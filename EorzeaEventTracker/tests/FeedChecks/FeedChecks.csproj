@@ -13,5 +13,6 @@
     <Compile Include="../../EorzeaEventTracker/EventImages.cs" Link="EventImages.cs" />
     <EmbeddedResource Include="../../locales/ru.json" LogicalName="EorzeaEventTracker.ru.json" />
     <EmbeddedResource Include="../../assets/*.jpg" LogicalName="Tests.%(Filename)%(Extension)" />
+    <Compile Include="../../EorzeaEventTracker/BookPagination.cs" Link="BookPagination.cs" />
   </ItemGroup>
 </Project>

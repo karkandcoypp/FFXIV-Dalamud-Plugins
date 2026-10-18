@@ -23,6 +23,7 @@ internal static class Program
         EventCompletionChecks.Run();
         RewardPreferenceChecks.Run();
         ManualRewardChecks.Run();
+        BookPaginationChecks.Run();
         var settings = new Configuration();
         Check(!settings.ShowCompactWidget, "compact widget starts hidden for existing configurations");
         settings.ShowCompactWidget = true;

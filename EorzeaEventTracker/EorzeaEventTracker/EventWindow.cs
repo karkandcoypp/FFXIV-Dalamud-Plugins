@@ -10,7 +10,7 @@ using Dalamud.Interface.Windowing;
 
 namespace EorzeaEventTracker;
 
-public sealed class EventWindow : Window, IDisposable
+public sealed partial class EventWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
     private bool settingsVisible;
@@ -27,10 +27,11 @@ public sealed class EventWindow : Window, IDisposable
     private string T(string text) => L.Text(text);
     private string E(string text) => L.Text(text, localizedEvent);
     private string F(string text, params object[] values) => L.Format(text, values);
-    private float UiScale => AppearancePolicy.Scale(plugin.Settings);
+    private float renderScale = 1;
+    private float UiScale => renderScale;
     private float Opacity => AppearancePolicy.Opacity(plugin.Settings);
     private float S => ImGui.GetFontSize() / 17f;
-    internal void SelectEvent(string id) => selected = id;
+    internal void SelectEvent(string id) { selected = id; sheetPage = 0; sheetSection = 0; settingsVisible = false; }
 
     public EventWindow(Plugin plugin) : base("Eorzea Event Tracker###EETMain")
     {
@@ -39,11 +40,15 @@ public sealed class EventWindow : Window, IDisposable
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints { MinimumSize = new(800, 540), MaximumSize = new(1600, 1400) };
         urlBuffer = plugin.Settings.FeedUrl;
+        Flags |= ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
     }
 
     public override void PreDraw()
     {
-        SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(900, 600) * UiScale, MaximumSize = new Vector2(1600, 1400) * UiScale };
+        var hostScale = Dalamud.Interface.Utility.ImGuiHelpers.GlobalScale;
+        var maximum = ImGui.GetMainViewport().WorkSize / hostScale - new Vector2(12);
+        renderScale = Math.Min(AppearancePolicy.Scale(plugin.Settings), Math.Max(.65f, maximum.Y / 620f));
+        SizeConstraints = new WindowSizeConstraints { MinimumSize = Vector2.Min(new Vector2(900, 600) * UiScale, maximum), MaximumSize = maximum };
         ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.89f, .83f, .70f, .98f * Opacity));
         ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(.20f, .12f, .075f, Opacity));
         ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(.30f, .18f, .10f, Opacity));
@@ -80,7 +85,7 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, new Vector4(.88f, .79f, .61f, 1));
         ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(.20f, .15f, .105f, 1));
         ImGui.PushStyleColor(ImGuiCol.TextDisabled, Muted);
-        try { DrawContent(); }
+        try { DrawBookContent(); }
         finally { ImGui.PopStyleColor(21); ImGui.PopStyleVar(3); ImGui.SetWindowFontScale(1); }
     }
 
@@ -89,7 +94,7 @@ public sealed class EventWindow : Window, IDisposable
         // Child windows inherit their parent's font scale. Normalize it so nested reward
         // panels get the same requested scale rather than multiplying or losing it.
         ImGui.SetWindowFontScale(1);
-        var visible = ImGui.BeginChild(id, size, border, flags);
+        var visible = ImGui.BeginChild(id, size, border, flags | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
         ImGui.SetWindowFontScale(UiScale);
         return visible;
     }
@@ -98,56 +103,6 @@ public sealed class EventWindow : Window, IDisposable
     {
         ImGui.EndChild();
         ImGui.SetWindowFontScale(UiScale);
-    }
-
-    private void DrawContent()
-    {
-        var now = DateTimeOffset.UtcNow;
-        var events = plugin.Feed.Feed.Events.Where(e => (plugin.Settings.ShowUnverified || e.Verified) && (e.Active(now) || e.Upcoming(now)))
-            .OrderBy(e => e.Upcoming(now)).ThenBy(e => e.EndsAt).ToList();
-        if (!events.Any(e => e.Id == selected)) selected = events.FirstOrDefault()?.Id ?? "";
-        ImGui.TextColored(Gold, T("E O R Z E A   /   E V E N T S"));
-        ImGui.SameLine();
-        ImGui.TextDisabled(T("Your seasonal adventure journal"));
-        ImGui.TextColored(Muted, T(plugin.Progress.Character));
-        ImGui.SameLine();
-        if (ImGui.SmallButton(T("Refresh") + "###Refresh"))
-        {
-            plugin.Images.RetryFailed();
-            _ = plugin.Feed.RefreshAsync(plugin.Settings.FeedUrl);
-        }
-        ImGui.SameLine();
-        if (ImGui.SmallButton(T("Settings") + "###Settings")) settingsVisible = !settingsVisible;
-        if (settingsVisible)
-        {
-            ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(.96f, .91f, .80f, .95f * Opacity));
-            if (BeginScaledChild("Journal settings", new Vector2(0, Math.Clamp(ImGui.GetContentRegionAvail().Y * .40f, 110 * S, 260 * S)), true)) DrawSettings();
-            EndScaledChild();
-            ImGui.PopStyleColor();
-        }
-        ImGui.Separator();
-        var railWidth = Math.Clamp(ImGui.GetContentRegionAvail().X * .32f, 280 * S, 360 * S);
-        var gutter = 18 * S;
-        DrawBookBackground(railWidth, gutter);
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(42 * S, 44 * S));
-        if (BeginScaledChild("Event rail", new Vector2(railWidth, -30 * S), false, ImGuiWindowFlags.AlwaysUseWindowPadding))
-        {
-            ImGui.TextColored(Muted, F("LIVE & UPCOMING  /  {0}", events.Count));
-            foreach (var e in events) DrawEventCard(e, now);
-            if (events.Count == 0) ImGui.TextWrapped(T("No current events in this feed. Check Lodestone for announcements."));
-        }
-        EndScaledChild();
-        ImGui.SameLine(0, gutter);
-        if (BeginScaledChild("Event detail", new Vector2(Math.Max(100 * S, ImGui.GetContentRegionAvail().X - 52 * S), -30 * S), false, ImGuiWindowFlags.AlwaysUseWindowPadding))
-        {
-            var current = events.FirstOrDefault(e => e.Id == selected);
-            if (current != null) DrawEvent(current, now);
-            else if (ImGui.Button(T("Open Lodestone") + "###Open Lodestone")) OpenUrl("https://na.finalfantasyxiv.com/lodestone/topics/");
-        }
-        EndScaledChild();
-        ImGui.PopStyleVar();
-        ImGui.TextColored(Muted, "Lodestone  /  " + L.FeedStatus(plugin.Feed.Status, plugin.Feed.UpdatedAt));
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Tracking stays on this computer. Collection unlocks and observed rewards are separate from quest completion."));
     }
 
     private void DrawBookBackground(float leftPageWidth, float gutter)
@@ -186,7 +141,7 @@ public sealed class EventWindow : Window, IDisposable
         var height = imageHeight + titleHeight + ImGui.GetTextLineHeightWithSpacing() * 3 + 44 * S;
         var start = ImGui.GetCursorScreenPos();
         var cursor = ImGui.GetCursorPos();
-        if (ImGui.InvisibleButton("Select event", new Vector2(width, height))) selected = e.Id;
+        if (ImGui.InvisibleButton("Select event", new Vector2(width, height))) SelectEvent(e.Id);
         var hovered = ImGui.IsItemHovered();
         if (hovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         var draw = ImGui.GetWindowDrawList();
@@ -243,115 +198,7 @@ public sealed class EventWindow : Window, IDisposable
         return file ?? (string.IsNullOrEmpty(asset) ? null : Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName!, "assets", asset));
     }
 
-    private void DrawEvent(EventInfo e, DateTimeOffset now)
-    {
-        localizedEvent = e;
-        try { DrawEventContent(e, now); }
-        finally { localizedEvent = null; }
-    }
-
-    private void DrawEventContent(EventInfo e, DateTimeOffset now)
-    {
-        plugin.Progress.Catalog.TryGetValue(e.Id, out var definition);
-        DrawHero(e, now);
-        if (e.EndsAt.HasValue) ImGui.TextDisabled(F("Ends {0}", e.EndsAt.Value.ToLocalTime().ToString("f", L.Culture)));
-        if (!e.Verified) ImGui.TextColored(Gold, T("Partial details — check the official page"));
-        if (plugin.Progress.ReadyForReminders && EventCompletionPolicy.IsComplete(definition, plugin.Progress.Quests))
-            ImGui.TextColored(Teal, T("Main objective completed"));
-        if (!string.IsNullOrWhiteSpace(e.Description)) ImGui.TextWrapped(E(e.Description));
-        if (ImGui.Button(T("Official event guide") + "###Official event guide")) OpenUrl(e.Url);
-        if (DateTime.UtcNow < mapErrorUntil) ImGui.TextWrapped(T("Could not open the map. Log in and try again; this area may be unavailable."));
-        ImGui.Spacing();
-        if (ImGui.BeginTabBar("Event tabs"))
-        {
-            if (ImGui.BeginTabItem(T("Your progress") + "###Your progress"))
-            {
-                if (definition == null) ImGui.TextWrapped(T("Automatic tracking has not been mapped for this event yet."));
-                else DrawProgress(definition);
-                ImGui.EndTabItem();
-            }
-            if (ImGui.BeginTabItem(T("How to join") + "###How to join"))
-            {
-                Section("REQUIREMENTS", e.Requirements);
-                Section("YOUR NEXT STEPS", e.Steps);
-                if (e.Locations.Count > 0)
-                {
-                    ImGui.TextColored(Gold, T("EVENT NPCs"));
-                    foreach (var location in e.Locations)
-                    {
-                        ImGui.PushID(location.Id);
-                        ImGui.TextWrapped($"{E(location.Npc)} — {E(location.Zone)} (X:{location.X:F1} Y:{location.Y:F1})");
-                        DrawLocationButton(location.Id);
-                        ImGui.PopID();
-                    }
-                }
-                Section("SOURCE NOTES", e.Notes);
-                ImGui.EndTabItem();
-            }
-            if (ImGui.BeginTabItem(T("Reward guide") + "###Reward guide"))
-            {
-                Section("REWARDS & PRICES", e.Rewards);
-                ImGui.EndTabItem();
-            }
-            ImGui.EndTabBar();
-        }
-    }
-
-    private void DrawProgress(TrackingDefinition definition)
-    {
-        ImGui.Spacing();
-        ImGui.TextColored(Gold, T("QUEST JOURNAL"));
-        foreach (var quest in definition.Quests)
-        {
-            ImGui.PushID((int)quest.Id);
-            var known = plugin.Progress.Available && plugin.Progress.Quests.TryGetValue(quest.Id, out _);
-            var done = known && plugin.Progress.Quests[quest.Id];
-            ImGui.TextColored(done ? Teal : Muted, T(done ? "[DONE]" : known ? "[TODO]" : "[ ... ]"));
-            ImGui.SameLine();
-            ImGui.TextWrapped(E(quest.Name));
-            DrawLocationButton(quest.LocationId);
-            ImGui.PopID();
-        }
-        ImGui.TextWrapped(T("Quest completion does not mean all shop rewards are collected."));
-        ImGui.Spacing();
-        var (count, total) = RewardPreferences.Progress(definition.Rewards, plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
-        ImGui.TextColored(Gold, F("REWARD COLLECTION   {0} / {1}", count, total));
-        ImGui.PushStyleColor(ImGuiCol.PlotHistogram, Teal);
-        ImGui.ProgressBar(total == 0 ? 0 : (float)count / total, new Vector2(-1, 9 * S), "");
-        ImGui.PopStyleColor();
-        ImGui.Checkbox(T("Show remaining rewards only") + "###Show remaining rewards only", ref remainingOnly);
-        ImGui.Checkbox(T("Favorites only") + "###FavoritesOnly", ref favoritesOnly);
-        var favorites = definition.Rewards.Where(r => plugin.Settings.FavoriteRewards.Contains(r.Id) && !plugin.Settings.IgnoredRewards.Contains(r.Id)).ToList();
-        if (favorites.Count > 0)
-        {
-            var confirmed = favorites.Count(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed);
-            ImGui.TextColored(Gold, F("FAVORITES   {0} / {1} obtained", confirmed, favorites.Count));
-        }
-        if (!definition.Rewards.Any(r => (!favoritesOnly || plugin.Settings.FavoriteRewards.Contains(r.Id))
-            && (!remainingOnly || (!plugin.Settings.IgnoredRewards.Contains(r.Id) && !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed))))
-            ImGui.TextWrapped(T("No rewards match these filters. Mark rewards as favorites or change the filters."));
-        var columns = ImGui.GetContentRegionAvail().X >= 520 * S ? 2 : 1;
-        if (ImGui.BeginTable("Rewards", columns, ImGuiTableFlags.SizingStretchSame))
-        {
-            foreach (var reward in definition.Rewards)
-            {
-                var state = plugin.Progress.Rewards.GetValueOrDefault(reward.Id);
-                if (remainingOnly && (state.Confirmed || plugin.Settings.IgnoredRewards.Contains(reward.Id))) continue;
-                if (favoritesOnly && !plugin.Settings.FavoriteRewards.Contains(reward.Id)) continue;
-                ImGui.TableNextColumn();
-                DrawReward(reward, state);
-            }
-            ImGui.EndTable();
-        }
-        ImGui.Spacing();
-        if (ImGui.CollapsingHeader(T("HOW TRACKING WORKS") + "###TrackingHelp"))
-        {
-            ImGui.TextWrapped(T("Unlocked = registered collection. In bags / equipped = currently found. Previously obtained = seen before on this character. Earned from quest = guaranteed quest reward."));
-            ImGui.TextWrapped(T("Not detected does not mean never owned: retainers, housing, glamour dresser and armoire are not scanned. Items seen by this plugin are remembered per character."));
-        }
-    }
-
-    private void DrawReward(TrackedReward reward, RewardProgress progress)
+    private void DrawReward(TrackedReward reward, RewardProgress progress, bool compact = false)
     {
         ImGui.PushID((int)reward.Id);
         var scale = S;
@@ -359,18 +206,12 @@ public sealed class EventWindow : Window, IDisposable
         var gap = 5 * scale;
         var ignored = plugin.Settings.IgnoredRewards.Contains(reward.Id);
         var favorite = plugin.Settings.FavoriteRewards.Contains(reward.Id);
+        var layout = MeasureReward(reward, progress, ImGui.GetContentRegionAvail().X, compact);
         var width = ImGui.GetContentRegionAvail().X - padding * 2;
         var textWidth = Math.Max(50 * scale, width - 52 * scale);
-        var titleHeight = ImGui.CalcTextSize(E(reward.Name), false, textWidth).Y;
-        var headerHeight = Math.Max(42 * scale, titleHeight + (reward.Price > 0 ? ImGui.GetTextLineHeight() + gap : 0));
+        var headerHeight = layout.Header;
         var status = L.RewardLabel(progress);
-        var statusHeight = ImGui.CalcTextSize(status, false, width).Y;
-        var oneLine = ImGui.CalcTextSize(T("Favorite")).X + ImGui.CalcTextSize(T("Not interested")).X
-            + ImGui.GetFrameHeight() * 2 + 24 * scale <= width;
-        var controlsHeight = ImGui.GetFrameHeight() * (oneLine ? 1 : 2) + (oneLine ? 0 : gap) + ImGui.GetFrameHeight() + gap;
-        var hasLocation = localizedEvent?.Locations.Any(l => l.Id == reward.LocationId) == true;
-        var height = padding * 2 + headerHeight + statusHeight + controlsHeight + gap * 3
-            + (hasLocation ? ImGui.GetTextLineHeight() + gap + ImGui.GetStyle().FramePadding.Y * 2 : 0);
+        var height = layout.Height;
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding));
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8 * scale, gap));
         ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (ignored ? .82f : 1));
@@ -398,6 +239,39 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.PushTextWrapPos(padding + width);
             ImGui.TextColored(!ignored && progress.Confirmed ? Teal : Muted, status);
             ImGui.PopTextWrapPos();
+            if (compact)
+            {
+                if (ImGui.SmallButton(T("Reward actions") + "###Actions")) ImGui.OpenPopup("RewardActions");
+                if (ImGui.BeginPopup("RewardActions"))
+                {
+                    DrawRewardControls(reward, false);
+                    ImGui.EndPopup();
+                }
+            }
+            else DrawRewardControls(reward, layout.OneLine);
+        }
+        EndScaledChild();
+        ImGui.PopStyleColor();
+        ImGui.PopStyleVar(3);
+        ImGui.PopID();
+    }
+
+    private (float Height, float Header, bool OneLine) MeasureReward(TrackedReward reward, RewardProgress progress, float cellWidth, bool compact)
+    {
+        var width = Math.Max(40 * S, cellWidth - 20 * S);
+        var textWidth = Math.Max(50 * S, width - 52 * S);
+        var title = ImGui.CalcTextSize(E(reward.Name), false, textWidth).Y;
+        var header = Math.Max(42 * S, title + (reward.Price > 0 ? ImGui.GetTextLineHeight() + 5 * S : 0));
+        var oneLine = ImGui.CalcTextSize(T("Favorite")).X + ImGui.CalcTextSize(T("Not interested")).X + ImGui.GetFrameHeight() * 2 + 24 * S <= width;
+        var controls = compact ? ImGui.GetFrameHeight() : ImGui.GetFrameHeight() * (oneLine ? 2 : 3) + 5 * S * (oneLine ? 1 : 2);
+        var map = !compact && localizedEvent?.Locations.Any(l => l.Id == reward.LocationId) == true ? ImGui.GetFrameHeight() + 5 * S : 0;
+        return (20 * S + header + ImGui.CalcTextSize(L.RewardLabel(progress), false, width).Y + controls + 15 * S + map, header, oneLine);
+    }
+
+    private void DrawRewardControls(TrackedReward reward, bool oneLine)
+    {
+        var favorite = plugin.Settings.FavoriteRewards.Contains(reward.Id);
+        var ignored = plugin.Settings.IgnoredRewards.Contains(reward.Id);
             if (ImGui.Checkbox(T("Favorite") + "###Favorite", ref favorite))
             {
                 RewardPreferences.Favorite(plugin.Settings, reward.Id, favorite);
@@ -417,11 +291,6 @@ public sealed class EventWindow : Window, IDisposable
             if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Saved for this character. Clearing this mark preserves any automatic confirmation."));
             ImGui.EndDisabled();
             DrawLocationButton(reward.LocationId);
-        }
-        EndScaledChild();
-        ImGui.PopStyleColor();
-        ImGui.PopStyleVar(3);
-        ImGui.PopID();
     }
 
     private void DrawLocationButton(string locationId)
@@ -483,59 +352,12 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.SetCursorPos(cursor + new Vector2(0, height + 12 * scale));
     }
 
-    private void DrawSettings()
-    {
-        var c = plugin.Settings;
-        var language = L.IsRussian ? 1 : 0;
-        if (ImGui.Combo(T("Language") + "###Language", ref language, "English\0Русский\0"))
-        {
-            c.Language = language == 1 ? "ru" : "en";
-            plugin.Save();
-        }
-        ImGui.TextWrapped(T("Names use the event's translations when available. Original item names remain in tooltips."));
-        var uiScale = UiScale;
-        if (ImGui.SliderFloat(T("Interface scale") + "###UiScale", ref uiScale, .75f, 1.75f, "%.2fx")) c.UiScale = uiScale;
-        if (ImGui.IsItemDeactivatedAfterEdit()) plugin.Save();
-        var opacity = Opacity;
-        if (ImGui.SliderFloat(T("Background opacity") + "###BackgroundOpacity", ref opacity, .4f, 1, "%.2f")) c.BackgroundOpacity = opacity;
-        if (ImGui.IsItemDeactivatedAfterEdit()) plugin.Save();
-        ImGui.TextWrapped(T("Applies to the journal and widget. Text and icons remain opaque."));
-        if (ImGui.SmallButton(T("Reset appearance") + "###ResetAppearance"))
-        { c.UiScale = 1; c.BackgroundOpacity = 1; plugin.Save(); }
-        var widget = c.ShowCompactWidget;
-        if (ImGui.Checkbox(T("Show compact event widget") + "###CompactWidget", ref widget)) plugin.SetWidgetVisible(widget);
-        var notify = c.NotifyOnLogin; if (ImGui.Checkbox(T("Notify on login") + "###Notify on login", ref notify)) { c.NotifyOnLogin = notify; plugin.Save(); }
-        ImGui.SameLine();
-        var open = c.OpenOnLogin; if (ImGui.Checkbox(T("Open on login") + "###Open on login", ref open)) { c.OpenOnLogin = open; plugin.Save(); }
-        ImGui.TextWrapped(T("Automatic opening skips inactive events and completed main quests. You can always open the journal or widget manually."));
-        var deadlines = c.NotifyFavoriteDeadlines;
-        if (ImGui.Checkbox(T("Remind me about favorite rewards before events end") + "###FavoriteDeadlines", ref deadlines))
-        { c.NotifyFavoriteDeadlines = deadlines; plugin.Save(); }
-        ImGui.TextWrapped(T("Reminders at 3 days and 24 hours, once per character and event deadline. If you were offline, the latest reminder appears after login. Unknown rewards are skipped."));
-        var unverified = c.ShowUnverified; if (ImGui.Checkbox(T("Show partial event entries") + "###Show partial event entries", ref unverified)) { c.ShowUnverified = unverified; plugin.Save(); }
-        ImGui.InputText(T("HTTPS feed URL") + "###HTTPS feed URL", ref urlBuffer, 512);
-        if (ImGui.Button(T("Save feed URL") + "###Save feed URL")) { c.FeedUrl = urlBuffer.Trim(); plugin.Save(); _ = plugin.Feed.RefreshAsync(c.FeedUrl); }
-        ImGui.TextWrapped(T("Events, quest IDs, rewards, artwork and translations update through the feed. New tracking mechanics may still require a plugin update."));
-        ImGui.TextWrapped(T("Leave URL empty for bundled / cached data. Character tracking works locally and refreshes every second."));
-    }
-
     private string Countdown(EventInfo e, DateTimeOffset now)
     {
         var future = e.Upcoming(now);
         var duration = (future ? e.StartsAt : e.EndsAt) - now;
         if (duration is not { } remaining || remaining <= TimeSpan.Zero) return T("Ended");
         return F(future ? "Starts in {0}d {1}h {2}m" : "Ends in {0}d {1}h {2}m", (int)remaining.TotalDays, remaining.Hours, remaining.Minutes);
-    }
-
-    private void Section(string title, System.Collections.Generic.IEnumerable<string> items)
-    {
-        var list = items.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-        if (list.Count == 0) return;
-        ImGui.Spacing();
-        ImGui.TextColored(Gold, T(title));
-        ImGui.PushTextWrapPos(0);
-        foreach (var item in list) ImGui.BulletText(E(item));
-        ImGui.PopTextWrapPos();
     }
 
     private static void OpenUrl(string url)

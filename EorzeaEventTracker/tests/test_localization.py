@@ -26,5 +26,6 @@ class LocalizationTests(unittest.TestCase):
         entries = json.loads((ROOT / 'locales/ru.json').read_text(encoding='utf-8'))
         window = (ROOT / 'EorzeaEventTracker/EventWindow.cs').read_text(encoding='utf-8')
         window += (ROOT / 'EorzeaEventTracker/CompactWidget.cs').read_text(encoding='utf-8')
+        window += (ROOT / 'EorzeaEventTracker/BookNavigation.cs').read_text(encoding='utf-8')
         for text in re.findall(r'(?:\b[TF]|L\.(?:Text|Format))\("([^"\n]+)"', window):
             with self.subTest(text=text): self.assertIn(text, entries)

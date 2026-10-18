@@ -121,5 +121,12 @@
   "Interface scale": "Масштаб интерфейса",
   "Background opacity": "Непрозрачность фона",
   "Applies to the journal and widget. Text and icons remain opaque.": "Применяется к журналу и виджету. Текст и иконки остаются непрозрачными.",
-  "Reset appearance": "Сбросить оформление"
+  "Reset appearance": "Сбросить оформление",
+  "Overview": "Обзор",
+  "Reward actions": "Действия",
+  "Page {0} / {1}": "Лист {0} / {1}",
+  "Scale is limited to keep the book on screen.": "Масштаб ограничен размером экрана, чтобы книга помещалась целиком.",
+  "Turn the page for event details.": "Перелистните страницу, чтобы прочитать подробности события.",
+  "Reminders are sent once at 3 days and 24 hours for unfinished favorites.": "Напоминания о неполученных избранных наградах приходят один раз за 3 дня и за сутки.",
+  "Use HTTPS; leave empty for cached event data.": "Укажите HTTPS-адрес или оставьте поле пустым для сохранённых данных."
 }
