@@ -22,7 +22,7 @@
     "Author": "Community prototype",
     "Name": "Eorzea Event Tracker",
     "InternalName": "EorzeaEventTracker",
-    "AssemblyVersion": "0.2.1.0",
+    "AssemblyVersion": "0.3.0.0",
     "Description": "Lodestone event dates, illustrated event guides, automatic quest completion and character reward tracking.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes",
@@ -38,8 +38,8 @@
     "LoadPriority": 0,
     "Punchline": "Lodestone event reminders and deadlines.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.2.1/EorzeaEventTracker.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.2.1/EorzeaEventTracker.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.2.1/EorzeaEventTracker.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.3.0/EorzeaEventTracker.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.3.0/EorzeaEventTracker.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.3.0/EorzeaEventTracker.zip"
   }
 ]
