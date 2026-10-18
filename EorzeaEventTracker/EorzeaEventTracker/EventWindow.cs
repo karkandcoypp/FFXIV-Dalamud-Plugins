@@ -295,6 +295,7 @@ public sealed class EventWindow : Window, IDisposable
         {
             var confirmed = favorites.Count(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed);
             ImGui.TextColored(Gold, F("FAVORITES   {0} / {1} obtained", confirmed, favorites.Count));
+            DrawFavoriteBudget(definition);
         }
         if (!definition.Rewards.Any(r => (!favoritesOnly || plugin.Settings.FavoriteRewards.Contains(r.Id))
             && (!remainingOnly || (!plugin.Settings.IgnoredRewards.Contains(r.Id) && !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed))))
@@ -318,6 +319,43 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.TextWrapped(T("Unlocked = registered collection. In bags / equipped = currently found. Previously obtained = seen before on this character. Earned from quest = guaranteed quest reward."));
             ImGui.TextWrapped(T("Not detected does not mean never owned: retainers, housing, glamour dresser and armoire are not scanned. Items seen by this plugin are remembered per character."));
         }
+    }
+
+    private void DrawFavoriteBudget(TrackingDefinition definition)
+    {
+        if (!plugin.Progress.ReadyForReminders)
+        {
+            ImGui.TextWrapped(T("Waiting for character data"));
+            return;
+        }
+        var pending = FavoriteBudget.Pending(definition.Rewards, plugin.Settings.FavoriteRewards,
+            plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
+        if (pending.Count == 0)
+        {
+            ImGui.TextColored(Teal, T("All favorite rewards obtained."));
+            return;
+        }
+        ImGui.Separator();
+        ImGui.TextColored(Gold, T("CURRENCY FOR FAVORITES"));
+        foreach (var budget in FavoriteBudget.Calculate(pending, plugin.Progress.CurrencyBalances))
+        {
+            ImGui.TextWrapped(F("Remaining rewards cost: {0} {1}", budget.Required.ToString("N0", L.Culture), E(budget.Currency)));
+            if (budget.Balance is { } balance)
+            {
+                ImGui.TextWrapped(F("You have: {0} {1}", balance.ToString("N0", L.Culture), E(budget.Currency)));
+                ImGui.TextColored(budget.Remaining == 0 ? Teal : Gold,
+                    F("Still to earn: {0} {1}", budget.Remaining!.Value.ToString("N0", L.Culture), E(budget.Currency)));
+                ImGui.PushStyleColor(ImGuiCol.PlotHistogram, Teal);
+                ImGui.ProgressBar((float)Math.Min(1d, (double)balance / budget.Required), new Vector2(-1, 6 * S), "");
+                ImGui.PopStyleColor();
+            }
+            else ImGui.TextWrapped(T("Balance unavailable; the cost above is not the amount still to earn."));
+        }
+        var unpriced = pending.Count(r => r.Price == 0 && r.EarnedByQuest == 0);
+        if (unpriced > 0) ImGui.TextWrapped(F("Favorites with unknown prices: {0}. Not included in the total.", unpriced));
+        if (pending.Any(r => r.Price == 0 && r.EarnedByQuest != 0))
+            ImGui.TextWrapped(T("Quest rewards require completing their quests, not currency."));
+        ImGui.Separator();
     }
 
     private void DrawReward(TrackedReward reward, RewardProgress progress)

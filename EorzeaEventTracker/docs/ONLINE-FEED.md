@@ -91,3 +91,9 @@ Optional `tracking.completionQuestId` identifies the main quest used for automat
 Current mappings: All Saints' Wake — Grim and Grisly Games (71004); Fall Guys — Just Crowning Around (70337), as explicitly selected by the user. This is independent of collecting every reward or winning achievements. New event main quest IDs can be added through `config/overrides.json`, without a plugin rebuild.
 
 Automatic display is suppressed if there are no visible active events with an uncompleted/unknown main objective. Manual journal/widget opening remains available. Favorite deadline reminders remain independent and can still notify about missing selected rewards after the main quest is complete.
+
+## Favorite currency budget (0.14.0+)
+
+Each tracked reward can specify `price`, `currency` (display label), and optional `currencyItemId` (game Item row ID, up to 1000000). Set the actual currency ID in reviewed overrides so future events can use the budget without a rebuild. Existing MGF entries without an ID remain compatible (MGF = 41629).
+
+The journal sums one copy of each still-unconfirmed favorite, excluding ignored rewards, separately per currency. It subtracts the current character's live balance; owned/manual marks remove rewards from the cost. Zero-price entries without a quest are treated as unpriced and called out separately, not assumed free. Unavailable balances never imply zero currency or an exact deficit. MGF is read from CurrencyManager; item tokens can be read from inventory. Balances are refreshed with character scans and cleared on logout/character/feed change.

@@ -53,7 +53,7 @@ public static class FeedPolicy
                 || tracking.Quests.Count > 64 || tracking.Rewards.Count > 200
                 || tracking.Quests.Any(q => q == null || q.Id < 65536 || q.Id > 131071 || !Text(q.Name, 500))
                 || tracking.Rewards.Any(r => r == null || r.Id == 0 || r.Id > 1000000 || r.Icon > 1000000
-                    || r.Price < 0 || !Text(r.Currency, 64) || !Text(r.Name, 500))
+                    || r.CurrencyItemId > 1000000 || r.Price < 0 || !Text(r.Currency, 64) || !Text(r.Name, 500))
                 || tracking.Quests.Select(q => q.Id).Distinct().Count() != tracking.Quests.Count
                 || tracking.Rewards.Select(r => r.Id).Distinct().Count() != tracking.Rewards.Count
                 || tracking.Rewards.Any(r => r.EarnedByQuest != 0 && !tracking.Quests.Any(q => q.Id == r.EarnedByQuest)))

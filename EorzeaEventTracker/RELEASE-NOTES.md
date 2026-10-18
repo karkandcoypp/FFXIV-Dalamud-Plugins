@@ -1,6 +1,7 @@
-# Eorzea Event Tracker 0.13.0
+# Eorzea Event Tracker 0.14.0
 
-- Hide an event with one click on its card. Restore it through the Hidden section above the event list.
-- Hidden events are excluded from the widget, login notices, automatic opening and favorite deadline reminders.
-- Progress and reward preferences are preserved. A new occurrence with a different deadline is visible again.
-- English and Russian labels; classic dark journal interface retained.
+- Favorite rewards now show remaining purchase cost, current currency balance and the amount still to earn, with a funding progress bar.
+- Reads MGF automatically for the current character and refreshes as currency and reward ownership change.
+- Excludes obtained/manual and ignored rewards. Currencies are calculated separately; unavailable balances and unknown prices are clearly marked.
+- Online event rewards can provide currencyItemId for new currencies without another plugin rebuild.
+- Classic journal UI, event hiding, progress and settings preserved. English and Russian supported.

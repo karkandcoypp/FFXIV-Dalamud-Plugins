@@ -136,5 +136,13 @@
   "No events to display. Check Hidden to restore an event.": "Нет событий для показа. Вернуть событие можно в разделе «Скрытые».",
   "Restore event": "Вернуть событие",
   "Hide event": "Скрыть событие",
-  "You can restore this event from Hidden. Progress is kept.": "Можно вернуть в разделе «Скрытые». Прогресс сохранится."
+  "You can restore this event from Hidden. Progress is kept.": "Можно вернуть в разделе «Скрытые». Прогресс сохранится.",
+  "All favorite rewards obtained.": "Все избранные награды получены.",
+  "CURRENCY FOR FAVORITES": "ВАЛЮТА НА ИЗБРАННОЕ",
+  "Remaining rewards cost: {0} {1}": "Стоимость оставшихся наград: {0} {1}",
+  "You have: {0} {1}": "У вас: {0} {1}",
+  "Still to earn: {0} {1}": "Осталось заработать: {0} {1}",
+  "Balance unavailable; the cost above is not the amount still to earn.": "Баланс пока недоступен. Выше указана полная стоимость, без вычета вашей валюты.",
+  "Favorites with unknown prices: {0}. Not included in the total.": "Избранных наград с неизвестной ценой: {0}. Они не включены в сумму.",
+  "Quest rewards require completing their quests, not currency.": "Для квестовых наград нужно завершить квесты; валюта не требуется."
 }

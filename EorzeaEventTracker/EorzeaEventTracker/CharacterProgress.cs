@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using Dalamud.Game.Inventory;
 using Lumina.Excel.Sheets;
+using FFXIVClientStructs.FFXIV.Client.Game;
 
 namespace EorzeaEventTracker;
 
@@ -16,6 +17,7 @@ public sealed class CharacterProgress
     private EventFeed? catalogFeed;
     public Dictionary<uint, bool> Quests { get; } = new();
     public Dictionary<uint, RewardProgress> Rewards { get; } = new();
+    public Dictionary<uint, long> CurrencyBalances { get; } = new();
     private readonly Dictionary<uint, RewardProgress> automaticRewards = new();
     public bool Available { get; private set; }
     public bool ReadyForReminders => Available && contentId == Plugin.Player.ContentId
@@ -108,6 +110,7 @@ public sealed class CharacterProgress
                 Rewards[reward.Id] = ProgressPolicy.ApplyManual(state, manual.Contains(reward.Id));
                 if (state.Confirmed && observed.Add(reward.Id)) dirty = true;
             }
+            ScanCurrencies(definitions);
             Available = true;
             if (dirty && now >= nextSave) { Flush(); nextSave = now.AddSeconds(10); }
         }
@@ -130,7 +133,26 @@ public sealed class CharacterProgress
         plugin.Save();
     }
 
-    private void Clear() { Available = false; Quests.Clear(); Rewards.Clear(); automaticRewards.Clear(); }
+    private unsafe void ScanCurrencies(IEnumerable<TrackingDefinition> definitions)
+    {
+        CurrencyBalances.Clear();
+        var currency = CurrencyManager.Instance();
+        var inventory = InventoryManager.Instance();
+        foreach (var id in definitions.SelectMany(d => d.Rewards).Where(r => r.Price > 0)
+            .Select(FavoriteBudget.CurrencyId).Where(id => id != 0).Distinct())
+        {
+            if (!Plugin.Data.GetExcelSheet<Item>().TryGetRow(id, out _)) continue;
+            if (currency != null && currency->HasItem(id)) CurrencyBalances[id] = currency->GetItemCount(id);
+            // MGF lives in CurrencyManager, never treat an unavailable bucket as an empty bag.
+            else if (id != 41629 && inventory != null)
+            {
+                var count = inventory->GetInventoryItemCount(id, false, false, false);
+                if (count >= 0) CurrencyBalances[id] = count;
+            }
+        }
+    }
+
+    private void Clear() { CurrencyBalances.Clear(); Available = false; Quests.Clear(); Rewards.Clear(); automaticRewards.Clear(); }
     private static bool GuaranteesReward(uint questId, uint itemId)
     {
         if (!Plugin.Data.GetExcelSheet<Quest>().TryGetRow(questId, out var row)) return false;

@@ -72,6 +72,7 @@
             "name": "Gentlebean Knit Cap",
             "icon": 56610,
             "price": 410,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -79,6 +80,7 @@
             "name": "Gentlebean Parka",
             "icon": 42992,
             "price": 410,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -86,6 +88,7 @@
             "name": "Gentlebean Bottoms",
             "icon": 57520,
             "price": 410,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -93,6 +96,7 @@
             "name": "Gentlebean Shoes",
             "icon": 49614,
             "price": 410,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -100,6 +104,7 @@
             "name": "Matte Winner's Crown",
             "icon": 56611,
             "price": 410,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -107,6 +112,7 @@
             "name": "Glossy Winner's Crown",
             "icon": 56645,
             "price": 410,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -114,6 +120,7 @@
             "name": "Rhiyes Identification Key",
             "icon": 26014,
             "price": 410,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -121,6 +128,7 @@
             "name": "Ballroom Etiquette - Embracing Blunders",
             "icon": 26435,
             "price": 410,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -128,6 +136,7 @@
             "name": "Pink Bean",
             "icon": 59899,
             "price": 350,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -135,6 +144,7 @@
             "name": "Pegwin",
             "icon": 59900,
             "price": 350,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -142,6 +152,7 @@
             "name": "Blunderville Crown",
             "icon": 53467,
             "price": 220,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -149,6 +160,7 @@
             "name": "Blunderville Flag",
             "icon": 53468,
             "price": 220,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -156,6 +168,7 @@
             "name": "Blunderville Donut Bumper",
             "icon": 52785,
             "price": 220,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -163,6 +176,7 @@
             "name": "Blunderville Padded Wall",
             "icon": 52786,
             "price": 220,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -170,6 +184,7 @@
             "name": "Blunderville Rainbow",
             "icon": 52787,
             "price": 220,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -177,6 +192,7 @@
             "name": "Blunderville Hammer",
             "icon": 52788,
             "price": 220,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -184,6 +200,7 @@
             "name": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
             "icon": 25945,
             "price": 220,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -191,6 +208,7 @@
             "name": "Blunderful Framer's Kit",
             "icon": 26625,
             "price": 200,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -198,6 +216,7 @@
             "name": "Blunderous Framer's Kit",
             "icon": 26625,
             "price": 200,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -205,6 +224,7 @@
             "name": "Blunder-villed Framer's Kit",
             "icon": 26625,
             "price": 200,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -212,6 +232,7 @@
             "name": "Standard Rationing Manual",
             "icon": 26186,
             "price": 200,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -219,6 +240,7 @@
             "name": "Gold Saucer Aetheryte Ticket",
             "icon": 25918,
             "price": 200,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           },
           {
@@ -226,6 +248,7 @@
             "name": "Wide Spectrum #1 Dye",
             "icon": 22805,
             "price": 150,
+            "currencyItemId": 41629,
             "locationId": "mgf-trader"
           }
         ],

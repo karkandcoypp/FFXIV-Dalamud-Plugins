@@ -25,6 +25,7 @@ public sealed class TrackedReward
     public uint Icon { get; set; }
     public int Price { get; set; }
     public string Currency { get; set; } = "MGF";
+    public uint CurrencyItemId { get; set; }
     public uint EarnedByQuest { get; set; }
 }
 
