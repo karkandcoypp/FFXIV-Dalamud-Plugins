@@ -553,8 +553,14 @@
       "text": "Пункт назначения NPC неоднозначен или не нанесен на карту: Apocalypsis Noctis Orchestrion Roll",
       "provider": "MyMemory",
       "machine": true
+    },
+    "75c4b0e69ac98105866292b38bbef92bb307dfff0c8a7a0c8995cae75db5a3f2": {
+      "source": "NPC destination is ambiguous or not mapped: A Quick Pit Stop Orchestrion Roll",
+      "text": "Пункт назначения NPC неоднозначен или не нанесен на карту: бросок оркестра быстрого пит-стопа",
+      "provider": "MyMemory",
+      "machine": true
     }
   },
   "day": "2026-10-18",
-  "used": 2303
+  "used": 2436
 }

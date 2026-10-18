@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-18T21:32:54.318363+00:00",
+  "generatedAt": "2026-10-18T21:45:47.451581+00:00",
   "events": [
     {
       "id": "0b841481931b7bc3",
@@ -23,7 +23,7 @@
       "verified": false,
       "notes": [
         "Dates extracted automatically from official site.",
-        "Automatic details may be incomplete. Main objective and NPC destinations are not inferred.",
+        "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
         "Unresolved or ambiguous quest: Resuming Quest Progress",
         "Unresolved or ambiguous quest: Replaying Seasonal Events",
         "Price unknown or exchange is ambiguous: Noctis Lucis Caelum Card",
@@ -32,7 +32,16 @@
         "Price unknown or exchange is ambiguous: Relax and Reflect Orchestrion Roll",
         "Price unknown or exchange is ambiguous: Veiled in Black Orchestrion Roll",
         "Price unknown or exchange is ambiguous: Apocalypsis Noctis Orchestrion Roll",
-        "Price unknown or exchange is ambiguous: A Quick Pit Stop Orchestrion Roll"
+        "Price unknown or exchange is ambiguous: A Quick Pit Stop Orchestrion Roll",
+        "NPC destination is ambiguous or not mapped: Noctis Lucis Caelum Card",
+        "NPC destination is ambiguous or not mapped: Hammerhead Orchestrion Roll",
+        "NPC destination is ambiguous or not mapped: Valse di Fantastica Orchestrion Roll",
+        "NPC destination is ambiguous or not mapped: Relax and Reflect Orchestrion Roll",
+        "NPC destination is ambiguous or not mapped: Veiled in Black Orchestrion Roll",
+        "NPC destination is ambiguous or not mapped: Apocalypsis Noctis Orchestrion Roll",
+        "NPC destination is ambiguous or not mapped: A Quick Pit Stop Orchestrion Roll",
+        "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.",
+        "Some Russian translations are pending; English text is shown until they are available."
       ],
       "imageUrl": "https://lds-img.finalfantasyxiv.com/h/p/0m52hBTHsuvQIQfh-pxIeo4SgM.png",
       "tracking": {
@@ -41,17 +50,20 @@
           {
             "id": 68694,
             "name": "The Man in Black",
-            "icon": 100831
+            "icon": 100831,
+            "locationId": "npc-1026849-map-13"
           },
           {
             "id": 68695,
             "name": "In the Dark of Night",
-            "icon": 100832
+            "icon": 100832,
+            "locationId": "npc-1026849-map-13"
           },
           {
             "id": 68696,
             "name": "Messenger of the Winds",
-            "icon": 100833
+            "icon": 100833,
+            "locationId": "npc-1026870-map-2"
           }
         ],
         "rewards": [
@@ -99,6 +111,26 @@
           }
         ]
       },
+      "locations": [
+        {
+          "id": "npc-1026849-map-13",
+          "npc": "Kipih Jakkya",
+          "zone": "Ul'dah - Steps of Nald",
+          "territoryId": 130,
+          "mapId": 13,
+          "x": 8.599,
+          "y": 9.748
+        },
+        {
+          "id": "npc-1026870-map-2",
+          "npc": "Noctis",
+          "zone": "New Gridania",
+          "territoryId": 132,
+          "mapId": 2,
+          "x": 11.479,
+          "y": 11.34
+        }
+      ],
       "automation": {
         "status": "partial",
         "sources": [
@@ -115,7 +147,7 @@
         "gameVersion": "5c744a8d8daafb25",
         "schema": "exdschema@2:rev:e773c41a90aed788cf4c1c48469fa85618ef01fb",
         "issues": [
-          "Automatic details may be incomplete. Main objective and NPC destinations are not inferred.",
+          "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
           "Unresolved or ambiguous quest: Resuming Quest Progress",
           "Unresolved or ambiguous quest: Replaying Seasonal Events",
           "Price unknown or exchange is ambiguous: Noctis Lucis Caelum Card",
@@ -124,12 +156,70 @@
           "Price unknown or exchange is ambiguous: Relax and Reflect Orchestrion Roll",
           "Price unknown or exchange is ambiguous: Veiled in Black Orchestrion Roll",
           "Price unknown or exchange is ambiguous: Apocalypsis Noctis Orchestrion Roll",
-          "Price unknown or exchange is ambiguous: A Quick Pit Stop Orchestrion Roll"
-        ]
+          "Price unknown or exchange is ambiguous: A Quick Pit Stop Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Noctis Lucis Caelum Card",
+          "NPC destination is ambiguous or not mapped: Hammerhead Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Valse di Fantastica Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Relax and Reflect Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Veiled in Black Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Apocalypsis Noctis Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: A Quick Pit Stop Orchestrion Roll"
+        ],
+        "npc": {
+          "mapped": 3,
+          "locations": 2,
+          "issues": [
+            "NPC destination is ambiguous or not mapped: Noctis Lucis Caelum Card",
+            "NPC destination is ambiguous or not mapped: Hammerhead Orchestrion Roll",
+            "NPC destination is ambiguous or not mapped: Valse di Fantastica Orchestrion Roll",
+            "NPC destination is ambiguous or not mapped: Relax and Reflect Orchestrion Roll",
+            "NPC destination is ambiguous or not mapped: Veiled in Black Orchestrion Roll",
+            "NPC destination is ambiguous or not mapped: Apocalypsis Noctis Orchestrion Roll",
+            "NPC destination is ambiguous or not mapped: A Quick Pit Stop Orchestrion Roll"
+          ]
+        },
+        "russian": {
+          "status": "partial",
+          "translated": 30,
+          "pending": 2,
+          "provider": "MyMemory + reviewed glossary"
+        }
       },
       "translations": {
         "ru": {
-          "Automatic details may be incomplete. Main objective and NPC destinations are not inferred.": "Автоматически собранные сведения могут быть неполными. Основная цель и точки NPC не определяются автоматически."
+          "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.": "Автоматически собранные сведения могут быть неполными. Основная цель не определяется автоматически; точки NPC добавляются только при точной связи в игровых данных.",
+          "The FINAL FANTASY XIV & FINAL FANTASY XV Collaboration Event Returns!": "Возвращается совместное событие FINAL FANTASY XIV и FINAL FANTASY XV!",
+          "The Man in Black": "Человек в черном",
+          "In the Dark of Night": "В темноте ночи",
+          "Messenger of the Winds": "Посланник ветров",
+          "Noctis Lucis Caelum Card": "Карта Noctis Lucis Caelum",
+          "Hammerhead Orchestrion Roll": "Ролл Hammerhead Orchestrion",
+          "Valse di Fantastica Orchestrion Roll": "Оркестровый ролл Valse di Fantastica",
+          "Relax and Reflect Orchestrion Roll": "Расслабьтесь и поразмышляйте над оркестровым роллом",
+          "Veiled in Black Orchestrion Roll": "Фата в черном оркестровом ролле",
+          "Apocalypsis Noctis Orchestrion Roll": "Ролл Apocalypsis Noctis Orchestrion",
+          "A Quick Pit Stop Orchestrion Roll": "Оркестровый ролл Quick Pit Stop",
+          "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
+          "New Gridania": "Новая Гридания",
+          "Dates extracted automatically from official site.": "Даты, автоматически извлекаемые с официального сайта.",
+          "Unresolved or ambiguous quest: Resuming Quest Progress": "Нерешенный или неоднозначный квест: Возобновление прогресса в квесте",
+          "Unresolved or ambiguous quest: Replaying Seasonal Events": "Неразрешенный или неоднозначный квест: повторное воспроизведение сезонных событий",
+          "Price unknown or exchange is ambiguous: Noctis Lucis Caelum Card": "Цена неизвестна или обмен неоднозначен: Noctis Lucis Caelum Card",
+          "Price unknown or exchange is ambiguous: Hammerhead Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: Hammerhead Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Valse di Fantastica Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: Valse di Fantastica Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Relax and Reflect Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: Relax and Reflect Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Veiled in Black Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: завуалирован в Black Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Apocalypsis Noctis Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: Apocalypsis Noctis Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: A Quick Pit Stop Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: Quick Pit Stop Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Noctis Lucis Caelum Card": "Пункт назначения NPC неоднозначен или не нанесен на карту: карта Noctis Lucis Caelum",
+          "NPC destination is ambiguous or not mapped: Hammerhead Orchestrion Roll": "Место назначения NPC неоднозначно или не нанесено на карту: Hammerhead Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Valse di Fantastica Orchestrion Roll": "Место назначения NPC неоднозначно или не нанесено на карту: Valse di Fantastica Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Relax and Reflect Orchestrion Roll": "Место назначения NPC неоднозначно или не нанесено на карту: расслабьтесь и отразите бросок оркестра",
+          "NPC destination is ambiguous or not mapped: Veiled in Black Orchestrion Roll": "Место назначения NPC неоднозначно или не нанесено на карту: завуалировано в Black Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Apocalypsis Noctis Orchestrion Roll": "Пункт назначения NPC неоднозначен или не нанесен на карту: Apocalypsis Noctis Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: A Quick Pit Stop Orchestrion Roll": "Пункт назначения NPC неоднозначен или не нанесен на карту: бросок оркестра быстрого пит-стопа",
+          "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках.",
+          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст."
         }
       }
     },
@@ -163,7 +253,9 @@
       "verified": true,
       "notes": [
         "All prices are MGF. Earn MGF during the event.",
-        "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/"
+        "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/",
+        "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.",
+        "Some Russian translations are pending; English text is shown until they are available."
       ],
       "tracking": {
         "eventId": "e9da20a481813c2f",
@@ -396,7 +488,34 @@
           "The Gold Saucer": "Золотое блюдце",
           "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
           "MGF Trader": "Торговец MGF",
-          "Blunderville Square": "Площадь Blunderville"
+          "Blunderville Square": "Площадь Blunderville",
+          "It Could Happen to You": "Это может случиться с вами",
+          "Just Crowning Around": "Просто коронуем вокруг",
+          "Gentlebean Knit Cap": "Вязаная кепка Gentlebean",
+          "Gentlebean Parka": "Нежная парка с бобами",
+          "Gentlebean Shoes": "Нежная обувь",
+          "Matte Winner's Crown": "Матовая корона победителя",
+          "Glossy Winner's Crown": "Глянцевая корона победителя",
+          "Rhiyes Identification Key": "Идентификационный ключ Rhiyes",
+          "Ballroom Etiquette - Embracing Blunders": "Бальный этикет: обнимаем грубые ошибки",
+          "Pink Bean": "Розовая фасоль",
+          "Pegwin": "Пегвин",
+          "Blunderville Crown": "Корона Бландервилля",
+          "Blunderville Flag": "Флаг Бландервилля",
+          "Blunderville Donut Bumper": "Бампер из пончиков Blunderville",
+          "Blunderville Padded Wall": "Мягкая стена Blunderville",
+          "Blunderville Hammer": "Бландервилль-Хаммер",
+          "Everybody Falls (Fall Guys Theme) Orchestrion Roll": "Все падают (тема Fall Guys) Orchestrion Roll",
+          "Blunderful Framer's Kit": "Набор Blunderful Framer's",
+          "Blunderous Framer's Kit": "Набор Blunderous Framer's Kit",
+          "Blunder-villed Framer's Kit": "Набор Framer's Kit для борьбы с промахами",
+          "Standard Rationing Manual": "Стандартное руководство по нормированию",
+          "Gold Saucer Aetheryte Ticket": "Билет на золотую тарелку с эфиритом",
+          "Wide Spectrum #1 Dye": "Краситель широкого спектра №1",
+          "Well-heeled Youth": "Молодежь на высоких каблуках",
+          "Lewena": "Левена",
+          "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках.",
+          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст."
         }
       },
       "locations": [
@@ -433,7 +552,13 @@
         "sources": [
           "https://na.finalfantasyxiv.com/lodestone/topics/detail/e1eb49ab626ea7b71795aab17ac5f335d8ace6de"
         ],
-        "issues": []
+        "issues": [],
+        "russian": {
+          "status": "partial",
+          "translated": 25,
+          "pending": 2,
+          "provider": "MyMemory + reviewed glossary"
+        }
       }
     },
     {
@@ -540,35 +665,6 @@
         ],
         "completionQuestId": 71004
       },
-      "automation": {
-        "status": "reviewed",
-        "sources": [
-          "https://na.finalfantasyxiv.com/lodestone/special/2026/All_Saints_Wake/tfrx2rkv52"
-        ],
-        "issues": []
-      },
-      "translations": {
-        "ru": {
-          "All Saints' Wake 2026": "День всех святых — 2026",
-          "A seasonal quest in Old Gridania featuring a bear costume and six furnishings.": "Сезонная цепочка квестов в Старой Гридании. Среди наград — костюм медведя и шесть предметов для дома.",
-          "Level 15 or higher.": "Уровень 15 или выше.",
-          "Start We Scare Bears with the Pumpkin-headed Apparition in Old Gridania (X:10.2 Y:9.4).": "Возьмите квест We Scare Bears у Pumpkin-headed Apparition в Old Gridania (X:10.2 Y:9.4).",
-          "Follow the seasonal quest objectives and continue the quest chain to obtain the costume.": "Выполняйте задания события и продолжайте цепочку, чтобы получить костюм.",
-          "Visit the event vendors for available furnishings and returning items. Finish seasonal quests before the event ends.": "Проверьте мебель и предметы прошлых лет у торговцев события. Завершите сезонные квесты до окончания события.",
-          "Grisly Bear Head and Grisly Bear Suit (costume).": "Grisly Bear Head и Grisly Bear Suit — костюм медведя.",
-          "Smiling Wakeshroom; Staring Wakeshroom; Wakesoul Buggy (furnishings).": "Smiling Wakeshroom, Staring Wakeshroom и Wakesoul Buggy — предметы для дома.",
-          "All Saints' Wake MMXXV Advertisement; All Saints' Wake MMXVI Advertisement; Tabletop All Saints' Wake MMXXV Advertisement.": "Плакаты All Saints' Wake MMXXV Advertisement и All Saints' Wake MMXVI Advertisement; настольный Tabletop All Saints' Wake MMXXV Advertisement.",
-          "Checked against the official event page and official Community Team blog on 2026-10-18. Vendor prices are not listed here.": "Проверено по официальной странице и блогу команды сообщества 18.10.2026. Цены торговцев здесь не указаны.",
-          "Official reward showcase: https://na.finalfantasyxiv.com/blog/003906.html": "Официальный обзор наград: https://na.finalfantasyxiv.com/blog/003906.html",
-          "Pumpkin-headed Apparition": "Тыквоголовое привидение",
-          "Old Gridania": "Старая Гридания",
-          "Bespectacled Peddler": "Торговка в очках",
-          "The Gold Saucer": "Золотое блюдце",
-          "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
-          "MGF Trader": "Торговец MGF",
-          "Blunderville Square": "Площадь Blunderville"
-        }
-      },
       "locations": [
         {
           "id": "wake-start",
@@ -597,7 +693,54 @@
           "x": 10.3,
           "y": 9.0
         }
-      ]
+      ],
+      "automation": {
+        "status": "reviewed",
+        "sources": [
+          "https://na.finalfantasyxiv.com/lodestone/special/2026/All_Saints_Wake/tfrx2rkv52"
+        ],
+        "issues": [],
+        "russian": {
+          "status": "complete",
+          "translated": 0,
+          "pending": 0,
+          "provider": "MyMemory + reviewed glossary"
+        }
+      },
+      "translations": {
+        "ru": {
+          "All Saints' Wake 2026": "День всех святых — 2026",
+          "A seasonal quest in Old Gridania featuring a bear costume and six furnishings.": "Сезонная цепочка квестов в Старой Гридании. Среди наград — костюм медведя и шесть предметов для дома.",
+          "Level 15 or higher.": "Уровень 15 или выше.",
+          "Start We Scare Bears with the Pumpkin-headed Apparition in Old Gridania (X:10.2 Y:9.4).": "Возьмите квест We Scare Bears у Pumpkin-headed Apparition в Old Gridania (X:10.2 Y:9.4).",
+          "Follow the seasonal quest objectives and continue the quest chain to obtain the costume.": "Выполняйте задания события и продолжайте цепочку, чтобы получить костюм.",
+          "Visit the event vendors for available furnishings and returning items. Finish seasonal quests before the event ends.": "Проверьте мебель и предметы прошлых лет у торговцев события. Завершите сезонные квесты до окончания события.",
+          "Grisly Bear Head and Grisly Bear Suit (costume).": "Grisly Bear Head и Grisly Bear Suit — костюм медведя.",
+          "Smiling Wakeshroom; Staring Wakeshroom; Wakesoul Buggy (furnishings).": "Smiling Wakeshroom, Staring Wakeshroom и Wakesoul Buggy — предметы для дома.",
+          "All Saints' Wake MMXXV Advertisement; All Saints' Wake MMXVI Advertisement; Tabletop All Saints' Wake MMXXV Advertisement.": "Плакаты All Saints' Wake MMXXV Advertisement и All Saints' Wake MMXVI Advertisement; настольный Tabletop All Saints' Wake MMXXV Advertisement.",
+          "Checked against the official event page and official Community Team blog on 2026-10-18. Vendor prices are not listed here.": "Проверено по официальной странице и блогу команды сообщества 18.10.2026. Цены торговцев здесь не указаны.",
+          "Official reward showcase: https://na.finalfantasyxiv.com/blog/003906.html": "Официальный обзор наград: https://na.finalfantasyxiv.com/blog/003906.html",
+          "Pumpkin-headed Apparition": "Тыквоголовое привидение",
+          "Old Gridania": "Старая Гридания",
+          "Bespectacled Peddler": "Торговка в очках",
+          "The Gold Saucer": "Золотое блюдце",
+          "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
+          "MGF Trader": "Торговец MGF",
+          "Blunderville Square": "Площадь Blunderville",
+          "We Scare Bears": "Мы пугаем медведей",
+          "Grim and Grisly Games": "Мрачные и грязные игры",
+          "Grisly Bear Head": "Гризли - насадка для медведя",
+          "Grisly Bear Suit": "Костюм «Ужасный медведь»",
+          "Smiling Wakeshroom": "Улыбающийся вейкшрум",
+          "Staring Wakeshroom": "Взгляд вейкшрума",
+          "Wakesoul Buggy": "Багги Wakesoul",
+          "All Saints' Wake MMXXV Advertisement": "Объявление о пробуждении всех святых MMXXV",
+          "All Saints' Wake MMXVI Advertisement": "Объявление All Saints Wake MMXVI",
+          "Tabletop All Saints' Wake MMXXV Advertisement": "Настольная реклама All Saints Wake MMXXV",
+          "Pattin": "Паттин",
+          "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках."
+        }
+      }
     }
   ]
 }
