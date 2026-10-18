@@ -43,12 +43,18 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 6 * S);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 10 * S);
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(10, 9) * S);
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.055f, .065f, .085f, .97f));
+        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(.24f, .30f, .37f, .65f));
+        ImGui.PushStyleColor(ImGuiCol.Tab, new Vector4(.11f, .15f, .20f, 1));
+        ImGui.PushStyleColor(ImGuiCol.TabActive, new Vector4(.13f, .32f, .34f, 1));
+        ImGui.PushStyleColor(ImGuiCol.TabHovered, new Vector4(.18f, .40f, .42f, 1));
+        ImGui.PushStyleColor(ImGuiCol.CheckMark, Teal);
         ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(.075f, .09f, .12f, .96f));
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.13f, .23f, .26f, 1));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.18f, .36f, .38f, 1));
         ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(.12f, .29f, .29f, 1));
         try { DrawContent(); }
-        finally { ImGui.PopStyleColor(4); ImGui.PopStyleVar(3); }
+        finally { ImGui.PopStyleColor(10); ImGui.PopStyleVar(3); }
     }
 
     private void DrawContent()
@@ -71,23 +77,10 @@ public sealed class EventWindow : Window, IDisposable
         if (ImGui.SmallButton(T("Settings") + "###Settings")) settingsVisible = !settingsVisible;
         if (settingsVisible) DrawSettings();
         ImGui.Separator();
-        if (ImGui.BeginChild("Event rail", new Vector2(216 * S, -30 * S), true))
+        if (ImGui.BeginChild("Event rail", new Vector2(Math.Clamp(ImGui.GetContentRegionAvail().X * .27f, 224 * S, 290 * S), -30 * S), true))
         {
             ImGui.TextColored(Muted, F("LIVE & UPCOMING  /  {0}", events.Count));
-            foreach (var e in events)
-            {
-                ImGui.PushID(e.Id);
-                if (ImGui.Selectable(L.Text(e.Title, e) + "###Event", selected == e.Id, ImGuiSelectableFlags.None, new Vector2(0, 30 * S))) selected = e.Id;
-                ImGui.TextColored(e.Active(now) ? Teal : Gold, T(e.Active(now) ? "LIVE NOW" : "UPCOMING"));
-                ImGui.TextDisabled(Countdown(e, now));
-                if (plugin.Progress.Catalog.TryGetValue(e.Id, out var def))
-                {
-                    var done = def.Rewards.Count(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed);
-                    ImGui.TextColored(Muted, F("{0} / {1} rewards confirmed", done, def.Rewards.Count));
-                }
-                ImGui.Separator();
-                ImGui.PopID();
-            }
+            foreach (var e in events) DrawEventCard(e, now);
             if (events.Count == 0) ImGui.TextWrapped(T("No current events in this feed. Check Lodestone for announcements."));
         }
         ImGui.EndChild();
@@ -101,6 +94,69 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.EndChild();
         ImGui.TextColored(Muted, "Lodestone  /  " + L.FeedStatus(plugin.Feed.Status, plugin.Feed.UpdatedAt));
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Tracking stays on this computer. Collection unlocks and observed rewards are separate from quest completion."));
+    }
+
+    private void DrawEventCard(EventInfo e, DateTimeOffset now)
+    {
+        ImGui.PushID(e.Id);
+        var active = selected == e.Id;
+        var accent = e.Active(now) ? Teal : Gold;
+        var width = ImGui.GetContentRegionAvail().X;
+        var title = L.Text(e.Title, e);
+        var padding = 12 * S;
+        var titleHeight = ImGui.CalcTextSize(title, false, width - padding * 2).Y;
+        var image = EventImagePath(e);
+        var artwork = image == null ? null : Plugin.Textures.GetFromFile(image);
+        var imageHeight = artwork == null ? 0 : 66 * S;
+        var height = imageHeight + titleHeight + ImGui.GetTextLineHeightWithSpacing() * 3 + 44 * S;
+        var start = ImGui.GetCursorScreenPos();
+        var cursor = ImGui.GetCursorPos();
+        if (ImGui.InvisibleButton("Select event", new Vector2(width, height))) selected = e.Id;
+        var hovered = ImGui.IsItemHovered();
+        if (hovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        var draw = ImGui.GetWindowDrawList();
+        var background = active ? new Vector4(.10f, .22f, .25f, 1)
+            : hovered ? new Vector4(.12f, .16f, .21f, 1) : new Vector4(.085f, .11f, .15f, 1);
+        draw.AddRectFilled(start, start + new Vector2(width, height), ImGui.ColorConvertFloat4ToU32(background), 8 * S);
+        draw.AddRect(start, start + new Vector2(width, height), ImGui.ColorConvertFloat4ToU32(active ? accent : new Vector4(.24f, .30f, .37f, .6f)), 8 * S);
+        draw.AddRectFilled(start + new Vector2(0, 10 * S), start + new Vector2(3 * S, height - 10 * S), ImGui.ColorConvertFloat4ToU32(accent), 2 * S);
+        if (artwork != null && artwork.TryGetWrap(out var wrap, out _))
+        {
+            var size = new Vector2(width - padding * 2, imageHeight);
+            var ratio = (float)wrap.Width / wrap.Height;
+            var displayRatio = size.X / size.Y;
+            var visible = ratio > displayRatio ? new Vector2(displayRatio / ratio, 1) : new Vector2(1, ratio / displayRatio);
+            draw.AddImage(wrap.Handle, start + new Vector2(padding, 9 * S), start + new Vector2(padding, 9 * S) + size,
+                (Vector2.One - visible) / 2, (Vector2.One + visible) / 2);
+        }
+        ImGui.SetCursorPos(cursor + new Vector2(padding, imageHeight + 16 * S));
+        ImGui.PushTextWrapPos(cursor.X + width - padding);
+        ImGui.TextColored(active ? new Vector4(.94f, 1, 1, 1) : new Vector4(.86f, .90f, .96f, 1), title);
+        ImGui.PopTextWrapPos();
+        ImGui.SetCursorPosX(cursor.X + padding);
+        ImGui.TextColored(accent, T(e.Active(now) ? "LIVE NOW" : "UPCOMING"));
+        ImGui.SetCursorPosX(cursor.X + padding);
+        ImGui.TextColored(Muted, Countdown(e, now));
+        if (plugin.Progress.Catalog.TryGetValue(e.Id, out var def))
+        {
+            var done = def.Rewards.Count(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed);
+            ImGui.SetCursorPosX(cursor.X + padding);
+            ImGui.TextColored(Muted, F("{0} / {1} rewards confirmed", done, def.Rewards.Count));
+            var bar = start + new Vector2(padding, height - 12 * S);
+            var barWidth = width - padding * 2;
+            draw.AddRectFilled(bar, bar + new Vector2(barWidth, 3 * S), ImGui.ColorConvertFloat4ToU32(new Vector4(.20f, .26f, .31f, 1)), 2 * S);
+            if (def.Rewards.Count > 0 && done > 0)
+                draw.AddRectFilled(bar, bar + new Vector2(barWidth * done / def.Rewards.Count, 3 * S), ImGui.ColorConvertFloat4ToU32(accent), 2 * S);
+        }
+        ImGui.SetCursorPos(cursor + new Vector2(0, height + 10 * S));
+        ImGui.PopID();
+    }
+
+    private string? EventImagePath(EventInfo e)
+    {
+        var file = plugin.Images.GetPath(e.ImageUrl);
+        var asset = plugin.Progress.BundledAsset(e.Id);
+        return file ?? (string.IsNullOrEmpty(asset) ? null : Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName!, "assets", asset));
     }
 
     private void DrawEvent(EventInfo e, DateTimeOffset now)
@@ -255,10 +311,7 @@ public sealed class EventWindow : Window, IDisposable
 
     private void DrawHero(EventInfo e)
     {
-        var file = plugin.Images.GetPath(e.ImageUrl);
-        var asset = plugin.Progress.BundledAsset(e.Id);
-        if (file == null && !string.IsNullOrEmpty(asset))
-            file = Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName!, "assets", asset);
+        var file = EventImagePath(e);
         if (file == null) return;
         var shared = Plugin.Textures.GetFromFile(file);
         var width = ImGui.GetContentRegionAvail().X;

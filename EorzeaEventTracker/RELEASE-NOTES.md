@@ -1,10 +1,10 @@
-Eorzea Event Tracker v0.4.0 for Dalamud API 15.
+Eorzea Event Tracker v0.4.1 for Dalamud API 15.
 
-- Favorite individual rewards and filter the list to your favorites. Selections persist across restarts and are shared between characters; completion still follows the current character.
-- Open the in-game map with a flag at the quest NPC or reward vendor using Where to go. Current events include quest givers, the All Saints' Wake vendor and the MGF trader.
-- NPC destinations and their translations update through the online feed. Missing destinations are not guessed; invalid metadata preserves the last valid feed.
-- English and Russian interface labels are included.
+- Replaced plain event names in the sidebar with full clickable cards, event artwork, wrapped titles and reward progress bars.
+- Selected events have a highlighted border, accent stripe and distinct background; hover feedback makes switching clear.
+- Sidebar width adapts to the window. Longer translated event titles wrap instead of being cut off.
+- Unified the window, tabs, borders and selection colors with a dark teal palette.
 
-Update through `/xlplugins` using your existing custom repository. Use `/events`, open Your progress, mark Favorite on a reward, and enable Favorites only. Where to go opens the map; How to join lists event NPCs.
+Update through `/xlplugins` using your existing custom repository, then open `/events`.
 
-Validation: Release build, feed/cache/configuration checks and collector/repository/localization tests. Final in-game interaction should be checked after installation.
+Validation: Release build against Dalamud API 15. Visual appearance at the player's UI scale should be checked in game.
