@@ -59,6 +59,9 @@ public sealed class Configuration : IPluginConfiguration
     public Dictionary<string, HashSet<uint>> ObservedRewards { get; set; } = new();
     public HashSet<uint> FavoriteRewards { get; set; } = new();
     public HashSet<uint> IgnoredRewards { get; set; } = new();
+    public Dictionary<string, HashSet<uint>> ManualRewards { get; set; } = new();
+    public float UiScale { get; set; } = 1;
+    public float BackgroundOpacity { get; set; } = 1;
     public bool NotifyFavoriteDeadlines { get; set; } = true;
     public Dictionary<string, int> DeadlineRemindersSent { get; set; } = new();
     public bool ShowCompactWidget { get; set; }

@@ -35,7 +35,7 @@ internal static class DeadlineReminderChecks
         e.StartsAt = now.AddHours(1);
         Check(Pending(now) == null, "upcoming events do not trigger reminders");
         e.StartsAt = now.AddDays(-5);
-        foreach (var state in new[] { RewardState.Owned, RewardState.Unlocked, RewardState.SeenPreviously, RewardState.QuestRewardEarned, RewardState.Unknown })
+        foreach (var state in new[] { RewardState.Owned, RewardState.Unlocked, RewardState.SeenPreviously, RewardState.QuestRewardEarned, RewardState.ManuallyObtained, RewardState.Unknown })
         {
             progress[1] = new(state);
             Check(Pending(now) == null, "no warning for confirmed or unknown reward state: " + state);

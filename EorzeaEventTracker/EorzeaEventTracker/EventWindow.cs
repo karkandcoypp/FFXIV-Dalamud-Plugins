@@ -27,6 +27,8 @@ public sealed class EventWindow : Window, IDisposable
     private string T(string text) => L.Text(text);
     private string E(string text) => L.Text(text, localizedEvent);
     private string F(string text, params object[] values) => L.Format(text, values);
+    private float UiScale => AppearancePolicy.Scale(plugin.Settings);
+    private float Opacity => AppearancePolicy.Opacity(plugin.Settings);
     private float S => ImGui.GetFontSize() / 17f;
     internal void SelectEvent(string id) => selected = id;
 
@@ -41,26 +43,28 @@ public sealed class EventWindow : Window, IDisposable
 
     public override void PreDraw()
     {
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.065f, .063f, .060f, .98f));
-        ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(.10f, .095f, .080f, 1));
-        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(.19f, .17f, .12f, 1));
-        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, new Vector4(.10f, .095f, .080f, 1));
+        SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(800, 540) * UiScale, MaximumSize = new Vector2(1600, 1400) * UiScale };
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.065f, .063f, .060f, .98f * Opacity));
+        ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(.10f, .095f, .080f, Opacity));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(.19f, .17f, .12f, Opacity));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, new Vector4(.10f, .095f, .080f, Opacity));
     }
 
     public override void PostDraw() => ImGui.PopStyleColor(4);
 
     public override void Draw()
     {
+        ImGui.SetWindowFontScale(UiScale);
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 6 * S);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 10 * S);
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(10, 9) * S);
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.065f, .063f, .060f, .98f));
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.065f, .063f, .060f, .98f * Opacity));
         ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(.39f, .35f, .26f, .40f));
         ImGui.PushStyleColor(ImGuiCol.Tab, new Vector4(.115f, .11f, .10f, 1));
         ImGui.PushStyleColor(ImGuiCol.TabActive, new Vector4(.25f, .22f, .16f, 1));
         ImGui.PushStyleColor(ImGuiCol.TabHovered, new Vector4(.31f, .27f, .19f, 1));
         ImGui.PushStyleColor(ImGuiCol.CheckMark, Gold);
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(.085f, .082f, .077f, .98f));
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(.085f, .082f, .077f, .98f * Opacity));
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.21f, .195f, .16f, 1));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.30f, .27f, .21f, 1));
         ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(.25f, .22f, .16f, 1));
@@ -76,7 +80,23 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(.89f, .87f, .81f, 1));
         ImGui.PushStyleColor(ImGuiCol.TextDisabled, Muted);
         try { DrawContent(); }
-        finally { ImGui.PopStyleColor(21); ImGui.PopStyleVar(3); }
+        finally { ImGui.PopStyleColor(21); ImGui.PopStyleVar(3); ImGui.SetWindowFontScale(1); }
+    }
+
+    private bool BeginScaledChild(string id, Vector2 size, bool border, ImGuiWindowFlags flags = ImGuiWindowFlags.None)
+    {
+        // Child windows inherit their parent's font scale. Normalize it so nested reward
+        // panels get the same requested scale rather than multiplying or losing it.
+        ImGui.SetWindowFontScale(1);
+        var visible = ImGui.BeginChild(id, size, border, flags);
+        ImGui.SetWindowFontScale(UiScale);
+        return visible;
+    }
+
+    private void EndScaledChild()
+    {
+        ImGui.EndChild();
+        ImGui.SetWindowFontScale(UiScale);
     }
 
     private void DrawContent()
@@ -99,21 +119,21 @@ public sealed class EventWindow : Window, IDisposable
         if (ImGui.SmallButton(T("Settings") + "###Settings")) settingsVisible = !settingsVisible;
         if (settingsVisible) DrawSettings();
         ImGui.Separator();
-        if (ImGui.BeginChild("Event rail", new Vector2(Math.Clamp(ImGui.GetContentRegionAvail().X * .27f, 224 * S, 290 * S), -30 * S), true))
+        if (BeginScaledChild("Event rail", new Vector2(Math.Clamp(ImGui.GetContentRegionAvail().X * .27f, 224 * S, 290 * S), -30 * S), true))
         {
             ImGui.TextColored(Muted, F("LIVE & UPCOMING  /  {0}", events.Count));
             foreach (var e in events) DrawEventCard(e, now);
             if (events.Count == 0) ImGui.TextWrapped(T("No current events in this feed. Check Lodestone for announcements."));
         }
-        ImGui.EndChild();
+        EndScaledChild();
         ImGui.SameLine();
-        if (ImGui.BeginChild("Event detail", new Vector2(0, -30 * S), true))
+        if (BeginScaledChild("Event detail", new Vector2(0, -30 * S), true))
         {
             var current = events.FirstOrDefault(e => e.Id == selected);
             if (current != null) DrawEvent(current, now);
             else if (ImGui.Button(T("Open Lodestone") + "###Open Lodestone")) OpenUrl("https://na.finalfantasyxiv.com/lodestone/topics/");
         }
-        ImGui.EndChild();
+        EndScaledChild();
         ImGui.TextColored(Muted, "Lodestone  /  " + L.FeedStatus(plugin.Feed.Status, plugin.Feed.UpdatedAt));
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Tracking stays on this computer. Collection unlocks and observed rewards are separate from quest completion."));
     }
@@ -139,6 +159,7 @@ public sealed class EventWindow : Window, IDisposable
         var draw = ImGui.GetWindowDrawList();
         var background = active ? new Vector4(.19f, .17f, .125f, 1)
             : hovered ? new Vector4(.15f, .14f, .12f, 1) : new Vector4(.105f, .10f, .09f, 1);
+        background.W = Opacity;
         draw.AddRectFilled(start, start + new Vector2(width, height), ImGui.ColorConvertFloat4ToU32(background), 8 * S);
         draw.AddRect(start, start + new Vector2(width, height), ImGui.ColorConvertFloat4ToU32(active ? accent : new Vector4(.25f, .23f, .19f, .4f)), 8 * S);
         draw.AddRectFilled(start + new Vector2(0, 10 * S), start + new Vector2(3 * S, height - 10 * S), ImGui.ColorConvertFloat4ToU32(accent), 2 * S);
@@ -305,15 +326,15 @@ public sealed class EventWindow : Window, IDisposable
         var statusHeight = ImGui.CalcTextSize(status, false, width).Y;
         var oneLine = ImGui.CalcTextSize(T("Favorite")).X + ImGui.CalcTextSize(T("Not interested")).X
             + ImGui.GetFrameHeight() * 2 + 24 * scale <= width;
-        var controlsHeight = ImGui.GetFrameHeight() * (oneLine ? 1 : 2) + (oneLine ? 0 : gap);
+        var controlsHeight = ImGui.GetFrameHeight() * (oneLine ? 1 : 2) + (oneLine ? 0 : gap) + ImGui.GetFrameHeight() + gap;
         var hasLocation = localizedEvent?.Locations.Any(l => l.Id == reward.LocationId) == true;
         var height = padding * 2 + headerHeight + statusHeight + controlsHeight + gap * 3
             + (hasLocation ? ImGui.GetTextLineHeight() + gap + ImGui.GetStyle().FramePadding.Y * 2 : 0);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding));
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8 * scale, gap));
         ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (ignored ? .60f : 1));
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, ignored ? new Vector4(.115f, .115f, .115f, 1) : new Vector4(.12f, .115f, .103f, 1));
-        if (ImGui.BeginChild("Reward tile", new Vector2(0, height), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.AlwaysUseWindowPadding))
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, ignored ? new Vector4(.115f, .115f, .115f, Opacity) : new Vector4(.12f, .115f, .103f, Opacity));
+        if (BeginScaledChild("Reward tile", new Vector2(0, height), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.AlwaysUseWindowPadding))
         {
             if (favorite && !ignored)
             {
@@ -348,9 +369,15 @@ public sealed class EventWindow : Window, IDisposable
                 plugin.Save();
             }
             if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Excluded from progress and reminders. Uncheck to count this reward again."));
+            var manuallyObtained = plugin.Progress.IsManuallyObtained(reward.Id);
+            ImGui.BeginDisabled(!plugin.Progress.ReadyForReminders);
+            if (ImGui.Checkbox(T("Already obtained (manual)") + "###ManuallyObtained", ref manuallyObtained))
+                plugin.Progress.SetManuallyObtained(reward.Id, manuallyObtained);
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Saved for this character. Clearing this mark preserves any automatic confirmation."));
+            ImGui.EndDisabled();
             DrawLocationButton(reward.LocationId);
         }
-        ImGui.EndChild();
+        EndScaledChild();
         ImGui.PopStyleColor();
         ImGui.PopStyleVar(3);
         ImGui.PopID();
@@ -375,9 +402,9 @@ public sealed class EventWindow : Window, IDisposable
         var padding = 18 * scale;
         var title = E(e.Title);
         float titleHeight;
-        ImGui.SetWindowFontScale(1.2f);
+        ImGui.SetWindowFontScale(UiScale * 1.2f);
         try { titleHeight = ImGui.CalcTextSize(title, false, width - padding * 2).Y; }
-        finally { ImGui.SetWindowFontScale(1); }
+        finally { ImGui.SetWindowFontScale(UiScale); }
         var height = Math.Max(Math.Clamp(width * .31f, 150 * scale, 205 * scale),
             titleHeight + ImGui.GetTextLineHeightWithSpacing() * 2 + padding * 2);
         var start = ImGui.GetCursorScreenPos();
@@ -402,14 +429,14 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.SetCursorPos(cursor + new Vector2(padding, textY));
         ImGui.TextColored(Gold, T(e.Active(now) ? "SEASONAL JOURNAL  /  LIVE" : "SEASONAL JOURNAL  /  UPCOMING"));
         ImGui.SetCursorPosX(cursor.X + padding);
-        ImGui.SetWindowFontScale(1.2f);
+        ImGui.SetWindowFontScale(UiScale * 1.2f);
         try
         {
             ImGui.PushTextWrapPos(cursor.X + width - padding);
             ImGui.TextColored(new Vector4(.98f, .95f, .88f, 1), title);
             ImGui.PopTextWrapPos();
         }
-        finally { ImGui.SetWindowFontScale(1); }
+        finally { ImGui.SetWindowFontScale(UiScale); }
         ImGui.SetCursorPosX(cursor.X + padding);
         ImGui.TextColored(new Vector4(.88f, .86f, .80f, 1), Countdown(e, now));
         ImGui.SetCursorPos(cursor + new Vector2(0, height + 12 * scale));
@@ -425,6 +452,15 @@ public sealed class EventWindow : Window, IDisposable
             plugin.Save();
         }
         ImGui.TextWrapped(T("Names use the event's translations when available. Original item names remain in tooltips."));
+        var uiScale = UiScale;
+        if (ImGui.SliderFloat(T("Interface scale") + "###UiScale", ref uiScale, .75f, 1.75f, "%.2fx")) c.UiScale = uiScale;
+        if (ImGui.IsItemDeactivatedAfterEdit()) plugin.Save();
+        var opacity = Opacity;
+        if (ImGui.SliderFloat(T("Background opacity") + "###BackgroundOpacity", ref opacity, .4f, 1, "%.2f")) c.BackgroundOpacity = opacity;
+        if (ImGui.IsItemDeactivatedAfterEdit()) plugin.Save();
+        ImGui.TextWrapped(T("Applies to the journal and widget. Text and icons remain opaque."));
+        if (ImGui.SmallButton(T("Reset appearance") + "###ResetAppearance"))
+        { c.UiScale = 1; c.BackgroundOpacity = 1; plugin.Save(); }
         var widget = c.ShowCompactWidget;
         if (ImGui.Checkbox(T("Show compact event widget") + "###CompactWidget", ref widget)) plugin.SetWidgetVisible(widget);
         var notify = c.NotifyOnLogin; if (ImGui.Checkbox(T("Notify on login") + "###Notify on login", ref notify)) { c.NotifyOnLogin = notify; plugin.Save(); }

@@ -114,5 +114,12 @@
   "Main objective completed": "Основная цель выполнена",
   "Automatic opening skips inactive events and completed main quests. You can always open the journal or widget manually.": "Автопоказ пропускает неактивные события и события с завершённым основным квестом. Журнал и виджет всегда можно открыть вручную.",
   "Not interested": "Не интересно",
-  "Excluded from progress and reminders. Uncheck to count this reward again.": "Не учитывается в прогрессе и напоминаниях. Снимите галочку, чтобы снова учитывать награду."
+  "Excluded from progress and reminders. Uncheck to count this reward again.": "Не учитывается в прогрессе и напоминаниях. Снимите галочку, чтобы снова учитывать награду.",
+  "Already obtained (manual)": "Уже получено (вручную)",
+  "Marked as obtained manually": "Получено — отмечено вручную",
+  "Saved for this character. Clearing this mark preserves any automatic confirmation.": "Сохраняется для этого персонажа. Снятие отметки не отменяет автоматическое подтверждение получения.",
+  "Interface scale": "Масштаб интерфейса",
+  "Background opacity": "Непрозрачность фона",
+  "Applies to the journal and widget. Text and icons remain opaque.": "Применяется к журналу и виджету. Текст и иконки остаются непрозрачными.",
+  "Reset appearance": "Сбросить оформление"
 }

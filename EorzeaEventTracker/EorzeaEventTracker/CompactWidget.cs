@@ -12,6 +12,8 @@ public sealed class CompactWidget : Window
     private static readonly Vector4 Teal = new(.49f, .69f, .62f, 1);
     private static readonly Vector4 Gold = new(.84f, .72f, .48f, 1);
     private Localizer L => plugin.Locale;
+    private float UiScale => AppearancePolicy.Scale(plugin.Settings);
+    private float Opacity => AppearancePolicy.Opacity(plugin.Settings);
     private float S => ImGui.GetFontSize() / 17f;
 
     public CompactWidget(Plugin plugin) : base("Eorzea / Events###EETCompact", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoFocusOnAppearing)
@@ -25,9 +27,10 @@ public sealed class CompactWidget : Window
 
     public override void PreDraw()
     {
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.075f, .072f, .065f, .96f));
-        ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(.10f, .095f, .080f, 1));
-        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(.19f, .17f, .12f, 1));
+        SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(260, 160) * UiScale, MaximumSize = new Vector2(520, 900) * UiScale };
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.075f, .072f, .065f, .96f * Opacity));
+        ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(.10f, .095f, .080f, Opacity));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(.19f, .17f, .12f, Opacity));
         ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(.39f, .35f, .26f, .40f));
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.21f, .195f, .16f, 1));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.30f, .27f, .21f, 1));
@@ -49,6 +52,13 @@ public sealed class CompactWidget : Window
     }
 
     public override void Draw()
+    {
+        ImGui.SetWindowFontScale(UiScale);
+        try { DrawContent(); }
+        finally { ImGui.SetWindowFontScale(1); }
+    }
+
+    private void DrawContent()
     {
         ImGui.TextColored(Gold, L.Text("Active events"));
         ImGui.SameLine();

@@ -28,16 +28,17 @@ public sealed class TrackedReward
     public uint EarnedByQuest { get; set; }
 }
 
-public enum RewardState { Unknown, NotSeen, NotUnlocked, SeenPreviously, QuestRewardEarned, Owned, Unlocked }
+public enum RewardState { Unknown, NotSeen, NotUnlocked, SeenPreviously, QuestRewardEarned, Owned, Unlocked, ManuallyObtained }
 public readonly record struct RewardProgress(RewardState State, int Quantity = 0)
 {
-    public bool Confirmed => State is RewardState.SeenPreviously or RewardState.QuestRewardEarned or RewardState.Owned or RewardState.Unlocked;
+    public bool Confirmed => State is RewardState.SeenPreviously or RewardState.QuestRewardEarned or RewardState.Owned or RewardState.Unlocked or RewardState.ManuallyObtained;
     public string Label => State switch
     {
         RewardState.Unlocked => "Unlocked",
         RewardState.Owned => $"In bags / equipped: {Quantity}",
         RewardState.QuestRewardEarned => "Earned from quest",
         RewardState.SeenPreviously => "Previously obtained",
+        RewardState.ManuallyObtained => "Marked as obtained manually",
         RewardState.NotUnlocked => "Not unlocked",
         RewardState.NotSeen => "Not detected",
         _ => "Waiting for character data",
@@ -46,6 +47,8 @@ public readonly record struct RewardProgress(RewardState State, int Quantity = 0
 
 public static class ProgressPolicy
 {
+    public static RewardProgress ApplyManual(RewardProgress automatic, bool manual) =>
+        automatic.Confirmed || !manual ? automatic : new(RewardState.ManuallyObtained);
     public static RewardProgress Resolve(bool available, bool? unlocked, int quantity, bool questEarned, bool observed)
     {
         if (!available) return new(RewardState.Unknown);

@@ -83,3 +83,9 @@ The widget lists active events from the current feed, ordered by deadline, with 
 Mark Not interested on a reward card to mute it and exclude it from reward progress in every view. Both the obtained count and the total count exclude marked rewards. The remaining-rewards filter also omits them. Disable the remaining/favorites filters to see and restore excluded cards.
 
 Ignoring a favorite removes it from favorites and reminders; favoriting an ignored reward restores it. Clearing Not interested restores inclusion without erasing acquisition history. These local preferences are shared between characters and persist across restarts. Main-quest completion and automatic opening rules are unchanged.
+
+## Manual acquired rewards and appearance (v0.9.0)
+
+Use Already obtained (manual) on a reward card when the plugin could not detect an earlier acquisition. The mark belongs only to the currently loaded character and is stored separately from automatically observed items. It counts toward all progress displays and missing-favorite reminders. Clearing it never removes genuine automatic confirmation. Not interested still excludes a reward from totals regardless of acquisition.
+
+Settings provides a plugin-local interface scale from75% to175% and background opacity from40% to100%, shared by the journal and widget. Text, icons and cover artwork remain opaque. Reset appearance restores100% scale and opacity. Changes persist when the slider edit finishes; other plugins' settings are not changed.

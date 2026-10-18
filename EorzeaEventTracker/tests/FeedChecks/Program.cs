@@ -22,6 +22,7 @@ internal static class Program
         DeadlineReminderChecks.Run();
         EventCompletionChecks.Run();
         RewardPreferenceChecks.Run();
+        ManualRewardChecks.Run();
         var settings = new Configuration();
         Check(!settings.ShowCompactWidget, "compact widget starts hidden for existing configurations");
         settings.ShowCompactWidget = true;

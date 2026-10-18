@@ -5,6 +5,7 @@
     <Compile Include="../../EorzeaEventTracker/EventModels.cs" Link="EventModels.cs" />
     <Compile Include="../../EorzeaEventTracker/ProgressModels.cs" Link="ProgressModels.cs" />
     <Compile Include="../../EorzeaEventTracker/RewardPreferences.cs" Link="RewardPreferences.cs" />
+    <Compile Include="../../EorzeaEventTracker/AppearancePolicy.cs" Link="AppearancePolicy.cs" />
     <Compile Include="../../EorzeaEventTracker/DeadlineReminderPolicy.cs" Link="DeadlineReminderPolicy.cs" />
     <Compile Include="../../EorzeaEventTracker/EventCompletionPolicy.cs" Link="EventCompletionPolicy.cs" />
     <Compile Include="../../EorzeaEventTracker/Localizer.cs" Link="Localizer.cs" />

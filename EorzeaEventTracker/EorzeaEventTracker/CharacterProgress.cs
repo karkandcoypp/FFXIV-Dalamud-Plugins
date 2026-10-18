@@ -16,6 +16,7 @@ public sealed class CharacterProgress
     private EventFeed? catalogFeed;
     public Dictionary<uint, bool> Quests { get; } = new();
     public Dictionary<uint, RewardProgress> Rewards { get; } = new();
+    private readonly Dictionary<uint, RewardProgress> automaticRewards = new();
     public bool Available { get; private set; }
     public bool ReadyForReminders => Available && contentId == Plugin.Player.ContentId
         && ReferenceEquals(catalogFeed, plugin.Feed.Feed);
@@ -83,6 +84,8 @@ public sealed class CharacterProgress
                     if (!item.IsEmpty && item.Quantity > 0)
                         quantities[item.BaseItemId] = quantities.GetValueOrDefault(item.BaseItemId) + (int)item.Quantity;
             var observed = ProgressPolicy.ForCharacter(plugin.Settings.ObservedRewards, contentId);
+            var manual = ProgressPolicy.ForCharacter(plugin.Settings.ManualRewards, contentId);
+            automaticRewards.Clear();
             var definitions = feed.Events.Where(e => e.Active(DateTimeOffset.UtcNow) || e.Upcoming(DateTimeOffset.UtcNow))
                 .Select(e => Catalog.GetValueOrDefault(e.Id)).OfType<TrackingDefinition>().ToList();
             var quests = Plugin.Data.GetExcelSheet<Quest>();
@@ -91,12 +94,18 @@ public sealed class CharacterProgress
             var items = Plugin.Data.GetExcelSheet<Item>();
             foreach (var reward in definitions.SelectMany(d => d.Rewards))
             {
-                if (!items.TryGetRow(reward.Id, out var row)) { Rewards[reward.Id] = new(RewardState.Unknown); continue; }
+                if (!items.TryGetRow(reward.Id, out var row))
+                {
+                    automaticRewards[reward.Id] = new(RewardState.Unknown);
+                    Rewards[reward.Id] = ProgressPolicy.ApplyManual(new(RewardState.Unknown), manual.Contains(reward.Id));
+                    continue;
+                }
                 bool? unlocked = Plugin.Unlocks.IsItemUnlockable(row) ? Plugin.Unlocks.IsItemUnlocked(row) : null;
                 var state = ProgressPolicy.Resolve(true, unlocked, quantities.GetValueOrDefault(reward.Id),
                     reward.EarnedByQuest != 0 && Quests.GetValueOrDefault(reward.EarnedByQuest)
                         && GuaranteesReward(reward.EarnedByQuest, reward.Id), observed.Contains(reward.Id));
-                Rewards[reward.Id] = state;
+                automaticRewards[reward.Id] = state;
+                Rewards[reward.Id] = ProgressPolicy.ApplyManual(state, manual.Contains(reward.Id));
                 if (state.Confirmed && observed.Add(reward.Id)) dirty = true;
             }
             Available = true;
@@ -109,7 +118,19 @@ public sealed class CharacterProgress
         }
     }
 
-    private void Clear() { Available = false; Quests.Clear(); Rewards.Clear(); }
+    public bool IsManuallyObtained(uint id) => ReadyForReminders && plugin.Settings.ManualRewards.TryGetValue(
+        contentId.ToString(System.Globalization.CultureInfo.InvariantCulture), out var rewards) && rewards.Contains(id);
+
+    public void SetManuallyObtained(uint id, bool obtained)
+    {
+        if (!ReadyForReminders) return;
+        var manual = ProgressPolicy.ForCharacter(plugin.Settings.ManualRewards, contentId);
+        if (obtained) manual.Add(id); else manual.Remove(id);
+        Rewards[id] = ProgressPolicy.ApplyManual(automaticRewards.GetValueOrDefault(id), obtained);
+        plugin.Save();
+    }
+
+    private void Clear() { Available = false; Quests.Clear(); Rewards.Clear(); automaticRewards.Clear(); }
     private static bool GuaranteesReward(uint questId, uint itemId)
     {
         if (!Plugin.Data.GetExcelSheet<Quest>().TryGetRow(questId, out var row)) return false;
