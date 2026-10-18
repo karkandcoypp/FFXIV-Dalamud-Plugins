@@ -42,6 +42,12 @@ public static class FeedPolicy
                 if (!Text(language.Key, 16) || language.Value == null || language.Value.Count > 500
                     || language.Value.Any(t => !Text(t.Key, 10000) || !Text(t.Value, 10000)))
                     throw new IOException("Invalid translations");
+            if (e.Locations == null || e.Locations.Count > 32
+                || e.Locations.Any(l => l == null || !Text(l.Id, 64) || !Text(l.Npc, 500) || !Text(l.Zone, 500)
+                    || l.TerritoryId == 0 || l.TerritoryId > 100000 || l.MapId == 0 || l.MapId > 100000
+                    || !float.IsFinite(l.X) || !float.IsFinite(l.Y) || l.X < 0 || l.X > 100 || l.Y < 0 || l.Y > 100)
+                || e.Locations.Select(l => l.Id).Distinct().Count() != e.Locations.Count)
+                throw new IOException("Invalid event locations");
             if (e.Tracking is not { } tracking) continue;
             if (tracking.EventId != e.Id || tracking.Quests == null || tracking.Rewards == null
                 || tracking.Quests.Count > 64 || tracking.Rewards.Count > 200
@@ -52,6 +58,9 @@ public static class FeedPolicy
                 || tracking.Rewards.Select(r => r.Id).Distinct().Count() != tracking.Rewards.Count
                 || tracking.Rewards.Any(r => r.EarnedByQuest != 0 && !tracking.Quests.Any(q => q.Id == r.EarnedByQuest)))
                 throw new IOException("Invalid tracking definition");
+            if (tracking.Quests.Any(q => !LocationReference(e, q.LocationId))
+                || tracking.Rewards.Any(r => !LocationReference(e, r.LocationId)))
+                throw new IOException("Unknown NPC location reference");
             quests += tracking.Quests.Count;
             rewards += tracking.Rewards.Count;
             if (quests > 256 || rewards > 2000) throw new IOException("Tracking catalog too large");
@@ -61,5 +70,6 @@ public static class FeedPolicy
     }
 
     private static bool Text(string? text, int max) => !string.IsNullOrWhiteSpace(text) && text.Length <= max;
+    private static bool LocationReference(EventInfo e, string? id) => id != null && (id.Length == 0 || e.Locations.Any(l => l.Id == id));
     private static bool List(List<string>? list) => list != null && list.Count <= 200 && list.All(s => Text(s, 10000));
 }

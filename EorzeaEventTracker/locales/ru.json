@@ -92,5 +92,12 @@
   "Dates extracted automatically from official site.": "Даты автоматически получены с официального сайта.",
   "Reward names, NPC location and quest steps require review.": "Названия наград, расположение NPC и шаги квестов требуют проверки.",
   "Events, quest IDs, rewards, artwork and translations update through the feed. New tracking mechanics may still require a plugin update.": "События, ID квестов, награды, картинки и переводы обновляются через ленту. Поддержка новой механики отслеживания может потребовать обновления плагина.",
-  "Names use the event's translations when available. Original item names remain in tooltips.": "Названия отображаются в переводе события, если он есть. Исходные названия предметов сохранены в подсказках."
+  "Names use the event's translations when available. Original item names remain in tooltips.": "Названия отображаются в переводе события, если он есть. Исходные названия предметов сохранены в подсказках.",
+  "Favorite": "В избранном",
+  "Favorites only": "Только избранное",
+  "FAVORITES   {0} / {1} obtained": "ИЗБРАННОЕ   Получено: {0} из {1}",
+  "Where to go": "Куда идти",
+  "EVENT NPCs": "NPC СОБЫТИЯ",
+  "Could not open the map. Log in and try again; this area may be unavailable.": "Не удалось открыть карту. Войдите в игру и попробуйте снова; область может быть недоступна.",
+  "No rewards match these filters. Mark rewards as favorites or change the filters.": "Нет наград для этих фильтров. Добавьте награды в избранное или измените фильтры."
 }

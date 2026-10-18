@@ -21,6 +21,7 @@ class OnlineFeedTests(unittest.TestCase):
             self.assertEqual(event['tracking'], detail['tracking'])
             self.assertEqual(event['translations'], detail['translations'])
             self.assertEqual(event['imageUrl'], detail['imageUrl'])
+            self.assertEqual(event['locations'], detail['locations'])
 
     def test_current_feed_contains_complete_online_definitions(self):
         feed = json.loads((ROOT / 'config/events.json').read_text(encoding='utf-8'))
@@ -29,6 +30,9 @@ class OnlineFeedTests(unittest.TestCase):
         self.assertGreaterEqual(sum(len(e['tracking']['rewards']) for e in mapped), 31)
         for event in mapped:
             self.assertEqual(event['id'], event['tracking']['eventId'])
+            locations = {l['id'] for l in event['locations']}
+            for target in event['tracking']['quests'] + event['tracking']['rewards']:
+                self.assertIn(target['locationId'], locations)
             self.assertTrue(event['imageUrl'].startswith('https://lds-img.finalfantasyxiv.com/'))
             if event.get('translations', {}).get('ru'):
                 self.assertIn(event['title'], event['translations']['ru'])

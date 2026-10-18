@@ -56,12 +56,14 @@
           {
             "id": 65970,
             "name": "It Could Happen to You",
-            "icon": 100376
+            "icon": 100376,
+            "locationId": "saucer-unlock"
           },
           {
             "id": 70337,
             "name": "Just Crowning Around",
-            "icon": 0
+            "icon": 0,
+            "locationId": "blunderville-unlock"
           }
         ],
         "rewards": [
@@ -69,139 +71,162 @@
             "id": 41560,
             "name": "Gentlebean Knit Cap",
             "icon": 56610,
-            "price": 410
+            "price": 410,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41561,
             "name": "Gentlebean Parka",
             "icon": 42992,
-            "price": 410
+            "price": 410,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41562,
             "name": "Gentlebean Bottoms",
             "icon": 57520,
-            "price": 410
+            "price": 410,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41563,
             "name": "Gentlebean Shoes",
             "icon": 49614,
-            "price": 410
+            "price": 410,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41564,
             "name": "Matte Winner's Crown",
             "icon": 56611,
-            "price": 410
+            "price": 410,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41796,
             "name": "Glossy Winner's Crown",
             "icon": 56645,
-            "price": 410
+            "price": 410,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41491,
             "name": "Rhiyes Identification Key",
             "icon": 26014,
-            "price": 410
+            "price": 410,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41463,
             "name": "Ballroom Etiquette - Embracing Blunders",
             "icon": 26435,
-            "price": 410
+            "price": 410,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41479,
             "name": "Pink Bean",
             "icon": 59899,
-            "price": 350
+            "price": 350,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41480,
             "name": "Pegwin",
             "icon": 59900,
-            "price": 350
+            "price": 350,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41437,
             "name": "Blunderville Crown",
             "icon": 53467,
-            "price": 220
+            "price": 220,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41438,
             "name": "Blunderville Flag",
             "icon": 53468,
-            "price": 220
+            "price": 220,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41439,
             "name": "Blunderville Donut Bumper",
             "icon": 52785,
-            "price": 220
+            "price": 220,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41440,
             "name": "Blunderville Padded Wall",
             "icon": 52786,
-            "price": 220
+            "price": 220,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41441,
             "name": "Blunderville Rainbow",
             "icon": 52787,
-            "price": 220
+            "price": 220,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41442,
             "name": "Blunderville Hammer",
             "icon": 52788,
-            "price": 220
+            "price": 220,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41628,
             "name": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
             "icon": 25945,
-            "price": 220
+            "price": 220,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41377,
             "name": "Blunderful Framer's Kit",
             "icon": 26625,
-            "price": 200
+            "price": 200,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41378,
             "name": "Blunderous Framer's Kit",
             "icon": 26625,
-            "price": 200
+            "price": 200,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41379,
             "name": "Blunder-villed Framer's Kit",
             "icon": 26625,
-            "price": 200
+            "price": 200,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41707,
             "name": "Standard Rationing Manual",
             "icon": 26186,
-            "price": 200
+            "price": 200,
+            "locationId": "mgf-trader"
           },
           {
             "id": 41708,
             "name": "Gold Saucer Aetheryte Ticket",
             "icon": 25918,
-            "price": 200
+            "price": 200,
+            "locationId": "mgf-trader"
           },
           {
             "id": 52255,
             "name": "Wide Spectrum #1 Dye",
             "icon": 22805,
-            "price": 150
+            "price": 150,
+            "locationId": "mgf-trader"
           }
         ]
       },
@@ -225,9 +250,45 @@
           "Standard Rationing Manual / Gold Saucer Aetheryte Ticket: 200 each.": "Standard Rationing Manual / Gold Saucer Aetheryte Ticket: по 200 MGF.",
           "Wide Spectrum #1 Dye: 150.": "Wide Spectrum #1 Dye — краситель: 150 MGF.",
           "All prices are MGF. Earn MGF during the event.": "Все цены указаны в MGF. Валюта зарабатывается во время события.",
-          "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/": "Правила и таблица призов проверены 18.10.2026: https://na.finalfantasyxiv.com/lodestone/special/fallguys/"
+          "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/": "Правила и таблица призов проверены 18.10.2026: https://na.finalfantasyxiv.com/lodestone/special/fallguys/",
+          "Pumpkin-headed Apparition": "Тыквоголовое привидение",
+          "Old Gridania": "Старая Гридания",
+          "Bespectacled Peddler": "Торговка в очках",
+          "The Gold Saucer": "Золотое блюдце",
+          "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
+          "MGF Trader": "Торговец MGF",
+          "Blunderville Square": "Площадь Blunderville"
         }
-      }
+      },
+      "locations": [
+        {
+          "id": "saucer-unlock",
+          "npc": "Well-heeled Youth",
+          "zone": "Ul'dah - Steps of Nald",
+          "territoryId": 130,
+          "mapId": 13,
+          "x": 9.6,
+          "y": 9.0
+        },
+        {
+          "id": "blunderville-unlock",
+          "npc": "Lewena",
+          "zone": "The Gold Saucer",
+          "territoryId": 144,
+          "mapId": 196,
+          "x": 4.8,
+          "y": 6.1
+        },
+        {
+          "id": "mgf-trader",
+          "npc": "MGF Trader",
+          "zone": "Blunderville Square",
+          "territoryId": 1197,
+          "mapId": 891,
+          "x": 3.8,
+          "y": 3.1
+        }
+      ]
     },
     {
       "id": "692a7561de5dd384",
@@ -260,12 +321,14 @@
           {
             "id": 71003,
             "name": "We Scare Bears",
-            "icon": 101479
+            "icon": 101479,
+            "locationId": "wake-start"
           },
           {
             "id": 71004,
             "name": "Grim and Grisly Games",
-            "icon": 101480
+            "icon": 101480,
+            "locationId": "wake-pattin"
           }
         ],
         "rewards": [
@@ -274,50 +337,58 @@
             "name": "Grisly Bear Head",
             "icon": 56959,
             "price": 0,
-            "earnedByQuest": 71004
+            "earnedByQuest": 71004,
+            "locationId": "wake-pattin"
           },
           {
             "id": 52403,
             "name": "Grisly Bear Suit",
             "icon": 57397,
             "price": 0,
-            "earnedByQuest": 71004
+            "earnedByQuest": 71004,
+            "locationId": "wake-pattin"
           },
           {
             "id": 51292,
             "name": "Smiling Wakeshroom",
             "icon": 52885,
-            "price": 0
+            "price": 0,
+            "locationId": "wake-vendor"
           },
           {
             "id": 51293,
             "name": "Staring Wakeshroom",
             "icon": 52886,
-            "price": 0
+            "price": 0,
+            "locationId": "wake-vendor"
           },
           {
             "id": 51294,
             "name": "Wakesoul Buggy",
             "icon": 52887,
-            "price": 0
+            "price": 0,
+            "locationId": "wake-vendor"
           },
           {
             "id": 51302,
             "name": "All Saints' Wake MMXXV Advertisement",
             "icon": 51944,
-            "price": 0
+            "price": 0,
+            "locationId": "wake-vendor"
           },
           {
             "id": 51304,
             "name": "All Saints' Wake MMXVI Advertisement",
             "icon": 51943,
-            "price": 0
+            "price": 0,
+            "locationId": "wake-vendor"
           },
           {
             "id": 51303,
             "name": "Tabletop All Saints' Wake MMXXV Advertisement",
             "icon": 53565,
-            "price": 0
+            "price": 0,
+            "locationId": "wake-vendor"
           }
         ]
       },
@@ -334,9 +405,45 @@
           "Smiling Wakeshroom; Staring Wakeshroom; Wakesoul Buggy (furnishings).": "Smiling Wakeshroom, Staring Wakeshroom и Wakesoul Buggy — предметы для дома.",
           "All Saints' Wake MMXXV Advertisement; All Saints' Wake MMXVI Advertisement; Tabletop All Saints' Wake MMXXV Advertisement.": "Плакаты All Saints' Wake MMXXV Advertisement и All Saints' Wake MMXVI Advertisement; настольный Tabletop All Saints' Wake MMXXV Advertisement.",
           "Checked against the official event page and official Community Team blog on 2026-10-18. Vendor prices are not listed here.": "Проверено по официальной странице и блогу команды сообщества 18.10.2026. Цены торговцев здесь не указаны.",
-          "Official reward showcase: https://na.finalfantasyxiv.com/blog/003906.html": "Официальный обзор наград: https://na.finalfantasyxiv.com/blog/003906.html"
+          "Official reward showcase: https://na.finalfantasyxiv.com/blog/003906.html": "Официальный обзор наград: https://na.finalfantasyxiv.com/blog/003906.html",
+          "Pumpkin-headed Apparition": "Тыквоголовое привидение",
+          "Old Gridania": "Старая Гридания",
+          "Bespectacled Peddler": "Торговка в очках",
+          "The Gold Saucer": "Золотое блюдце",
+          "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
+          "MGF Trader": "Торговец MGF",
+          "Blunderville Square": "Площадь Blunderville"
         }
-      }
+      },
+      "locations": [
+        {
+          "id": "wake-start",
+          "npc": "Pumpkin-headed Apparition",
+          "zone": "Old Gridania",
+          "territoryId": 133,
+          "mapId": 3,
+          "x": 10.2,
+          "y": 9.4
+        },
+        {
+          "id": "wake-pattin",
+          "npc": "Pattin",
+          "zone": "Old Gridania",
+          "territoryId": 133,
+          "mapId": 3,
+          "x": 10.2,
+          "y": 9.4
+        },
+        {
+          "id": "wake-vendor",
+          "npc": "Bespectacled Peddler",
+          "zone": "Old Gridania",
+          "territoryId": 133,
+          "mapId": 3,
+          "x": 10.3,
+          "y": 9.0
+        }
+      ]
     }
   ]
 }

@@ -17,6 +17,8 @@ public sealed class EventWindow : Window, IDisposable
     private string urlBuffer;
     private string selected = "";
     private bool remainingOnly;
+    private bool favoritesOnly;
+    private DateTime mapErrorUntil;
     private EventInfo? localizedEvent;
     private static readonly Vector4 Teal = new(.40f, .88f, .77f, 1);
     private static readonly Vector4 Gold = new(1, .76f, .43f, 1);
@@ -119,6 +121,7 @@ public sealed class EventWindow : Window, IDisposable
         if (!e.Verified) ImGui.TextColored(Gold, T("Partial details — check the official page"));
         if (!string.IsNullOrWhiteSpace(e.Description)) ImGui.TextWrapped(E(e.Description));
         if (ImGui.Button(T("Official event guide") + "###Official event guide")) OpenUrl(e.Url);
+        if (DateTime.UtcNow < mapErrorUntil) ImGui.TextWrapped(T("Could not open the map. Log in and try again; this area may be unavailable."));
         ImGui.Spacing();
         if (ImGui.BeginTabBar("Event tabs"))
         {
@@ -132,6 +135,17 @@ public sealed class EventWindow : Window, IDisposable
             {
                 Section("REQUIREMENTS", e.Requirements);
                 Section("YOUR NEXT STEPS", e.Steps);
+                if (e.Locations.Count > 0)
+                {
+                    ImGui.TextColored(Teal, T("EVENT NPCs"));
+                    foreach (var location in e.Locations)
+                    {
+                        ImGui.PushID(location.Id);
+                        ImGui.TextWrapped($"{E(location.Npc)} — {E(location.Zone)} (X:{location.X:F1} Y:{location.Y:F1})");
+                        DrawLocationButton(location.Id);
+                        ImGui.PopID();
+                    }
+                }
                 Section("SOURCE NOTES", e.Notes);
                 ImGui.EndTabItem();
             }
@@ -150,11 +164,14 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.TextColored(Teal, T("QUEST JOURNAL"));
         foreach (var quest in definition.Quests)
         {
+            ImGui.PushID((int)quest.Id);
             var known = plugin.Progress.Available && plugin.Progress.Quests.TryGetValue(quest.Id, out _);
             var done = known && plugin.Progress.Quests[quest.Id];
             ImGui.TextColored(done ? Teal : Muted, T(done ? "[DONE]" : known ? "[TODO]" : "[ ... ]"));
             ImGui.SameLine();
             ImGui.TextWrapped(E(quest.Name));
+            DrawLocationButton(quest.LocationId);
+            ImGui.PopID();
         }
         ImGui.TextWrapped(T("Quest completion does not mean all shop rewards are collected."));
         ImGui.Spacing();
@@ -164,6 +181,16 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.ProgressBar(definition.Rewards.Count == 0 ? 0 : (float)count / definition.Rewards.Count, new Vector2(-1, 9 * S), "");
         ImGui.PopStyleColor();
         ImGui.Checkbox(T("Show remaining rewards only") + "###Show remaining rewards only", ref remainingOnly);
+        ImGui.Checkbox(T("Favorites only") + "###FavoritesOnly", ref favoritesOnly);
+        var favorites = definition.Rewards.Where(r => plugin.Settings.FavoriteRewards.Contains(r.Id)).ToList();
+        if (favorites.Count > 0)
+        {
+            var confirmed = favorites.Count(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed);
+            ImGui.TextColored(Gold, F("FAVORITES   {0} / {1} obtained", confirmed, favorites.Count));
+        }
+        if (!definition.Rewards.Any(r => (!favoritesOnly || plugin.Settings.FavoriteRewards.Contains(r.Id))
+            && (!remainingOnly || !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed)))
+            ImGui.TextWrapped(T("No rewards match these filters. Mark rewards as favorites or change the filters."));
         var columns = ImGui.GetContentRegionAvail().X >= 560 * S ? 2 : 1;
         if (ImGui.BeginTable("Rewards", columns, ImGuiTableFlags.SizingStretchSame))
         {
@@ -171,6 +198,7 @@ public sealed class EventWindow : Window, IDisposable
             {
                 var state = plugin.Progress.Rewards.GetValueOrDefault(reward.Id);
                 if (remainingOnly && state.Confirmed) continue;
+                if (favoritesOnly && !plugin.Settings.FavoriteRewards.Contains(reward.Id)) continue;
                 ImGui.TableNextColumn();
                 DrawReward(reward, state);
             }
@@ -185,7 +213,7 @@ public sealed class EventWindow : Window, IDisposable
     private void DrawReward(TrackedReward reward, RewardProgress progress)
     {
         ImGui.PushID((int)reward.Id);
-        if (ImGui.BeginChild("Reward tile", new Vector2(0, 146 * S), true))
+        if (ImGui.BeginChild("Reward tile", new Vector2(0, 210 * S), true))
         {
             var icon = Plugin.Textures.GetFromGameIcon(new GameIconLookup(reward.Icon));
             if (reward.Icon != 0 && icon.TryGetWrap(out var wrap, out _)) ImGui.Image(wrap.Handle, new Vector2(38 * S));
@@ -195,14 +223,34 @@ public sealed class EventWindow : Window, IDisposable
             var textWidth = Math.Max(70 * S, ImGui.GetContentRegionAvail().X);
             ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textWidth);
             ImGui.TextUnformatted(E(reward.Name));
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip($"{reward.Name}\nItem #{reward.Id}");
             ImGui.PopTextWrapPos();
             ImGui.EndGroup();
             ImGui.TextColored(progress.Confirmed ? Teal : Muted, L.RewardLabel(progress));
             if (reward.Price > 0) ImGui.TextColored(Gold, $"{reward.Price.ToString("N0", L.Culture)} {E(reward.Currency)}");
-            if (ImGui.IsWindowHovered()) ImGui.SetTooltip($"{reward.Name}\n{L.RewardLabel(progress)}\nItem #{reward.Id}");
+            var favorite = plugin.Settings.FavoriteRewards.Contains(reward.Id);
+            if (ImGui.Checkbox(T("Favorite") + "###Favorite", ref favorite))
+            {
+                if (favorite) plugin.Settings.FavoriteRewards.Add(reward.Id);
+                else plugin.Settings.FavoriteRewards.Remove(reward.Id);
+                plugin.Save();
+            }
+            DrawLocationButton(reward.LocationId);
         }
         ImGui.EndChild();
         ImGui.PopID();
+    }
+
+    private void DrawLocationButton(string locationId)
+    {
+        var location = localizedEvent?.Locations.FirstOrDefault(l => l.Id == locationId);
+        if (location == null) return;
+        ImGui.BeginDisabled(!Plugin.Client.IsLoggedIn);
+        if (ImGui.SmallButton(T("Where to go") + "###Map"))
+            if (!EventNavigation.Open(location)) mapErrorUntil = DateTime.UtcNow.AddSeconds(10);
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip($"{E(location.Npc)} — {E(location.Zone)}\nX:{location.X:F1} Y:{location.Y:F1}");
+        ImGui.EndDisabled();
     }
 
     private void DrawHero(EventInfo e)

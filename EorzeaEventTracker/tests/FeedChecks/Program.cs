@@ -20,6 +20,12 @@ internal static class Program
         }
         await OnlineFeedChecks.Run();
         var settings = new Configuration();
+        Check(settings.FavoriteRewards.Count == 0, "existing configurations start without favorites");
+        settings.FavoriteRewards.Add(52402);
+        var saved = JsonSerializer.Deserialize<Configuration>(JsonSerializer.Serialize(settings))!;
+        Check(saved.FavoriteRewards.Contains(52402), "favorite rewards survive a configuration save and reload");
+        saved.FavoriteRewards.Remove(52402);
+        Check(!JsonSerializer.Deserialize<Configuration>(JsonSerializer.Serialize(saved))!.FavoriteRewards.Contains(52402), "removed favorites do not reappear after reload");
         var locale = new Localizer(settings);
         Check(locale.Text("Settings") == "Settings", "English remains the default language");
         settings.Language = "ru";

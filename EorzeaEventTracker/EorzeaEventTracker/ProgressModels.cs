@@ -11,12 +11,14 @@ public sealed class TrackingDefinition
 }
 public sealed class TrackedQuest
 {
+    public string LocationId { get; set; } = "";
     public uint Id { get; set; }
     public string Name { get; set; } = "";
     public uint Icon { get; set; }
 }
 public sealed class TrackedReward
 {
+    public string LocationId { get; set; } = "";
     public uint Id { get; set; }
     public string Name { get; set; } = "";
     public uint Icon { get; set; }

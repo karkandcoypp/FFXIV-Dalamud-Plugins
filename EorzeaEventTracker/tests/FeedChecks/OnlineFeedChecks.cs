@@ -23,6 +23,8 @@ internal static class OnlineFeedChecks
                 Rewards = new() { new() { Id = 52402, Name = "Online reward", Icon = 56959, EarnedByQuest = 71004 } } },
             Translations = new() { ["ru"] = new() { ["A future event"] = "Новое событие", ["Online reward"] = "Новая награда" } } };
         var feed = new EventFeed { Events = new() { e } };
+        e.Locations.Add(new EventLocation { Id = "trader", Npc = "Online trader", Zone = "Old Gridania", TerritoryId = 133, MapId = 3, X = 10.2f, Y = 9.4f });
+        e.Tracking!.Rewards[0].LocationId = "trader";
         var handler = new FakeHandler { Data = JsonSerializer.SerializeToUtf8Bytes(feed) };
         using (var service = new EventFeedService(cache, bundle, handler))
         {
@@ -34,6 +36,17 @@ internal static class OnlineFeedChecks
             Check(locale.Text("A future event", service.Feed.Events[0]) == "Новое событие", "online translation is applied without changing language resources");
             Check(locale.Text("Online reward", service.Feed.Events[0]) == "Новая награда", "online reward names support translation");
             var previous = service.Feed;
+            Check(previous.Events[0].Locations[0].MapId == 3 && catalog[e.Id].Rewards[0].LocationId == "trader", "new NPC locations and reward associations arrive online");
+            e.Locations[0].X = 101;
+            handler.Data = JsonSerializer.SerializeToUtf8Bytes(feed);
+            await service.RefreshAsync("https://example.com/feed");
+            Check(ReferenceEquals(previous, service.Feed), "invalid NPC coordinates preserve the last valid feed");
+            e.Locations[0].X = 10.2f;
+            e.Tracking.Rewards[0].LocationId = "missing";
+            handler.Data = JsonSerializer.SerializeToUtf8Bytes(feed);
+            await service.RefreshAsync("https://example.com/feed");
+            Check(ReferenceEquals(previous, service.Feed), "unknown reward NPC reference preserves the last valid feed");
+            e.Tracking.Rewards[0].LocationId = "trader";
             e.Tracking!.Rewards[0].EarnedByQuest = 65537;
             handler.Data = JsonSerializer.SerializeToUtf8Bytes(feed);
             await service.RefreshAsync("https://example.com/feed");
@@ -43,7 +56,10 @@ internal static class OnlineFeedChecks
             Check(ReferenceEquals(previous, service.Feed), "unsupported schema preserves the last known good feed");
         }
         using (var offline = new EventFeedService(cache, bundle))
+        {
             Check(offline.Feed.Events[0].Tracking?.Rewards.Count == 1, "online catalog and translations survive an offline restart");
+            Check(offline.Feed.Events[0].Locations[0].Npc == "Online trader", "NPC map locations survive an offline restart");
+        }
 
         foreach (var url in new[] { "http://lds-img.finalfantasyxiv.com/a.png", "https://evil.test/a.png", "https://lds-img.finalfantasyxiv.com.evil.test/a.png", "file:///C:/a.png" })
             Check(!FeedPolicy.IsImageUrl(url), "image URL rejected: " + url);

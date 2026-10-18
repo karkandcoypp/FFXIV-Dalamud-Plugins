@@ -4,7 +4,7 @@ One installation of plugin 0.3.0 enables data updates for new events. New event 
 
 ## Source and publication
 
-Edit `config/overrides.json` under the event's official Lodestone URL. Add reviewed text, `tracking`, `imageUrl` and `translations`. The collector merges these fields into `config/events.json`; do not only edit generated events.json, because the next collection will replace it.
+Edit `config/overrides.json` under the event's official Lodestone URL. Add reviewed text, `tracking`, `imageUrl`, `translations` and `locations`. The collector merges these fields into `config/events.json`; do not only edit generated events.json, because the next collection will replace it.
 
 Run from the EorzeaEventTracker directory:
 
@@ -57,6 +57,24 @@ This is a shortened real example, not an additional live event. Event IDs are th
 - `tracking` can be omitted for a basic announcement or set to an empty definition to override a previous mapping. `config/tracking.json` is only an offline/legacy backup, not the primary online catalog.
 
 ## Artwork and offline behavior
+
+### NPC map links (v0.4.0+)
+
+An optional event `locations` array supplies NPC map destinations. Quest and reward entries reference a destination using optional `locationId`. Missing locations leave map buttons hidden; no location is guessed. New destinations can be published through the feed without a DLL release.
+
+```json
+{
+  "locations": [
+    {"id":"mgf-trader", "npc":"MGF Trader", "zone":"Blunderville Square", "territoryId":1197, "mapId":891, "x":3.8, "y":3.1}
+  ]
+}
+```
+
+Use displayed map coordinates, not world coordinates. Territory and map IDs must match the installed game's Map/TerritoryType sheets; the client checks this before opening a map. The action only opens the map with a flag, and is disabled when logged out. NPC and zone names use event translations. Up to 32 destinations per event are accepted; invalid coordinates, duplicate IDs and unknown references reject the feed and retain the last valid copy. Cached destinations remain usable offline.
+
+Initial destinations were checked against the installed game sheets (quest issuer NPC/Level, Map and TerritoryType). MGF trader coordinates are published on the [official Fall Guys page](https://na.finalfantasyxiv.com/lodestone/special/fallguys/). The seasonal peddler location is [Old Gridania X:10.3 Y:9.0](https://ffxiv.consolegameswiki.com/wiki/All_Saints%27_Wake_%282026%29).
+
+Favorites are stored locally by item ID in plugin configuration, shared between characters. They are independent of event feed contents and each character's obtained-reward history.
 
 Images are loaded asynchronously only when an event is viewed, from HTTPS URLs on `lds-img.finalfantasyxiv.com` or `img.finalfantasyxiv.com`. Redirects to other hosts are not followed. PNG/JPEG images are capped at 4 MB, 8192 pixels per dimension and 16 million pixels overall, with at most two concurrent downloads.
 

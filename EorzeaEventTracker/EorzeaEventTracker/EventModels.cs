@@ -28,9 +28,21 @@ public sealed class EventInfo
     [JsonPropertyName("tracking")] public TrackingDefinition? Tracking { get; set; }
     [JsonPropertyName("imageUrl")] public string ImageUrl { get; set; } = "";
     [JsonPropertyName("translations")] public Dictionary<string, Dictionary<string, string>> Translations { get; set; } = new();
+    [JsonPropertyName("locations")] public List<EventLocation> Locations { get; set; } = new();
 
     public bool Active(DateTimeOffset now) => StartsAt <= now && EndsAt > now;
     public bool Upcoming(DateTimeOffset now) => StartsAt > now;
+}
+
+public sealed class EventLocation
+{
+    public string Id { get; set; } = "";
+    public string Npc { get; set; } = "";
+    public string Zone { get; set; } = "";
+    public uint TerritoryId { get; set; }
+    public uint MapId { get; set; }
+    public float X { get; set; }
+    public float Y { get; set; }
 }
 
 public sealed class Configuration : IPluginConfiguration
@@ -45,4 +57,5 @@ public sealed class Configuration : IPluginConfiguration
     public string FeedUrl { get; set; } = DefaultFeedUrl;
     public Dictionary<string, bool> ManualCompletions { get; set; } = new();
     public Dictionary<string, HashSet<uint>> ObservedRewards { get; set; } = new();
+    public HashSet<uint> FavoriteRewards { get; set; } = new();
 }
