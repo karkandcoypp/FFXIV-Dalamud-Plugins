@@ -128,3 +128,13 @@ Russian translations use the public MyMemory GET endpoint (https://api.mymemory.
 config/translation-cache.json persists successful translations and UTC daily usage across scheduled runs. A consistent reviewed glossary seeds the cache; conflicting reviewed meanings stay event-scoped. The default budget is 1200 source characters per run and 4500 per UTC day. Untranslated strings are retried on later scheduled runs; service failure/quota exhaustion leaves original English and previously cached Russian usable. The cache is committed together with the feed only after client validation. No service key is required. The public service has its own availability/limits, so a new event may initially have partial Russian coverage.
 
 Source references: https://v2.xivapi.com/docs/guides/sheets/ ; https://github.com/goatcorp/Dalamud/blob/master/Dalamud/Game/Text/SeStringHandling/Payloads/MapLinkPayload.cs ; https://mymemory.translated.net/doc/spec.php .
+
+## Entrance routes for inaccessible maps
+
+A valid Map/Level row does not guarantee that the game can open that map remotely. The in-game test confirmed that the Blunderville Square merchant map cannot be opened from outside, although its coordinates and IDs are valid. Quest map links to the Gold Saucer did work.
+
+config/map-routes.json is a shared territory-level entrance registry, independent of event IDs, item IDs and plugin code. Its Blunderville entry is supported by the official patch 6.51 notes: speak with Wy in the Gold Saucer (X:6.1 Y:7.4). The collector resolves the entrance NPC's unique position from game data and verifies the expected territory/map; it does not guess a route from the event's quest list.
+
+Routing is applied AFTER reviewed overrides, so curated events and newly collected events use the same correction. The published location itself points to the entrance, making it compatible with existing 0.14.0 clients. Its NPC label and source notes explain the entrance and retain the final merchant/area coordinates. Optional navigation metadata records the original destination for provenance. Unknown/unconfirmed entrance coordinates remove the broken button instead of publishing the inaccessible destination. Other zones are unchanged; unknown inaccessible areas still require a confirmed registry route. New registry entries need no DLL update.
+
+The isolated Fall Guys test feed was corrected through the same routing stage. Its original no-manual-data collection provenance is retained, with an explicit navigation-correction annotation. This correction does not turn the earlier data-only validation into an in-game map-click test.

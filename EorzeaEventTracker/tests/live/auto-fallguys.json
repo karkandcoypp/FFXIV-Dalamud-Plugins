@@ -38,6 +38,7 @@
       ],
       "verified": false,
       "notes": [
+        "To reach MGF trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.",
         "Dates extracted automatically from official site.",
         "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
         "Branching quest chain: It Could Happen to You",
@@ -92,7 +93,7 @@
             "price": 410,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41561,
@@ -101,7 +102,7 @@
             "price": 410,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41562,
@@ -110,7 +111,7 @@
             "price": 410,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41563,
@@ -119,7 +120,7 @@
             "price": 410,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41564,
@@ -128,7 +129,7 @@
             "price": 410,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41796,
@@ -137,7 +138,7 @@
             "price": 410,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41491,
@@ -146,7 +147,7 @@
             "price": 410,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41463,
@@ -155,7 +156,7 @@
             "price": 410,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41479,
@@ -164,7 +165,7 @@
             "price": 350,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41480,
@@ -173,7 +174,7 @@
             "price": 350,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41437,
@@ -182,7 +183,7 @@
             "price": 220,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41438,
@@ -191,7 +192,7 @@
             "price": 220,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41439,
@@ -200,7 +201,7 @@
             "price": 220,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41440,
@@ -209,7 +210,7 @@
             "price": 220,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41441,
@@ -218,7 +219,7 @@
             "price": 220,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41442,
@@ -227,7 +228,7 @@
             "price": 220,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41628,
@@ -236,7 +237,7 @@
             "price": 220,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41377,
@@ -245,7 +246,7 @@
             "price": 200,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41378,
@@ -254,7 +255,7 @@
             "price": 200,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41379,
@@ -263,7 +264,7 @@
             "price": 200,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41707,
@@ -272,7 +273,7 @@
             "price": 200,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41708,
@@ -281,7 +282,7 @@
             "price": 200,
             "currencyItemId": 41629,
             "currency": "MGF",
-            "locationId": "npc-1046441-map-891"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 52255,
@@ -338,13 +339,26 @@
           "y": 3.423
         },
         {
-          "id": "npc-1046441-map-891",
-          "npc": "MGF trader",
-          "zone": "Blunderville Square",
-          "territoryId": 1197,
-          "mapId": 891,
-          "x": 3.852,
-          "y": 3.172
+          "id": "npc-1046442-map-196-entry-891",
+          "npc": "Wy — entrance to Blunderville Square",
+          "zone": "The Gold Saucer",
+          "territoryId": 144,
+          "mapId": 196,
+          "x": 6.163,
+          "y": 7.459,
+          "navigation": {
+            "mode": "entrance",
+            "destination": {
+              "id": "npc-1046441-map-891",
+              "npc": "MGF trader",
+              "zone": "Blunderville Square",
+              "territoryId": 1197,
+              "mapId": 891,
+              "x": 3.852,
+              "y": 3.172
+            },
+            "source": "https://na.finalfantasyxiv.com/lodestone/topics/detail/46ff678d764ec5b14996fcd2fae85a7170f385f0/"
+          }
         }
       ],
       "automation": {
@@ -399,6 +413,10 @@
           "translated": 43,
           "pending": 5,
           "provider": "MyMemory + reviewed glossary"
+        },
+        "navigationRoutes": {
+          "routed": 1,
+          "unavailable": []
         }
       },
       "translations": {
@@ -448,7 +466,9 @@
           "Price unknown or exchange is ambiguous: Wide Spectrum #1 Dye": "Цена неизвестна или обмен неоднозначен: краситель Wide Spectrum #1",
           "NPC destination is ambiguous or not mapped: Wide Spectrum #1 Dye": "Назначение NPC неоднозначно или не отображается: краситель Wide Spectrum #1",
           "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках.",
-          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст."
+          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст.",
+          "Wy — entrance to Blunderville Square": "Wy — вход в Бландервилл-Сквер",
+          "To reach MGF trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.": "Чтобы попасть к ТРЕЙДЕР MGF в Бландервилл-Сквер (X:3.8 Y:3.1), поговорите с Wy в Золотая тарелка (X:6.1 Y:7.4). Кнопка «Куда идти» ведёт ко входу, а не к торговцу внутри."
         }
       }
     }
@@ -461,6 +481,7 @@
     "reviewedGlossaryEntries": 0,
     "previousFeedUsed": false,
     "preexistingTranslationCacheUsed": false,
-    "identityChangedOnlyToAvoidExistingHiddenEventPreferences": true
+    "identityChangedOnlyToAvoidExistingHiddenEventPreferences": true,
+    "navigationCorrection": "Known inaccessible area routes to its verified entrance NPC; quest/item/price data unchanged."
   }
 }

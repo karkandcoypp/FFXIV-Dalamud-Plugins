@@ -17,11 +17,13 @@ from bs4 import BeautifulSoup
 try:
     from .enrich import GameData, enrich
     from .translate import RussianTranslator
-    from .npc import retain_failed_locations
+    from .npc import NpcLocator, retain_failed_locations
+    from .routes import apply_map_routes
 except ImportError:
     from enrich import GameData, enrich
     from translate import RussianTranslator
-    from npc import retain_failed_locations
+    from npc import NpcLocator, retain_failed_locations
+    from routes import apply_map_routes
 
 BASE = 'https://na.finalfantasyxiv.com'
 INDEX = BASE + '/lodestone/topics/'
@@ -200,6 +202,8 @@ def run(args):
                     e[key] = manual[key]
             if manual.get('tracking') is not None:
                 e['automation'] = dict(status='reviewed', sources=[e.get('url', url)], issues=[])
+            if api:
+                apply_map_routes(e, NpcLocator(api))
             if translator:
                 translator.apply(e, old)
             events[e['id']] = e

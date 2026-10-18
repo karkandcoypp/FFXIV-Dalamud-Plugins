@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-18T21:45:47.451581+00:00",
+  "generatedAt": "2026-10-18T22:23:09.523869+00:00",
   "events": [
     {
       "id": "0b841481931b7bc3",
@@ -252,6 +252,7 @@
       ],
       "verified": true,
       "notes": [
+        "To reach MGF Trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.",
         "All prices are MGF. Earn MGF during the event.",
         "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/",
         "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.",
@@ -280,7 +281,7 @@
             "icon": 56610,
             "price": 410,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41561,
@@ -288,7 +289,7 @@
             "icon": 42992,
             "price": 410,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41562,
@@ -296,7 +297,7 @@
             "icon": 57520,
             "price": 410,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41563,
@@ -304,7 +305,7 @@
             "icon": 49614,
             "price": 410,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41564,
@@ -312,7 +313,7 @@
             "icon": 56611,
             "price": 410,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41796,
@@ -320,7 +321,7 @@
             "icon": 56645,
             "price": 410,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41491,
@@ -328,7 +329,7 @@
             "icon": 26014,
             "price": 410,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41463,
@@ -336,7 +337,7 @@
             "icon": 26435,
             "price": 410,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41479,
@@ -344,7 +345,7 @@
             "icon": 59899,
             "price": 350,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41480,
@@ -352,7 +353,7 @@
             "icon": 59900,
             "price": 350,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41437,
@@ -360,7 +361,7 @@
             "icon": 53467,
             "price": 220,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41438,
@@ -368,7 +369,7 @@
             "icon": 53468,
             "price": 220,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41439,
@@ -376,7 +377,7 @@
             "icon": 52785,
             "price": 220,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41440,
@@ -384,7 +385,7 @@
             "icon": 52786,
             "price": 220,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41441,
@@ -392,7 +393,7 @@
             "icon": 52787,
             "price": 220,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41442,
@@ -400,7 +401,7 @@
             "icon": 52788,
             "price": 220,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41628,
@@ -408,7 +409,7 @@
             "icon": 25945,
             "price": 220,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41377,
@@ -416,7 +417,7 @@
             "icon": 26625,
             "price": 200,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41378,
@@ -424,7 +425,7 @@
             "icon": 26625,
             "price": 200,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41379,
@@ -432,7 +433,7 @@
             "icon": 26625,
             "price": 200,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41707,
@@ -440,7 +441,7 @@
             "icon": 26186,
             "price": 200,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 41708,
@@ -448,7 +449,7 @@
             "icon": 25918,
             "price": 200,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           },
           {
             "id": 52255,
@@ -456,7 +457,7 @@
             "icon": 22805,
             "price": 150,
             "currencyItemId": 41629,
-            "locationId": "mgf-trader"
+            "locationId": "npc-1046442-map-196-entry-891"
           }
         ],
         "completionQuestId": 70337
@@ -515,7 +516,9 @@
           "Well-heeled Youth": "Молодежь на высоких каблуках",
           "Lewena": "Левена",
           "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках.",
-          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст."
+          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст.",
+          "Wy — entrance to Blunderville Square": "Wy — вход в Площадь Blunderville",
+          "To reach MGF Trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.": "Чтобы попасть к Торговец MGF в Площадь Blunderville (X:3.8 Y:3.1), поговорите с Wy в Золотое блюдце (X:6.1 Y:7.4). Кнопка «Куда идти» ведёт ко входу, а не к торговцу внутри."
         }
       },
       "locations": [
@@ -538,13 +541,26 @@
           "y": 6.1
         },
         {
-          "id": "mgf-trader",
-          "npc": "MGF Trader",
-          "zone": "Blunderville Square",
-          "territoryId": 1197,
-          "mapId": 891,
-          "x": 3.8,
-          "y": 3.1
+          "id": "npc-1046442-map-196-entry-891",
+          "npc": "Wy — entrance to Blunderville Square",
+          "zone": "The Gold Saucer",
+          "territoryId": 144,
+          "mapId": 196,
+          "x": 6.163,
+          "y": 7.459,
+          "navigation": {
+            "mode": "entrance",
+            "destination": {
+              "id": "mgf-trader",
+              "npc": "MGF Trader",
+              "zone": "Blunderville Square",
+              "territoryId": 1197,
+              "mapId": 891,
+              "x": 3.8,
+              "y": 3.1
+            },
+            "source": "https://na.finalfantasyxiv.com/lodestone/topics/detail/46ff678d764ec5b14996fcd2fae85a7170f385f0/"
+          }
         }
       ],
       "automation": {
@@ -558,6 +574,10 @@
           "translated": 25,
           "pending": 2,
           "provider": "MyMemory + reviewed glossary"
+        },
+        "navigationRoutes": {
+          "routed": 1,
+          "unavailable": []
         }
       }
     },
