@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-18T14:29:24.252808+00:00",
+  "events": [
+    {
+      "id": "0b841481931b7bc3",
+      "title": "The FINAL FANTASY XIV & FINAL FANTASY XV Collaboration Event Returns!",
+      "url": "https://na.finalfantasyxiv.com/lodestone/topics/detail/b7ff81b627294a36825255532371d6d8f9066d74",
+      "startsAt": "2026-09-24T08:00:00Z",
+      "endsAt": "2026-10-13T14:59:00Z",
+      "description": "",
+      "requirements": [],
+      "steps": [],
+      "rewards": [],
+      "verified": false,
+      "notes": [
+        "Dates extracted automatically from official site.",
+        "Reward names, NPC location and quest steps require review."
+      ]
+    },
+    {
+      "id": "e9da20a481813c2f",
+      "title": "Fall Guys Collaboration",
+      "url": "https://na.finalfantasyxiv.com/lodestone/topics/detail/e1eb49ab626ea7b71795aab17ac5f335d8ace6de",
+      "startsAt": "2026-10-07T08:00:00Z",
+      "endsAt": "2026-10-27T14:59:00Z",
+      "description": "Play Blunderville, earn Manderville Gold Saucer Fame (MGF), and exchange it for prizes.",
+      "requirements": [
+        "Level 15+; Gold Saucer access via It Could Happen to You (requires your city-state's envoy main scenario quest)."
+      ],
+      "steps": [
+        "Unlock Gold Saucer: Well-Heeled Youth, Ul'dah - Steps of Nald (X:9.6 Y:9.0).",
+        "Complete Just Crowning Around: Lewena, Gold Saucer (X:4.8 Y:6.1). Returning players can resume directly.",
+        "Join Blunderville shows for MGF; exchange it at MGF Trader, Blunderville Square (X:3.8 Y:3.1)."
+      ],
+      "rewards": [
+        "Gentlebean Knit Cap / Parka / Bottoms / Shoes: 410 MGF each.",
+        "Matte Winner's Crown / Glossy Winner's Crown: 410 each.",
+        "Rhiyes Identification Key (mount): 410.",
+        "Ballroom Etiquette - Embracing Blunders (emote): 410.",
+        "Pink Bean / Pegwin (minions): 350 each.",
+        "Blunderville Crown / Flag / Donut Bumper / Padded Wall / Rainbow / Hammer: 220 each.",
+        "Everybody Falls (Fall Guys Theme) Orchestrion Roll: 220.",
+        "Blunderful / Blunderous / Blunder-villed Framer's Kit: 200 each.",
+        "Standard Rationing Manual / Gold Saucer Aetheryte Ticket: 200 each.",
+        "Wide Spectrum #1 Dye: 150."
+      ],
+      "verified": true,
+      "notes": [
+        "All prices are MGF. Earn MGF during the event.",
+        "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/"
+      ]
+    },
+    {
+      "id": "692a7561de5dd384",
+      "title": "All Saints' Wake 2026",
+      "url": "https://na.finalfantasyxiv.com/lodestone/special/2026/All_Saints_Wake/tfrx2rkv52",
+      "startsAt": "2026-10-15T08:00:00Z",
+      "endsAt": "2026-11-02T14:59:00Z",
+      "description": "A seasonal quest in Old Gridania featuring a bear costume and six furnishings.",
+      "requirements": [
+        "Level 15 or higher."
+      ],
+      "steps": [
+        "Start We Scare Bears with the Pumpkin-headed Apparition in Old Gridania (X:10.2 Y:9.4).",
+        "Follow the seasonal quest objectives and continue the quest chain to obtain the costume.",
+        "Visit the event vendors for available furnishings and returning items. Finish seasonal quests before the event ends."
+      ],
+      "rewards": [
+        "Grisly Bear Head and Grisly Bear Suit (costume).",
+        "Smiling Wakeshroom; Staring Wakeshroom; Wakesoul Buggy (furnishings).",
+        "All Saints' Wake MMXXV Advertisement; All Saints' Wake MMXVI Advertisement; Tabletop All Saints' Wake MMXXV Advertisement."
+      ],
+      "verified": true,
+      "notes": [
+        "Checked against the official event page and official Community Team blog on 2026-10-18. Vendor prices are not listed here.",
+        "Official reward showcase: https://na.finalfantasyxiv.com/blog/003906.html"
+      ]
+    }
+  ]
+}

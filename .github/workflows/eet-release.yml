@@ -1,0 +1,70 @@
+name: Release Eorzea Event Tracker
+on:
+  push:
+    tags: ['eet-v*']
+permissions:
+  contents: write
+concurrency:
+  group: eet-publish
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test event collector and repository index
+        working-directory: EorzeaEventTracker
+        run: |
+          python -m pip install -r collector/requirements.txt
+          python -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Python tests failed' }
+          dotnet run --project tests/FeedChecks/FeedChecks.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Feed checks failed' }
+      - name: Install Dalamud development files
+        run: |
+          $directory = Join-Path $env:APPDATA 'XIVLauncher/addon/Hooks/dev'
+          Invoke-WebRequest 'https://goatcorp.github.io/dalamud-distrib/latest.zip' -OutFile "$env:RUNNER_TEMP/dalamud.zip"
+          New-Item -ItemType Directory -Path $directory -Force | Out-Null
+          Expand-Archive "$env:RUNNER_TEMP/dalamud.zip" -DestinationPath $directory -Force
+      - name: Build plugin
+        run: |
+          dotnet build EorzeaEventTracker/EorzeaEventTracker/EorzeaEventTracker.csproj -c Release --warnaserror
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+          $output = 'EorzeaEventTracker/EorzeaEventTracker/bin/Release'
+          Copy-Item "$output/EorzeaEventTracker/latest.zip" "$env:RUNNER_TEMP/EorzeaEventTracker.zip"
+          Copy-Item "$output/EorzeaEventTracker.json" "$env:RUNNER_TEMP/EorzeaEventTracker.json"
+          python EorzeaEventTracker/tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Invalid release metadata' }
+          git restore pluginmaster.json
+      - name: Publish release asset
+        run: |
+          gh release create $env:RELEASE_TAG "$env:RUNNER_TEMP/EorzeaEventTracker.zip" --repo $env:RELEASE_REPO --title "Eorzea Event Tracker $env:RELEASE_TAG" --notes-file EorzeaEventTracker/RELEASE-NOTES.md --latest=false
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
+      - name: Add released plugin to custom repository
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+          python EorzeaEventTracker/tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Index update failed' }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pluginmaster.json
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Release Eorzea Event Tracker $env:RELEASE_TAG"
+            if ($LASTEXITCODE -ne 0) { throw 'Index commit failed' }
+            git push origin main
+            if ($LASTEXITCODE -ne 0) { throw 'Index push failed' }
+          }

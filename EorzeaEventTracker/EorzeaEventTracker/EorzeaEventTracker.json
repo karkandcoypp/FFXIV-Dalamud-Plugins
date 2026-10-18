@@ -1,0 +1,12 @@
+{
+  "Author": "Community prototype",
+  "Name": "Eorzea Event Tracker",
+  "InternalName": "EorzeaEventTracker",
+  "AssemblyVersion": "0.1.2.0",
+  "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes",
+  "Description": "Official Lodestone event dates, rewards and participation information. Personal testing MVP; completion tracking is manual.",
+  "Punchline": "Lodestone event reminders and deadlines.",
+  "ApplicableVersion": "any",
+  "DalamudApiLevel": 15,
+  "Tags": ["events", "seasonal", "lodestone"]
+}

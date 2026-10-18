@@ -78,3 +78,9 @@ dotnet build Dalamud.FullscreenCutscenes.sln --configuration Release
 - Community fork maintained by **Carcosa Lyuman**.
 
 Final Fantasy XIV is a registered trademark of Square Enix Holdings Co., Ltd. This project is not affiliated with or endorsed by Square Enix or the Dalamud project.
+
+## Eorzea Event Tracker
+
+This custom repository also distributes **Eorzea Event Tracker** (Dalamud API 15). Install it from the same repository URL above, then run `/events`. It lists official event deadlines, requirements, participation steps and rewards. Current All Saints' Wake and Fall Guys details are included, with MGF prices for Fall Guys.
+
+See [source and build instructions](EorzeaEventTracker/README.md) and [Russian installation instructions](EorzeaEventTracker/INSTALL-RU.md). Disable the development DLL copy before installing from the plugin installer. Completion tracking remains manual.

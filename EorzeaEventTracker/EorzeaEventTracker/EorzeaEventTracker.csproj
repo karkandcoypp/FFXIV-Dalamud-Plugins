@@ -1,0 +1,13 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <Version>0.1.2.0</Version>
+    <Author>Community prototype</Author>
+    <Name>Eorzea Event Tracker</Name>
+    <Punchline>Official FFXIV event reminders and rewards.</Punchline>
+    <Description>Tracks official Lodestone seasonal events, steps, rewards, and deadlines.</Description>
+    <Tags>events;seasonal;lodestone</Tags>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="..\config\events.json" Link="events.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
