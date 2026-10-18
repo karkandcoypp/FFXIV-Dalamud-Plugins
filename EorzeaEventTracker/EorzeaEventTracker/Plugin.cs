@@ -18,9 +18,15 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IChatGui Chat { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IPlayerState Player { get; private set; } = null!;
+    [PluginService] internal static IUnlockState Unlocks { get; private set; } = null!;
+    [PluginService] internal static IGameInventory Inventory { get; private set; } = null!;
+    [PluginService] internal static IDataManager Data { get; private set; } = null!;
+    [PluginService] internal static ITextureProvider Textures { get; private set; } = null!;
 
     internal Configuration Settings { get; }
     internal EventFeedService Feed { get; }
+    internal CharacterProgress Progress { get; }
     private readonly WindowSystem windows = new("EorzeaEventTracker");
     private readonly EventWindow window;
     private bool previousLoggedIn;
@@ -38,6 +44,7 @@ public sealed class Plugin : IDalamudPlugin
         var data = PluginInterface.GetPluginConfigDirectory();
         var bundled = Path.Combine(PluginInterface.AssemblyLocation.DirectoryName!, "events.json");
         Feed = new EventFeedService(Path.Combine(data, "events.json"), bundled);
+        Progress = new CharacterProgress(this);
         window = new EventWindow(this);
         windows.AddWindow(window);
         Commands.AddHandler("/events", new CommandInfo((_, _) => window.Toggle())
@@ -52,6 +59,7 @@ public sealed class Plugin : IDalamudPlugin
     internal void Save() => PluginInterface.SavePluginConfig(Settings);
     private void OnUpdate(IFramework framework)
     {
+        Progress.Update();
         var loggedIn = Client.IsLoggedIn;
         if (loggedIn && !previousLoggedIn)
         {
@@ -71,6 +79,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        Progress.Flush();
         Framework.Update -= OnUpdate;
         PluginInterface.UiBuilder.Draw -= windows.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= Open;

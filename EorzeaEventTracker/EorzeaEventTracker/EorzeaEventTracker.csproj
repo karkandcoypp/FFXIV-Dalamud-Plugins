@@ -1,6 +1,6 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.1.2.0</Version>
+    <Version>0.2.0.0</Version>
     <Author>Community prototype</Author>
     <Name>Eorzea Event Tracker</Name>
     <Punchline>Official FFXIV event reminders and rewards.</Punchline>
@@ -9,5 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="..\config\events.json" Link="events.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\config\tracking.json" Link="tracking.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\assets\*.jpg" Link="assets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

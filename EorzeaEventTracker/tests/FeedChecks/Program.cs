@@ -11,6 +11,16 @@ internal static class Program
 {
     private static async Task Main()
     {
+        Check(ProgressPolicy.Resolve(false, true, 1, true, true).State == RewardState.Unknown, "unloaded character data never reports obtained rewards");
+        Check(ProgressPolicy.Resolve(true, true, 0, false, false).State == RewardState.Unlocked, "registered collection survives item consumption");
+        Check(ProgressPolicy.Resolve(true, false, 1, false, false).State == RewardState.Owned, "unconsumed collection item is owned but not registered");
+        Check(ProgressPolicy.Resolve(true, null, 0, true, false).State == RewardState.QuestRewardEarned, "guaranteed quest reward remains earned after moving item");
+        Check(ProgressPolicy.Resolve(true, null, 0, false, true).State == RewardState.SeenPreviously, "previous observation survives moving or consuming item");
+        Check(ProgressPolicy.Resolve(true, null, 0, false, false).State == RewardState.NotSeen, "absent furniture is not falsely marked never owned");
+        Check(ProgressPolicy.Resolve(true, false, 0, false, false).State == RewardState.NotUnlocked, "locked collection is distinguished from absent furniture");
+        var history = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<uint>>();
+        ProgressPolicy.ForCharacter(history, 1).Add(52402);
+        Check(!ProgressPolicy.ForCharacter(history, 2).Contains(52402) && ProgressPolicy.ForCharacter(history, 1).Contains(52402), "character reward histories remain isolated");
         var root = Path.Combine(Path.GetTempPath(), "EET-checks-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
         var cache = Path.Combine(root, "cache.json");

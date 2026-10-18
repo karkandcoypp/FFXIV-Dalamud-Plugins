@@ -40,6 +40,8 @@ jobs:
           Expand-Archive "$env:RUNNER_TEMP/dalamud.zip" -DestinationPath $directory -Force
       - name: Build plugin
         run: |
+          dotnet run --project EorzeaEventTracker/tests/ApiChecks/ApiChecks.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Dalamud API checks failed' }
           dotnet build EorzeaEventTracker/EorzeaEventTracker/EorzeaEventTracker.csproj -c Release --warnaserror
           if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
           $output = 'EorzeaEventTracker/EorzeaEventTracker/bin/Release'

@@ -3,5 +3,6 @@
   <ItemGroup>
     <Compile Include="../../EorzeaEventTracker/EventFeedService.cs" Link="EventFeedService.cs" />
     <Compile Include="../../EorzeaEventTracker/EventModels.cs" Link="EventModels.cs" />
+    <Compile Include="../../EorzeaEventTracker/ProgressModels.cs" Link="ProgressModels.cs" />
   </ItemGroup>
 </Project>

@@ -83,4 +83,4 @@ Final Fantasy XIV is a registered trademark of Square Enix Holdings Co., Ltd. Th
 
 This custom repository also distributes **Eorzea Event Tracker** (Dalamud API 15). Install it from the same repository URL above, then run `/events`. It lists official event deadlines, requirements, participation steps and rewards. Current All Saints' Wake and Fall Guys details are included, with MGF prices for Fall Guys.
 
-See [source and build instructions](EorzeaEventTracker/README.md) and [Russian installation instructions](EorzeaEventTracker/INSTALL-RU.md). Disable the development DLL copy before installing from the plugin installer. Completion tracking remains manual.
+See [source and build instructions](EorzeaEventTracker/README.md) and [Russian installation instructions](EorzeaEventTracker/INSTALL-RU.md). Disable the development DLL copy before installing from the plugin installer. Version 0.2.0 adds automatic quest and character reward tracking, illustrated event guides and game item icons. Unobserved items in remote storage may remain unknown.

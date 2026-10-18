@@ -1,6 +1,6 @@
 # Eorzea Event Tracker
 
-Dalamud API 15 plugin for official FFXIV event reminders. Open `/events` to view active and upcoming events, local dates, requirements, participation steps and rewards. Completion checkboxes are manual.
+Dalamud API 15 plugin for official FFXIV event reminders. Open `/events` for an illustrated journal with event artwork, item icons, reward cards, quest completion, character reward progress, local deadlines, participation steps and prices.
 
 ## Install in Dalamud
 
@@ -12,7 +12,22 @@ https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/pl
 
 Save, open `/xlplugins`, search for **Eorzea Event Tracker**, and install it. Disable any development copy first. See [Russian instructions](INSTALL-RU.md).
 
-Version 0.1.2 includes verified participation details and rewards for All Saints' Wake and Fall Guys as of October 18, 2026. Sources: [All Saints' Wake](https://na.finalfantasyxiv.com/lodestone/special/2026/All_Saints_Wake/tfrx2rkv52), [official reward showcase](https://na.finalfantasyxiv.com/blog/003906.html), [Fall Guys rules and prize table](https://na.finalfantasyxiv.com/lodestone/special/fallguys/).
+Version 0.2.0 maps 4 quests and 31 rewards across All Saints' Wake and Fall Guys as of October 18, 2026. Sources: [All Saints' Wake](https://na.finalfantasyxiv.com/lodestone/special/2026/All_Saints_Wake/tfrx2rkv52), [official reward showcase](https://na.finalfantasyxiv.com/blog/003906.html), [Fall Guys rules and prize table](https://na.finalfantasyxiv.com/lodestone/special/fallguys/).
+
+## Automatic character progress
+
+Quest completion and collection unlocks use Dalamud 15's managed services. Loaded bag, equipped and armory containers are scanned once per second. A five-second grace period follows character changes; progress clears on logout. No native hooks or direct memory access are used by this plugin.
+
+- **Unlocked**: a collectible is registered (mount, minion, emote, orchestrion, framer's kit, where supported by the game).
+- **In bags / equipped**: an item is currently found in the scanned containers, including armory.
+- **Earned from quest**: a guaranteed item reward from a completed quest, even if the item was moved or discarded.
+- **Previously obtained**: the plugin observed the item before on this character.
+- **Not unlocked**: a supported collection unlock is not registered.
+- **Not detected**: no evidence is available; this does not mean the item was never owned.
+
+Retainers, housing, glamour dresser and armoire are not scanned. Earlier purchases of non-collectible items cannot always be reconstructed. Observations are saved locally under the current character's content ID; they are never sent to the feed host. Existing unlocks from earlier event iterations count. Quest completion and all-rewards collection are separate.
+
+`config/tracking.json` is a bundled, versioned catalog, independent of the online announcement feed. `tools/build_tracking.py` resolves exact English quest and item IDs from XIVAPI game data and confirms guaranteed quest rewards; run it explicitly when maintaining mappings. Art sources are recorded in `assets/SOURCES.md`.
 
 ## Event data
 
@@ -43,4 +58,4 @@ Output: `EorzeaEventTracker/bin/Release/EorzeaEventTracker.dll`. Complete Dalamu
 
 The root GitHub Actions release workflow builds and tests `eet-v*` tags, publishes a release ZIP, then merges the plugin into `pluginmaster.json`, retaining the Ultrawide entry. Tags match assembly versions without the final `.0` (for example `eet-v0.1.2`).
 
-Local verification: Release build with no warnings/errors, Python collector/index tests, and C# feed regression checks. In-game behavior still requires user testing. Automatic quest/inventory/reward progress is not implemented.
+Local verification: Release build with no warnings/errors, Python collector/index/catalog tests, C# feed/progress policy checks and inventory-container API checks. Version 0.1.2 was confirmed working in-game by the user. New tracking and UI in 0.2.0 still require in-game testing.

@@ -39,4 +39,5 @@ public sealed class Configuration : IPluginConfiguration
     public bool ShowUnverified { get; set; } = true;
     public string FeedUrl { get; set; } = DefaultFeedUrl;
     public Dictionary<string, bool> ManualCompletions { get; set; } = new();
+    public Dictionary<string, HashSet<uint>> ObservedRewards { get; set; } = new();
 }
