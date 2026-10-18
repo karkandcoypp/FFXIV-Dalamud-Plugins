@@ -68,10 +68,10 @@ public sealed class CompactWidget : Window
             if (!plugin.Progress.ReadyForReminders) ImGui.TextWrapped(L.Text("Waiting for character data"));
             else if (plugin.Progress.Catalog.TryGetValue(e.Id, out var definition))
             {
-                var count = definition.Rewards.Count(r => plugin.Progress.Rewards.TryGetValue(r.Id, out var progress) && progress.Confirmed);
-                ImGui.TextDisabled(L.Format("{0} / {1} rewards confirmed", count, definition.Rewards.Count));
+                var (count, total) = RewardPreferences.Progress(definition.Rewards, plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
+                ImGui.TextDisabled(L.Format("{0} / {1} rewards confirmed", count, total));
                 ImGui.PushStyleColor(ImGuiCol.PlotHistogram, Teal);
-                ImGui.ProgressBar(definition.Rewards.Count == 0 ? 0 : (float)count / definition.Rewards.Count,
+                ImGui.ProgressBar(total == 0 ? 0 : (float)count / total,
                     new Vector2(-1, 5 * S), "");
                 ImGui.PopStyleColor();
             }

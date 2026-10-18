@@ -140,14 +140,14 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.TextColored(Muted, Countdown(e, now));
         if (plugin.Progress.Catalog.TryGetValue(e.Id, out var def))
         {
-            var done = def.Rewards.Count(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed);
+            var (done, total) = RewardPreferences.Progress(def.Rewards, plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
             ImGui.SetCursorPosX(cursor.X + padding);
-            ImGui.TextColored(Muted, F("{0} / {1} rewards confirmed", done, def.Rewards.Count));
+            ImGui.TextColored(Muted, F("{0} / {1} rewards confirmed", done, total));
             var bar = start + new Vector2(padding, height - 12 * S);
             var barWidth = width - padding * 2;
             draw.AddRectFilled(bar, bar + new Vector2(barWidth, 3 * S), ImGui.ColorConvertFloat4ToU32(new Vector4(.20f, .26f, .31f, 1)), 2 * S);
-            if (def.Rewards.Count > 0 && done > 0)
-                draw.AddRectFilled(bar, bar + new Vector2(barWidth * done / def.Rewards.Count, 3 * S), ImGui.ColorConvertFloat4ToU32(accent), 2 * S);
+            if (total > 0 && done > 0)
+                draw.AddRectFilled(bar, bar + new Vector2(barWidth * done / total, 3 * S), ImGui.ColorConvertFloat4ToU32(accent), 2 * S);
         }
         ImGui.SetCursorPos(cursor + new Vector2(0, height + 10 * S));
         ImGui.PopID();
@@ -234,21 +234,21 @@ public sealed class EventWindow : Window, IDisposable
         }
         ImGui.TextWrapped(T("Quest completion does not mean all shop rewards are collected."));
         ImGui.Spacing();
-        var count = definition.Rewards.Count(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed);
-        ImGui.TextColored(Teal, F("REWARD COLLECTION   {0} / {1}", count, definition.Rewards.Count));
+        var (count, total) = RewardPreferences.Progress(definition.Rewards, plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
+        ImGui.TextColored(Teal, F("REWARD COLLECTION   {0} / {1}", count, total));
         ImGui.PushStyleColor(ImGuiCol.PlotHistogram, Teal);
-        ImGui.ProgressBar(definition.Rewards.Count == 0 ? 0 : (float)count / definition.Rewards.Count, new Vector2(-1, 9 * S), "");
+        ImGui.ProgressBar(total == 0 ? 0 : (float)count / total, new Vector2(-1, 9 * S), "");
         ImGui.PopStyleColor();
         ImGui.Checkbox(T("Show remaining rewards only") + "###Show remaining rewards only", ref remainingOnly);
         ImGui.Checkbox(T("Favorites only") + "###FavoritesOnly", ref favoritesOnly);
-        var favorites = definition.Rewards.Where(r => plugin.Settings.FavoriteRewards.Contains(r.Id)).ToList();
+        var favorites = definition.Rewards.Where(r => plugin.Settings.FavoriteRewards.Contains(r.Id) && !plugin.Settings.IgnoredRewards.Contains(r.Id)).ToList();
         if (favorites.Count > 0)
         {
             var confirmed = favorites.Count(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed);
             ImGui.TextColored(Gold, F("FAVORITES   {0} / {1} obtained", confirmed, favorites.Count));
         }
         if (!definition.Rewards.Any(r => (!favoritesOnly || plugin.Settings.FavoriteRewards.Contains(r.Id))
-            && (!remainingOnly || !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed)))
+            && (!remainingOnly || (!plugin.Settings.IgnoredRewards.Contains(r.Id) && !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed))))
             ImGui.TextWrapped(T("No rewards match these filters. Mark rewards as favorites or change the filters."));
         var columns = ImGui.GetContentRegionAvail().X >= 560 * S ? 2 : 1;
         if (ImGui.BeginTable("Rewards", columns, ImGuiTableFlags.SizingStretchSame))
@@ -256,7 +256,7 @@ public sealed class EventWindow : Window, IDisposable
             foreach (var reward in definition.Rewards)
             {
                 var state = plugin.Progress.Rewards.GetValueOrDefault(reward.Id);
-                if (remainingOnly && state.Confirmed) continue;
+                if (remainingOnly && (state.Confirmed || plugin.Settings.IgnoredRewards.Contains(reward.Id))) continue;
                 if (favoritesOnly && !plugin.Settings.FavoriteRewards.Contains(reward.Id)) continue;
                 ImGui.TableNextColumn();
                 DrawReward(reward, state);
@@ -272,7 +272,11 @@ public sealed class EventWindow : Window, IDisposable
     private void DrawReward(TrackedReward reward, RewardProgress progress)
     {
         ImGui.PushID((int)reward.Id);
-        if (ImGui.BeginChild("Reward tile", new Vector2(0, 210 * S), true))
+        var ignored = plugin.Settings.IgnoredRewards.Contains(reward.Id);
+        var wasIgnored = ignored;
+        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (ignored ? .60f : 1));
+        if (ignored) ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(.12f, .12f, .13f, 1));
+        if (ImGui.BeginChild("Reward tile", new Vector2(0, 238 * S), true))
         {
             var icon = Plugin.Textures.GetFromGameIcon(new GameIconLookup(reward.Icon));
             if (reward.Icon != 0 && icon.TryGetWrap(out var wrap, out _)) ImGui.Image(wrap.Handle, new Vector2(38 * S));
@@ -281,22 +285,29 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.BeginGroup();
             var textWidth = Math.Max(70 * S, ImGui.GetContentRegionAvail().X);
             ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textWidth);
-            ImGui.TextUnformatted(E(reward.Name));
+            ImGui.TextColored(ignored ? Muted : Vector4.One, E(reward.Name));
             if (ImGui.IsItemHovered()) ImGui.SetTooltip($"{reward.Name}\nItem #{reward.Id}");
             ImGui.PopTextWrapPos();
             ImGui.EndGroup();
-            ImGui.TextColored(progress.Confirmed ? Teal : Muted, L.RewardLabel(progress));
-            if (reward.Price > 0) ImGui.TextColored(Gold, $"{reward.Price.ToString("N0", L.Culture)} {E(reward.Currency)}");
+            ImGui.TextColored(!ignored && progress.Confirmed ? Teal : Muted, L.RewardLabel(progress));
+            if (reward.Price > 0) ImGui.TextColored(ignored ? Muted : Gold, $"{reward.Price.ToString("N0", L.Culture)} {E(reward.Currency)}");
             var favorite = plugin.Settings.FavoriteRewards.Contains(reward.Id);
             if (ImGui.Checkbox(T("Favorite") + "###Favorite", ref favorite))
             {
-                if (favorite) plugin.Settings.FavoriteRewards.Add(reward.Id);
-                else plugin.Settings.FavoriteRewards.Remove(reward.Id);
+                RewardPreferences.Favorite(plugin.Settings, reward.Id, favorite);
                 plugin.Save();
             }
+            if (ImGui.Checkbox(T("Not interested") + "###NotInterested", ref ignored))
+            {
+                RewardPreferences.Ignore(plugin.Settings, reward.Id, ignored);
+                plugin.Save();
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Excluded from progress and reminders. Uncheck to count this reward again."));
             DrawLocationButton(reward.LocationId);
         }
         ImGui.EndChild();
+        if (wasIgnored) ImGui.PopStyleColor();
+        ImGui.PopStyleVar();
         ImGui.PopID();
     }
 

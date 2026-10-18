@@ -77,3 +77,9 @@ Each threshold is delivered once per character, event and deadline, and delivery
 Use `/eventswidget` or `/events widget` to toggle a separate movable, resizable window. You can also enable Show compact event widget in Settings. The choice persists across restarts and the widget hides while logged out. It starts hidden for existing installations.
 
 The widget lists active events from the current feed, ordered by deadline, with time remaining and confirmed-reward progress for the logged-in character. It follows the journal's partial-event visibility setting. Loading data and events without tracking are labeled explicitly. Click an event title to open its full journal; the Journal button opens the main window.
+
+## Unwanted rewards (v0.7.0)
+
+Mark Not interested on a reward card to mute it and exclude it from reward progress in every view. Both the obtained count and the total count exclude marked rewards. The remaining-rewards filter also omits them. Disable the remaining/favorites filters to see and restore excluded cards.
+
+Ignoring a favorite removes it from favorites and reminders; favoriting an ignored reward restores it. Clearing Not interested restores inclusion without erasing acquisition history. These local preferences are shared between characters and persist across restarts. Main-quest completion and automatic opening rules are unchanged.

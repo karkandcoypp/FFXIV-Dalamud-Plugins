@@ -12,7 +12,7 @@ public static class DeadlineReminderPolicy
     // Stages increase with urgency. A late login produces only the most urgent reminder.
     public static DeadlineReminder? Pending(EventInfo e, TrackingDefinition? definition,
         IReadOnlySet<uint> favorites, IReadOnlyDictionary<uint, RewardProgress> progress,
-        IReadOnlyDictionary<string, int> sent, ulong contentId, bool ready, DateTimeOffset now)
+        IReadOnlyDictionary<string, int> sent, ulong contentId, bool ready, DateTimeOffset now, IReadOnlySet<uint>? ignored = null)
     {
         if (!ready || contentId == 0 || !e.Active(now) || definition == null || !e.EndsAt.HasValue) return null;
         var remaining = e.EndsAt.Value - now;
@@ -22,7 +22,7 @@ public static class DeadlineReminderPolicy
             + e.EndsAt.Value.UtcTicks.ToString(CultureInfo.InvariantCulture);
         if (sent.TryGetValue(key, out var delivered) && delivered >= stage) return null;
         // Unknown or missing game rows are not evidence that a reward is still missing.
-        var missing = definition.Rewards.Count(r => favorites.Contains(r.Id)
+        var missing = definition.Rewards.Count(r => favorites.Contains(r.Id) && ignored?.Contains(r.Id) != true
             && progress.TryGetValue(r.Id, out var state) && state.State != RewardState.Unknown && !state.Confirmed);
         return missing == 0 ? null : new DeadlineReminder(key, stage, missing);
     }

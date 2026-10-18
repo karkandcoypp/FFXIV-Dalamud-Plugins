@@ -139,7 +139,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             var pending = DeadlineReminderPolicy.Pending(e, Progress.Catalog.GetValueOrDefault(e.Id),
                 Settings.FavoriteRewards, Progress.Rewards, Settings.DeadlineRemindersSent,
-                Player.ContentId, Progress.ReadyForReminders, now);
+                Player.ContentId, Progress.ReadyForReminders, now, Settings.IgnoredRewards);
             if (pending is not { } reminder) continue;
             var deadline = Locale.Text(reminder.Stage == 2 ? "Ends within 24 hours" : "Ends within 3 days");
             var message = Locale.Text(e.Title, e) + " — " + deadline + ". "
