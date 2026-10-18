@@ -17,5 +17,29 @@
       "cutscene",
       "fullscreen"
     ]
+  },
+  {
+    "Author": "Community prototype",
+    "Name": "Eorzea Event Tracker",
+    "InternalName": "EorzeaEventTracker",
+    "AssemblyVersion": "0.1.2.0",
+    "Description": "Official Lodestone event dates, rewards and participation information. Personal testing MVP; completion tracking is manual.",
+    "ApplicableVersion": "any",
+    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes",
+    "Tags": [
+      "events",
+      "seasonal",
+      "lodestone"
+    ],
+    "DalamudApiLevel": 15,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "CanUnloadAsync": false,
+    "LoadPriority": 0,
+    "Punchline": "Lodestone event reminders and deadlines.",
+    "AcceptsFeedback": true,
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.1.2/EorzeaEventTracker.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.1.2/EorzeaEventTracker.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.1.2/EorzeaEventTracker.zip"
   }
 ]
