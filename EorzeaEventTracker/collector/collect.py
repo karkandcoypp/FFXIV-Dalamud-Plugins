@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Conservative Lodestone collector: discovers topics, extracts explicit US Pacific event windows.
-Claims of full reward extraction are deliberately avoided: image-only rewards need manual review.
+Exact reward/quest matches and simple shop exchanges are enriched from version-pinned XIVAPI data.
 """
 import argparse
 import hashlib
@@ -13,6 +13,11 @@ from zoneinfo import ZoneInfo
 
 import requests
 from bs4 import BeautifulSoup
+
+try:
+    from .enrich import GameData, enrich
+except ImportError:
+    from enrich import GameData, enrich
 
 BASE = 'https://na.finalfantasyxiv.com'
 INDEX = BASE + '/lodestone/topics/'
@@ -52,8 +57,43 @@ def page(url, session=None):
     return BeautifulSoup(res.text, 'html.parser')
 
 
-def extract(url, session=None):
+def special_links(soup, url, session=None):
+    article = soup.select_one('.news__detail__wrapper') or soup.select_one('.news__detail') or soup
+    targets = []
+    for a in article.select('a[href]'):
+        target = urljoin(url, a['href'])
+        parsed = urlparse(target)
+        if parsed.scheme != 'https' or parsed.username or parsed.port not in (None, 443):
+            continue
+        if parsed.hostname == 'sqex.to' and re.fullmatch(r'/[A-Za-z0-9_-]{1,64}', parsed.path):
+            response = (session or requests).get(target, timeout=15, headers=UA, allow_redirects=False)
+            if response.status_code not in (301, 302, 303, 307, 308):
+                raise ValueError('Official short link unavailable')
+            target = urljoin(target, response.headers.get('Location', ''))
+        target = target.split('?')[0].split('#')[0]
+        if target.startswith(BASE + '/lodestone/special/') and target not in targets:
+            targets.append(target)
+    return targets
+
+
+def extract(url, session=None, game_data=None, follow=True):
     soup = page(url, session)
+    detail_soup = None
+    detail_issue = None
+    detail_url = None
+    if follow and '/topics/detail/' in url:
+        try:
+            specials = special_links(soup, url, session)
+        except Exception:
+            specials = []
+            detail_issue = 'Special-site link unavailable.'
+        if len(specials) == 1:
+            linked = extract(specials[0], session, game_data, follow=False)
+            if linked:
+                return linked
+            # Repeated collaborations keep current dates in the announcement and rewards on a timeless special site.
+            detail_soup = page(specials[0], session)
+            detail_url = specials[0]
     for tag in soup(['script', 'style', 'noscript']): tag.decompose()
     meta = soup.find('meta', property='og:title')
     title = meta.get('content', '') if meta else ''
@@ -68,7 +108,7 @@ def extract(url, session=None):
     text = soup.get_text(' ', strip=True)
     times = STAMP.findall(text)
     zone = 'America/Los_Angeles' if re.search(r'\bP[SD]T\b|Pacific', text) else None
-    if len(times) < 2 or not zone:
+    if len(times) != 2 or not zone:
         return None  # Do not invent dates for unstructured / timezone-ambiguous pages.
     start, end = parse_stamp(times[0], zone), parse_stamp(times[1], zone)
     if start >= end: return None
@@ -77,10 +117,18 @@ def extract(url, session=None):
     for match in re.finditer(r'\bLevel\s+\d{1,3}\b', text, re.I):
         val = match.group(0)
         if val not in requirements: requirements.append(val)
-    return dict(id=ident, title=title[:160], url=url, startsAt=start, endsAt=end,
+    event = dict(id=ident, title=title[:160], url=url, startsAt=start, endsAt=end,
                 description='', requirements=requirements[:6], steps=[], rewards=[],
                 verified=False, notes=['Dates extracted automatically from official site.',
                                        'Reward names, NPC location and quest steps require review.'])
+    if game_data is not None:
+        enrich(event, detail_soup if detail_soup is not None else soup, lambda target: page(target, session), game_data)
+        if detail_url:
+            event['automation']['sources'].append(detail_url)
+        if detail_issue:
+            event['notes'].append(detail_issue)
+            event['automation']['issues'].append(detail_issue)
+    return event
 
 
 def discover(session=None):
@@ -98,42 +146,88 @@ def discover(session=None):
 
 
 def run(args):
+    target = Path(args.output)
+    previous = {}
+    if target.exists():
+        try:
+            previous = {e['id']: e for e in json.loads(target.read_text(encoding='utf-8'))['events']}
+        except (ValueError, KeyError, TypeError):
+            pass
     override_file = Path(args.overrides)
     overrides = json.loads(override_file.read_text(encoding='utf-8')) if override_file.exists() else {}
     pinned = [url for url in overrides if url.startswith(BASE + '/lodestone/')]
-    urls = list(dict.fromkeys([*args.url, *pinned, *(discover() if not args.no_discover else [])]))
-    events = []
+    discovered = []
     errors = []
-    for url in urls[:args.limit]:
+    if not args.no_discover:
         try:
-            e = extract(url)
-            if not e:
-                print('SKIP (uncertain dates):', url)
-                continue
-            manual = overrides.get(e['id']) or overrides.get(url) or {}
-            for key in ('title', 'description', 'requirements', 'steps', 'rewards', 'notes', 'verified', 'tracking', 'imageUrl', 'translations', 'locations'):
-                if key in manual: e[key] = manual[key]
-            events.append(e)
-            print('OK:', e['title'])
+            discovered = list(discover())
         except Exception as exc:
-            print('ERROR:', url, exc)
-            errors.append(url)
-    if errors:
-        raise RuntimeError('Collection failed; keeping the previous feed unchanged')
-    output = dict(schemaVersion=1, generatedAt=datetime.now(timezone.utc).isoformat(),
-                  events=sorted(events, key=lambda e: e['startsAt']))
-    target = Path(args.output)
+            errors.append(dict(url=INDEX, reason=str(exc)))
+    urls = list(dict.fromkeys([*args.url, *pinned, *discovered]))
+    api = None if getattr(args, 'no_enrich', False) else GameData()
+    events = {}
+    report = []
+    for url in urls[:args.limit]:
+        old = next((e for e in previous.values() if e.get('url') == url), None)
+        try:
+            reviewed = overrides.get(url, {}).get('tracking') is not None
+            e = extract(url, game_data=None if reviewed else api, follow=not reviewed)
+            if not e:
+                raise ValueError('Uncertain dates; not publishing guessed event windows')
+            old = previous.get(e['id'], old)
+            automation = e.get('automation', {})
+            if old and any('unavailable' in issue.lower() for issue in automation.get('issues', [])):
+                # Preserve evidence on transient API/source failure instead of erasing known rewards.
+                e = dict(old)
+                note = 'Data source unavailable; retaining previously collected details.'
+                e['notes'] = list(dict.fromkeys(e.get('notes', []) + [note]))[:200]
+                e['verified'] = False
+                e['automation'] = dict(automation, status='stale')
+            manual = overrides.get(e['id']) or overrides.get(e.get('url')) or overrides.get(url) or {}
+            for key in ('title', 'description', 'requirements', 'steps', 'rewards', 'notes', 'verified', 'tracking', 'imageUrl', 'translations', 'locations'):
+                if key in manual:
+                    e[key] = manual[key]
+            if manual.get('tracking') is not None:
+                e['automation'] = dict(status='reviewed', sources=[e.get('url', url)], issues=[])
+            events[e['id']] = e
+            report.append(dict(url=url, eventId=e['id'], **e.get('automation', {'status': 'basic'})))
+            print('OK:', e['title'], e.get('automation', {}).get('status', 'basic'))
+        except Exception as exc:
+            print('PARTIAL:', url, exc)
+            errors.append(dict(url=url, reason=str(exc)))
+            if old:
+                events[old['id']] = old
+    # A short discovery page or temporary source failure must not remove still-running events.
+    now = datetime.now(timezone.utc)
+    for ident, old in previous.items():
+        try:
+            if ident not in events and datetime.fromisoformat(old['endsAt'].replace('Z', '+00:00')) > now:
+                events[ident] = old
+                report.append(dict(eventId=ident, url=old.get('url'), status='retained'))
+        except (KeyError, ValueError, TypeError):
+            continue
+    if not events and (errors or previous):
+        raise RuntimeError('No usable event data; keeping the previous feed unchanged')
+    output = dict(schemaVersion=1, generatedAt=now.isoformat(),
+                  events=sorted(events.values(), key=lambda e: e['startsAt']))
+    if len(output['events']) > 500:
+        raise RuntimeError('Event limit exceeded; keeping the previous feed unchanged')
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_suffix(target.suffix + '.tmp')
     temporary.write_text(json.dumps(output, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
     temporary.replace(target)
-    print(f'Wrote {len(events)} entries to {target}')
+    report_path = Path(getattr(args, 'report', None) or target.with_name('collection-report.json'))
+    report_path.write_text(json.dumps(dict(generatedAt=now.isoformat(), events=report, errors=errors),
+                                      indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+    print(f'Wrote {len(events)} entries to {target}; {len(errors)} source issue(s)')
 
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', action='append', default=[], help='Official event URL (repeatable)')
     ap.add_argument('--no-discover', action='store_true')
+    ap.add_argument('--no-enrich', action='store_true', help='Disable game-data enrichment')
+    ap.add_argument('--report', help='Collection diagnostics JSON path')
     ap.add_argument('--limit', type=int, default=25)
     ap.add_argument('--overrides', default='config/overrides.json')
     ap.add_argument('--output', default='config/events.json')

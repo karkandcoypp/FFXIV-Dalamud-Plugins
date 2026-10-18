@@ -13,7 +13,7 @@ python collector/collect.py
 python -m unittest discover -s tests -v
 ```
 
-The scheduled collector runs twice daily. It can also be dispatched manually. Feed-only edits do not need a release tag. The plugin downloads the feed on login, Refresh and every 30 minutes while logged in. Tracking definitions are applied on the framework thread at the next update; no plugin reload is needed.
+The scheduled collector runs every six hours. It can also be dispatched manually. Feed-only edits do not need a release tag. The plugin downloads the feed on login, Refresh and every 30 minutes while logged in. Tracking definitions are applied on the framework thread at the next update; no plugin reload is needed.
 
 Existing plugins before 0.3.0 ignore the new optional fields. `schemaVersion` remains 1. Legacy feeds without them still work with the bundled fallback definitions.
 
@@ -82,7 +82,7 @@ The cache uses a hash of the URL, never a path supplied by the feed. Change the 
 
 Invalid or unsupported feed data leaves the last valid feed in use. No scripts, assemblies, hooks or executable expressions can be delivered through this format. Only known game-sheet lookups and existing tracking rules are applied.
 
-New content is not automatically inferred with full accuracy from arbitrary Lodestone layouts. Event discovery and date parsing are automatic where supported; quest/reward IDs, translations and participation details still require reviewed annotations in the feed source.
+The collector enriches supported official pages automatically as described below. Image-only text, NPC destinations, primary completion objectives and Russian names are not guessed. Reviewed overrides remain available for exceptions.
 
 ## Main event objective (v0.6.1)
 
@@ -97,3 +97,22 @@ Automatic display is suppressed if there are no visible active events with an un
 Each tracked reward can specify `price`, `currency` (display label), and optional `currencyItemId` (game Item row ID, up to 1000000). Set the actual currency ID in reviewed overrides so future events can use the budget without a rebuild. Existing MGF entries without an ID remain compatible (MGF = 41629).
 
 The journal sums one copy of each still-unconfirmed favorite, excluding ignored rewards, separately per currency. It subtracts the current character's live balance; owned/manual marks remove rewards from the cost. Zero-price entries without a quest are treated as unpriced and called out separately, not assumed free. Unavailable balances never imply zero currency or an exact deficit. MGF is read from CurrencyManager; item tokens can be read from inventory. Balances are refreshed with character scans and cleared on logout/character/feed change.
+
+## Automatic enrichment
+
+The collector discovers Lodestone announcements and follows a single official special-event link when possible, including sqex.to redirects checked against the official destination allowlist. If the special page has no current dates, the announcement supplies dates and the special page supplies reward details. Exactly two explicit, timezone-qualified timestamps are required. Known active/future events survive shortened discovery results and temporary source failures.
+
+For new events without a reviewed tracking override:
+
+- Official Eorzea Database links supply exact English item names. Only unique exact XIVAPI matches supply IDs and icons.
+- Explicit quest headings/database links are resolved similarly. Up to eight unique direct continuations are followed, with no additional prerequisites. Guaranteed rewards are assigned only when they also appear on the official reward list. The main completion objective is not inferred.
+- SpecialShop exchanges supply prices only when every matching offer agrees on one direct currency and amount, offers one normal-quality copy, and has no quest, achievement or collectability conditions. Truncated searches, indirect currencies, bundles, multiple costs, conflicting prices and competing GilShop listings stay unpriced. GilShop-only prices are currently unsupported.
+- The official og:image supplies cover artwork from the approved CDN. Unknown/ambiguous facts are described in notes and automation.issues. The provenance includes source URLs and API version/schema, pinned during the run.
+
+Automatically enriched events remain verified=false: identifying some facts does not establish complete coverage. Existing clients show the partial-details indicator; users who disabled partial/unverified events need to enable them to see these entries. Known facts remain usable for tracking and favorite currency budgets. Reasons for missing data are under How to join / Source notes. Missing prices are never treated as free.
+
+Reviewed overrides take precedence, preserving existing maps, translations and event behavior. Temporary enrichment failures retain a known event's last details instead of erasing rewards. A wholly unusable run leaves the previous feed unchanged. Collection runtime and API requests are bounded; repeated requests are cached. No fuzzy matches, OCR or speculative prices are published.
+
+Each run writes collection-report.json beside the output. GitHub Actions uploads it as event-collection-report; it is diagnostic data, not plugin content. The workflow validates the feed with the client's own policy before committing.
+
+This is a collector-only update: plugin 0.14.0 loads new data on Refresh, login or its periodic refresh without a DLL update. Automated Russian translations would need a separate translation source/service. Until a reviewed translation is available, source English names remain visible.
