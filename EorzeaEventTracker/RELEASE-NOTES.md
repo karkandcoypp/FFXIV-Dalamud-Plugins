@@ -1,10 +1,7 @@
-Eorzea Event Tracker v0.3.1 for Dalamud API 15.
+Eorzea Event Tracker v0.3.2 for Dalamud API 15.
 
-- Repository renamed to FFXIV-Dalamud-Plugins, with separate plugin folders and shared release tools.
-- Updated project and event feed URLs.
-- The default feed preference migrates automatically from the previous repository name. Custom feed addresses and explicit local mode are preserved.
-- Existing plugin subscriptions continue through GitHub's repository redirect. Saved character progress and plugin identity are unchanged.
-- Online event delivery from v0.3.0 remains available.
+- Added the user-provided character portrait as the plugin icon in the Dalamud installer and installed plugin list.
+- The original PNG is included unchanged in the package.
 
 Install from the existing custom repository:
 https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/pluginmaster.json
