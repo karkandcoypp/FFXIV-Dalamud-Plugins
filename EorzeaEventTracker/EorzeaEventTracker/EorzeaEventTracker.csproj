@@ -1,7 +1,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.3.2.0</Version>
-    <Author>Community prototype</Author>
+    <Version>0.3.3.0</Version>
+    <Author>Carcosa Lyuman</Author>
     <Name>Eorzea Event Tracker</Name>
     <Punchline>Official FFXIV event reminders and rewards.</Punchline>
     <Description>Tracks official Lodestone seasonal events, steps, rewards, and deadlines.</Description>
@@ -12,6 +12,6 @@
     <Content Include="..\config\events.json" Link="events.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\config\tracking.json" Link="tracking.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\assets\*.jpg" Link="assets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\assets\icon.png" Link="icon.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\assets\icon-v2.png" Link="icon.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

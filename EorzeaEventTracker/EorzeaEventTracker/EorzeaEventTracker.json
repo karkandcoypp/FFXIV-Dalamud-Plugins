@@ -1,9 +1,9 @@
 {
-  "Author": "Community prototype",
+  "Author": "Carcosa Lyuman",
   "Name": "Eorzea Event Tracker",
   "InternalName": "EorzeaEventTracker",
-  "AssemblyVersion": "0.3.2.0",
-  "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/EorzeaEventTracker/assets/icon.png",
+  "AssemblyVersion": "0.3.3.0",
+  "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/EorzeaEventTracker/assets/icon-v2.png",
   "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
   "Description": "Lodestone event dates, illustrated event guides, automatic quest completion and character reward tracking.",
   "Punchline": "Lodestone event reminders and deadlines.",
