@@ -2,21 +2,27 @@
   {
     "Author": "Carcosa Lyuman",
     "Name": "Ultrawide Cutscenes Community",
-    "Punchline": "Remove letterboxing from cutscenes on ultrawide monitors.",
-    "Description": "A community-maintained fork that removes 16:9 letterboxing from FFXIV cutscenes on ultrawide displays.",
     "InternalName": "Dalamud.FullscreenCutscenes.Community",
-    "AssemblyVersion": "1.1.0.2",
-    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
+    "AssemblyVersion": "1.1.0.3",
+    "Description": "This community-maintained fork removes the \"letterboxing\" bars when watching cutscenes on ultrawide monitors.\nBeware! You may see things outside the intended frame, such as upcoming NPCs popping in or T-posing.\n\nOriginal implementation by goat and Maple. Thanks to aers for the native discovery.",
     "ApplicableVersion": "any",
-    "DalamudApiLevel": 15,
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/v1.1.0.2/latest.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/v1.1.0.2/latest.zip",
-    "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/UltrawideCutscenes/Dalamud.FullscreenCutscenes/icon.png",
+    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
     "Tags": [
       "ultrawide",
       "cutscene",
       "fullscreen"
-    ]
+    ],
+    "DalamudApiLevel": 15,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "CanUnloadAsync": false,
+    "LoadPriority": 0,
+    "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/UltrawideCutscenes/Dalamud.FullscreenCutscenes/icon.png",
+    "Punchline": "Remove letterboxing from cutscenes on ultrawide monitors.",
+    "AcceptsFeedback": true,
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/uc-v1.1.0.3/UltrawideCutscenes.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/uc-v1.1.0.3/UltrawideCutscenes.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/uc-v1.1.0.3/UltrawideCutscenes.zip"
   },
   {
     "Author": "Community prototype",
