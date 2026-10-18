@@ -18,6 +18,7 @@ public sealed class EventWindow : Window, IDisposable
     private string selected = "";
     private bool remainingOnly;
     private bool favoritesOnly;
+    private bool showHidden;
     private DateTime mapErrorUntil;
     private EventInfo? localizedEvent;
     private static readonly Vector4 Teal = new(.49f, .69f, .62f, 1);
@@ -30,7 +31,7 @@ public sealed class EventWindow : Window, IDisposable
     private float UiScale => AppearancePolicy.Scale(plugin.Settings);
     private float Opacity => AppearancePolicy.Opacity(plugin.Settings);
     private float S => ImGui.GetFontSize() / 17f;
-    internal void SelectEvent(string id) => selected = id;
+    internal void SelectEvent(string id) { selected = id; showHidden = false; }
 
     public EventWindow(Plugin plugin) : base("Eorzea Event Tracker###EETMain")
     {
@@ -104,6 +105,8 @@ public sealed class EventWindow : Window, IDisposable
         var now = DateTimeOffset.UtcNow;
         var events = plugin.Feed.Feed.Events.Where(e => (plugin.Settings.ShowUnverified || e.Verified) && (e.Active(now) || e.Upcoming(now)))
             .OrderBy(e => e.Upcoming(now)).ThenBy(e => e.EndsAt).ToList();
+        var hiddenCount = events.Count(plugin.IsEventHidden);
+        events = events.Where(e => plugin.IsEventHidden(e) == showHidden).ToList();
         if (!events.Any(e => e.Id == selected)) selected = events.FirstOrDefault()?.Id ?? "";
         ImGui.TextColored(Gold, T("E O R Z E A   /   E V E N T S"));
         ImGui.SameLine();
@@ -121,9 +124,12 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.Separator();
         if (BeginScaledChild("Event rail", new Vector2(Math.Clamp(ImGui.GetContentRegionAvail().X * .27f, 224 * S, 290 * S), -30 * S), true))
         {
-            ImGui.TextColored(Muted, F("LIVE & UPCOMING  /  {0}", events.Count));
+            ImGui.TextColored(Muted, showHidden ? F("Hidden events / {0}", events.Count) : F("LIVE & UPCOMING  /  {0}", events.Count));
+            if (ImGui.SmallButton((showHidden ? T("Back to events") : F("Hidden ({0})", hiddenCount)) + "###HiddenEvents"))
+                showHidden = !showHidden;
+            if (showHidden) ImGui.TextWrapped(T("Hidden from the journal, widget and reminders. Restore any event below."));
             foreach (var e in events) DrawEventCard(e, now);
-            if (events.Count == 0) ImGui.TextWrapped(T("No current events in this feed. Check Lodestone for announcements."));
+            if (events.Count == 0) ImGui.TextWrapped(T("No events to display. Check Hidden to restore an event."));
         }
         EndScaledChild();
         ImGui.SameLine();
@@ -150,10 +156,10 @@ public sealed class EventWindow : Window, IDisposable
         var image = EventImagePath(e);
         var artwork = image == null ? null : Plugin.Textures.GetFromFile(image);
         var imageHeight = artwork == null ? 0 : 66 * S;
-        var height = imageHeight + titleHeight + ImGui.GetTextLineHeightWithSpacing() * 3 + 44 * S;
+        var height = imageHeight + titleHeight + ImGui.GetTextLineHeightWithSpacing() * 3 + 76 * S;
         var start = ImGui.GetCursorScreenPos();
         var cursor = ImGui.GetCursorPos();
-        if (ImGui.InvisibleButton("Select event", new Vector2(width, height))) selected = e.Id;
+        if (ImGui.InvisibleButton("Select event", new Vector2(width, height - 32 * S))) selected = e.Id;
         var hovered = ImGui.IsItemHovered();
         if (hovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         var draw = ImGui.GetWindowDrawList();
@@ -185,12 +191,16 @@ public sealed class EventWindow : Window, IDisposable
             var (done, total) = RewardPreferences.Progress(def.Rewards, plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
             ImGui.SetCursorPosX(cursor.X + padding);
             ImGui.TextColored(Muted, F("{0} / {1} rewards confirmed", done, total));
-            var bar = start + new Vector2(padding, height - 12 * S);
+            var bar = start + new Vector2(padding, height - 44 * S);
             var barWidth = width - padding * 2;
             draw.AddRectFilled(bar, bar + new Vector2(barWidth, 3 * S), ImGui.ColorConvertFloat4ToU32(new Vector4(.22f, .21f, .18f, 1)), 2 * S);
             if (total > 0 && done > 0)
                 draw.AddRectFilled(bar, bar + new Vector2(barWidth * done / total, 3 * S), ImGui.ColorConvertFloat4ToU32(Teal), 2 * S);
         }
+        ImGui.SetCursorPos(cursor + new Vector2(padding, height - 30 * S));
+        if (ImGui.SmallButton((showHidden ? T("Restore event") : T("Hide event")) + "###HideEvent"))
+            plugin.SetEventHidden(e, !showHidden);
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("You can restore this event from Hidden. Progress is kept."));
         ImGui.SetCursorPos(cursor + new Vector2(0, height + 10 * S));
         ImGui.PopID();
     }

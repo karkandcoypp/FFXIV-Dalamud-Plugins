@@ -42,7 +42,7 @@ public sealed class Plugin : IDalamudPlugin
     private DateTimeOffset nextReminderCheck;
     private bool widgetOpenedManually;
     internal bool AllowWidgetDisplay => widgetOpenedManually || ShouldAutoOpen();
-    private bool ShouldAutoOpen() => loginRefresh == null && EventCompletionPolicy.ShouldAutoOpen(Feed.Feed, Progress.Catalog,
+    private bool ShouldAutoOpen() => loginRefresh == null && EventCompletionPolicy.ShouldAutoOpen(new EventFeed { Events = Feed.Feed.Events.Where(e => !IsEventHidden(e)).ToList() }, Progress.Catalog,
         Progress.Quests, Progress.ReadyForReminders, Settings.ShowUnverified, DateTimeOffset.UtcNow);
 
     public Plugin()
@@ -92,6 +92,15 @@ public sealed class Plugin : IDalamudPlugin
         window.SelectEvent(eventId);
         window.IsOpen = true;
     }
+    // Include the occurrence deadline so a returning seasonal event is visible again.
+    private static string EventVisibilityKey(EventInfo e) => e.Id + ":" + (e.EndsAt?.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unknown");
+    internal bool IsEventHidden(EventInfo e) => Settings.HiddenEvents.Contains(EventVisibilityKey(e));
+    internal void SetEventHidden(EventInfo e, bool hidden)
+    {
+        if (hidden) Settings.HiddenEvents.Add(EventVisibilityKey(e));
+        else Settings.HiddenEvents.Remove(EventVisibilityKey(e));
+        Save();
+    }
     internal void Save() => PluginInterface.SavePluginConfig(Settings);
     private void OnUpdate(IFramework framework)
     {
@@ -119,7 +128,7 @@ public sealed class Plugin : IDalamudPlugin
         if (loggedIn && loginRefresh?.IsCompleted == true && Progress.ReadyForReminders)
         {
             loginRefresh = null;
-            var active = Feed.Feed.Events.Count(e => e.Active(DateTimeOffset.UtcNow) && (Settings.ShowUnverified || e.Verified));
+            var active = Feed.Feed.Events.Count(e => e.Active(DateTimeOffset.UtcNow) && !IsEventHidden(e) && (Settings.ShowUnverified || e.Verified));
             if (Settings.NotifyOnLogin && active > 0)
                 Chat.Print("[Eorzea Event Tracker] " + Locale.Format("{0} active event(s)! Type /events for details.", active));
             if (Settings.OpenOnLogin && ShouldAutoOpen()) Open();
@@ -135,7 +144,7 @@ public sealed class Plugin : IDalamudPlugin
             || loginRefresh != null || now < nextReminderCheck) return;
         nextReminderCheck = now.AddMinutes(1);
         var changed = false;
-        foreach (var e in Feed.Feed.Events.Where(e => Settings.ShowUnverified || e.Verified))
+        foreach (var e in Feed.Feed.Events.Where(e => !IsEventHidden(e) && (Settings.ShowUnverified || e.Verified)))
         {
             var pending = DeadlineReminderPolicy.Pending(e, Progress.Catalog.GetValueOrDefault(e.Id),
                 Settings.FavoriteRewards, Progress.Rewards, Settings.DeadlineRemindersSent,

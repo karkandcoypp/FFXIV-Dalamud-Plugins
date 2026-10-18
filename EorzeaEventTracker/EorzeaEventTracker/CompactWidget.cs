@@ -67,7 +67,7 @@ public sealed class CompactWidget : Window
         ImGui.Separator();
         var now = DateTimeOffset.UtcNow;
         var events = plugin.Feed.Feed.Events
-            .Where(e => e.Active(now) && (plugin.Settings.ShowUnverified || e.Verified))
+            .Where(e => !plugin.IsEventHidden(e) && e.Active(now) && (plugin.Settings.ShowUnverified || e.Verified))
             .OrderBy(e => e.EndsAt).ToList();
         if (events.Count == 0) ImGui.TextWrapped(L.Text("No active events right now."));
         foreach (var e in events)

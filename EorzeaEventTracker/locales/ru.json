@@ -128,5 +128,13 @@
   "Scale is limited to keep the book on screen.": "Масштаб ограничен размером экрана, чтобы книга помещалась целиком.",
   "Turn the page for event details.": "Перелистните страницу, чтобы прочитать подробности события.",
   "Reminders are sent once at 3 days and 24 hours for unfinished favorites.": "Напоминания о неполученных избранных наградах приходят один раз за 3 дня и за сутки.",
-  "Use HTTPS; leave empty for cached event data.": "Укажите HTTPS-адрес или оставьте поле пустым для сохранённых данных."
+  "Use HTTPS; leave empty for cached event data.": "Укажите HTTPS-адрес или оставьте поле пустым для сохранённых данных.",
+  "Hidden events / {0}": "Скрытые события / {0}",
+  "Back to events": "К событиям",
+  "Hidden ({0})": "Скрытые ({0})",
+  "Hidden from the journal, widget and reminders. Restore any event below.": "Не показываются в журнале, виджете и уведомлениях. Любое событие можно вернуть.",
+  "No events to display. Check Hidden to restore an event.": "Нет событий для показа. Вернуть событие можно в разделе «Скрытые».",
+  "Restore event": "Вернуть событие",
+  "Hide event": "Скрыть событие",
+  "You can restore this event from Hidden. Progress is kept.": "Можно вернуть в разделе «Скрытые». Прогресс сохранится."
 }

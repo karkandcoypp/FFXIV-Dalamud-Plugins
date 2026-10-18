@@ -10,4 +10,3 @@ Item icons are loaded from the installed game through Dalamud's texture provider
 `icon.png` is the character portrait supplied by the user on 2026-10-18 for the plugin icon. The original PNG is used unchanged.
 
 `icon-v2.png` is a square adaptation of the user portrait prepared with imagegen for Dalamud compatibility. The original remains in `icon.png`.
-

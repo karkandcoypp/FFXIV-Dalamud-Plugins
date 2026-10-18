@@ -65,4 +65,5 @@ public sealed class Configuration : IPluginConfiguration
     public bool NotifyFavoriteDeadlines { get; set; } = true;
     public Dictionary<string, int> DeadlineRemindersSent { get; set; } = new();
     public bool ShowCompactWidget { get; set; }
+    public HashSet<string> HiddenEvents { get; set; } = new();
 }

@@ -1,8 +1,6 @@
-# Eorzea Event Tracker 0.12.0
+# Eorzea Event Tracker 0.13.0
 
-- Restored the dark journal interface from 0.9.0, with illustrated event cards, cover artwork, compact reward cards, tabs and scrolling.
-- Removed the book background, bookmarks and page navigation.
-- Character progress, manual reward marks, favorites, ignored rewards, reminders, widget and appearance settings are preserved.
-- Published with a higher version so existing installations can update normally through Dalamud.
-
-The previous book versions remain available in GitHub releases and tags for rollback.
+- Hide an event with one click on its card. Restore it through the Hidden section above the event list.
+- Hidden events are excluded from the widget, login notices, automatic opening and favorite deadline reminders.
+- Progress and reward preferences are preserved. A new occurrence with a different deadline is visible again.
+- English and Russian labels; classic dark journal interface retained.
