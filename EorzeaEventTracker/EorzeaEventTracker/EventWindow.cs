@@ -340,6 +340,10 @@ public sealed class EventWindow : Window, IDisposable
         var notify = c.NotifyOnLogin; if (ImGui.Checkbox(T("Notify on login") + "###Notify on login", ref notify)) { c.NotifyOnLogin = notify; plugin.Save(); }
         ImGui.SameLine();
         var open = c.OpenOnLogin; if (ImGui.Checkbox(T("Open on login") + "###Open on login", ref open)) { c.OpenOnLogin = open; plugin.Save(); }
+        var deadlines = c.NotifyFavoriteDeadlines;
+        if (ImGui.Checkbox(T("Remind me about favorite rewards before events end") + "###FavoriteDeadlines", ref deadlines))
+        { c.NotifyFavoriteDeadlines = deadlines; plugin.Save(); }
+        ImGui.TextWrapped(T("Reminders at 3 days and 24 hours, once per character and event deadline. If you were offline, the latest reminder appears after login. Unknown rewards are skipped."));
         var unverified = c.ShowUnverified; if (ImGui.Checkbox(T("Show partial event entries") + "###Show partial event entries", ref unverified)) { c.ShowUnverified = unverified; plugin.Save(); }
         ImGui.InputText(T("HTTPS feed URL") + "###HTTPS feed URL", ref urlBuffer, 512);
         if (ImGui.Button(T("Save feed URL") + "###Save feed URL")) { c.FeedUrl = urlBuffer.Trim(); plugin.Save(); _ = plugin.Feed.RefreshAsync(c.FeedUrl); }

@@ -99,5 +99,10 @@
   "Where to go": "Куда идти",
   "EVENT NPCs": "NPC СОБЫТИЯ",
   "Could not open the map. Log in and try again; this area may be unavailable.": "Не удалось открыть карту. Войдите в игру и попробуйте снова; область может быть недоступна.",
-  "No rewards match these filters. Mark rewards as favorites or change the filters.": "Нет наград для этих фильтров. Добавьте награды в избранное или измените фильтры."
+  "No rewards match these filters. Mark rewards as favorites or change the filters.": "Нет наград для этих фильтров. Добавьте награды в избранное или измените фильтры.",
+  "Ends within 24 hours": "До окончания осталось не больше суток",
+  "Ends within 3 days": "До окончания осталось не больше 3 дней",
+  "Favorite rewards still unconfirmed: {0}. Open /events.": "Избранные награды, получение которых ещё не подтверждено: {0}. Откройте /events.",
+  "Remind me about favorite rewards before events end": "Напоминать об избранных наградах перед окончанием событий",
+  "Reminders at 3 days and 24 hours, once per character and event deadline. If you were offline, the latest reminder appears after login. Unknown rewards are skipped.": "Напоминания за 3 дня и за сутки — по одному для каждого персонажа и срока окончания события. Если вы были не в игре, актуальное напоминание появится после входа. Награды с неизвестным статусом не учитываются."
 }

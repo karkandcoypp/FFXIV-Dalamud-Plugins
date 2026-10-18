@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Interface.Windowing;
+using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 
@@ -24,6 +26,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IDataManager Data { get; private set; } = null!;
     [PluginService] internal static ITextureProvider Textures { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static INotificationManager Notifications { get; private set; } = null!;
 
     internal Configuration Settings { get; }
     internal EventFeedService Feed { get; }
@@ -35,6 +38,7 @@ public sealed class Plugin : IDalamudPlugin
     private bool previousLoggedIn;
     private Task? loginRefresh;
     private DateTime nextFeedRefresh;
+    private DateTimeOffset nextReminderCheck;
 
     public Plugin()
     {
@@ -90,6 +94,37 @@ public sealed class Plugin : IDalamudPlugin
             if (Settings.OpenOnLogin && active > 0) Open();
         }
         previousLoggedIn = loggedIn;
+        CheckDeadlineReminders();
+    }
+
+    private void CheckDeadlineReminders()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (!Settings.NotifyFavoriteDeadlines || !Client.IsLoggedIn || !Progress.ReadyForReminders
+            || loginRefresh != null || now < nextReminderCheck) return;
+        nextReminderCheck = now.AddMinutes(1);
+        var changed = false;
+        foreach (var e in Feed.Feed.Events.Where(e => Settings.ShowUnverified || e.Verified))
+        {
+            var pending = DeadlineReminderPolicy.Pending(e, Progress.Catalog.GetValueOrDefault(e.Id),
+                Settings.FavoriteRewards, Progress.Rewards, Settings.DeadlineRemindersSent,
+                Player.ContentId, Progress.ReadyForReminders, now);
+            if (pending is not { } reminder) continue;
+            var deadline = Locale.Text(reminder.Stage == 2 ? "Ends within 24 hours" : "Ends within 3 days");
+            var message = Locale.Text(e.Title, e) + " — " + deadline + ". "
+                + Locale.Format("Favorite rewards still unconfirmed: {0}. Open /events.", reminder.RemainingFavorites);
+            Notifications.AddNotification(new Notification
+            {
+                Title = "Eorzea Event Tracker",
+                Content = message,
+                Type = NotificationType.Warning,
+                InitialDuration = TimeSpan.FromSeconds(15),
+            });
+            Chat.Print("[Eorzea Event Tracker] " + message);
+            Settings.DeadlineRemindersSent[reminder.Key] = reminder.Stage;
+            changed = true;
+        }
+        if (changed) Save();
     }
 
     public void Dispose()

@@ -17,6 +17,8 @@ public sealed class CharacterProgress
     public Dictionary<uint, bool> Quests { get; } = new();
     public Dictionary<uint, RewardProgress> Rewards { get; } = new();
     public bool Available { get; private set; }
+    public bool ReadyForReminders => Available && contentId == Plugin.Player.ContentId
+        && ReferenceEquals(catalogFeed, plugin.Feed.Feed);
     public string Character { get; private set; } = "Waiting for character";
     private ulong contentId;
     private DateTime nextScan;

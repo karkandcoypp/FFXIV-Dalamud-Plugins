@@ -65,3 +65,9 @@ Output: `EorzeaEventTracker/bin/Release/EorzeaEventTracker.dll`. Complete Dalamu
 The root GitHub Actions release workflow builds and tests `eet-v*` tags, publishes a release ZIP, then merges the plugin into `pluginmaster.json`, retaining the Ultrawide entry. Tags match assembly versions without the final `.0` (for example `eet-v0.1.2`).
 
 Local verification covers Release compilation, collector/index/catalog/localization tests, online-only event ingestion, offline persistence, image caching/validation, progress rules and inventory-container API checks. Version 0.2.0 was confirmed working in-game by the user. The 0.3.0 online catalog still requires in-game testing.
+
+## Favorite reward deadline reminders (v0.5.0)
+
+Mark desired rewards as Favorite. While logged in, the plugin checks active events every minute and shows a Dalamud popup plus a local chat message within 72 hours and within 24 hours of the deadline if favorite rewards remain unconfirmed on this character. No reminders are sent for unknown or unloaded reward data, or for completed/expired events.
+
+Each threshold is delivered once per character, event and deadline, and delivery history survives restarts. A login during the final day receives only the final-day reminder. If the official deadline changes, its new reminder history is independent. Reminders require the game/plugin to be running; an offline threshold is caught up after login while the event remains active. Settings has a separate reminder toggle, enabled by default. This is independent of the general login announcement setting.

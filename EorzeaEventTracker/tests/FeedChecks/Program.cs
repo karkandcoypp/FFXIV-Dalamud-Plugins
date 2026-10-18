@@ -19,6 +19,7 @@ internal static class Program
             return;
         }
         await OnlineFeedChecks.Run();
+        DeadlineReminderChecks.Run();
         var settings = new Configuration();
         Check(settings.FavoriteRewards.Count == 0, "existing configurations start without favorites");
         settings.FavoriteRewards.Add(52402);
