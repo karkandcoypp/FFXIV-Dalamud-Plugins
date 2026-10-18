@@ -28,6 +28,7 @@ public sealed class EventWindow : Window, IDisposable
     private string E(string text) => L.Text(text, localizedEvent);
     private string F(string text, params object[] values) => L.Format(text, values);
     private float S => ImGui.GetFontSize() / 17f;
+    internal void SelectEvent(string id) => selected = id;
 
     public EventWindow(Plugin plugin) : base("Eorzea Event Tracker###EETMain")
     {
@@ -337,6 +338,8 @@ public sealed class EventWindow : Window, IDisposable
             plugin.Save();
         }
         ImGui.TextWrapped(T("Names use the event's translations when available. Original item names remain in tooltips."));
+        var widget = c.ShowCompactWidget;
+        if (ImGui.Checkbox(T("Show compact event widget") + "###CompactWidget", ref widget)) plugin.SetWidgetVisible(widget);
         var notify = c.NotifyOnLogin; if (ImGui.Checkbox(T("Notify on login") + "###Notify on login", ref notify)) { c.NotifyOnLogin = notify; plugin.Save(); }
         ImGui.SameLine();
         var open = c.OpenOnLogin; if (ImGui.Checkbox(T("Open on login") + "###Open on login", ref open)) { c.OpenOnLogin = open; plugin.Save(); }

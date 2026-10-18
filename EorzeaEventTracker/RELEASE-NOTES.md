@@ -1,11 +1,11 @@
-Eorzea Event Tracker v0.5.0 for Dalamud API 15.
+Eorzea Event Tracker v0.6.0 for Dalamud API 15.
 
-- Added deadline reminders when the current character still has unconfirmed favorite rewards: once within 3 days and once within 24 hours of an active event ending.
-- Reminders appear as a Dalamud popup and a local chat message, with the event name and missing-favorites count. English and Russian are supported.
-- Reminder history persists per character, event and deadline, preventing repeated alerts on scans, relogs or restarts. A late login sends only the most urgent reminder.
-- Unknown reward states are excluded. Checks wait for loaded character tracking and the login feed refresh, and run every minute while in game.
-- Enabled by default; a separate toggle in Settings disables favorite deadline reminders independently of login announcements.
+- Added a separate compact widget with active events, time remaining, confirmed reward counts and progress bars. Soonest-ending events appear first.
+- Toggle it with `/eventswidget`, `/events widget`, or Show compact event widget in Settings. The visibility preference survives restarts; the widget hides while logged out.
+- Click an event title to open that event in the main journal. Long translated titles wrap, and the final 24 hours are highlighted.
+- The widget can be moved and resized. While character data is loading it shows a waiting status; events without tracking have an explicit status.
+- English and Russian labels are included. The main journal and deadline reminders continue working independently.
 
-Update through `/xlplugins`, open `/events`, and mark the rewards you want as Favorite. If the game was closed at a deadline threshold, the current reminder appears after the next login while the event is still active.
+Update through `/xlplugins` and run `/eventswidget` to show it. Close its window or use the same command to hide it.
 
-Validation: Release build; threshold boundary, persistence, character isolation, late-login, completed/unknown reward, expired-event and opt-out checks; existing feed/collector/localization tests. In-game notification display still needs verification after installation.
+Validation: Release build and existing feed/collector/localization checks. Layout and clicks should be checked at the player's UI scale in game.

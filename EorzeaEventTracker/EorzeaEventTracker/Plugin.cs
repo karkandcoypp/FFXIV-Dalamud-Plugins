@@ -35,6 +35,7 @@ public sealed class Plugin : IDalamudPlugin
     internal EventImages Images { get; }
     private readonly WindowSystem windows = new("EorzeaEventTracker");
     private readonly EventWindow window;
+    private readonly CompactWidget widget;
     private bool previousLoggedIn;
     private Task? loginRefresh;
     private DateTime nextFeedRefresh;
@@ -57,9 +58,16 @@ public sealed class Plugin : IDalamudPlugin
         Images = new EventImages(Path.Combine(data, "event-images"));
         Progress = new CharacterProgress(this);
         window = new EventWindow(this);
+        widget = new CompactWidget(this) { IsOpen = Settings.ShowCompactWidget };
         windows.AddWindow(window);
-        Commands.AddHandler("/events", new CommandInfo((_, _) => window.Toggle())
-        { HelpMessage = "Open the Eorzea Event Tracker window" });
+        windows.AddWindow(widget);
+        Commands.AddHandler("/events", new CommandInfo((_, args) =>
+        {
+            if (args.Trim().Equals("widget", StringComparison.OrdinalIgnoreCase)) ToggleWidget();
+            else window.Toggle();
+        }) { HelpMessage = "Open Eorzea Event Tracker; /events widget toggles the compact widget" });
+        Commands.AddHandler("/eventswidget", new CommandInfo((_, _) => ToggleWidget())
+        { HelpMessage = "Toggle the compact Eorzea Event Tracker widget" });
         PluginInterface.UiBuilder.Draw += windows.Draw;
         PluginInterface.UiBuilder.OpenMainUi += Open;
         PluginInterface.UiBuilder.OpenConfigUi += Open;
@@ -67,6 +75,18 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void Open() => window.IsOpen = true;
+    private void ToggleWidget() => SetWidgetVisible(!widget.IsOpen);
+    internal void SetWidgetVisible(bool visible)
+    {
+        widget.IsOpen = visible;
+        Settings.ShowCompactWidget = visible;
+        Save();
+    }
+    internal void OpenEvent(string eventId)
+    {
+        window.SelectEvent(eventId);
+        window.IsOpen = true;
+    }
     internal void Save() => PluginInterface.SavePluginConfig(Settings);
     private void OnUpdate(IFramework framework)
     {
@@ -135,6 +155,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi -= Open;
         PluginInterface.UiBuilder.OpenConfigUi -= Open;
         Commands.RemoveHandler("/events");
+        Commands.RemoveHandler("/eventswidget");
         windows.RemoveAllWindows();
         window.Dispose();
         Feed.Dispose();

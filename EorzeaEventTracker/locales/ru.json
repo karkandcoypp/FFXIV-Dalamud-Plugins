@@ -104,5 +104,11 @@
   "Ends within 3 days": "До окончания осталось не больше 3 дней",
   "Favorite rewards still unconfirmed: {0}. Open /events.": "Избранные награды, получение которых ещё не подтверждено: {0}. Откройте /events.",
   "Remind me about favorite rewards before events end": "Напоминать об избранных наградах перед окончанием событий",
-  "Reminders at 3 days and 24 hours, once per character and event deadline. If you were offline, the latest reminder appears after login. Unknown rewards are skipped.": "Напоминания за 3 дня и за сутки — по одному для каждого персонажа и срока окончания события. Если вы были не в игре, актуальное напоминание появится после входа. Награды с неизвестным статусом не учитываются."
+  "Reminders at 3 days and 24 hours, once per character and event deadline. If you were offline, the latest reminder appears after login. Unknown rewards are skipped.": "Напоминания за 3 дня и за сутки — по одному для каждого персонажа и срока окончания события. Если вы были не в игре, актуальное напоминание появится после входа. Награды с неизвестным статусом не учитываются.",
+  "Active events": "Активные события",
+  "Journal": "Журнал",
+  "Show compact event widget": "Показывать компактный виджет событий",
+  "No active events right now.": "Сейчас нет активных событий.",
+  "Click an event to open its journal.": "Нажмите на событие, чтобы открыть его в журнале.",
+  "Tracking is not available for this event yet.": "Отслеживание этого события пока недоступно."
 }

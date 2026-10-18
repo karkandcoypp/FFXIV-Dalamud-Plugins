@@ -21,6 +21,9 @@ internal static class Program
         await OnlineFeedChecks.Run();
         DeadlineReminderChecks.Run();
         var settings = new Configuration();
+        Check(!settings.ShowCompactWidget, "compact widget starts hidden for existing configurations");
+        settings.ShowCompactWidget = true;
+        Check(JsonSerializer.Deserialize<Configuration>(JsonSerializer.Serialize(settings))!.ShowCompactWidget, "widget visibility preference survives restart");
         Check(settings.FavoriteRewards.Count == 0, "existing configurations start without favorites");
         settings.FavoriteRewards.Add(52402);
         var saved = JsonSerializer.Deserialize<Configuration>(JsonSerializer.Serialize(settings))!;

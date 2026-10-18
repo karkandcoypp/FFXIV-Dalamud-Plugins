@@ -71,3 +71,9 @@ Local verification covers Release compilation, collector/index/catalog/localizat
 Mark desired rewards as Favorite. While logged in, the plugin checks active events every minute and shows a Dalamud popup plus a local chat message within 72 hours and within 24 hours of the deadline if favorite rewards remain unconfirmed on this character. No reminders are sent for unknown or unloaded reward data, or for completed/expired events.
 
 Each threshold is delivered once per character, event and deadline, and delivery history survives restarts. A login during the final day receives only the final-day reminder. If the official deadline changes, its new reminder history is independent. Reminders require the game/plugin to be running; an offline threshold is caught up after login while the event remains active. Settings has a separate reminder toggle, enabled by default. This is independent of the general login announcement setting.
+
+## Compact widget (v0.6.0)
+
+Use `/eventswidget` or `/events widget` to toggle a separate movable, resizable window. You can also enable Show compact event widget in Settings. The choice persists across restarts and the widget hides while logged out. It starts hidden for existing installations.
+
+The widget lists active events from the current feed, ordered by deadline, with time remaining and confirmed-reward progress for the logged-in character. It follows the journal's partial-event visibility setting. Loading data and events without tracking are labeled explicitly. Click an event title to open its full journal; the Journal button opens the main window.
