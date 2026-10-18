@@ -12,7 +12,12 @@ public sealed class Localizer
     public Localizer(Configuration settings) => this.settings = settings;
     public bool IsRussian => settings.Language == "ru";
     public CultureInfo Culture => CultureInfo.GetCultureInfo(IsRussian ? "ru-RU" : "en-US");
-    public string Text(string text) => IsRussian && Russian.TryGetValue(text, out var translated) ? translated : text;
+    public string Text(string text, EventInfo? context = null)
+    {
+        if (context?.Translations.TryGetValue(IsRussian ? "ru" : "en", out var entries) == true
+            && entries.TryGetValue(text, out var online)) return online;
+        return IsRussian && Russian.TryGetValue(text, out var translated) ? translated : text;
+    }
     public string Format(string template, params object[] values) => string.Format(Culture, Text(template), values);
 
     public string RewardLabel(RewardProgress reward) => reward.State switch

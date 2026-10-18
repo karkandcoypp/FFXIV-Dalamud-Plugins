@@ -9,7 +9,7 @@ namespace EorzeaEventTracker;
 
 public sealed class EventFeedService : IDisposable
 {
-    private readonly HttpClient client = new() { Timeout = TimeSpan.FromSeconds(12) };
+    private readonly HttpClient client;
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly CancellationTokenSource lifetime = new();
     private volatile bool disposed;
@@ -20,8 +20,10 @@ public sealed class EventFeedService : IDisposable
     public string Status { get; private set; } = "Not loaded";
     public DateTimeOffset? UpdatedAt { get; private set; }
 
-    public EventFeedService(string cachePath, string bundledPath)
+    public EventFeedService(string cachePath, string bundledPath, HttpMessageHandler? handler = null)
     {
+        client = handler == null ? new HttpClient() : new HttpClient(handler);
+        client.Timeout = TimeSpan.FromSeconds(12);
         this.cachePath = cachePath;
         this.bundledPath = bundledPath;
         LoadLocal();
@@ -85,19 +87,7 @@ public sealed class EventFeedService : IDisposable
         finally { gate.Release(); }
     }
 
-    private static void Validate(EventFeed? feed)
-    {
-        if (feed == null || feed.SchemaVersion != 1 || feed.Events == null || feed.Events.Count > 500)
-            throw new IOException("Unsupported feed");
-        var ids = new System.Collections.Generic.HashSet<string>();
-        foreach (var e in feed.Events)
-        {
-            if (e == null || string.IsNullOrWhiteSpace(e.Id) || string.IsNullOrWhiteSpace(e.Title) ||
-                !ids.Add(e.Id) || e.StartsAt == null || e.EndsAt == null || e.StartsAt >= e.EndsAt ||
-                e.Requirements == null || e.Steps == null || e.Rewards == null || e.Notes == null)
-                throw new IOException("Malformed event");
-        }
-    }
+    private static void Validate(EventFeed? feed) => FeedPolicy.Validate(feed);
 
     public void Dispose()
     {

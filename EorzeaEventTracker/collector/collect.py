@@ -111,7 +111,7 @@ def run(args):
                 print('SKIP (uncertain dates):', url)
                 continue
             manual = overrides.get(e['id']) or overrides.get(url) or {}
-            for key in ('title', 'description', 'requirements', 'steps', 'rewards', 'notes', 'verified'):
+            for key in ('title', 'description', 'requirements', 'steps', 'rewards', 'notes', 'verified', 'tracking', 'imageUrl', 'translations'):
                 if key in manual: e[key] = manual[key]
             events.append(e)
             print('OK:', e['title'])

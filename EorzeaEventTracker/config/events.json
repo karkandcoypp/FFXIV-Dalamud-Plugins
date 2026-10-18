@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-18T15:00:24.425690+00:00",
+  "generatedAt": "2026-10-18T15:19:28.709657+00:00",
   "events": [
     {
       "id": "0b841481931b7bc3",
@@ -49,7 +49,185 @@
       "notes": [
         "All prices are MGF. Earn MGF during the event.",
         "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/"
-      ]
+      ],
+      "tracking": {
+        "eventId": "e9da20a481813c2f",
+        "quests": [
+          {
+            "id": 65970,
+            "name": "It Could Happen to You",
+            "icon": 100376
+          },
+          {
+            "id": 70337,
+            "name": "Just Crowning Around",
+            "icon": 0
+          }
+        ],
+        "rewards": [
+          {
+            "id": 41560,
+            "name": "Gentlebean Knit Cap",
+            "icon": 56610,
+            "price": 410
+          },
+          {
+            "id": 41561,
+            "name": "Gentlebean Parka",
+            "icon": 42992,
+            "price": 410
+          },
+          {
+            "id": 41562,
+            "name": "Gentlebean Bottoms",
+            "icon": 57520,
+            "price": 410
+          },
+          {
+            "id": 41563,
+            "name": "Gentlebean Shoes",
+            "icon": 49614,
+            "price": 410
+          },
+          {
+            "id": 41564,
+            "name": "Matte Winner's Crown",
+            "icon": 56611,
+            "price": 410
+          },
+          {
+            "id": 41796,
+            "name": "Glossy Winner's Crown",
+            "icon": 56645,
+            "price": 410
+          },
+          {
+            "id": 41491,
+            "name": "Rhiyes Identification Key",
+            "icon": 26014,
+            "price": 410
+          },
+          {
+            "id": 41463,
+            "name": "Ballroom Etiquette - Embracing Blunders",
+            "icon": 26435,
+            "price": 410
+          },
+          {
+            "id": 41479,
+            "name": "Pink Bean",
+            "icon": 59899,
+            "price": 350
+          },
+          {
+            "id": 41480,
+            "name": "Pegwin",
+            "icon": 59900,
+            "price": 350
+          },
+          {
+            "id": 41437,
+            "name": "Blunderville Crown",
+            "icon": 53467,
+            "price": 220
+          },
+          {
+            "id": 41438,
+            "name": "Blunderville Flag",
+            "icon": 53468,
+            "price": 220
+          },
+          {
+            "id": 41439,
+            "name": "Blunderville Donut Bumper",
+            "icon": 52785,
+            "price": 220
+          },
+          {
+            "id": 41440,
+            "name": "Blunderville Padded Wall",
+            "icon": 52786,
+            "price": 220
+          },
+          {
+            "id": 41441,
+            "name": "Blunderville Rainbow",
+            "icon": 52787,
+            "price": 220
+          },
+          {
+            "id": 41442,
+            "name": "Blunderville Hammer",
+            "icon": 52788,
+            "price": 220
+          },
+          {
+            "id": 41628,
+            "name": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
+            "icon": 25945,
+            "price": 220
+          },
+          {
+            "id": 41377,
+            "name": "Blunderful Framer's Kit",
+            "icon": 26625,
+            "price": 200
+          },
+          {
+            "id": 41378,
+            "name": "Blunderous Framer's Kit",
+            "icon": 26625,
+            "price": 200
+          },
+          {
+            "id": 41379,
+            "name": "Blunder-villed Framer's Kit",
+            "icon": 26625,
+            "price": 200
+          },
+          {
+            "id": 41707,
+            "name": "Standard Rationing Manual",
+            "icon": 26186,
+            "price": 200
+          },
+          {
+            "id": 41708,
+            "name": "Gold Saucer Aetheryte Ticket",
+            "icon": 25918,
+            "price": 200
+          },
+          {
+            "id": 52255,
+            "name": "Wide Spectrum #1 Dye",
+            "icon": 22805,
+            "price": 150
+          }
+        ]
+      },
+      "imageUrl": "https://lds-img.finalfantasyxiv.com/h/0/zje_ddUUZhM_mwaVQGVVOVsByM.jpg",
+      "translations": {
+        "ru": {
+          "Fall Guys Collaboration": "Коллаборация Fall Guys",
+          "Play Blunderville, earn Manderville Gold Saucer Fame (MGF), and exchange it for prizes.": "Участвуйте в Blunderville, зарабатывайте Manderville Gold Saucer Fame (MGF) и обменивайте валюту на призы.",
+          "Level 15+; Gold Saucer access via It Could Happen to You (requires your city-state's envoy main scenario quest).": "Уровень 15+. Доступ в Gold Saucer открывается квестом It Could Happen to You; предварительно нужен сюжетный квест посланника вашего города.",
+          "Unlock Gold Saucer: Well-Heeled Youth, Ul'dah - Steps of Nald (X:9.6 Y:9.0).": "Откройте Gold Saucer: NPC Well-Heeled Youth, Ul'dah - Steps of Nald (X:9.6 Y:9.0).",
+          "Complete Just Crowning Around: Lewena, Gold Saucer (X:4.8 Y:6.1). Returning players can resume directly.": "Выполните Just Crowning Around: NPC Lewena, Gold Saucer (X:4.8 Y:6.1). Если квест уже пройден в прошлый раз, повторять его не нужно.",
+          "Join Blunderville shows for MGF; exchange it at MGF Trader, Blunderville Square (X:3.8 Y:3.1).": "Зарабатывайте MGF в соревнованиях Blunderville. Обменивайте валюту у MGF Trader в Blunderville Square (X:3.8 Y:3.1).",
+          "Gentlebean Knit Cap / Parka / Bottoms / Shoes: 410 MGF each.": "Gentlebean Knit Cap / Parka / Bottoms / Shoes: по 410 MGF.",
+          "Matte Winner's Crown / Glossy Winner's Crown: 410 each.": "Matte Winner's Crown / Glossy Winner's Crown: по 410 MGF.",
+          "Rhiyes Identification Key (mount): 410.": "Rhiyes Identification Key — маунт: 410 MGF.",
+          "Ballroom Etiquette - Embracing Blunders (emote): 410.": "Ballroom Etiquette - Embracing Blunders — эмоция: 410 MGF.",
+          "Pink Bean / Pegwin (minions): 350 each.": "Pink Bean / Pegwin — миньоны: по 350 MGF.",
+          "Blunderville Crown / Flag / Donut Bumper / Padded Wall / Rainbow / Hammer: 220 each.": "Blunderville Crown / Flag / Donut Bumper / Padded Wall / Rainbow / Hammer: по 220 MGF.",
+          "Everybody Falls (Fall Guys Theme) Orchestrion Roll: 220.": "Everybody Falls (Fall Guys Theme) Orchestrion Roll — музыка: 220 MGF.",
+          "Blunderful / Blunderous / Blunder-villed Framer's Kit: 200 each.": "Blunderful / Blunderous / Blunder-villed Framer's Kit — оформление портрета: по 200 MGF.",
+          "Standard Rationing Manual / Gold Saucer Aetheryte Ticket: 200 each.": "Standard Rationing Manual / Gold Saucer Aetheryte Ticket: по 200 MGF.",
+          "Wide Spectrum #1 Dye: 150.": "Wide Spectrum #1 Dye — краситель: 150 MGF.",
+          "All prices are MGF. Earn MGF during the event.": "Все цены указаны в MGF. Валюта зарабатывается во время события.",
+          "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/": "Правила и таблица призов проверены 18.10.2026: https://na.finalfantasyxiv.com/lodestone/special/fallguys/"
+        }
+      }
     },
     {
       "id": "692a7561de5dd384",
@@ -75,7 +253,90 @@
       "notes": [
         "Checked against the official event page and official Community Team blog on 2026-10-18. Vendor prices are not listed here.",
         "Official reward showcase: https://na.finalfantasyxiv.com/blog/003906.html"
-      ]
+      ],
+      "tracking": {
+        "eventId": "692a7561de5dd384",
+        "quests": [
+          {
+            "id": 71003,
+            "name": "We Scare Bears",
+            "icon": 101479
+          },
+          {
+            "id": 71004,
+            "name": "Grim and Grisly Games",
+            "icon": 101480
+          }
+        ],
+        "rewards": [
+          {
+            "id": 52402,
+            "name": "Grisly Bear Head",
+            "icon": 56959,
+            "price": 0,
+            "earnedByQuest": 71004
+          },
+          {
+            "id": 52403,
+            "name": "Grisly Bear Suit",
+            "icon": 57397,
+            "price": 0,
+            "earnedByQuest": 71004
+          },
+          {
+            "id": 51292,
+            "name": "Smiling Wakeshroom",
+            "icon": 52885,
+            "price": 0
+          },
+          {
+            "id": 51293,
+            "name": "Staring Wakeshroom",
+            "icon": 52886,
+            "price": 0
+          },
+          {
+            "id": 51294,
+            "name": "Wakesoul Buggy",
+            "icon": 52887,
+            "price": 0
+          },
+          {
+            "id": 51302,
+            "name": "All Saints' Wake MMXXV Advertisement",
+            "icon": 51944,
+            "price": 0
+          },
+          {
+            "id": 51304,
+            "name": "All Saints' Wake MMXVI Advertisement",
+            "icon": 51943,
+            "price": 0
+          },
+          {
+            "id": 51303,
+            "name": "Tabletop All Saints' Wake MMXXV Advertisement",
+            "icon": 53565,
+            "price": 0
+          }
+        ]
+      },
+      "imageUrl": "https://lds-img.finalfantasyxiv.com/h/2/S6cUfbRM1Huta2gcz90SFzZhFM.jpg",
+      "translations": {
+        "ru": {
+          "All Saints' Wake 2026": "День всех святых — 2026",
+          "A seasonal quest in Old Gridania featuring a bear costume and six furnishings.": "Сезонная цепочка квестов в Старой Гридании. Среди наград — костюм медведя и шесть предметов для дома.",
+          "Level 15 or higher.": "Уровень 15 или выше.",
+          "Start We Scare Bears with the Pumpkin-headed Apparition in Old Gridania (X:10.2 Y:9.4).": "Возьмите квест We Scare Bears у Pumpkin-headed Apparition в Old Gridania (X:10.2 Y:9.4).",
+          "Follow the seasonal quest objectives and continue the quest chain to obtain the costume.": "Выполняйте задания события и продолжайте цепочку, чтобы получить костюм.",
+          "Visit the event vendors for available furnishings and returning items. Finish seasonal quests before the event ends.": "Проверьте мебель и предметы прошлых лет у торговцев события. Завершите сезонные квесты до окончания события.",
+          "Grisly Bear Head and Grisly Bear Suit (costume).": "Grisly Bear Head и Grisly Bear Suit — костюм медведя.",
+          "Smiling Wakeshroom; Staring Wakeshroom; Wakesoul Buggy (furnishings).": "Smiling Wakeshroom, Staring Wakeshroom и Wakesoul Buggy — предметы для дома.",
+          "All Saints' Wake MMXXV Advertisement; All Saints' Wake MMXVI Advertisement; Tabletop All Saints' Wake MMXXV Advertisement.": "Плакаты All Saints' Wake MMXXV Advertisement и All Saints' Wake MMXVI Advertisement; настольный Tabletop All Saints' Wake MMXXV Advertisement.",
+          "Checked against the official event page and official Community Team blog on 2026-10-18. Vendor prices are not listed here.": "Проверено по официальной странице и блогу команды сообщества 18.10.2026. Цены торговцев здесь не указаны.",
+          "Official reward showcase: https://na.finalfantasyxiv.com/blog/003906.html": "Официальный обзор наград: https://na.finalfantasyxiv.com/blog/003906.html"
+        }
+      }
     }
   ]
 }

@@ -90,5 +90,7 @@
   "All prices are MGF. Earn MGF during the event.": "Все цены указаны в MGF. Валюта зарабатывается во время события.",
   "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/": "Правила и таблица призов проверены 18.10.2026: https://na.finalfantasyxiv.com/lodestone/special/fallguys/",
   "Dates extracted automatically from official site.": "Даты автоматически получены с официального сайта.",
-  "Reward names, NPC location and quest steps require review.": "Названия наград, расположение NPC и шаги квестов требуют проверки."
+  "Reward names, NPC location and quest steps require review.": "Названия наград, расположение NPC и шаги квестов требуют проверки.",
+  "Events, quest IDs, rewards, artwork and translations update through the feed. New tracking mechanics may still require a plugin update.": "События, ID квестов, награды, картинки и переводы обновляются через ленту. Поддержка новой механики отслеживания может потребовать обновления плагина.",
+  "Names use the event's translations when available. Original item names remain in tooltips.": "Названия отображаются в переводе события, если он есть. Исходные названия предметов сохранены в подсказках."
 }

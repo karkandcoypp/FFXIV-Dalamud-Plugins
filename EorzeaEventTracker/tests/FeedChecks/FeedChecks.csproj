@@ -5,6 +5,9 @@
     <Compile Include="../../EorzeaEventTracker/EventModels.cs" Link="EventModels.cs" />
     <Compile Include="../../EorzeaEventTracker/ProgressModels.cs" Link="ProgressModels.cs" />
     <Compile Include="../../EorzeaEventTracker/Localizer.cs" Link="Localizer.cs" />
+    <Compile Include="../../EorzeaEventTracker/FeedPolicy.cs" Link="FeedPolicy.cs" />
+    <Compile Include="../../EorzeaEventTracker/EventImages.cs" Link="EventImages.cs" />
     <EmbeddedResource Include="../../locales/ru.json" LogicalName="EorzeaEventTracker.ru.json" />
+    <EmbeddedResource Include="../../assets/*.jpg" LogicalName="Tests.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

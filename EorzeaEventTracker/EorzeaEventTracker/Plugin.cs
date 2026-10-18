@@ -28,6 +28,7 @@ public sealed class Plugin : IDalamudPlugin
     internal EventFeedService Feed { get; }
     internal CharacterProgress Progress { get; }
     internal Localizer Locale { get; }
+    internal EventImages Images { get; }
     private readonly WindowSystem windows = new("EorzeaEventTracker");
     private readonly EventWindow window;
     private bool previousLoggedIn;
@@ -47,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
         var data = PluginInterface.GetPluginConfigDirectory();
         var bundled = Path.Combine(PluginInterface.AssemblyLocation.DirectoryName!, "events.json");
         Feed = new EventFeedService(Path.Combine(data, "events.json"), bundled);
+        Images = new EventImages(Path.Combine(data, "event-images"));
         Progress = new CharacterProgress(this);
         window = new EventWindow(this);
         windows.AddWindow(window);
@@ -68,11 +70,13 @@ public sealed class Plugin : IDalamudPlugin
         {
             loginRefresh = Feed.RefreshAsync(Settings.FeedUrl);
             nextFeedRefresh = DateTime.UtcNow.AddMinutes(30);
+            Images.RetryFailed();
         }
         else if (loggedIn && DateTime.UtcNow >= nextFeedRefresh)
         {
             nextFeedRefresh = DateTime.UtcNow.AddMinutes(30);
             _ = Feed.RefreshAsync(Settings.FeedUrl);
+            Images.RetryFailed();
         }
         if (!loggedIn) loginRefresh = null;
         if (loggedIn && loginRefresh?.IsCompleted == true)
@@ -97,5 +101,6 @@ public sealed class Plugin : IDalamudPlugin
         windows.RemoveAllWindows();
         window.Dispose();
         Feed.Dispose();
+        Images.Dispose();
     }
 }

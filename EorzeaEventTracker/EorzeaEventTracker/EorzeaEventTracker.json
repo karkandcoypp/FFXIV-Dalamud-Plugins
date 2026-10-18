@@ -2,7 +2,7 @@
   "Author": "Community prototype",
   "Name": "Eorzea Event Tracker",
   "InternalName": "EorzeaEventTracker",
-  "AssemblyVersion": "0.2.1.0",
+  "AssemblyVersion": "0.3.0.0",
   "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes",
   "Description": "Lodestone event dates, illustrated event guides, automatic quest completion and character reward tracking.",
   "Punchline": "Lodestone event reminders and deadlines.",

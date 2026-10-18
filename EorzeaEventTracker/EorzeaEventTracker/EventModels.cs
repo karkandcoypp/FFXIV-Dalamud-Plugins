@@ -25,6 +25,9 @@ public sealed class EventInfo
     [JsonPropertyName("rewards")] public List<string> Rewards { get; set; } = new();
     [JsonPropertyName("verified")] public bool Verified { get; set; }
     [JsonPropertyName("notes")] public List<string> Notes { get; set; } = new();
+    [JsonPropertyName("tracking")] public TrackingDefinition? Tracking { get; set; }
+    [JsonPropertyName("imageUrl")] public string ImageUrl { get; set; } = "";
+    [JsonPropertyName("translations")] public Dictionary<string, Dictionary<string, string>> Translations { get; set; } = new();
 
     public bool Active(DateTimeOffset now) => StartsAt <= now && EndsAt > now;
     public bool Upcoming(DateTimeOffset now) => StartsAt > now;

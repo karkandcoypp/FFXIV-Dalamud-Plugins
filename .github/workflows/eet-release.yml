@@ -32,6 +32,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Python tests failed' }
           dotnet run --project tests/FeedChecks/FeedChecks.csproj -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Feed checks failed' }
+          dotnet run --project tests/FeedChecks/FeedChecks.csproj -c Release -- --validate config/events.json
+          if ($LASTEXITCODE -ne 0) { throw 'Feed metadata validation failed' }
       - name: Install Dalamud development files
         run: |
           $directory = Join-Path $env:APPDATA 'XIVLauncher/addon/Hooks/dev'

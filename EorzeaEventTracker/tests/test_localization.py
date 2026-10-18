@@ -20,7 +20,7 @@ class LocalizationTests(unittest.TestCase):
         for event in overrides.values():
             strings = [event['title'], event['description'], *event['requirements'], *event['steps'], *event['rewards'], *event['notes']]
             for text in strings:
-                with self.subTest(text=text): self.assertIn(text, entries)
+                with self.subTest(text=text): self.assertIn(text, event.get('translations', {}).get('ru', entries))
 
     def test_literal_ui_translation_keys_exist(self):
         entries = json.loads((ROOT / 'locales/ru.json').read_text(encoding='utf-8'))

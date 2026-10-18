@@ -1,14 +1,14 @@
-Eorzea Event Tracker v0.2.1 for Dalamud API 15.
+Eorzea Event Tracker v0.3.0 for Dalamud API 15.
 
-- Choose English or Русский in Settings → Language. The choice applies immediately and is saved.
-- Russian interface, reward statuses, countdowns, chat notifications and current event participation guides. Quest, item and NPC names stay in English for in-game lookup.
-- Dates use the selected interface language and the computer's local time zone.
-- Untranslated future event text falls back to English.
-- The online feed now refreshes automatically every 30 minutes while logged in, as well as on login and Refresh.
-- New event announcements can arrive without a plugin rebuild when the collector can parse their dates. Detailed guides require reviewed feed annotations; new automatic tracking mappings and artwork currently require a plugin update.
+- Quest IDs, reward mappings, prices/currencies, event translations and artwork URLs now arrive through the online feed.
+- New definitions apply without restarting or rebuilding the plugin. Current events have been migrated to the online format.
+- Artwork loads asynchronously from official HTTPS image hosts and is cached locally. Existing bundled artwork remains a fallback.
+- Invalid feed data preserves the last valid copy. Cached event details, mappings, translations and downloaded images work offline.
+- Guaranteed quest reward claims are additionally checked against the game's reward list.
+- New tracking mechanics and changes to the game API may still require a plugin update. New event details still need reviewed source annotations; they are not magically extracted from every Lodestone layout.
 
 Install from the existing custom repository:
 https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/pluginmaster.json
 
 Open `/xlplugins`, find Eorzea Event Tracker, install it, then use `/events`.
-Update the installed plugin through the Dalamud installer, open `/events`, then select Settings → Language → Русский. Version 0.2.0 was confirmed working in-game by the user; this localization update still requires in-game verification.
+Install this update once through `/xlplugins`. Subsequent event data refreshes on login, Refresh and every 30 minutes while logged in. This online catalog version still requires in-game verification.

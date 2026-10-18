@@ -9,8 +9,16 @@ namespace Dalamud.Configuration { public interface IPluginConfiguration { int Ve
 
 internal static class Program
 {
-    private static async Task Main()
+    private static async Task Main(string[] args)
     {
+        if (args.Length == 2 && args[0] == "--validate")
+        {
+            var candidate = JsonSerializer.Deserialize<EventFeed>(File.ReadAllText(args[1]), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            FeedPolicy.Validate(candidate);
+            Console.WriteLine("PASS: generated feed validated with the client policy");
+            return;
+        }
+        await OnlineFeedChecks.Run();
         var settings = new Configuration();
         var locale = new Localizer(settings);
         Check(locale.Text("Settings") == "Settings", "English remains the default language");
