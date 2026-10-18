@@ -1,0 +1,466 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-18T22:04:34.175369+00:00",
+  "events": [
+    {
+      "id": "e2e-auto-e9da20a481813c2f",
+      "title": "Fall Guys Collaboration Event Returns October 7!",
+      "url": "https://na.finalfantasyxiv.com/lodestone/topics/detail/e1eb49ab626ea7b71795aab17ac5f335d8ace6de",
+      "startsAt": "2026-10-07T08:00:00Z",
+      "endsAt": "2026-10-27T14:59:00Z",
+      "description": "",
+      "requirements": [],
+      "steps": [],
+      "rewards": [
+        "Gentlebean Knit Cap",
+        "Gentlebean Parka",
+        "Gentlebean Bottoms",
+        "Gentlebean Shoes",
+        "Matte Winner's Crown",
+        "Glossy Winner's Crown",
+        "Rhiyes Identification Key",
+        "Ballroom Etiquette - Embracing Blunders",
+        "Pink Bean",
+        "Pegwin",
+        "Blunderville Crown",
+        "Blunderville Flag",
+        "Blunderville Donut Bumper",
+        "Blunderville Padded Wall",
+        "Blunderville Rainbow",
+        "Blunderville Hammer",
+        "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
+        "Blunderful Framer's Kit",
+        "Blunderous Framer's Kit",
+        "Blunder-villed Framer's Kit",
+        "Standard Rationing Manual",
+        "Gold Saucer Aetheryte Ticket",
+        "Wide Spectrum #1 Dye"
+      ],
+      "verified": false,
+      "notes": [
+        "Dates extracted automatically from official site.",
+        "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
+        "Branching quest chain: It Could Happen to You",
+        "Branching quest chain: The Gridanian Envoy",
+        "Branching quest chain: The Ul'dahn Envoy",
+        "Branching quest chain: The Lominsan Envoy",
+        "Price unknown or exchange is ambiguous: Wide Spectrum #1 Dye",
+        "NPC destination is ambiguous or not mapped: Wide Spectrum #1 Dye",
+        "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.",
+        "Some Russian translations are pending; English text is shown until they are available."
+      ],
+      "imageUrl": "https://lds-img.finalfantasyxiv.com/h/-/WPwECrWl-rElQ8JCIc-x5x2oVM.jpg",
+      "tracking": {
+        "eventId": "e2e-auto-e9da20a481813c2f",
+        "quests": [
+          {
+            "id": 65970,
+            "name": "It Could Happen to You",
+            "icon": 100376,
+            "locationId": "npc-1011565-map-13"
+          },
+          {
+            "id": 70337,
+            "name": "Just Crowning Around",
+            "icon": 0,
+            "locationId": "npc-1011145-map-196"
+          },
+          {
+            "id": 66043,
+            "name": "The Gridanian Envoy",
+            "icon": 100067,
+            "locationId": "npc-1003027-map-69"
+          },
+          {
+            "id": 66064,
+            "name": "The Ul'dahn Envoy",
+            "icon": 100091,
+            "locationId": "npc-1004004-map-13"
+          },
+          {
+            "id": 66082,
+            "name": "The Lominsan Envoy",
+            "icon": 100083,
+            "locationId": "npc-1002694-map-75"
+          }
+        ],
+        "rewards": [
+          {
+            "id": 41560,
+            "name": "Gentlebean Knit Cap",
+            "icon": 56610,
+            "price": 410,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41561,
+            "name": "Gentlebean Parka",
+            "icon": 42992,
+            "price": 410,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41562,
+            "name": "Gentlebean Bottoms",
+            "icon": 57520,
+            "price": 410,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41563,
+            "name": "Gentlebean Shoes",
+            "icon": 49614,
+            "price": 410,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41564,
+            "name": "Matte Winner's Crown",
+            "icon": 56611,
+            "price": 410,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41796,
+            "name": "Glossy Winner's Crown",
+            "icon": 56645,
+            "price": 410,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41491,
+            "name": "Rhiyes Identification Key",
+            "icon": 26014,
+            "price": 410,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41463,
+            "name": "Ballroom Etiquette - Embracing Blunders",
+            "icon": 26435,
+            "price": 410,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41479,
+            "name": "Pink Bean",
+            "icon": 59899,
+            "price": 350,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41480,
+            "name": "Pegwin",
+            "icon": 59900,
+            "price": 350,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41437,
+            "name": "Blunderville Crown",
+            "icon": 53467,
+            "price": 220,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41438,
+            "name": "Blunderville Flag",
+            "icon": 53468,
+            "price": 220,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41439,
+            "name": "Blunderville Donut Bumper",
+            "icon": 52785,
+            "price": 220,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41440,
+            "name": "Blunderville Padded Wall",
+            "icon": 52786,
+            "price": 220,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41441,
+            "name": "Blunderville Rainbow",
+            "icon": 52787,
+            "price": 220,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41442,
+            "name": "Blunderville Hammer",
+            "icon": 52788,
+            "price": 220,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41628,
+            "name": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
+            "icon": 25945,
+            "price": 220,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41377,
+            "name": "Blunderful Framer's Kit",
+            "icon": 26625,
+            "price": 200,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41378,
+            "name": "Blunderous Framer's Kit",
+            "icon": 26625,
+            "price": 200,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41379,
+            "name": "Blunder-villed Framer's Kit",
+            "icon": 26625,
+            "price": 200,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41707,
+            "name": "Standard Rationing Manual",
+            "icon": 26186,
+            "price": 200,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 41708,
+            "name": "Gold Saucer Aetheryte Ticket",
+            "icon": 25918,
+            "price": 200,
+            "currencyItemId": 41629,
+            "currency": "MGF",
+            "locationId": "npc-1046441-map-891"
+          },
+          {
+            "id": 52255,
+            "name": "Wide Spectrum #1 Dye",
+            "icon": 22805,
+            "price": 0
+          }
+        ]
+      },
+      "locations": [
+        {
+          "id": "npc-1011565-map-13",
+          "npc": "well-heeled youth",
+          "zone": "Ul'dah - Steps of Nald",
+          "territoryId": 130,
+          "mapId": 13,
+          "x": 9.671,
+          "y": 9.039
+        },
+        {
+          "id": "npc-1011145-map-196",
+          "npc": "Lewena",
+          "zone": "The Gold Saucer",
+          "territoryId": 144,
+          "mapId": 196,
+          "x": 4.816,
+          "y": 6.141
+        },
+        {
+          "id": "npc-1003027-map-69",
+          "npc": "Kan-E-Senna",
+          "zone": "Lotus Stand",
+          "territoryId": 205,
+          "mapId": 69,
+          "x": 6.223,
+          "y": 6.122
+        },
+        {
+          "id": "npc-1004004-map-13",
+          "npc": "Raubahn",
+          "zone": "Ul'dah - Steps of Nald",
+          "territoryId": 130,
+          "mapId": 13,
+          "x": 8.461,
+          "y": 8.978
+        },
+        {
+          "id": "npc-1002694-map-75",
+          "npc": "Merlwyb",
+          "zone": "Command Room",
+          "territoryId": 198,
+          "mapId": 75,
+          "x": 3.562,
+          "y": 3.423
+        },
+        {
+          "id": "npc-1046441-map-891",
+          "npc": "MGF trader",
+          "zone": "Blunderville Square",
+          "territoryId": 1197,
+          "mapId": 891,
+          "x": 3.852,
+          "y": 3.172
+        }
+      ],
+      "automation": {
+        "status": "partial",
+        "sources": [
+          "https://na.finalfantasyxiv.com/lodestone/topics/detail/e1eb49ab626ea7b71795aab17ac5f335d8ace6de",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/bbf686f52b7/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/a3f8419ad18/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/4f45b297cfc/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/5b23c48798c/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/f51d67639b2/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/ef205108476/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/3bdf72eb08a/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/8c09dda9bdd/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/13c282afb89/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/c387041f698/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/c90d6feade1/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/ace94c938bd/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/b7126f8734f/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/d50087f3937/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/846bd28ccfd/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/c83f3fe8e35/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/626254f5a6d/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/84afea35be0/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/555566a8d8c/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/b7c50e3cf3b/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/d86f2bb5d9c/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/66af5df618d/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/5e02f2a47cf/",
+          "https://na.finalfantasyxiv.com/lodestone/special/fallguys/"
+        ],
+        "gameVersion": "5c744a8d8daafb25",
+        "schema": "exdschema@2:rev:e773c41a90aed788cf4c1c48469fa85618ef01fb",
+        "issues": [
+          "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
+          "Branching quest chain: It Could Happen to You",
+          "Branching quest chain: The Gridanian Envoy",
+          "Branching quest chain: The Ul'dahn Envoy",
+          "Branching quest chain: The Lominsan Envoy",
+          "Price unknown or exchange is ambiguous: Wide Spectrum #1 Dye",
+          "NPC destination is ambiguous or not mapped: Wide Spectrum #1 Dye"
+        ],
+        "npc": {
+          "mapped": 27,
+          "locations": 6,
+          "issues": [
+            "NPC destination is ambiguous or not mapped: Wide Spectrum #1 Dye"
+          ]
+        },
+        "russian": {
+          "status": "partial",
+          "translated": 43,
+          "pending": 5,
+          "provider": "MyMemory + reviewed glossary"
+        }
+      },
+      "translations": {
+        "ru": {
+          "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.": "Автоматически собранные сведения могут быть неполными. Основная цель не определяется автоматически; точки NPC добавляются только при точной связи в игровых данных.",
+          "Fall Guys Collaboration Event Returns October 7!": "Коллаборационное событие Fall Guys возвращается 7 октября!",
+          "It Could Happen to You": "Это может случиться с вами",
+          "Just Crowning Around": "Просто коронуем вокруг",
+          "The Gridanian Envoy": "Гриданианский посланник",
+          "The Ul'dahn Envoy": "Посланник Ульдана",
+          "The Lominsan Envoy": "Посланник Ломинсана",
+          "Gentlebean Knit Cap": "Вязаная кепка Gentlebean",
+          "Gentlebean Parka": "Нежная парка с бобами",
+          "Gentlebean Shoes": "Нежная обувь",
+          "Matte Winner's Crown": "Матовая корона победителя",
+          "Glossy Winner's Crown": "Глянцевая корона победителя",
+          "Rhiyes Identification Key": "Идентификационный ключ Rhiyes",
+          "Ballroom Etiquette - Embracing Blunders": "Бальный этикет: обнимаем грубые ошибки",
+          "Pink Bean": "Розовая фасоль",
+          "Pegwin": "Пегвин",
+          "Blunderville Crown": "Корона Бландервилля",
+          "Blunderville Flag": "Флаг Бландервилля",
+          "Blunderville Donut Bumper": "Бампер из пончиков Blunderville",
+          "Blunderville Padded Wall": "Мягкая стена Blunderville",
+          "Blunderville Hammer": "Бландервилль-Хаммер",
+          "Everybody Falls (Fall Guys Theme) Orchestrion Roll": "Все падают (тема Fall Guys) Orchestrion Roll",
+          "Blunderful Framer's Kit": "Набор Blunderful Framer's",
+          "Blunderous Framer's Kit": "Набор Blunderous Framer's Kit",
+          "Blunder-villed Framer's Kit": "Набор Framer's Kit для борьбы с промахами",
+          "Standard Rationing Manual": "Стандартное руководство по нормированию",
+          "Gold Saucer Aetheryte Ticket": "Билет на золотую тарелку с эфиритом",
+          "Wide Spectrum #1 Dye": "Краситель широкого спектра №1",
+          "well-heeled youth": "молодежь на высоких каблуках",
+          "Ul'dah - Steps of Nald": "Ульда - ступеньки Налда",
+          "Lewena": "Левена",
+          "The Gold Saucer": "Золотая тарелка",
+          "Lotus Stand": "Подставка для лотоса",
+          "Raubahn": "Раубан",
+          "Command Room": "Комната управления",
+          "MGF trader": "ТРЕЙДЕР MGF",
+          "Blunderville Square": "Бландервилл-Сквер",
+          "Dates extracted automatically from official site.": "Даты, автоматически извлекаемые с официального сайта.",
+          "Branching quest chain: It Could Happen to You": "Ветвящаяся цепочка квестов: это может случиться с вами",
+          "Branching quest chain: The Gridanian Envoy": "Разветвленная цепочка квестов: Посланник Гриданиана",
+          "Branching quest chain: The Ul'dahn Envoy": "Разветвленная цепочка квестов: Посланник Ульдана",
+          "Branching quest chain: The Lominsan Envoy": "Разветвленная цепочка квестов: Посланник Ломинсана",
+          "Price unknown or exchange is ambiguous: Wide Spectrum #1 Dye": "Цена неизвестна или обмен неоднозначен: краситель Wide Spectrum #1",
+          "NPC destination is ambiguous or not mapped: Wide Spectrum #1 Dye": "Назначение NPC неоднозначно или не отображается: краситель Wide Spectrum #1",
+          "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках.",
+          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст."
+        }
+      }
+    }
+  ],
+  "testOnly": true,
+  "testProvenance": {
+    "collectorEventId": "e9da20a481813c2f",
+    "sourceFeedSha256": "46ff67a4dc8ed70b556c4d6ece5b234d4fdc8af80953e7312d45c8ca22ca71eb",
+    "manualOverrides": 0,
+    "reviewedGlossaryEntries": 0,
+    "previousFeedUsed": false,
+    "preexistingTranslationCacheUsed": false,
+    "identityChangedOnlyToAvoidExistingHiddenEventPreferences": true
+  }
+}

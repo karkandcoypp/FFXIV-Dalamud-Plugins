@@ -11,6 +11,11 @@ internal static class Program
 {
     private static async Task Main(string[] args)
     {
+        if (args.Length is 2 or 3 && args[0] == "--integration-url")
+        {
+            await LiveFeedChecks.Run(args[1], args.Length == 3 ? args[2] : null);
+            return;
+        }
         if (args.Length == 2 && args[0] == "--validate")
         {
             var candidate = JsonSerializer.Deserialize<EventFeed>(File.ReadAllText(args[1]), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
