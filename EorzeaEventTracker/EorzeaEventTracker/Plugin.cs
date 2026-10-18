@@ -27,14 +27,17 @@ public sealed class Plugin : IDalamudPlugin
     internal Configuration Settings { get; }
     internal EventFeedService Feed { get; }
     internal CharacterProgress Progress { get; }
+    internal Localizer Locale { get; }
     private readonly WindowSystem windows = new("EorzeaEventTracker");
     private readonly EventWindow window;
     private bool previousLoggedIn;
     private Task? loginRefresh;
+    private DateTime nextFeedRefresh;
 
     public Plugin()
     {
         Settings = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        Locale = new Localizer(Settings);
         if (Settings.Version < 2)
         {
             if (string.IsNullOrWhiteSpace(Settings.FeedUrl)) Settings.FeedUrl = Configuration.DefaultFeedUrl;
@@ -64,6 +67,12 @@ public sealed class Plugin : IDalamudPlugin
         if (loggedIn && !previousLoggedIn)
         {
             loginRefresh = Feed.RefreshAsync(Settings.FeedUrl);
+            nextFeedRefresh = DateTime.UtcNow.AddMinutes(30);
+        }
+        else if (loggedIn && DateTime.UtcNow >= nextFeedRefresh)
+        {
+            nextFeedRefresh = DateTime.UtcNow.AddMinutes(30);
+            _ = Feed.RefreshAsync(Settings.FeedUrl);
         }
         if (!loggedIn) loginRefresh = null;
         if (loggedIn && loginRefresh?.IsCompleted == true)
@@ -71,7 +80,7 @@ public sealed class Plugin : IDalamudPlugin
             loginRefresh = null;
             var active = Feed.Feed.Events.Count(e => e.Active(DateTimeOffset.UtcNow) && (Settings.ShowUnverified || e.Verified));
             if (Settings.NotifyOnLogin && active > 0)
-                Chat.Print($"[Eorzea Event Tracker] {active} active event(s)! Type /events for details.");
+                Chat.Print("[Eorzea Event Tracker] " + Locale.Format("{0} active event(s)! Type /events for details.", active));
             if (Settings.OpenOnLogin && active > 0) Open();
         }
         previousLoggedIn = loggedIn;

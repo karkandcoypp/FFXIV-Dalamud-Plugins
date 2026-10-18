@@ -1,6 +1,6 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.2.0.0</Version>
+    <Version>0.2.1.0</Version>
     <Author>Community prototype</Author>
     <Name>Eorzea Event Tracker</Name>
     <Punchline>Official FFXIV event reminders and rewards.</Punchline>
@@ -8,6 +8,7 @@
     <Tags>events;seasonal;lodestone</Tags>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\locales\ru.json" LogicalName="EorzeaEventTracker.ru.json" />
     <Content Include="..\config\events.json" Link="events.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\config\tracking.json" Link="tracking.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\assets\*.jpg" Link="assets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

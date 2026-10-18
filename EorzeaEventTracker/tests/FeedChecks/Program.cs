@@ -11,6 +11,17 @@ internal static class Program
 {
     private static async Task Main()
     {
+        var settings = new Configuration();
+        var locale = new Localizer(settings);
+        Check(locale.Text("Settings") == "Settings", "English remains the default language");
+        settings.Language = "ru";
+        Check(locale.Text("Settings") == "Настройки", "language switches immediately without recreating the localizer");
+        Check(locale.RewardLabel(new(RewardState.Owned, 2)) == "В сумках / надето: 2", "Russian reward counts preserve the quantity");
+        Check(locale.Format("{0} / {1} rewards confirmed", 8, 23) == "Награды: 8 из 23", "Russian counters preserve both values");
+        Check(locale.Text("A new unknown event") == "A new unknown event", "untranslated future events fall back to source text");
+        Check(JsonSerializer.Deserialize<Configuration>(JsonSerializer.Serialize(settings))?.Language == "ru", "language choice survives configuration serialization");
+        settings.Language = "en";
+        Check(locale.Text("Settings") == "Settings" && locale.Culture.Name == "en-US", "switching back restores English and date culture");
         Check(ProgressPolicy.Resolve(false, true, 1, true, true).State == RewardState.Unknown, "unloaded character data never reports obtained rewards");
         Check(ProgressPolicy.Resolve(true, true, 0, false, false).State == RewardState.Unlocked, "registered collection survives item consumption");
         Check(ProgressPolicy.Resolve(true, false, 1, false, false).State == RewardState.Owned, "unconsumed collection item is owned but not registered");

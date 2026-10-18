@@ -1,15 +1,14 @@
-Eorzea Event Tracker v0.2.0 for Dalamud API 15.
+Eorzea Event Tracker v0.2.1 for Dalamud API 15.
 
-- Redesigned journal: official event artwork, event navigation, tabs, game item icons, reward cards, countdowns and collection progress.
-- Automatic completion checks for the All Saints' Wake quest chain and Fall Guys unlock quests.
-- Automatic collection unlock checks through Dalamud, plus carried/equipped/armory item detection for all 31 mapped rewards.
-- Guaranteed bear costume rewards can be confirmed by completion of Grim and Grisly Games.
-- Observed rewards are remembered separately for each character. Collection data stays on your computer.
-- Clear distinctions between Unlocked, In bags / equipped, Earned from quest, Previously obtained, Not unlocked, and Not detected.
-- No retainer, housing, glamour dresser or armoire scan: an undetected item is not assumed never obtained. Collectibles from earlier iterations count as already unlocked.
+- Choose English or Русский in Settings → Language. The choice applies immediately and is saved.
+- Russian interface, reward statuses, countdowns, chat notifications and current event participation guides. Quest, item and NPC names stay in English for in-game lookup.
+- Dates use the selected interface language and the computer's local time zone.
+- Untranslated future event text falls back to English.
+- The online feed now refreshes automatically every 30 minutes while logged in, as well as on login and Refresh.
+- New event announcements can arrive without a plugin rebuild when the collector can parse their dates. Detailed guides require reviewed feed annotations; new automatic tracking mappings and artwork currently require a plugin update.
 
 Install from the existing custom repository:
 https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/pluginmaster.json
 
 Open `/xlplugins`, find Eorzea Event Tracker, install it, then use `/events`.
-Update the installed plugin through the Dalamud installer. Disable an old development copy first. Automatic tracking starts a few seconds after login. This version needs in-game verification; the preceding 0.1.2 release was confirmed working by the user.
+Update the installed plugin through the Dalamud installer, open `/events`, then select Settings → Language → Русский. Version 0.2.0 was confirmed working in-game by the user; this localization update still requires in-game verification.

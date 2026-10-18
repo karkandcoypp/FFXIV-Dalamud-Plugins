@@ -29,9 +29,15 @@ Retainers, housing, glamour dresser and armoire are not scanned. Earlier purchas
 
 `config/tracking.json` is a bundled, versioned catalog, independent of the online announcement feed. `tools/build_tracking.py` resolves exact English quest and item IDs from XIVAPI game data and confirms guaranteed quest rewards; run it explicitly when maintaining mappings. Art sources are recorded in `assets/SOURCES.md`.
 
+## Language
+
+Version 0.2.1 adds Settings → Language → English / Русский. The choice applies immediately and persists. UI, statuses, countdowns, login messages and current event guides are translated. Dates follow the chosen language and local time zone. Quest, item and NPC names stay in English for finding them in-game. Unknown future event descriptions fall back to English.
+
 ## Event data
 
-The bundled snapshot works offline. The hosted HTTPS feed is enabled by default; login and Refresh update the local cache. Clear Settings → HTTPS feed URL for local mode. In local mode Refresh reloads the cache, falling back to bundled data. A cache file in the plugin configuration directory takes priority over bundled data.
+The bundled snapshot works offline. The hosted HTTPS feed is enabled by default; login, Refresh and a 30-minute timer while logged in update the local cache. Clear Settings → HTTPS feed URL for local mode. In local mode Refresh reloads the cache, falling back to bundled data. A cache file in the plugin configuration directory takes priority over bundled data.
+
+New announcements do not require rebuilding the plugin if their explicit dates can be parsed. Reviewed requirements/rewards can be updated in the feed. Automatic tracking mappings, new bundled artwork and new Russian translations currently ship with plugin updates; a newly discovered event may initially have English partial details and no progress mapping.
 
 The collector discovers official NA Lodestone articles and includes pages pinned in `config/overrides.json`. It requires explicit Pacific dates and skips uncertain ranges. Rewards and steps are reviewed annotations; future events may contain partial data. A scheduled GitHub Action refreshes the feed twice daily. Network errors fail the collection without overwriting the previous feed.
 
@@ -58,4 +64,4 @@ Output: `EorzeaEventTracker/bin/Release/EorzeaEventTracker.dll`. Complete Dalamu
 
 The root GitHub Actions release workflow builds and tests `eet-v*` tags, publishes a release ZIP, then merges the plugin into `pluginmaster.json`, retaining the Ultrawide entry. Tags match assembly versions without the final `.0` (for example `eet-v0.1.2`).
 
-Local verification: Release build with no warnings/errors, Python collector/index/catalog tests, C# feed/progress policy checks and inventory-container API checks. Version 0.1.2 was confirmed working in-game by the user. New tracking and UI in 0.2.0 still require in-game testing.
+Local verification: Release build with no warnings/errors, Python collector/index/catalog/localization tests, C# feed/progress/language checks and inventory-container API checks. Version 0.2.0 was confirmed working in-game by the user. Localization in 0.2.1 still requires in-game testing.

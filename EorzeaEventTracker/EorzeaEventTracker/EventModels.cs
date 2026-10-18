@@ -37,6 +37,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool NotifyOnLogin { get; set; } = true;
     public bool OpenOnLogin { get; set; }
     public bool ShowUnverified { get; set; } = true;
+    public string Language { get; set; } = "en";
     public string FeedUrl { get; set; } = DefaultFeedUrl;
     public Dictionary<string, bool> ManualCompletions { get; set; } = new();
     public Dictionary<string, HashSet<uint>> ObservedRewards { get; set; } = new();

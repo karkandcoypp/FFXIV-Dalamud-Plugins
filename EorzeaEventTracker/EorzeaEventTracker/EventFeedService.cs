@@ -18,6 +18,7 @@ public sealed class EventFeedService : IDisposable
     private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
     public EventFeed Feed { get; private set; } = new();
     public string Status { get; private set; } = "Not loaded";
+    public DateTimeOffset? UpdatedAt { get; private set; }
 
     public EventFeedService(string cachePath, string bundledPath)
     {
@@ -77,7 +78,8 @@ public sealed class EventFeedService : IDisposable
             await File.WriteAllBytesAsync(tmp, data, lifetime.Token);
             File.Move(tmp, cachePath, true);
             Feed = feed!;
-            Status = "Updated " + DateTimeOffset.Now.ToString("g");
+            UpdatedAt = DateTimeOffset.Now;
+            Status = "Updated " + UpdatedAt.Value.ToString("g");
         }
         catch (Exception ex) { Status = "Offline: using cached feed (" + ex.Message + ")"; }
         finally { gate.Release(); }
