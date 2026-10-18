@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-18T15:28:38.130900+00:00",
+  "generatedAt": "2026-10-18T21:32:54.318363+00:00",
   "events": [
     {
       "id": "0b841481931b7bc3",
@@ -11,12 +11,127 @@
       "description": "",
       "requirements": [],
       "steps": [],
-      "rewards": [],
+      "rewards": [
+        "Noctis Lucis Caelum Card",
+        "Hammerhead Orchestrion Roll",
+        "Valse di Fantastica Orchestrion Roll",
+        "Relax and Reflect Orchestrion Roll",
+        "Veiled in Black Orchestrion Roll",
+        "Apocalypsis Noctis Orchestrion Roll",
+        "A Quick Pit Stop Orchestrion Roll"
+      ],
       "verified": false,
       "notes": [
         "Dates extracted automatically from official site.",
-        "Reward names, NPC location and quest steps require review."
-      ]
+        "Automatic details may be incomplete. Main objective and NPC destinations are not inferred.",
+        "Unresolved or ambiguous quest: Resuming Quest Progress",
+        "Unresolved or ambiguous quest: Replaying Seasonal Events",
+        "Price unknown or exchange is ambiguous: Noctis Lucis Caelum Card",
+        "Price unknown or exchange is ambiguous: Hammerhead Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Valse di Fantastica Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Relax and Reflect Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Veiled in Black Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Apocalypsis Noctis Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: A Quick Pit Stop Orchestrion Roll"
+      ],
+      "imageUrl": "https://lds-img.finalfantasyxiv.com/h/p/0m52hBTHsuvQIQfh-pxIeo4SgM.png",
+      "tracking": {
+        "eventId": "0b841481931b7bc3",
+        "quests": [
+          {
+            "id": 68694,
+            "name": "The Man in Black",
+            "icon": 100831
+          },
+          {
+            "id": 68695,
+            "name": "In the Dark of Night",
+            "icon": 100832
+          },
+          {
+            "id": 68696,
+            "name": "Messenger of the Winds",
+            "icon": 100833
+          }
+        ],
+        "rewards": [
+          {
+            "id": 24880,
+            "name": "Noctis Lucis Caelum Card",
+            "icon": 27671,
+            "price": 0
+          },
+          {
+            "id": 25078,
+            "name": "Hammerhead Orchestrion Roll",
+            "icon": 25945,
+            "price": 0
+          },
+          {
+            "id": 25079,
+            "name": "Valse di Fantastica Orchestrion Roll",
+            "icon": 25945,
+            "price": 0
+          },
+          {
+            "id": 25080,
+            "name": "Relax and Reflect Orchestrion Roll",
+            "icon": 25945,
+            "price": 0
+          },
+          {
+            "id": 25081,
+            "name": "Veiled in Black Orchestrion Roll",
+            "icon": 25945,
+            "price": 0
+          },
+          {
+            "id": 25082,
+            "name": "Apocalypsis Noctis Orchestrion Roll",
+            "icon": 25945,
+            "price": 0
+          },
+          {
+            "id": 25083,
+            "name": "A Quick Pit Stop Orchestrion Roll",
+            "icon": 25945,
+            "price": 0
+          }
+        ]
+      },
+      "automation": {
+        "status": "partial",
+        "sources": [
+          "https://na.finalfantasyxiv.com/lodestone/topics/detail/b7ff81b627294a36825255532371d6d8f9066d74",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/23c5e795c9f/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/80a2e103120/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/7834dff98e9/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/c95105661d3/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/f682e0e98be/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/2f4fdab22da/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/645c9102074/",
+          "https://na.finalfantasyxiv.com/lodestone/special/ffxv/8ghatq7szp/"
+        ],
+        "gameVersion": "5c744a8d8daafb25",
+        "schema": "exdschema@2:rev:e773c41a90aed788cf4c1c48469fa85618ef01fb",
+        "issues": [
+          "Automatic details may be incomplete. Main objective and NPC destinations are not inferred.",
+          "Unresolved or ambiguous quest: Resuming Quest Progress",
+          "Unresolved or ambiguous quest: Replaying Seasonal Events",
+          "Price unknown or exchange is ambiguous: Noctis Lucis Caelum Card",
+          "Price unknown or exchange is ambiguous: Hammerhead Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Valse di Fantastica Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Relax and Reflect Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Veiled in Black Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Apocalypsis Noctis Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: A Quick Pit Stop Orchestrion Roll"
+        ]
+      },
+      "translations": {
+        "ru": {
+          "Automatic details may be incomplete. Main objective and NPC destinations are not inferred.": "Автоматически собранные сведения могут быть неполными. Основная цель и точки NPC не определяются автоматически."
+        }
+      }
     },
     {
       "id": "e9da20a481813c2f",
@@ -312,7 +427,14 @@
           "x": 3.8,
           "y": 3.1
         }
-      ]
+      ],
+      "automation": {
+        "status": "reviewed",
+        "sources": [
+          "https://na.finalfantasyxiv.com/lodestone/topics/detail/e1eb49ab626ea7b71795aab17ac5f335d8ace6de"
+        ],
+        "issues": []
+      }
     },
     {
       "id": "692a7561de5dd384",
@@ -339,6 +461,7 @@
         "Checked against the official event page and official Community Team blog on 2026-10-18. Vendor prices are not listed here.",
         "Official reward showcase: https://na.finalfantasyxiv.com/blog/003906.html"
       ],
+      "imageUrl": "https://lds-img.finalfantasyxiv.com/h/2/S6cUfbRM1Huta2gcz90SFzZhFM.jpg",
       "tracking": {
         "eventId": "692a7561de5dd384",
         "quests": [
@@ -417,7 +540,13 @@
         ],
         "completionQuestId": 71004
       },
-      "imageUrl": "https://lds-img.finalfantasyxiv.com/h/2/S6cUfbRM1Huta2gcz90SFzZhFM.jpg",
+      "automation": {
+        "status": "reviewed",
+        "sources": [
+          "https://na.finalfantasyxiv.com/lodestone/special/2026/All_Saints_Wake/tfrx2rkv52"
+        ],
+        "issues": []
+      },
       "translations": {
         "ru": {
           "All Saints' Wake 2026": "День всех святых — 2026",
