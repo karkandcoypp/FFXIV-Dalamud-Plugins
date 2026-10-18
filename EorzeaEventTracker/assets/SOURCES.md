@@ -11,4 +11,3 @@ Item icons are loaded from the installed game through Dalamud's texture provider
 
 `icon-v2.png` is a square adaptation of the user portrait prepared with imagegen for Dalamud compatibility. The original remains in `icon.png`.
 
-`book.png`: original AI-generated blank fantasy journal background created with the imagegen skill on 2026-10-18 for this plugin. No game UI textures or screenshot text are copied. Content is drawn separately by ImGui.
