@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-18T22:23:09.523869+00:00",
+  "generatedAt": "2026-10-18T22:24:55.065372+00:00",
   "events": [
     {
       "id": "0b841481931b7bc3",
@@ -490,6 +490,8 @@
           "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
           "MGF Trader": "Торговец MGF",
           "Blunderville Square": "Площадь Blunderville",
+          "Wy — entrance to Blunderville Square": "Wy — вход в Площадь Blunderville",
+          "To reach MGF Trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.": "Чтобы попасть к Торговец MGF в Площадь Blunderville (X:3.8 Y:3.1), поговорите с Wy в Золотое блюдце (X:6.1 Y:7.4). Кнопка «Куда идти» ведёт ко входу, а не к торговцу внутри.",
           "It Could Happen to You": "Это может случиться с вами",
           "Just Crowning Around": "Просто коронуем вокруг",
           "Gentlebean Knit Cap": "Вязаная кепка Gentlebean",
@@ -516,9 +518,7 @@
           "Well-heeled Youth": "Молодежь на высоких каблуках",
           "Lewena": "Левена",
           "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках.",
-          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст.",
-          "Wy — entrance to Blunderville Square": "Wy — вход в Площадь Blunderville",
-          "To reach MGF Trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.": "Чтобы попасть к Торговец MGF в Площадь Blunderville (X:3.8 Y:3.1), поговорите с Wy в Золотое блюдце (X:6.1 Y:7.4). Кнопка «Куда идти» ведёт ко входу, а не к торговцу внутри."
+          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст."
         }
       },
       "locations": [
@@ -569,15 +569,15 @@
           "https://na.finalfantasyxiv.com/lodestone/topics/detail/e1eb49ab626ea7b71795aab17ac5f335d8ace6de"
         ],
         "issues": [],
+        "navigationRoutes": {
+          "routed": 1,
+          "unavailable": []
+        },
         "russian": {
           "status": "partial",
           "translated": 25,
           "pending": 2,
           "provider": "MyMemory + reviewed glossary"
-        },
-        "navigationRoutes": {
-          "routed": 1,
-          "unavailable": []
         }
       }
     },
