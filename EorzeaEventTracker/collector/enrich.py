@@ -5,6 +5,11 @@ import time
 from urllib.parse import urljoin, urlparse
 import requests
 
+try:
+    from .npc import enrich_locations
+except ImportError:
+    from npc import enrich_locations
+
 API = 'https://v2.xivapi.com/api/'
 SHOP_FIELDS = ('UseCurrencyType,Item[].Item@as(raw),Item[].ItemCost@as(raw),'
                'Item[].CurrencyCost,Item[].ReceiveCount,Item[].ReceiveHq,Item[].CostType,'
@@ -112,7 +117,7 @@ def db_name(soup, kind):
 
 
 def enrich(event, soup, page, api):
-    issues = ['Automatic details may be incomplete. Main objective and NPC destinations are not inferred.']
+    issues = ['Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.']
     sources = [event['url']]
     rewards, quests = {}, {}
     reward_links = official_links(soup, event['url'], 'item')
@@ -200,11 +205,13 @@ def enrich(event, soup, page, api):
         event['imageUrl'] = image
     event['tracking'] = dict(eventId=event['id'], quests=list(quests.values()), rewards=list(rewards.values()))
     event['rewards'] = [r['name'] for r in rewards.values()]
+    npc_result = enrich_locations(event, api)
+    issues.extend(npc_result['issues'])
     event['verified'] = False  # Extracted facts do not prove that the entire event has been mapped.
     event['notes'] = list(dict.fromkeys(event.get('notes', [])[:1] + issues))[:200]
     event['automation'] = dict(status='partial', sources=sources, gameVersion=api.version,
-                               schema=api.schema, issues=list(dict.fromkeys(issues)))
+                               schema=api.schema, issues=list(dict.fromkeys(issues)), npc=npc_result)
     message = issues[0]
     event.setdefault('translations', {}).setdefault('ru', {})[message] = (
-        'Автоматически собранные сведения могут быть неполными. Основная цель и точки NPC не определяются автоматически.')
+        'Автоматически собранные сведения могут быть неполными. Основная цель не определяется автоматически; точки NPC добавляются только при точной связи в игровых данных.')
     return event

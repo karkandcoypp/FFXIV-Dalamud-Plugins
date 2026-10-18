@@ -123,7 +123,7 @@ class EnrichmentTests(unittest.TestCase):
             old = {'id': 'known', 'title': 'Known', 'url': URL, 'startsAt': '2026-01-01T00:00:00Z',
                    'endsAt': '2099-01-01T00:00:00Z', 'tracking': {'rewards': [{'id': 10, 'price': 500}]}}
             target.write_text(json.dumps({'events': [old]}), encoding='utf-8')
-            args = Namespace(output=str(target), overrides=folder+'/none', url=[URL], no_discover=True, limit=1)
+            args = Namespace(no_translate=True, output=str(target), overrides=folder+'/none', url=[URL], no_discover=True, limit=1)
             with patch('collector.collect.extract', side_effect=RuntimeError('offline')):
                 run(args)
             self.assertEqual(json.loads(target.read_text(encoding='utf-8'))['events'], [old])
@@ -135,7 +135,7 @@ class EnrichmentTests(unittest.TestCase):
                    'endsAt': '2099-01-01T00:00:00Z', 'tracking': {'rewards': [{'id': 10, 'price': 500}]}}
             target.write_text(json.dumps({'events': [old]}), encoding='utf-8')
             fresh = dict(old, tracking={'rewards': []}, automation={'issues': ['Game data unavailable']})
-            args = Namespace(output=str(target), overrides=folder+'/none', url=[URL], no_discover=True, limit=1)
+            args = Namespace(no_translate=True, output=str(target), overrides=folder+'/none', url=[URL], no_discover=True, limit=1)
             with patch('collector.collect.extract', return_value=fresh):
                 run(args)
             result = json.loads(target.read_text(encoding='utf-8'))['events'][0]

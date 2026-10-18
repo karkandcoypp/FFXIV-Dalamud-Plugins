@@ -1,0 +1,560 @@
+{
+  "entries": {
+    "f59fe852671e910f049974ef5acd52e4df73ff9a7c63ffbc95185888557946e1": {
+      "source": "All Saints' Wake 2026",
+      "text": "День всех святых — 2026",
+      "provider": "reviewed"
+    },
+    "7efa92334127d1c4b14bdca8771f0b1913c9a95fbfa64489d0e9b56d9bc98a8b": {
+      "source": "A seasonal quest in Old Gridania featuring a bear costume and six furnishings.",
+      "text": "Сезонная цепочка квестов в Старой Гридании. Среди наград — костюм медведя и шесть предметов для дома.",
+      "provider": "reviewed"
+    },
+    "596dc4c4c2a0d3525baca998406a865e8b31014114301508b0144e2880a28683": {
+      "source": "Level 15 or higher.",
+      "text": "Уровень 15 или выше.",
+      "provider": "reviewed"
+    },
+    "c3b9ba7ba776905903577ddcd3ae1e699832dc8a5cc3b9db73b2027017cb4979": {
+      "source": "Start We Scare Bears with the Pumpkin-headed Apparition in Old Gridania (X:10.2 Y:9.4).",
+      "text": "Возьмите квест We Scare Bears у Pumpkin-headed Apparition в Old Gridania (X:10.2 Y:9.4).",
+      "provider": "reviewed"
+    },
+    "831875cc7bb35f165ebd39ea2cd9682684e56f2c43bee915e858da953d6022e5": {
+      "source": "Follow the seasonal quest objectives and continue the quest chain to obtain the costume.",
+      "text": "Выполняйте задания события и продолжайте цепочку, чтобы получить костюм.",
+      "provider": "reviewed"
+    },
+    "cb74b1b725954ffd940efd7f48a33df877dc1572c6a2b1ffe2176c4a8c672721": {
+      "source": "Visit the event vendors for available furnishings and returning items. Finish seasonal quests before the event ends.",
+      "text": "Проверьте мебель и предметы прошлых лет у торговцев события. Завершите сезонные квесты до окончания события.",
+      "provider": "reviewed"
+    },
+    "ebbecb53bb1132ce340e9308023778cd011fd7e9821707723dbb536d4e07d214": {
+      "source": "Grisly Bear Head and Grisly Bear Suit (costume).",
+      "text": "Grisly Bear Head и Grisly Bear Suit — костюм медведя.",
+      "provider": "reviewed"
+    },
+    "4a250982420dd00884ac65f823fb8b6b6f7101d62a443eeb5dbf64f2555b8f08": {
+      "source": "Smiling Wakeshroom; Staring Wakeshroom; Wakesoul Buggy (furnishings).",
+      "text": "Smiling Wakeshroom, Staring Wakeshroom и Wakesoul Buggy — предметы для дома.",
+      "provider": "reviewed"
+    },
+    "d0cfe04e6e07698e4205872553113017eed28de10b2146e3dadd3cad6994f77f": {
+      "source": "All Saints' Wake MMXXV Advertisement; All Saints' Wake MMXVI Advertisement; Tabletop All Saints' Wake MMXXV Advertisement.",
+      "text": "Плакаты All Saints' Wake MMXXV Advertisement и All Saints' Wake MMXVI Advertisement; настольный Tabletop All Saints' Wake MMXXV Advertisement.",
+      "provider": "reviewed"
+    },
+    "a89c87079a13b8ad9294d7b2856f8acbf2f930a7a6e6d98182980a3436b9cfaa": {
+      "source": "Checked against the official event page and official Community Team blog on 2026-10-18. Vendor prices are not listed here.",
+      "text": "Проверено по официальной странице и блогу команды сообщества 18.10.2026. Цены торговцев здесь не указаны.",
+      "provider": "reviewed"
+    },
+    "6e147be9b7ea8e57a2cc7fe9a9ba297004d96919a8938bb54dceeed8855862a9": {
+      "source": "Pumpkin-headed Apparition",
+      "text": "Тыквоголовое привидение",
+      "provider": "reviewed"
+    },
+    "56d129cdff87ecae4bc9e94e4eaeab823d24ce7a56060bb7bcf6e64e59248119": {
+      "source": "Old Gridania",
+      "text": "Старая Гридания",
+      "provider": "reviewed"
+    },
+    "7aac94d96ba90e8b8949d95e7b27b9e06a078b112187642bfa8b2ee585e1a9b9": {
+      "source": "Bespectacled Peddler",
+      "text": "Торговка в очках",
+      "provider": "reviewed"
+    },
+    "4079ea3c1659f1c50b6896d38ba88fc4c6491a61a744b432c872e26e9c224b21": {
+      "source": "The Gold Saucer",
+      "text": "Золотое блюдце",
+      "provider": "reviewed"
+    },
+    "536f23e3040db138302b3318bbef9352f193cb8841a24b69ba62c209c8dffad0": {
+      "source": "Ul'dah - Steps of Nald",
+      "text": "Уль’да — Ступени Нальда",
+      "provider": "reviewed"
+    },
+    "2a92f72b93ab1f543e10902ed1cf520cf22138e163b1d24f2f2e91676513d4d5": {
+      "source": "MGF Trader",
+      "text": "Торговец MGF",
+      "provider": "reviewed"
+    },
+    "c25697be1ed991cccca4689fe4722db959301165ca20cad9c0a28026d6cd9f4a": {
+      "source": "Blunderville Square",
+      "text": "Площадь Blunderville",
+      "provider": "reviewed"
+    },
+    "ca84c472f5e4b8f1fe81ff91c353307d308c6873bd3479e0ba9b1235563ab59d": {
+      "source": "Fall Guys Collaboration",
+      "text": "Коллаборация Fall Guys",
+      "provider": "reviewed"
+    },
+    "b6674d0acaaade4db7777a9bd90685bad03b93ef35ee456f38c1496e9e120310": {
+      "source": "Play Blunderville, earn Manderville Gold Saucer Fame (MGF), and exchange it for prizes.",
+      "text": "Участвуйте в Blunderville, зарабатывайте Manderville Gold Saucer Fame (MGF) и обменивайте валюту на призы.",
+      "provider": "reviewed"
+    },
+    "2ec7659e26d55c033008e4f220e8fbe7f567b64ecb6f678faa1c4e35c00d4ea2": {
+      "source": "Level 15+; Gold Saucer access via It Could Happen to You (requires your city-state's envoy main scenario quest).",
+      "text": "Уровень 15+. Доступ в Gold Saucer открывается квестом It Could Happen to You; предварительно нужен сюжетный квест посланника вашего города.",
+      "provider": "reviewed"
+    },
+    "642dea271f892b5d6670f7bc143f37295c2eebbdae7d2b8805c7586fc84d7a97": {
+      "source": "Unlock Gold Saucer: Well-Heeled Youth, Ul'dah - Steps of Nald (X:9.6 Y:9.0).",
+      "text": "Откройте Gold Saucer: NPC Well-Heeled Youth, Ul'dah - Steps of Nald (X:9.6 Y:9.0).",
+      "provider": "reviewed"
+    },
+    "3f314589c80677f5f25f6aeb57ccee1022d53b0e23120c00edcc4b061b958c23": {
+      "source": "Complete Just Crowning Around: Lewena, Gold Saucer (X:4.8 Y:6.1). Returning players can resume directly.",
+      "text": "Выполните Just Crowning Around: NPC Lewena, Gold Saucer (X:4.8 Y:6.1). Если квест уже пройден в прошлый раз, повторять его не нужно.",
+      "provider": "reviewed"
+    },
+    "e14223dc8a90143cf517a9a1da2ab2a1d672d8224787d5bd8cd94bd1577c94ff": {
+      "source": "Join Blunderville shows for MGF; exchange it at MGF Trader, Blunderville Square (X:3.8 Y:3.1).",
+      "text": "Зарабатывайте MGF в соревнованиях Blunderville. Обменивайте валюту у MGF Trader в Blunderville Square (X:3.8 Y:3.1).",
+      "provider": "reviewed"
+    },
+    "b4932d35ae153b99e9cbf8968cdeaf9e5d5ccf1de9b1f0d113624e71ae937de0": {
+      "source": "Gentlebean Knit Cap / Parka / Bottoms / Shoes: 410 MGF each.",
+      "text": "Gentlebean Knit Cap / Parka / Bottoms / Shoes: по 410 MGF.",
+      "provider": "reviewed"
+    },
+    "f6adbf57cdece122eed5829606445de76c52eb27558780b29c50aacb09b6b60a": {
+      "source": "Matte Winner's Crown / Glossy Winner's Crown: 410 each.",
+      "text": "Matte Winner's Crown / Glossy Winner's Crown: по 410 MGF.",
+      "provider": "reviewed"
+    },
+    "cbf8883ead8b48cd24d164bcd4748bde285ca94f8a6a3f8727459dd66f43331c": {
+      "source": "Rhiyes Identification Key (mount): 410.",
+      "text": "Rhiyes Identification Key — маунт: 410 MGF.",
+      "provider": "reviewed"
+    },
+    "b9116fd5ae4fef4b348044e62e6c7bfc83cce268e79411e624f4cb67c34a4375": {
+      "source": "Ballroom Etiquette - Embracing Blunders (emote): 410.",
+      "text": "Ballroom Etiquette - Embracing Blunders — эмоция: 410 MGF.",
+      "provider": "reviewed"
+    },
+    "2a383c75ac7960286261affb038b41f2ebee5773fc92b8471bda0926dd0b5de7": {
+      "source": "Pink Bean / Pegwin (minions): 350 each.",
+      "text": "Pink Bean / Pegwin — миньоны: по 350 MGF.",
+      "provider": "reviewed"
+    },
+    "ada6c1c8ee371e236820a90b8814bb8993fccf89e2a2e0f1f819a0b5a2e6c766": {
+      "source": "Blunderville Crown / Flag / Donut Bumper / Padded Wall / Rainbow / Hammer: 220 each.",
+      "text": "Blunderville Crown / Flag / Donut Bumper / Padded Wall / Rainbow / Hammer: по 220 MGF.",
+      "provider": "reviewed"
+    },
+    "6627fbd48f64a4d7051d4f8713465ac87cc0bce827ac6849abff4339a6e8256e": {
+      "source": "Everybody Falls (Fall Guys Theme) Orchestrion Roll: 220.",
+      "text": "Everybody Falls (Fall Guys Theme) Orchestrion Roll — музыка: 220 MGF.",
+      "provider": "reviewed"
+    },
+    "4c71968924724e64d1b8927daf2e16e40687bb195ceda5c9ec402a6a8cd8fd40": {
+      "source": "Blunderful / Blunderous / Blunder-villed Framer's Kit: 200 each.",
+      "text": "Blunderful / Blunderous / Blunder-villed Framer's Kit — оформление портрета: по 200 MGF.",
+      "provider": "reviewed"
+    },
+    "90af4d52668df38b96c7d6b19d832b6486b10704ccfa60ee3ff6c5e69e8ce3e2": {
+      "source": "Standard Rationing Manual / Gold Saucer Aetheryte Ticket: 200 each.",
+      "text": "Standard Rationing Manual / Gold Saucer Aetheryte Ticket: по 200 MGF.",
+      "provider": "reviewed"
+    },
+    "381ea97a0101188e0f5b3b055f42fe8c5dd078279d77d7c1a4008644f88d38d0": {
+      "source": "Wide Spectrum #1 Dye: 150.",
+      "text": "Wide Spectrum #1 Dye — краситель: 150 MGF.",
+      "provider": "reviewed"
+    },
+    "1271df56a3a192236a60dbe4b162fe4b057acb4f1e17d20480c442db19593150": {
+      "source": "All prices are MGF. Earn MGF during the event.",
+      "text": "Все цены указаны в MGF. Валюта зарабатывается во время события.",
+      "provider": "reviewed"
+    },
+    "a0660fa7edc7eeceb84222a962a8bf2f167143034a9470924cb685f79dab8554": {
+      "source": "We Scare Bears",
+      "text": "Мы пугаем медведей",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "4b0b020ed6b4869f8c882d939ad01be26971950c7443613eeb3ba232fd5d8725": {
+      "source": "Grim and Grisly Games",
+      "text": "Мрачные и грязные игры",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "f67e54b578abbd098639f46cb9b50cf2cc54ef86989f2ffd8b017183a3e3ae3a": {
+      "source": "Grisly Bear Head",
+      "text": "Гризли - насадка для медведя",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "c1bd030ce55a6cfe0037a59be3d237fc03048117f05ae643d6e020b818e88233": {
+      "source": "Grisly Bear Suit",
+      "text": "Костюм «Ужасный медведь»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "6583d55545b33daee4ed365838c1305a5dd26b62defb32c2d87a278cb5eb8fb1": {
+      "source": "Smiling Wakeshroom",
+      "text": "Улыбающийся вейкшрум",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "abdc2a94aeaa456eb47fe697863e27f7e6f4a10ffe3a791ccc267e869353ad4e": {
+      "source": "Staring Wakeshroom",
+      "text": "Взгляд вейкшрума",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "ac07b8fb9fb07ad9a813763fbd72f25880b111229943455c91a5b6d97499b4bf": {
+      "source": "Wakesoul Buggy",
+      "text": "Багги Wakesoul",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "2a120f6897be304ec44c9ebc90aa6fa2d0684d607ba451f6260660e50c5c4ace": {
+      "source": "All Saints' Wake MMXXV Advertisement",
+      "text": "Объявление о пробуждении всех святых MMXXV",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "cd76fc198d903e45eeddf247cd31e18c0e10d7fbf1605d03ee489e24b8a90bf1": {
+      "source": "All Saints' Wake MMXVI Advertisement",
+      "text": "Объявление All Saints Wake MMXVI",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "3c1fceb4596a14420eea4680e92c77a592f96e08099faeb070ccb86be830e017": {
+      "source": "Tabletop All Saints' Wake MMXXV Advertisement",
+      "text": "Настольная реклама All Saints Wake MMXXV",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "d432cc14c7d44fb11864059c5a9d141b529d2bd5aa34ad19eb647aae97950b84": {
+      "source": "Pattin",
+      "text": "Паттин",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "e5858f967f92bdfc1949ca2c9fb284e61016277ac3079cdb104e9527021bfd9b": {
+      "source": "It Could Happen to You",
+      "text": "Это может случиться с вами",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "6a64693efa55c0827e99844a683b31a0cd93aea45a9ac2f229b3f06d94813a5f": {
+      "source": "Just Crowning Around",
+      "text": "Просто коронуем вокруг",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "ad18fd3688e68a20e28515d9e600f62f742684c3be9194333680bc01c097bbec": {
+      "source": "Gentlebean Knit Cap",
+      "text": "Вязаная кепка Gentlebean",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "ac0fded00632a3efd1d868681e0d916fcc33c0af51ca15d46a1bf00fb95ef8d5": {
+      "source": "Gentlebean Parka",
+      "text": "Нежная парка с бобами",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "49ef24fff5c0d212c33b4bec45f46227c2b0f146cf3bf00d3c7cc92547e6e28a": {
+      "source": "Gentlebean Shoes",
+      "text": "Нежная обувь",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "d08b41d13ee1bcbac3317890349e832191fbcd7b73897f50804a4aa4e42a88bd": {
+      "source": "Matte Winner's Crown",
+      "text": "Матовая корона победителя",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "6a8b2cb5bd364da6eedaa1ae88443e71a3fe1a481f257ac07d492a1015ee0f3d": {
+      "source": "Glossy Winner's Crown",
+      "text": "Глянцевая корона победителя",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "c56c04e3b2fd4b9a478bfe1a34bca7c45139a0dcfc1b981261c6855b6cd8094d": {
+      "source": "Rhiyes Identification Key",
+      "text": "Идентификационный ключ Rhiyes",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "0810b3c76465d656f4c262c12ab347ef6195926f22fdc1981e152a9718965c75": {
+      "source": "Ballroom Etiquette - Embracing Blunders",
+      "text": "Бальный этикет: обнимаем грубые ошибки",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "10077ab036bede9eaebe139a540feacd6aac08adba733dfa05e74178c89cfe73": {
+      "source": "Pink Bean",
+      "text": "Розовая фасоль",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "bd6bc60bdd07edc53f1e9f55b605c9d4bb5c1d5de3b3f20510f12de35eaac5b2": {
+      "source": "Pegwin",
+      "text": "Пегвин",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "b7768a7da4590615983b369a68e2534707e9d06100c3deb29fe9c6313f660fff": {
+      "source": "Blunderville Crown",
+      "text": "Корона Бландервилля",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "dc1c67b422ab4b1a3d727b002d4c486868fcd976c60db2f3c757e6cd6e61942d": {
+      "source": "Blunderville Flag",
+      "text": "Флаг Бландервилля",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "f97daceabec44ca59af83e82d9293032a1182a138b3ab976674fffc41e25d7d2": {
+      "source": "Blunderville Donut Bumper",
+      "text": "Бампер из пончиков Blunderville",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "485613d0a19e96c2a24e2044644d61a83bfb3409531b15e9b14e5dbb14f5cb74": {
+      "source": "Blunderville Padded Wall",
+      "text": "Мягкая стена Blunderville",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "eb51dda6d06d58cd160bc6a9574b4acf372c148d06b993e3ee34c61a742f4279": {
+      "source": "Blunderville Hammer",
+      "text": "Бландервилль-Хаммер",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "de54de0b7c93c9280f03359ff35a39f9d6fdc216b8670d17dd616e1232b2e19e": {
+      "source": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
+      "text": "Все падают (тема Fall Guys) Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "ca49397d00da1e4cd4bd086e5cf79b3be71439bf179787a8a83d8afbf935918a": {
+      "source": "Blunderful Framer's Kit",
+      "text": "Набор Blunderful Framer's",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "f5ee5ac959bc57af15f8daec29fa9617288e03c6b5005dfeafaf0e670ee76b6d": {
+      "source": "Blunderous Framer's Kit",
+      "text": "Набор Blunderous Framer's Kit",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "7963d11b79a1dd5c419baa6c7042295798b8c3709dbbbb906e96c7eb00e67376": {
+      "source": "Blunder-villed Framer's Kit",
+      "text": "Набор Framer's Kit для борьбы с промахами",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "db94762399cbf901defe3d2c4bc67d862d05bea466e241872cc2bed0d7af61b3": {
+      "source": "Standard Rationing Manual",
+      "text": "Стандартное руководство по нормированию",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "40168ded254741295d2ad4a8cc31c6e150a6c5a3ca5e9c3ada5383cb004953c6": {
+      "source": "Gold Saucer Aetheryte Ticket",
+      "text": "Билет на золотую тарелку с эфиритом",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "5a0c9f5759f8176576ef83b09f5559b4b72d4ccb847c5b1f428572d761b82e12": {
+      "source": "Wide Spectrum #1 Dye",
+      "text": "Краситель широкого спектра №1",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "99c992bc9251c42ad5ef663d93b3e3f4a34b138d52c5c725dbe60dc2c8fe4b1b": {
+      "source": "Well-heeled Youth",
+      "text": "Молодежь на высоких каблуках",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "09d8e2fff4741963fb3e0e3f4a5ab6144e8bd8295f3f139de69212deb2e75170": {
+      "source": "Lewena",
+      "text": "Левена",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "f396ab6d6d2ef15f2ce0c6758ee498145621b145a9defaa076600b81b81effc6": {
+      "source": "The FINAL FANTASY XIV & FINAL FANTASY XV Collaboration Event Returns!",
+      "text": "Возвращается совместное событие FINAL FANTASY XIV и FINAL FANTASY XV!",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "f778b13afdf94a5a7ec5a93bcdcbe8b11a75eb7bb9c6d3da9a2eeb5b21972d92": {
+      "source": "The Man in Black",
+      "text": "Человек в черном",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "ef60fe195d1c811b06692d7a4f5dd41b95c155b3f38de3155ca56345d90d2c33": {
+      "source": "In the Dark of Night",
+      "text": "В темноте ночи",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "0017148c2d66bb85a7301db6be7b21f901747cc7a7410fddcf382f591edfc7d3": {
+      "source": "Messenger of the Winds",
+      "text": "Посланник ветров",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "7db58b1cc058e250cdab32be4b20f864d3c620bdf2837c704489b82b26fa7865": {
+      "source": "Noctis Lucis Caelum Card",
+      "text": "Карта Noctis Lucis Caelum",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "2e31529bb074c446c8378d7416909e1e4787c93ed118b926aaedc828cb07b136": {
+      "source": "Hammerhead Orchestrion Roll",
+      "text": "Ролл Hammerhead Orchestrion",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "bb826cd2187b8fde91275e9ea311cb0ab1ffc625e24d123eedb2fbaaf2b17c3a": {
+      "source": "Valse di Fantastica Orchestrion Roll",
+      "text": "Оркестровый ролл Valse di Fantastica",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "ab155dd8ea74d24744bbbeeea9c1f859d6473be0dcfa98b38fcda2c507d68c55": {
+      "source": "Relax and Reflect Orchestrion Roll",
+      "text": "Расслабьтесь и поразмышляйте над оркестровым роллом",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "5219a9670ddd4a225763fa9586966da40eaf98b20894eeaefa0b5a18ce1db1f6": {
+      "source": "Veiled in Black Orchestrion Roll",
+      "text": "Фата в черном оркестровом ролле",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "5c76732b271f145f5c79ecfe49e38447e8aa18ee0dfba2705b2564afe73b6f0d": {
+      "source": "Apocalypsis Noctis Orchestrion Roll",
+      "text": "Ролл Apocalypsis Noctis Orchestrion",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "3f2e7f3bda964f3c718418e2ba3ce5daf26715cb12db20c89c3ba51b269ac27f": {
+      "source": "A Quick Pit Stop Orchestrion Roll",
+      "text": "Оркестровый ролл Quick Pit Stop",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "b2e33cdc805a86016c463cac42ea1e716607cd7d230a025b4cef174c1b50f806": {
+      "source": "New Gridania",
+      "text": "Новая Гридания",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "2f520a7c47ab70698835e2a6966497e81fe330c3afa92e25b6810bddac615774": {
+      "source": "Dates extracted automatically from official site.",
+      "text": "Даты, автоматически извлекаемые с официального сайта.",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "3f14cb35bb794795b3d5b15a2d331db776adb4c102663a9afb0880dc2c114cee": {
+      "source": "Unresolved or ambiguous quest: Resuming Quest Progress",
+      "text": "Нерешенный или неоднозначный квест: Возобновление прогресса в квесте",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "7426c22c8c3139f2a1a49dd8c692750f4874cd8507d3cda5eec81e173fde901c": {
+      "source": "Unresolved or ambiguous quest: Replaying Seasonal Events",
+      "text": "Неразрешенный или неоднозначный квест: повторное воспроизведение сезонных событий",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "151ec3d97f9c429cd9d9ad9f6b22492ee63fa0198c3983397164ecd1a3238ec5": {
+      "source": "Price unknown or exchange is ambiguous: Noctis Lucis Caelum Card",
+      "text": "Цена неизвестна или обмен неоднозначен: Noctis Lucis Caelum Card",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "322410d896ca8072292bb2ac52293c6d3226a5c01c793f421a51db9ed7804ccc": {
+      "source": "Price unknown or exchange is ambiguous: Hammerhead Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: Hammerhead Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "76115fe6c1299e629a9a1a9bce7f0ce011255fe10892c7ff3f7159ee10c33de8": {
+      "source": "Price unknown or exchange is ambiguous: Valse di Fantastica Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: Valse di Fantastica Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "dc36679c1ebeed9d0f14ec9837ef0ea11409565ab5d81061c2e09b4f7006c716": {
+      "source": "Price unknown or exchange is ambiguous: Relax and Reflect Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: Relax and Reflect Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "bc67f015d70423d8669a7e4d92a3dbd3cbf1c17c930978587043742fce34ff71": {
+      "source": "Price unknown or exchange is ambiguous: Veiled in Black Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: завуалирован в Black Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "553c4bf01697b08fad41a9abbeff7c0e43c0a8cc228064fc82a7c8200c5a9984": {
+      "source": "Price unknown or exchange is ambiguous: Apocalypsis Noctis Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: Apocalypsis Noctis Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "7b0a5734201324a9b66f2da79ee73c1fb22effdcaa6b1e1de1ead66f497a1cbf": {
+      "source": "Price unknown or exchange is ambiguous: A Quick Pit Stop Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: Quick Pit Stop Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "cd097d27cba1c5d4a6ecf1657fbca4bed19b16df9f20bc9a6f1082dac132f270": {
+      "source": "NPC destination is ambiguous or not mapped: Noctis Lucis Caelum Card",
+      "text": "Пункт назначения NPC неоднозначен или не нанесен на карту: карта Noctis Lucis Caelum",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "98e57633685f7ecfe09fc67a65aa5ae4cb910fb1e285aaf2a18122db91ae1417": {
+      "source": "NPC destination is ambiguous or not mapped: Hammerhead Orchestrion Roll",
+      "text": "Место назначения NPC неоднозначно или не нанесено на карту: Hammerhead Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "d4b0b553bf04bd8cec760b43efd9959b423335cb13f4d38d52bc373327507590": {
+      "source": "NPC destination is ambiguous or not mapped: Valse di Fantastica Orchestrion Roll",
+      "text": "Место назначения NPC неоднозначно или не нанесено на карту: Valse di Fantastica Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "41bd6ed0743c39a505f713cc2ec0f0fc7f4be4f46e7319a9beb2de4212fb6af8": {
+      "source": "NPC destination is ambiguous or not mapped: Relax and Reflect Orchestrion Roll",
+      "text": "Место назначения NPC неоднозначно или не нанесено на карту: расслабьтесь и отразите бросок оркестра",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "079664f9ee78e8d966eb43fce31258613623b7ca4630b0a63227d333d443c3b4": {
+      "source": "NPC destination is ambiguous or not mapped: Veiled in Black Orchestrion Roll",
+      "text": "Место назначения NPC неоднозначно или не нанесено на карту: завуалировано в Black Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "2e7d22e4dc16a8f888e9d4253cf0becd2afddac003ad74b68a5b944dd64a7d8f": {
+      "source": "NPC destination is ambiguous or not mapped: Apocalypsis Noctis Orchestrion Roll",
+      "text": "Пункт назначения NPC неоднозначен или не нанесен на карту: Apocalypsis Noctis Orchestrion Roll",
+      "provider": "MyMemory",
+      "machine": true
+    }
+  },
+  "day": "2026-10-18",
+  "used": 2303
+}

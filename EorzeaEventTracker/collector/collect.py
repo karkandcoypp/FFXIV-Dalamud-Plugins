@@ -16,8 +16,12 @@ from bs4 import BeautifulSoup
 
 try:
     from .enrich import GameData, enrich
+    from .translate import RussianTranslator
+    from .npc import retain_failed_locations
 except ImportError:
     from enrich import GameData, enrich
+    from translate import RussianTranslator
+    from npc import retain_failed_locations
 
 BASE = 'https://na.finalfantasyxiv.com'
 INDEX = BASE + '/lodestone/topics/'
@@ -165,6 +169,10 @@ def run(args):
             errors.append(dict(url=INDEX, reason=str(exc)))
     urls = list(dict.fromkeys([*args.url, *pinned, *discovered]))
     api = None if getattr(args, 'no_enrich', False) else GameData()
+    translator = None if getattr(args, 'no_translate', False) else RussianTranslator(
+        getattr(args, 'translation_cache', None) or target.with_name('translation-cache.json'))
+    if translator:
+        translator.seed(overrides.values())
     events = {}
     report = []
     for url in urls[:args.limit]:
@@ -176,19 +184,24 @@ def run(args):
                 raise ValueError('Uncertain dates; not publishing guessed event windows')
             old = previous.get(e['id'], old)
             automation = e.get('automation', {})
-            if old and any('unavailable' in issue.lower() for issue in automation.get('issues', [])):
+            if old and any(issue.startswith(('Reward source unavailable', 'Quest data unavailable', 'Shop data unavailable',
+                                            'Special-site link unavailable', 'Game data unavailable'))
+                           for issue in automation.get('issues', [])):
                 # Preserve evidence on transient API/source failure instead of erasing known rewards.
                 e = dict(old)
                 note = 'Data source unavailable; retaining previously collected details.'
                 e['notes'] = list(dict.fromkeys(e.get('notes', []) + [note]))[:200]
                 e['verified'] = False
                 e['automation'] = dict(automation, status='stale')
+            retain_failed_locations(e, old)
             manual = overrides.get(e['id']) or overrides.get(e.get('url')) or overrides.get(url) or {}
             for key in ('title', 'description', 'requirements', 'steps', 'rewards', 'notes', 'verified', 'tracking', 'imageUrl', 'translations', 'locations'):
                 if key in manual:
                     e[key] = manual[key]
             if manual.get('tracking') is not None:
                 e['automation'] = dict(status='reviewed', sources=[e.get('url', url)], issues=[])
+            if translator:
+                translator.apply(e, old)
             events[e['id']] = e
             report.append(dict(url=url, eventId=e['id'], **e.get('automation', {'status': 'basic'})))
             print('OK:', e['title'], e.get('automation', {}).get('status', 'basic'))
@@ -212,6 +225,8 @@ def run(args):
                   events=sorted(events.values(), key=lambda e: e['startsAt']))
     if len(output['events']) > 500:
         raise RuntimeError('Event limit exceeded; keeping the previous feed unchanged')
+    if translator:
+        translator.save()
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_suffix(target.suffix + '.tmp')
     temporary.write_text(json.dumps(output, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
@@ -226,6 +241,8 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--url', action='append', default=[], help='Official event URL (repeatable)')
     ap.add_argument('--no-discover', action='store_true')
+    ap.add_argument('--no-translate', action='store_true', help='Disable automatic Russian translation')
+    ap.add_argument('--translation-cache', help='Persistent translation cache and quota state')
     ap.add_argument('--no-enrich', action='store_true', help='Disable game-data enrichment')
     ap.add_argument('--report', help='Collection diagnostics JSON path')
     ap.add_argument('--limit', type=int, default=25)

@@ -82,7 +82,7 @@ The cache uses a hash of the URL, never a path supplied by the feed. Change the 
 
 Invalid or unsupported feed data leaves the last valid feed in use. No scripts, assemblies, hooks or executable expressions can be delivered through this format. Only known game-sheet lookups and existing tracking rules are applied.
 
-The collector enriches supported official pages automatically as described below. Image-only text, NPC destinations, primary completion objectives and Russian names are not guessed. Reviewed overrides remain available for exceptions.
+The collector enriches supported official pages automatically as described below. Image-only text and primary completion objectives are not guessed. NPC destinations use exact game-data relationships; automatic Russian text is explicitly labelled. Reviewed overrides remain available for exceptions.
 
 ## Main event objective (v0.6.1)
 
@@ -111,8 +111,20 @@ For new events without a reviewed tracking override:
 
 Automatically enriched events remain verified=false: identifying some facts does not establish complete coverage. Existing clients show the partial-details indicator; users who disabled partial/unverified events need to enable them to see these entries. Known facts remain usable for tracking and favorite currency budgets. Reasons for missing data are under How to join / Source notes. Missing prices are never treated as free.
 
-Reviewed overrides take precedence, preserving existing maps, translations and event behavior. Temporary enrichment failures retain a known event's last details instead of erasing rewards. A wholly unusable run leaves the previous feed unchanged. Collection runtime and API requests are bounded; repeated requests are cached. No fuzzy matches, OCR or speculative prices are published.
+Reviewed overrides take precedence, preserving existing maps, translations and event behavior. Temporary enrichment failures retain a known event's last details instead of erasing rewards. A wholly unusable run leaves the previous feed unchanged. Collection runtime and API requests are bounded; repeated requests are cached. No fuzzy item/NPC matches, OCR or speculative prices are published.
 
 Each run writes collection-report.json beside the output. GitHub Actions uploads it as event-collection-report; it is diagnostic data, not plugin content. The workflow validates the feed with the client's own policy before committing.
 
-This is a collector-only update: plugin 0.14.0 loads new data on Refresh, login or its periodic refresh without a DLL update. Automated Russian translations would need a separate translation source/service. Until a reviewed translation is available, source English names remain visible.
+This is a collector-only update: plugin 0.14.0 loads new data on Refresh, login or its periodic refresh without a DLL update. Automatic Russian translation and NPC destinations are handled as described below.
+
+## Automatic Russian translation and NPC destinations
+
+New automatically enriched events resolve quest issuers through Quest.IssuerStart + IssuerLocation -> Level -> Map. Level.Type must be ENpc (8), its object must match the quest issuer, and map/territory IDs must agree. NPC names come from ENpcResident; zone names come from Map.PlaceName. World X/Z are converted using the same SizeFactor/OffsetX/OffsetY formula as Dalamud MapLinkPayload, with finite/range checks.
+
+Reward merchants follow item -> SpecialShop or GilShopItem -> ENpcBase.ENpcData -> Level. All supported shop links must identify one NPC, and the NPC must have one unique usable placement. Multiple NPCs, truncated results, multiple positions/floors, indirect shop handlers, mismatched IDs and unavailable rows leave the map button absent, with an explanation in source notes. No NPC is selected by name similarity. Guaranteed quest rewards link to that quest's issuer as a starting point, not to an inferred completion target. Locations and locationId use the existing feed format; no plugin update is needed.
+
+Russian translations use the public MyMemory GET endpoint (https://api.mymemory.translated.net/get), en|ru. Only public event text is submitted; character data and plugin settings never enter the collector. Exact-source translations are accepted; fuzzy matches for different sentences, quota/error messages, markup, altered numbers or placeholders are rejected. Long text is split into bounded segments. Machine text is labelled in event notes; reviewed event translations always win.
+
+config/translation-cache.json persists successful translations and UTC daily usage across scheduled runs. A consistent reviewed glossary seeds the cache; conflicting reviewed meanings stay event-scoped. The default budget is 1200 source characters per run and 4500 per UTC day. Untranslated strings are retried on later scheduled runs; service failure/quota exhaustion leaves original English and previously cached Russian usable. The cache is committed together with the feed only after client validation. No service key is required. The public service has its own availability/limits, so a new event may initially have partial Russian coverage.
+
+Source references: https://v2.xivapi.com/docs/guides/sheets/ ; https://github.com/goatcorp/Dalamud/blob/master/Dalamud/Game/Text/SeStringHandling/Payloads/MapLinkPayload.cs ; https://mymemory.translated.net/doc/spec.php .

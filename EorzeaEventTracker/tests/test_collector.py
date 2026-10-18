@@ -33,7 +33,7 @@ class DateTests(unittest.TestCase):
         with TemporaryDirectory() as folder:
             output = Path(folder) / 'events.json'
             output.write_text('previous feed', encoding='utf-8')
-            args = Namespace(overrides=str(Path(folder) / 'none'), url=['https://na.finalfantasyxiv.com/test'], no_discover=True, limit=1, output=str(output))
+            args = Namespace(no_translate=True, overrides=str(Path(folder) / 'none'), url=['https://na.finalfantasyxiv.com/test'], no_discover=True, limit=1, output=str(output))
             with patch('collector.collect.extract', side_effect=RuntimeError('offline')):
                 with self.assertRaises(RuntimeError): run(args)
             self.assertEqual(output.read_text(encoding='utf-8'), 'previous feed')
