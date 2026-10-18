@@ -1,7 +1,6 @@
-# Eorzea Event Tracker 0.14.0
+# Eorzea Event Tracker 0.15.0
 
-- Favorite rewards now show remaining purchase cost, current currency balance and the amount still to earn, with a funding progress bar.
-- Reads MGF automatically for the current character and refreshes as currency and reward ownership change.
-- Excludes obtained/manual and ignored rewards. Currencies are calculated separately; unavailable balances and unknown prices are clearly marked.
-- Online event rewards can provide currencyItemId for new currencies without another plugin rebuild.
-- Classic journal UI, event hiding, progress and settings preserved. English and Russian supported.
+- Item and NPC names always display in English, regardless of interface language or translations supplied by an older event feed.
+- Russian interface, event descriptions and quest translations remain available.
+- The collector no longer spends translation requests on item/NPC names; existing feed entries retain English names as well.
+- Progress, favorites, manual marks, hidden events and settings are preserved.

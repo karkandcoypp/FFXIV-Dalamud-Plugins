@@ -34,7 +34,7 @@ internal static class OnlineFeedChecks
             Check(catalog["new-online-only"].Asset == "", "online local asset paths are ignored");
             var locale = new Localizer(new Configuration { Language = "ru" });
             Check(locale.Text("A future event", service.Feed.Events[0]) == "Новое событие", "online translation is applied without changing language resources");
-            Check(locale.Text("Online reward", service.Feed.Events[0]) == "Новая награда", "online reward names support translation");
+            Check(locale.Text("Online reward", service.Feed.Events[0]) == "Online reward", "item names stay English even when online translations exist");
             var previous = service.Feed;
             e.Tracking!.CompletionQuestId = 65537;
             handler.Data = JsonSerializer.SerializeToUtf8Bytes(feed);

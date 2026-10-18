@@ -138,3 +138,9 @@ config/map-routes.json is a shared territory-level entrance registry, independen
 Routing is applied AFTER reviewed overrides, so curated events and newly collected events use the same correction. The published location itself points to the entrance, making it compatible with existing 0.14.0 clients. Its NPC label and source notes explain the entrance and retain the final merchant/area coordinates. Optional navigation metadata records the original destination for provenance. Unknown/unconfirmed entrance coordinates remove the broken button instead of publishing the inaccessible destination. Other zones are unchanged; unknown inaccessible areas still require a confirmed registry route. New registry entries need no DLL update.
 
 The isolated Fall Guys test feed was corrected through the same routing stage. Its original no-manual-data collection provenance is retained, with an explicit navigation-correction annotation. This correction does not turn the earlier data-only validation into an in-game map-click test.
+
+## English item/NPC names (0.15.0)
+
+Item names and NPC labels always remain English, independently of the interface language. Localizer enforces this for tracked reward names and event NPC labels even if an older/custom feed includes Russian aliases. Existing aliases are also restored to English when encountered inside translated descriptions. Quest titles, event titles, interface labels, zones and descriptions keep their language behavior.
+
+The collector excludes item and NPC names from translation requests and publishes identity translations for these names so older 0.14.0 clients also keep English names. Previously cached/online aliases are normalized in event text where they match known names. This policy includes the original merchant NPC in entrance-route metadata. Names retain their source IDs and strings; tracking/favorite/manual state is unaffected.

@@ -29,6 +29,7 @@ internal static class Program
         RewardPreferenceChecks.Run();
         ManualRewardChecks.Run();
         FavoriteBudgetChecks.Run();
+        EnglishNameChecks.Run();
         var settings = new Configuration();
         Check(!settings.ShowCompactWidget, "compact widget starts hidden for existing configurations");
         settings.ShowCompactWidget = true;

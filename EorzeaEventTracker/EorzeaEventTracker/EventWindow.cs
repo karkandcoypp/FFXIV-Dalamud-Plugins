@@ -499,7 +499,7 @@ public sealed class EventWindow : Window, IDisposable
             c.Language = language == 1 ? "ru" : "en";
             plugin.Save();
         }
-        ImGui.TextWrapped(T("Names use the event's translations when available. Original item names remain in tooltips."));
+        ImGui.TextWrapped(T("Item and NPC names always stay in English. Interface and event descriptions use your selected language."));
         var uiScale = UiScale;
         if (ImGui.SliderFloat(T("Interface scale") + "###UiScale", ref uiScale, .75f, 1.75f, "%.2fx")) c.UiScale = uiScale;
         if (ImGui.IsItemDeactivatedAfterEdit()) plugin.Save();

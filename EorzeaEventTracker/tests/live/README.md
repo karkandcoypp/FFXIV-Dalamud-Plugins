@@ -34,3 +34,5 @@ dotnet run --project EorzeaEventTracker/tests/ApiChecks/ApiChecks.csproj -c Rele
 4. Restore the previously recorded feed URL and any settings/preferences changed during the check. The standard URL is https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/EorzeaEventTracker/config/events.json . Do not leave the frozen snapshot as your permanent feed: it will expire with the real event.
 
 The automated diagnostics do not control the game process and cannot verify rendering or an actual in-game click. Those steps remain explicitly manual. No plugin DLL update is required for this test.
+
+Name policy update: from plugin 0.15.0 and the refreshed test feed, item and NPC names are intentionally English. The earlier 21/23 Russian item-name count above records the historical automation test, not the current expected presentation. Russian event/quest titles, descriptions and UI remain supported.

@@ -15,6 +15,33 @@ PENDING_NOTE = 'Some Russian translations are pending; English text is shown unt
 PENDING_RU = 'Часть русского перевода ещё не готова. До его получения показывается английский текст.'
 
 
+def english_names(event):
+    names = [reward.get('name', '') for reward in event.get('tracking', {}).get('rewards', [])]
+    for location in event.get('locations', []):
+        names.append(location.get('npc', ''))
+        names.append(location.get('navigation', {}).get('destination', {}).get('npc', ''))
+    return {name for name in names if name}
+
+
+def keep_english_names(event, previous=None, cache=None):
+    names = english_names(event)
+    ru = event.setdefault('translations', {}).setdefault('ru', {})
+    old = (previous or {}).get('translations', {}).get('ru', {})
+    aliases = {}
+    for name in names:
+        for translated in (ru.get(name), old.get(name), (cache or {}).get(RussianTranslator.key(name), {}).get('text')):
+            if isinstance(translated, str) and translated and translated != name:
+                aliases[translated] = name
+    for key, value in list(ru.items()):
+        for alias in sorted(aliases, key=len, reverse=True):
+            value = re.sub(r'(?<!\w)' + re.escape(alias) + r'(?!\w)', lambda match: aliases[alias], value)
+        ru[key] = value
+    for name in names:
+        if name in ru or len(ru) < 500:
+            ru[name] = name  # Also works in existing 0.14.0 clients before they update.
+    return event
+
+
 def strings(event):
     # Prioritize the visible title, reward/quest names and map destinations over diagnostics.
     values = [event.get('title', '')]
@@ -29,7 +56,7 @@ def strings(event):
         values.extend(event.get(key, []))
     values.append(event.get('description', ''))
     values.extend(event.get('notes', []))
-    return list(dict.fromkeys(s for s in values if isinstance(s, str) and s.strip()))
+    return list(dict.fromkeys(s for s in values if isinstance(s, str) and s.strip() and s not in english_names(event)))
 
 
 class RussianTranslator:
@@ -139,6 +166,7 @@ class RussianTranslator:
         return None
 
     def apply(self, event, previous=None):
+        keep_english_names(event, previous, self.data['entries'])
         ru = event.setdefault('translations', {}).setdefault('ru', {})
         old = (previous or {}).get('translations', {}).get('ru', {})
         missing = []

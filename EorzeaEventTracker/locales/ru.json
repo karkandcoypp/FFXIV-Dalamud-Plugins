@@ -144,5 +144,6 @@
   "Still to earn: {0} {1}": "Осталось заработать: {0} {1}",
   "Balance unavailable; the cost above is not the amount still to earn.": "Баланс пока недоступен. Выше указана полная стоимость, без вычета вашей валюты.",
   "Favorites with unknown prices: {0}. Not included in the total.": "Избранных наград с неизвестной ценой: {0}. Они не включены в сумму.",
-  "Quest rewards require completing their quests, not currency.": "Для квестовых наград нужно завершить квесты; валюта не требуется."
+  "Quest rewards require completing their quests, not currency.": "Для квестовых наград нужно завершить квесты; валюта не требуется.",
+  "Item and NPC names always stay in English. Interface and event descriptions use your selected language.": "Названия предметов и NPC всегда на английском. Интерфейс и описания событий используют выбранный язык."
 }
