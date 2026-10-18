@@ -20,9 +20,9 @@ public sealed class EventWindow : Window, IDisposable
     private bool favoritesOnly;
     private DateTime mapErrorUntil;
     private EventInfo? localizedEvent;
-    private static readonly Vector4 Teal = new(.49f, .69f, .62f, 1);
-    private static readonly Vector4 Gold = new(.84f, .72f, .48f, 1);
-    private static readonly Vector4 Muted = new(.61f, .61f, .59f, 1);
+    private static readonly Vector4 Teal = new(.18f, .36f, .26f, 1);
+    private static readonly Vector4 Gold = new(.49f, .29f, .12f, 1);
+    private static readonly Vector4 Muted = new(.40f, .33f, .25f, 1);
     private Localizer L => plugin.Locale;
     private string T(string text) => L.Text(text);
     private string E(string text) => L.Text(text, localizedEvent);
@@ -35,7 +35,7 @@ public sealed class EventWindow : Window, IDisposable
     public EventWindow(Plugin plugin) : base("Eorzea Event Tracker###EETMain")
     {
         this.plugin = plugin;
-        Size = new Vector2(1040, 790);
+        Size = new Vector2(1180, 820);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints { MinimumSize = new(800, 540), MaximumSize = new(1600, 1400) };
         urlBuffer = plugin.Settings.FeedUrl;
@@ -43,14 +43,15 @@ public sealed class EventWindow : Window, IDisposable
 
     public override void PreDraw()
     {
-        SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(800, 540) * UiScale, MaximumSize = new Vector2(1600, 1400) * UiScale };
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.065f, .063f, .060f, .98f * Opacity));
-        ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(.10f, .095f, .080f, Opacity));
-        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(.19f, .17f, .12f, Opacity));
-        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, new Vector4(.10f, .095f, .080f, Opacity));
+        SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(900, 600) * UiScale, MaximumSize = new Vector2(1600, 1400) * UiScale };
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.89f, .83f, .70f, .98f * Opacity));
+        ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(.20f, .12f, .075f, Opacity));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(.30f, .18f, .10f, Opacity));
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(.96f, .91f, .79f, 1));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, new Vector4(.20f, .12f, .075f, Opacity));
     }
 
-    public override void PostDraw() => ImGui.PopStyleColor(4);
+    public override void PostDraw() => ImGui.PopStyleColor(5);
 
     public override void Draw()
     {
@@ -58,26 +59,26 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 6 * S);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 10 * S);
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(10, 9) * S);
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.065f, .063f, .060f, .98f * Opacity));
-        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(.39f, .35f, .26f, .40f));
-        ImGui.PushStyleColor(ImGuiCol.Tab, new Vector4(.115f, .11f, .10f, 1));
-        ImGui.PushStyleColor(ImGuiCol.TabActive, new Vector4(.25f, .22f, .16f, 1));
-        ImGui.PushStyleColor(ImGuiCol.TabHovered, new Vector4(.31f, .27f, .19f, 1));
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.89f, .83f, .70f, .98f * Opacity));
+        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(.48f, .34f, .19f, .35f));
+        ImGui.PushStyleColor(ImGuiCol.Tab, new Vector4(.80f, .71f, .56f, 1));
+        ImGui.PushStyleColor(ImGuiCol.TabActive, new Vector4(.91f, .84f, .68f, 1));
+        ImGui.PushStyleColor(ImGuiCol.TabHovered, new Vector4(.95f, .89f, .75f, 1));
         ImGui.PushStyleColor(ImGuiCol.CheckMark, Gold);
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(.085f, .082f, .077f, .98f * Opacity));
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.21f, .195f, .16f, 1));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.30f, .27f, .21f, 1));
-        ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(.25f, .22f, .16f, 1));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(.35f, .29f, .19f, 1));
-        ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(.17f, .16f, .14f, 1));
-        ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, new Vector4(.24f, .22f, .17f, 1));
-        ImGui.PushStyleColor(ImGuiCol.FrameBgActive, new Vector4(.29f, .25f, .18f, 1));
-        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(.28f, .25f, .18f, 1));
-        ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(.32f, .28f, .19f, 1));
-        ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(.35f, .31f, .23f, .45f));
-        ImGui.PushStyleColor(ImGuiCol.TabUnfocused, new Vector4(.115f, .11f, .10f, 1));
-        ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, new Vector4(.21f, .19f, .15f, 1));
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(.89f, .87f, .81f, 1));
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0, 0, 0, 0));
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.79f, .68f, .49f, 1));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.88f, .77f, .57f, 1));
+        ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(.91f, .84f, .68f, 1));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(.72f, .58f, .38f, 1));
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(.85f, .78f, .64f, 1));
+        ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, new Vector4(.92f, .86f, .73f, 1));
+        ImGui.PushStyleColor(ImGuiCol.FrameBgActive, new Vector4(.78f, .66f, .47f, 1));
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(.90f, .81f, .64f, 1));
+        ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(.82f, .70f, .51f, 1));
+        ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(.49f, .34f, .18f, .35f));
+        ImGui.PushStyleColor(ImGuiCol.TabUnfocused, new Vector4(.80f, .71f, .56f, 1));
+        ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, new Vector4(.88f, .79f, .61f, 1));
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(.20f, .15f, .105f, 1));
         ImGui.PushStyleColor(ImGuiCol.TextDisabled, Muted);
         try { DrawContent(); }
         finally { ImGui.PopStyleColor(21); ImGui.PopStyleVar(3); ImGui.SetWindowFontScale(1); }
@@ -117,25 +118,57 @@ public sealed class EventWindow : Window, IDisposable
         }
         ImGui.SameLine();
         if (ImGui.SmallButton(T("Settings") + "###Settings")) settingsVisible = !settingsVisible;
-        if (settingsVisible) DrawSettings();
+        if (settingsVisible)
+        {
+            ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(.96f, .91f, .80f, .95f * Opacity));
+            if (BeginScaledChild("Journal settings", new Vector2(0, Math.Clamp(ImGui.GetContentRegionAvail().Y * .40f, 110 * S, 260 * S)), true)) DrawSettings();
+            EndScaledChild();
+            ImGui.PopStyleColor();
+        }
         ImGui.Separator();
-        if (BeginScaledChild("Event rail", new Vector2(Math.Clamp(ImGui.GetContentRegionAvail().X * .27f, 224 * S, 290 * S), -30 * S), true))
+        var railWidth = Math.Clamp(ImGui.GetContentRegionAvail().X * .32f, 280 * S, 360 * S);
+        var gutter = 18 * S;
+        DrawBookBackground(railWidth, gutter);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(42 * S, 44 * S));
+        if (BeginScaledChild("Event rail", new Vector2(railWidth, -30 * S), false, ImGuiWindowFlags.AlwaysUseWindowPadding))
         {
             ImGui.TextColored(Muted, F("LIVE & UPCOMING  /  {0}", events.Count));
             foreach (var e in events) DrawEventCard(e, now);
             if (events.Count == 0) ImGui.TextWrapped(T("No current events in this feed. Check Lodestone for announcements."));
         }
         EndScaledChild();
-        ImGui.SameLine();
-        if (BeginScaledChild("Event detail", new Vector2(0, -30 * S), true))
+        ImGui.SameLine(0, gutter);
+        if (BeginScaledChild("Event detail", new Vector2(Math.Max(100 * S, ImGui.GetContentRegionAvail().X - 52 * S), -30 * S), false, ImGuiWindowFlags.AlwaysUseWindowPadding))
         {
             var current = events.FirstOrDefault(e => e.Id == selected);
             if (current != null) DrawEvent(current, now);
             else if (ImGui.Button(T("Open Lodestone") + "###Open Lodestone")) OpenUrl("https://na.finalfantasyxiv.com/lodestone/topics/");
         }
         EndScaledChild();
+        ImGui.PopStyleVar();
         ImGui.TextColored(Muted, "Lodestone  /  " + L.FeedStatus(plugin.Feed.Status, plugin.Feed.UpdatedAt));
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Tracking stays on this computer. Collection unlocks and observed rewards are separate from quest completion."));
+    }
+
+    private void DrawBookBackground(float leftPageWidth, float gutter)
+    {
+        var start = ImGui.GetCursorScreenPos();
+        var size = new Vector2(ImGui.GetContentRegionAvail().X, Math.Max(100 * S, ImGui.GetContentRegionAvail().Y - 30 * S));
+        var draw = ImGui.GetWindowDrawList();
+        var file = Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName!, "assets", "book.png");
+        if (Plugin.Textures.GetFromFile(file).TryGetWrap(out var wrap, out _))
+        {
+            // Preserve the central binding while independently sizing the two content pages.
+            var tint = ImGui.ColorConvertFloat4ToU32(new Vector4(1, 1, 1, Opacity));
+            draw.AddImage(wrap.Handle, start, start + new Vector2(leftPageWidth, size.Y), Vector2.Zero, new Vector2(.49f, 1), tint);
+            draw.AddImage(wrap.Handle, start + new Vector2(leftPageWidth, 0), start + new Vector2(leftPageWidth + gutter, size.Y), new Vector2(.49f, 0), new Vector2(.51f, 1), tint);
+            draw.AddImage(wrap.Handle, start + new Vector2(leftPageWidth + gutter, 0), start + size, new Vector2(.51f, 0), Vector2.One, tint);
+        }
+        else
+        {
+            draw.AddRectFilled(start, start + size, ImGui.ColorConvertFloat4ToU32(new Vector4(.95f, .88f, .73f, Opacity)), 10 * S);
+            draw.AddRectFilled(start + new Vector2(leftPageWidth, 0), start + new Vector2(leftPageWidth + gutter, size.Y), ImGui.ColorConvertFloat4ToU32(new Vector4(.58f, .41f, .23f, Opacity)));
+        }
     }
 
     private void DrawEventCard(EventInfo e, DateTimeOffset now)
@@ -157,11 +190,11 @@ public sealed class EventWindow : Window, IDisposable
         var hovered = ImGui.IsItemHovered();
         if (hovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         var draw = ImGui.GetWindowDrawList();
-        var background = active ? new Vector4(.19f, .17f, .125f, 1)
-            : hovered ? new Vector4(.15f, .14f, .12f, 1) : new Vector4(.105f, .10f, .09f, 1);
+        var background = active ? new Vector4(.91f, .82f, .64f, 1)
+            : hovered ? new Vector4(.97f, .91f, .79f, 1) : new Vector4(.96f, .90f, .77f, 1);
         background.W = Opacity;
         draw.AddRectFilled(start, start + new Vector2(width, height), ImGui.ColorConvertFloat4ToU32(background), 8 * S);
-        draw.AddRect(start, start + new Vector2(width, height), ImGui.ColorConvertFloat4ToU32(active ? accent : new Vector4(.25f, .23f, .19f, .4f)), 8 * S);
+        draw.AddRect(start, start + new Vector2(width, height), ImGui.ColorConvertFloat4ToU32(active ? accent : new Vector4(.53f, .37f, .20f, .35f)), 8 * S);
         draw.AddRectFilled(start + new Vector2(0, 10 * S), start + new Vector2(3 * S, height - 10 * S), ImGui.ColorConvertFloat4ToU32(accent), 2 * S);
         if (artwork != null && artwork.TryGetWrap(out var wrap, out _))
         {
@@ -172,9 +205,17 @@ public sealed class EventWindow : Window, IDisposable
             draw.AddImage(wrap.Handle, start + new Vector2(padding, 9 * S), start + new Vector2(padding, 9 * S) + size,
                 (Vector2.One - visible) / 2, (Vector2.One + visible) / 2);
         }
+        if (active)
+        {
+            var ribbonLeft = start + new Vector2(width - 28 * S, 0);
+            var ribbonRight = start + new Vector2(width - 14 * S, 28 * S);
+            draw.AddRectFilled(ribbonLeft, ribbonRight, ImGui.ColorConvertFloat4ToU32(new Vector4(.46f, .16f, .13f, 1)));
+            draw.AddTriangleFilled(new Vector2(ribbonLeft.X, ribbonRight.Y), ribbonRight,
+                start + new Vector2(width - 21 * S, 21 * S), ImGui.ColorConvertFloat4ToU32(background));
+        }
         ImGui.SetCursorPos(cursor + new Vector2(padding, imageHeight + 16 * S));
         ImGui.PushTextWrapPos(cursor.X + width - padding);
-        ImGui.TextColored(active ? new Vector4(.96f, .93f, .85f, 1) : new Vector4(.84f, .82f, .76f, 1), title);
+        ImGui.TextColored(active ? new Vector4(.27f, .13f, .09f, 1) : new Vector4(.28f, .22f, .16f, 1), title);
         ImGui.PopTextWrapPos();
         ImGui.SetCursorPosX(cursor.X + padding);
         ImGui.TextColored(accent, T(e.Active(now) ? "LIVE NOW" : "UPCOMING"));
@@ -187,7 +228,7 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.TextColored(Muted, F("{0} / {1} rewards confirmed", done, total));
             var bar = start + new Vector2(padding, height - 12 * S);
             var barWidth = width - padding * 2;
-            draw.AddRectFilled(bar, bar + new Vector2(barWidth, 3 * S), ImGui.ColorConvertFloat4ToU32(new Vector4(.22f, .21f, .18f, 1)), 2 * S);
+            draw.AddRectFilled(bar, bar + new Vector2(barWidth, 3 * S), ImGui.ColorConvertFloat4ToU32(new Vector4(.67f, .57f, .40f, .45f)), 2 * S);
             if (total > 0 && done > 0)
                 draw.AddRectFilled(bar, bar + new Vector2(barWidth * done / total, 3 * S), ImGui.ColorConvertFloat4ToU32(Teal), 2 * S);
         }
@@ -289,7 +330,7 @@ public sealed class EventWindow : Window, IDisposable
         if (!definition.Rewards.Any(r => (!favoritesOnly || plugin.Settings.FavoriteRewards.Contains(r.Id))
             && (!remainingOnly || (!plugin.Settings.IgnoredRewards.Contains(r.Id) && !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed))))
             ImGui.TextWrapped(T("No rewards match these filters. Mark rewards as favorites or change the filters."));
-        var columns = ImGui.GetContentRegionAvail().X >= 560 * S ? 2 : 1;
+        var columns = ImGui.GetContentRegionAvail().X >= 520 * S ? 2 : 1;
         if (ImGui.BeginTable("Rewards", columns, ImGuiTableFlags.SizingStretchSame))
         {
             foreach (var reward in definition.Rewards)
@@ -332,8 +373,8 @@ public sealed class EventWindow : Window, IDisposable
             + (hasLocation ? ImGui.GetTextLineHeight() + gap + ImGui.GetStyle().FramePadding.Y * 2 : 0);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding));
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(8 * scale, gap));
-        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (ignored ? .60f : 1));
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, ignored ? new Vector4(.115f, .115f, .115f, Opacity) : new Vector4(.12f, .115f, .103f, Opacity));
+        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (ignored ? .82f : 1));
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, ignored ? new Vector4(.83f, .81f, .75f, .85f * Opacity) : new Vector4(.98f, .95f, .86f, .86f * Opacity));
         if (BeginScaledChild("Reward tile", new Vector2(0, height), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.AlwaysUseWindowPadding))
         {
             if (favorite && !ignored)
@@ -348,7 +389,7 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.SameLine();
             ImGui.BeginGroup();
             ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textWidth);
-            ImGui.TextColored(ignored ? Muted : favorite ? Gold : new Vector4(.92f, .90f, .84f, 1), E(reward.Name));
+            ImGui.TextColored(ignored ? Muted : favorite ? Gold : new Vector4(.23f, .17f, .11f, 1), E(reward.Name));
             if (ImGui.IsItemHovered()) ImGui.SetTooltip($"{reward.Name}\nItem #{reward.Id}");
             if (reward.Price > 0) ImGui.TextColored(ignored ? Muted : Gold, $"{reward.Price.ToString("N0", L.Culture)} {E(reward.Currency)}");
             ImGui.PopTextWrapPos();
@@ -405,7 +446,7 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.SetWindowFontScale(UiScale * 1.2f);
         try { titleHeight = ImGui.CalcTextSize(title, false, width - padding * 2).Y; }
         finally { ImGui.SetWindowFontScale(UiScale); }
-        var height = Math.Max(Math.Clamp(width * .31f, 150 * scale, 205 * scale),
+        var height = Math.Max(Math.Clamp(width * .30f, 130 * scale, 175 * scale),
             titleHeight + ImGui.GetTextLineHeightWithSpacing() * 2 + padding * 2);
         var start = ImGui.GetCursorScreenPos();
         var cursor = ImGui.GetCursorPos();
@@ -427,7 +468,7 @@ public sealed class EventWindow : Window, IDisposable
         draw.AddRect(start, start + size, ImGui.ColorConvertFloat4ToU32(new Vector4(Gold.X, Gold.Y, Gold.Z, .45f)), 4 * scale);
         var textY = height - padding - titleHeight - ImGui.GetTextLineHeightWithSpacing() * 2;
         ImGui.SetCursorPos(cursor + new Vector2(padding, textY));
-        ImGui.TextColored(Gold, T(e.Active(now) ? "SEASONAL JOURNAL  /  LIVE" : "SEASONAL JOURNAL  /  UPCOMING"));
+        ImGui.TextColored(new Vector4(.91f, .77f, .48f, 1), T(e.Active(now) ? "SEASONAL JOURNAL  /  LIVE" : "SEASONAL JOURNAL  /  UPCOMING"));
         ImGui.SetCursorPosX(cursor.X + padding);
         ImGui.SetWindowFontScale(UiScale * 1.2f);
         try
