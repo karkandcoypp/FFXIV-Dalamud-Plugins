@@ -36,6 +36,11 @@ internal static class OnlineFeedChecks
             Check(locale.Text("A future event", service.Feed.Events[0]) == "Новое событие", "online translation is applied without changing language resources");
             Check(locale.Text("Online reward", service.Feed.Events[0]) == "Новая награда", "online reward names support translation");
             var previous = service.Feed;
+            e.Tracking!.CompletionQuestId = 65537;
+            handler.Data = JsonSerializer.SerializeToUtf8Bytes(feed);
+            await service.RefreshAsync("https://example.com/feed");
+            Check(ReferenceEquals(previous, service.Feed), "unknown main completion quest preserves the last valid feed");
+            e.Tracking.CompletionQuestId = 71004;
             Check(previous.Events[0].Locations[0].MapId == 3 && catalog[e.Id].Rewards[0].LocationId == "trader", "new NPC locations and reward associations arrive online");
             e.Locations[0].X = 101;
             handler.Data = JsonSerializer.SerializeToUtf8Bytes(feed);

@@ -176,6 +176,8 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.TextColored(Gold, Countdown(e, now));
         if (e.EndsAt.HasValue) ImGui.TextDisabled(F("Ends {0}", e.EndsAt.Value.ToLocalTime().ToString("f", L.Culture)));
         if (!e.Verified) ImGui.TextColored(Gold, T("Partial details — check the official page"));
+        if (plugin.Progress.ReadyForReminders && EventCompletionPolicy.IsComplete(definition, plugin.Progress.Quests))
+            ImGui.TextColored(Teal, T("Main objective completed"));
         if (!string.IsNullOrWhiteSpace(e.Description)) ImGui.TextWrapped(E(e.Description));
         if (ImGui.Button(T("Official event guide") + "###Official event guide")) OpenUrl(e.Url);
         if (DateTime.UtcNow < mapErrorUntil) ImGui.TextWrapped(T("Could not open the map. Log in and try again; this area may be unavailable."));
@@ -343,6 +345,7 @@ public sealed class EventWindow : Window, IDisposable
         var notify = c.NotifyOnLogin; if (ImGui.Checkbox(T("Notify on login") + "###Notify on login", ref notify)) { c.NotifyOnLogin = notify; plugin.Save(); }
         ImGui.SameLine();
         var open = c.OpenOnLogin; if (ImGui.Checkbox(T("Open on login") + "###Open on login", ref open)) { c.OpenOnLogin = open; plugin.Save(); }
+        ImGui.TextWrapped(T("Automatic opening skips inactive events and completed main quests. You can always open the journal or widget manually."));
         var deadlines = c.NotifyFavoriteDeadlines;
         if (ImGui.Checkbox(T("Remind me about favorite rewards before events end") + "###FavoriteDeadlines", ref deadlines))
         { c.NotifyFavoriteDeadlines = deadlines; plugin.Save(); }

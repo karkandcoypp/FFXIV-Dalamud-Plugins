@@ -20,6 +20,7 @@ internal static class Program
         }
         await OnlineFeedChecks.Run();
         DeadlineReminderChecks.Run();
+        EventCompletionChecks.Run();
         var settings = new Configuration();
         Check(!settings.ShowCompactWidget, "compact widget starts hidden for existing configurations");
         settings.ShowCompactWidget = true;

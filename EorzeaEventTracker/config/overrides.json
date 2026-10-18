@@ -96,7 +96,8 @@
           "price": 0,
           "locationId": "wake-vendor"
         }
-      ]
+      ],
+      "completionQuestId": 71004
     },
     "translations": {
       "ru": {
@@ -357,7 +358,8 @@
           "price": 150,
           "locationId": "mgf-trader"
         }
-      ]
+      ],
+      "completionQuestId": 70337
     },
     "translations": {
       "ru": {

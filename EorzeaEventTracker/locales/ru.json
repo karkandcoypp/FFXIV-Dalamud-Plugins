@@ -110,5 +110,7 @@
   "Show compact event widget": "Показывать компактный виджет событий",
   "No active events right now.": "Сейчас нет активных событий.",
   "Click an event to open its journal.": "Нажмите на событие, чтобы открыть его в журнале.",
-  "Tracking is not available for this event yet.": "Отслеживание этого события пока недоступно."
+  "Tracking is not available for this event yet.": "Отслеживание этого события пока недоступно.",
+  "Main objective completed": "Основная цель выполнена",
+  "Automatic opening skips inactive events and completed main quests. You can always open the journal or widget manually.": "Автопоказ пропускает неактивные события и события с завершённым основным квестом. Журнал и виджет всегда можно открыть вручную."
 }

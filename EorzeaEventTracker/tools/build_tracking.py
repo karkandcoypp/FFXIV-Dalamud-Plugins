@@ -47,7 +47,7 @@ def main():
             for item in items:
                 if item['id'] in guaranteed:
                     item['earnedByQuest'] = resolved_quests[-1]['id']
-        events.append(dict(eventId=hashlib.sha256(url.encode()).hexdigest()[:16], asset=asset, quests=resolved_quests, rewards=items))
+        events.append(dict(eventId=hashlib.sha256(url.encode()).hexdigest()[:16], asset=asset, completionQuestId=resolved_quests[-1]['id'], quests=resolved_quests, rewards=items))
     (ROOT / 'config/tracking.json').write_text(json.dumps(events, indent=2) + '\n', encoding='utf-8')
     print('Resolved', sum(len(e['rewards']) for e in events), 'rewards and', sum(len(e['quests']) for e in events), 'quests.')
 

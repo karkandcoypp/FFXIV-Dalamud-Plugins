@@ -61,6 +61,8 @@ public static class FeedPolicy
             if (tracking.Quests.Any(q => !LocationReference(e, q.LocationId))
                 || tracking.Rewards.Any(r => !LocationReference(e, r.LocationId)))
                 throw new IOException("Unknown NPC location reference");
+            if (tracking.CompletionQuestId != 0 && !tracking.Quests.Any(q => q.Id == tracking.CompletionQuestId))
+                throw new IOException("Unknown completion quest");
             quests += tracking.Quests.Count;
             rewards += tracking.Rewards.Count;
             if (quests > 256 || rewards > 2000) throw new IOException("Tracking catalog too large");

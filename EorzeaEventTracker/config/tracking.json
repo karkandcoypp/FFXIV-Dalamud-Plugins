@@ -65,7 +65,8 @@
         "icon": 53565,
         "price": 0
       }
-    ]
+    ],
+    "completionQuestId": 71004
   },
   {
     "eventId": "e9da20a481813c2f",
@@ -221,6 +222,7 @@
         "icon": 22805,
         "price": 150
       }
-    ]
+    ],
+    "completionQuestId": 70337
   }
 ]

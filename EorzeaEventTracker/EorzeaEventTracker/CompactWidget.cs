@@ -23,7 +23,7 @@ public sealed class CompactWidget : Window
         SizeConstraints = new WindowSizeConstraints { MinimumSize = new(260, 160), MaximumSize = new(520, 900) };
     }
 
-    public override bool DrawConditions() => Plugin.Client.IsLoggedIn;
+    public override bool DrawConditions() => Plugin.Client.IsLoggedIn && plugin.AllowWidgetDisplay;
 
     public override void OnClose()
     {

@@ -40,6 +40,10 @@ public sealed class Plugin : IDalamudPlugin
     private Task? loginRefresh;
     private DateTime nextFeedRefresh;
     private DateTimeOffset nextReminderCheck;
+    private bool widgetOpenedManually;
+    internal bool AllowWidgetDisplay => widgetOpenedManually || ShouldAutoOpen();
+    private bool ShouldAutoOpen() => loginRefresh == null && EventCompletionPolicy.ShouldAutoOpen(Feed.Feed, Progress.Catalog,
+        Progress.Quests, Progress.ReadyForReminders, Settings.ShowUnverified, DateTimeOffset.UtcNow);
 
     public Plugin()
     {
@@ -75,10 +79,11 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void Open() => window.IsOpen = true;
-    private void ToggleWidget() => SetWidgetVisible(!widget.IsOpen);
+    private void ToggleWidget() => SetWidgetVisible(!(widget.IsOpen && AllowWidgetDisplay));
     internal void SetWidgetVisible(bool visible)
     {
         widget.IsOpen = visible;
+        widgetOpenedManually = visible;
         Settings.ShowCompactWidget = visible;
         Save();
     }
@@ -94,6 +99,7 @@ public sealed class Plugin : IDalamudPlugin
         var loggedIn = Client.IsLoggedIn;
         if (loggedIn && !previousLoggedIn)
         {
+            widgetOpenedManually = false;
             loginRefresh = Feed.RefreshAsync(Settings.FeedUrl);
             nextFeedRefresh = DateTime.UtcNow.AddMinutes(30);
             Images.RetryFailed();
@@ -104,14 +110,19 @@ public sealed class Plugin : IDalamudPlugin
             _ = Feed.RefreshAsync(Settings.FeedUrl);
             Images.RetryFailed();
         }
-        if (!loggedIn) loginRefresh = null;
-        if (loggedIn && loginRefresh?.IsCompleted == true)
+        if (!loggedIn)
+        {
+            loginRefresh = null;
+            widgetOpenedManually = false;
+            window.IsOpen = false;
+        }
+        if (loggedIn && loginRefresh?.IsCompleted == true && Progress.ReadyForReminders)
         {
             loginRefresh = null;
             var active = Feed.Feed.Events.Count(e => e.Active(DateTimeOffset.UtcNow) && (Settings.ShowUnverified || e.Verified));
             if (Settings.NotifyOnLogin && active > 0)
                 Chat.Print("[Eorzea Event Tracker] " + Locale.Format("{0} active event(s)! Type /events for details.", active));
-            if (Settings.OpenOnLogin && active > 0) Open();
+            if (Settings.OpenOnLogin && ShouldAutoOpen()) Open();
         }
         previousLoggedIn = loggedIn;
         CheckDeadlineReminders();

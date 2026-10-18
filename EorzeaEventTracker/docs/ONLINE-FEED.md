@@ -83,3 +83,11 @@ The cache uses a hash of the URL, never a path supplied by the feed. Change the 
 Invalid or unsupported feed data leaves the last valid feed in use. No scripts, assemblies, hooks or executable expressions can be delivered through this format. Only known game-sheet lookups and existing tracking rules are applied.
 
 New content is not automatically inferred with full accuracy from arbitrary Lodestone layouts. Event discovery and date parsing are automatic where supported; quest/reward IDs, translations and participation details still require reviewed annotations in the feed source.
+
+## Main event objective (v0.6.1)
+
+Optional `tracking.completionQuestId` identifies the main quest used for automatic journal/widget visibility. It must refer to a quest in the same tracking definition; zero or omission means the main objective is unknown. Unknown completion is not treated as completed. The plugin waits for loaded character progress and the login feed refresh before deciding to auto-open.
+
+Current mappings: All Saints' Wake — Grim and Grisly Games (71004); Fall Guys — Just Crowning Around (70337), as explicitly selected by the user. This is independent of collecting every reward or winning achievements. New event main quest IDs can be added through `config/overrides.json`, without a plugin rebuild.
+
+Automatic display is suppressed if there are no visible active events with an uncompleted/unknown main objective. Manual journal/widget opening remains available. Favorite deadline reminders remain independent and can still notify about missing selected rewards after the main quest is complete.

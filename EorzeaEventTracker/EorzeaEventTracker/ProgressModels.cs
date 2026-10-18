@@ -6,6 +6,7 @@ public sealed class TrackingDefinition
 {
     public string EventId { get; set; } = "";
     public string Asset { get; set; } = "";
+    public uint CompletionQuestId { get; set; }
     public List<TrackedQuest> Quests { get; set; } = new();
     public List<TrackedReward> Rewards { get; set; } = new();
 }

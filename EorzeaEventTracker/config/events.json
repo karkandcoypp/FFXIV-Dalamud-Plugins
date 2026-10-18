@@ -228,7 +228,8 @@
             "price": 150,
             "locationId": "mgf-trader"
           }
-        ]
+        ],
+        "completionQuestId": 70337
       },
       "imageUrl": "https://lds-img.finalfantasyxiv.com/h/0/zje_ddUUZhM_mwaVQGVVOVsByM.jpg",
       "translations": {
@@ -390,7 +391,8 @@
             "price": 0,
             "locationId": "wake-vendor"
           }
-        ]
+        ],
+        "completionQuestId": 71004
       },
       "imageUrl": "https://lds-img.finalfantasyxiv.com/h/2/S6cUfbRM1Huta2gcz90SFzZhFM.jpg",
       "translations": {
