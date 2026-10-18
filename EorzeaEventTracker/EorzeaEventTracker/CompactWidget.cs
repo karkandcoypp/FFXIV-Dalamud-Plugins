@@ -9,8 +9,8 @@ namespace EorzeaEventTracker;
 public sealed class CompactWidget : Window
 {
     private readonly Plugin plugin;
-    private static readonly Vector4 Teal = new(.40f, .88f, .77f, 1);
-    private static readonly Vector4 Gold = new(1, .76f, .43f, 1);
+    private static readonly Vector4 Teal = new(.49f, .69f, .62f, 1);
+    private static readonly Vector4 Gold = new(.84f, .72f, .48f, 1);
     private Localizer L => plugin.Locale;
     private float S => ImGui.GetFontSize() / 17f;
 
@@ -23,6 +23,22 @@ public sealed class CompactWidget : Window
         SizeConstraints = new WindowSizeConstraints { MinimumSize = new(260, 160), MaximumSize = new(520, 900) };
     }
 
+    public override void PreDraw()
+    {
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.075f, .072f, .065f, .96f));
+        ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(.10f, .095f, .080f, 1));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(.19f, .17f, .12f, 1));
+        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(.39f, .35f, .26f, .40f));
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.21f, .195f, .16f, 1));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.30f, .27f, .21f, 1));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(.35f, .29f, .19f, 1));
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(.28f, .25f, .18f, 1));
+        ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(.35f, .31f, .23f, .45f));
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(.17f, .16f, .14f, 1));
+    }
+
+    public override void PostDraw() => ImGui.PopStyleColor(10);
+
     public override bool DrawConditions() => Plugin.Client.IsLoggedIn && plugin.AllowWidgetDisplay;
 
     public override void OnClose()
@@ -34,7 +50,7 @@ public sealed class CompactWidget : Window
 
     public override void Draw()
     {
-        ImGui.TextColored(Teal, L.Text("Active events"));
+        ImGui.TextColored(Gold, L.Text("Active events"));
         ImGui.SameLine();
         if (ImGui.SmallButton(L.Text("Journal") + "###Journal")) plugin.OpenEvent("");
         ImGui.TextDisabled(plugin.Progress.Character);
@@ -59,7 +75,7 @@ public sealed class CompactWidget : Window
             }
             ImGui.SetCursorPos(cursor + new Vector2(4 * S, 4 * S));
             ImGui.PushTextWrapPos(cursor.X + width - 4 * S);
-            ImGui.TextColored(new Vector4(.92f, .96f, 1, 1), title);
+            ImGui.TextColored(new Vector4(.92f, .90f, .84f, 1), title);
             ImGui.PopTextWrapPos();
             ImGui.SetCursorPos(cursor + new Vector2(0, height + 4 * S));
             var remaining = e.EndsAt!.Value - now;

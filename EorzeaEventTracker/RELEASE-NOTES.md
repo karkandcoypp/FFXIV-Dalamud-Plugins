@@ -1,11 +1,11 @@
-Eorzea Event Tracker v0.7.0 for Dalamud API 15.
+Eorzea Event Tracker v0.8.0 for Dalamud API 15.
 
-- Added a Not interested checkbox to reward cards. Excluded rewards appear muted with a neutral gray background and remain available to review or restore.
-- Excluded rewards count toward neither obtained nor total rewards in the journal, event sidebar and compact widget. They are also omitted by the remaining-rewards filter.
-- Marking a favorite as Not interested removes it from favorites and deadline reminders. Favoriting it again restores interest. Main-quest completion remains independent.
-- Preferences persist locally by item ID and are shared between characters, like favorites. Actual reward tracking/history is preserved.
-- English and Russian labels and explanations are included.
+- Redesigned event headers as journal covers: cropped artwork, a soft dark gradient, enlarged wrapped title, status and countdown over the image. Missing/loading artwork uses the same readable cover layout.
+- Reworked rewards into compact content-sized cards: icon and title/price side by side, status underneath, then favorite/ignore controls and map action. Long translations and narrow columns adapt without fixed tall empty tiles.
+- Introduced a quieter journal palette: warm charcoal panels, parchment-colored text and muted gold highlights. Green is reserved for collection progress and obtained states.
+- Updated selected event cards, tab/button states, subtle borders, main title bar and compact widget to match.
+- Existing tracking, map links, favorite/ignore behavior, reminders and automatic opening rules are preserved.
 
-Update through `/xlplugins`, open `/events` and mark Not interested on unwanted reward cards. Clear the checkbox to include a reward again. Turn off remaining/favorites filters to see excluded cards.
+Update through `/xlplugins`, open `/events` and use `/eventswidget` for the matching compact display.
 
-Validation: Release build, persistence and exclusion-count checks, reminder exclusion, all-rewards-excluded case and existing feed/collector/localization checks. Muted card appearance should be checked in game.
+Validation: Release build against Dalamud API 15 plus existing localization, feed and progress checks. In-game layout at the player's UI scale needs visual verification after installation.
