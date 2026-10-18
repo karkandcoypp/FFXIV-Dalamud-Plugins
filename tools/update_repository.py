@@ -1,4 +1,4 @@
-"""Merge a released EET manifest into a custom Dalamud repository index."""
+"""Merge a released plugin manifest into the shared Dalamud repository index."""
 import argparse
 import json
 from pathlib import Path
@@ -7,11 +7,16 @@ from pathlib import Path
 def update(index_path, manifest_path, repository, tag):
     index = json.loads(Path(index_path).read_text(encoding='utf-8-sig'))
     manifest = json.loads(Path(manifest_path).read_text(encoding='utf-8-sig'))
-    if manifest.get('InternalName') != 'EorzeaEventTracker':
+    prefixes = {'EorzeaEventTracker': 'eet-v', 'Dalamud.FullscreenCutscenes.Community': 'uc-v'}
+    name = manifest.get('InternalName')
+    if name not in prefixes:
         raise ValueError('Unexpected plugin manifest')
-    if tag != 'eet-v' + manifest['AssemblyVersion'].removesuffix('.0'):
+    version = manifest['AssemblyVersion']
+    tag_version = version.rsplit('.', 1)[0] if version.endswith('.0') else version
+    if tag != prefixes[name] + tag_version:
         raise ValueError('Release tag does not match assembly version')
-    link = f'https://github.com/{repository}/releases/download/{tag}/EorzeaEventTracker.zip'
+    asset = 'EorzeaEventTracker.zip' if name == 'EorzeaEventTracker' else 'UltrawideCutscenes.zip'
+    link = f'https://github.com/{repository}/releases/download/{tag}/{asset}'
     manifest.update(RepoUrl=f'https://github.com/{repository}',
                     DownloadLinkInstall=link, DownloadLinkUpdate=link, DownloadLinkTesting=link)
     existing = next((i for i, item in enumerate(index) if item.get('InternalName') == manifest['InternalName']), None)

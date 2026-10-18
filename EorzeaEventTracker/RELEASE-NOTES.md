@@ -1,14 +1,13 @@
-Eorzea Event Tracker v0.3.0 for Dalamud API 15.
+Eorzea Event Tracker v0.3.1 for Dalamud API 15.
 
-- Quest IDs, reward mappings, prices/currencies, event translations and artwork URLs now arrive through the online feed.
-- New definitions apply without restarting or rebuilding the plugin. Current events have been migrated to the online format.
-- Artwork loads asynchronously from official HTTPS image hosts and is cached locally. Existing bundled artwork remains a fallback.
-- Invalid feed data preserves the last valid copy. Cached event details, mappings, translations and downloaded images work offline.
-- Guaranteed quest reward claims are additionally checked against the game's reward list.
-- New tracking mechanics and changes to the game API may still require a plugin update. New event details still need reviewed source annotations; they are not magically extracted from every Lodestone layout.
+- Repository renamed to FFXIV-Dalamud-Plugins, with separate plugin folders and shared release tools.
+- Updated project and event feed URLs.
+- The default feed preference migrates automatically from the previous repository name. Custom feed addresses and explicit local mode are preserved.
+- Existing plugin subscriptions continue through GitHub's repository redirect. Saved character progress and plugin identity are unchanged.
+- Online event delivery from v0.3.0 remains available.
 
 Install from the existing custom repository:
-https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/pluginmaster.json
+https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/pluginmaster.json
 
 Open `/xlplugins`, find Eorzea Event Tracker, install it, then use `/events`.
-Install this update once through `/xlplugins`. Subsequent event data refreshes on login, Refresh and every 30 minutes while logged in. This online catalog version still requires in-game verification.
+Update through `/xlplugins`. New installations can use the new shared repository URL above. Existing subscriptions do not need to add a duplicate repository entry.

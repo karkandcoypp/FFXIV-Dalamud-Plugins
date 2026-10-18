@@ -3,3 +3,6 @@
 obj/
 bin/
 *.user
+.dotnet/
+__pycache__/
+*.pyc

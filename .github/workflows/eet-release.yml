@@ -5,7 +5,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: eet-publish
+  group: dalamud-publish
   cancel-in-progress: false
 jobs:
   release:
@@ -49,7 +49,7 @@ jobs:
           $output = 'EorzeaEventTracker/EorzeaEventTracker/bin/Release'
           Copy-Item "$output/EorzeaEventTracker/latest.zip" "$env:RUNNER_TEMP/EorzeaEventTracker.zip"
           Copy-Item "$output/EorzeaEventTracker.json" "$env:RUNNER_TEMP/EorzeaEventTracker.json"
-          python EorzeaEventTracker/tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          python tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Invalid release metadata' }
           git restore pluginmaster.json
       - name: Publish release asset
@@ -60,7 +60,7 @@ jobs:
         run: |
           git fetch origin main
           git checkout -B main origin/main
-          python EorzeaEventTracker/tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          python tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Index update failed' }
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

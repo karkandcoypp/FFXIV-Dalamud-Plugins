@@ -7,7 +7,7 @@ Dalamud API 15 plugin for official FFXIV event reminders. Open `/events` for an 
 Add this URL to `/xlsettings` → Experimental → Custom Plugin Repositories:
 
 ```text
-https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/pluginmaster.json
+https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/pluginmaster.json
 ```
 
 Save, open `/xlplugins`, search for **Eorzea Event Tracker**, and install it. Disable any development copy first. See [Russian instructions](INSTALL-RU.md).

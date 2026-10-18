@@ -39,10 +39,11 @@ public sealed class Plugin : IDalamudPlugin
     {
         Settings = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         Locale = new Localizer(Settings);
-        if (Settings.Version < 2)
+        if (Settings.Version < 3)
         {
-            if (string.IsNullOrWhiteSpace(Settings.FeedUrl)) Settings.FeedUrl = Configuration.DefaultFeedUrl;
-            Settings.Version = 2;
+            if (Settings.FeedUrl == Configuration.LegacyFeedUrl || (Settings.Version < 2 && string.IsNullOrWhiteSpace(Settings.FeedUrl)))
+                Settings.FeedUrl = Configuration.DefaultFeedUrl;
+            Settings.Version = 3;
             Save();
         }
         var data = PluginInterface.GetPluginConfigDirectory();

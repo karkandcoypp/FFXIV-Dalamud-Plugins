@@ -35,8 +35,9 @@ public sealed class EventInfo
 
 public sealed class Configuration : IPluginConfiguration
 {
-    public const string DefaultFeedUrl = "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/EorzeaEventTracker/config/events.json";
-    public int Version { get; set; } = 2;
+    public const string LegacyFeedUrl = "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/EorzeaEventTracker/config/events.json";
+    public const string DefaultFeedUrl = "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/EorzeaEventTracker/config/events.json";
+    public int Version { get; set; } = 3;
     public bool NotifyOnLogin { get; set; } = true;
     public bool OpenOnLogin { get; set; }
     public bool ShowUnverified { get; set; } = true;

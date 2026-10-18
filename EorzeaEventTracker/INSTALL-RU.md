@@ -1,11 +1,11 @@
-# Eorzea Event Tracker v0.3.0 — установка
+# Eorzea Event Tracker v0.3.1 — установка
 
 1. Если установлена тестовая DLL через Dev Plugin Locations, отключите эту копию и удалите её путь.
 2. Откройте `/xlsettings` → Experimental → Custom Plugin Repositories.
 3. Добавьте адрес:
 
 ```text
-https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/pluginmaster.json
+https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/pluginmaster.json
 ```
 
 4. Сохраните настройки и откройте `/xlplugins`.

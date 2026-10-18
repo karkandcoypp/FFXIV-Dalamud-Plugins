@@ -1,86 +1,53 @@
-# FFXIV Ultrawide Cutscenes
+# FFXIV Dalamud Plugins
 
-A community-maintained Dalamud plugin that removes 16:9 letterboxing from Final Fantasy XIV cutscenes on ultrawide displays.
+Общий репозиторий плагинов **Carcosa Lyuman** для FFXIV / Dalamud API 15.
 
-The original plugin is no longer actively maintained. This fork keeps it compatible with current versions of FFXIV and Dalamud.
+| Плагин | Что делает | Команда | Исходники |
+| --- | --- | --- | --- |
+| Ultrawide Cutscenes Community | Убирает полосы 16:9 из внутриигровых кат-сцен на широких мониторах | `/pcutscenes` | [UltrawideCutscenes](UltrawideCutscenes/README.md) |
+| Eorzea Event Tracker | Показывает текущие события, инструкции, награды и прогресс персонажа | `/events` | [EorzeaEventTracker](EorzeaEventTracker/README.md) |
 
-## Features
+## Установка через Dalamud
 
-- Removes black letterbox bars from in-engine cutscenes.
-- Supports ultrawide and super-ultrawide displays.
-- Can be enabled or disabled without restarting the game.
-- Reports whether its native game hook initialized successfully.
+В `/xlsettings` → **Experimental → Custom Plugin Repositories** добавьте:
 
-## Installation
-
-1. Open Dalamud settings with `/xlsettings`.
-2. Select **Experimental**.
-3. Add the following URL under **Custom Plugin Repositories**:
-
-   ```text
-   https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/pluginmaster.json
-   ```
-
-4. Save the settings and open `/xlplugins`.
-5. Search for **Ultrawide Cutscenes Community** and install it.
-
-The custom repository URL will become active once the first release and `pluginmaster.json` have been published.
-
-## Установка на русском
-
-1. Откройте настройки Dalamud командой `/xlsettings`.
-2. Перейдите в раздел **Experimental**.
-3. Добавьте следующий адрес в список **Custom Plugin Repositories**:
-
-   ```text
-   https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/pluginmaster.json
-   ```
-
-4. Сохраните настройки и откройте установщик плагинов командой `/xlplugins`.
-5. Найдите **Ultrawide Cutscenes Community** и установите плагин.
-
-Плагин убирает чёрные полосы формата 16:9 из внутриигровых кат-сцен на широкоформатных и сверхшироких мониторах.
-
-## Commands
-
-| Command | Description |
-| --- | --- |
-| `/pcutscenes` | Toggle the plugin on or off. |
-| `/pcutscenes true` | Enable the plugin. |
-| `/pcutscenes false` | Disable the plugin. |
-| `/pcutscenes status` | Show the plugin and native hook status. |
-
-## Compatibility
-
-This version targets Dalamud API 15 and .NET 10. Native game signatures can change after an FFXIV update. If the plugin stops working, run `/pcutscenes status`; `native hook: not available` means the plugin requires an update for the current game client.
-
-## Known limitations
-
-Cutscenes are authored for a 16:9 frame. Removing the bars may expose content outside the intended camera area, including actors appearing early, unloaded objects, T-poses, or other staging artifacts.
-
-## Building
-
-Requirements:
-
-- .NET 10 SDK
-- A current Dalamud development installation
-
-Build the solution in Release mode:
-
-```powershell
-dotnet build Dalamud.FullscreenCutscenes.sln --configuration Release
+```text
+https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/pluginmaster.json
 ```
 
-## Credits
+Сохраните настройки, откройте `/xlplugins` и установите нужный плагин. Для русского интерфейса Event Tracker: Settings → Language → Русский.
 
-- Original implementation by goat and Maple.
-- Native letterbox discovery credited to aers.
-- Community fork maintained by **Carcosa Lyuman**.
+Если уже подключён старый адрес `FFXIV-Ultrawide-Cutscenes`, оставьте существующую запись: она продолжает работать через перенаправление GitHub. Добавлять второй адрес для тех же плагинов не требуется. Не создавайте новый репозиторий под прежним именем — это отключит перенаправление.
 
-Final Fantasy XIV is a registered trademark of Square Enix Holdings Co., Ltd. This project is not affiliated with or endorsed by Square Enix or the Dalamud project.
+## Структура
 
-## Eorzea Event Tracker
+```text
+UltrawideCutscenes/         проект кат-сцен, решение и документация
+EorzeaEventTracker/         проект трекера, лента событий, переводы и тесты
+tools/                     общие инструменты публикации
+.github/workflows/         независимые сборки и обновление событий
+pluginmaster.json          общая лента установки обоих плагинов
+build.ps1                  сборка одного или обоих проектов
+```
 
-This custom repository also distributes **Eorzea Event Tracker** (Dalamud API 15). Install it from the same repository URL above, then run `/events`. It lists official event deadlines, requirements, participation steps and rewards. Current All Saints' Wake and Fall Guys details are included, with MGF prices for Fall Guys.
+Каждый плагин выпускается независимо: теги `uc-v*` для Ultrawide Cutscenes и `eet-v*` для Event Tracker. Общий инструмент публикации обновляет соответствующую запись в `pluginmaster.json`, сохраняя другой плагин.
 
-See [source and build instructions](EorzeaEventTracker/README.md) and [Russian installation instructions](EorzeaEventTracker/INSTALL-RU.md). Disable the development DLL copy before installing from the plugin installer. Version 0.2.0 adds automatic quest and character reward tracking, illustrated event guides and game item icons. Unobserved items in remote storage may remain unknown.
+## Сборка
+
+Нужны .NET 10 SDK и установленные библиотеки Dalamud API 15. Для нестандартного расположения библиотек задайте `DALAMUD_HOME`.
+
+Из корня репозитория:
+
+```powershell
+./build.ps1
+./build.ps1 -Plugin UltrawideCutscenes
+./build.ps1 -Plugin EorzeaEventTracker
+```
+
+Скрипт использует локальный `.dotnet`, если он есть, иначе системный SDK. Инструкции и ограничения каждого плагина находятся в его папке.
+
+Данные новых событий Event Tracker обновляются через онлайн-ленту без пересборки DLL. [Формат ленты и добавление событий](EorzeaEventTracker/docs/ONLINE-FEED.md).
+
+This repository contains independent Dalamud plugins. Add the shared custom repository URL above and install either plugin through `/xlplugins`. Plugin identities and saved settings remain unchanged by the repository rename.
+
+Final Fantasy XIV belongs to Square Enix. This project is not affiliated with Square Enix or the Dalamud project.

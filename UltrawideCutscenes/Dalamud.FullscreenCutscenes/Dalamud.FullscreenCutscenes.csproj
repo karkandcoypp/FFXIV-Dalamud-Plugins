@@ -1,13 +1,13 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
     <AssemblyName>Dalamud.FullscreenCutscenes.Community</AssemblyName>
     <Authors>Carcosa Lyuman</Authors>
     <Company></Company>
-    <Version>1.1.0.2</Version>
+    <Version>1.1.0.3</Version>
     <Description>Removes letterboxing from FFXIV cutscenes on ultrawide displays.</Description>
     <Copyright></Copyright>
-    <PackageProjectUrl>https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins</PackageProjectUrl>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 </Project>

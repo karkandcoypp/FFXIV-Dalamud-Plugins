@@ -4,8 +4,8 @@
   "Punchline": "Remove letterboxing from cutscenes on ultrawide monitors.",
   "Description": "This community-maintained fork removes the \"letterboxing\" bars when watching cutscenes on ultrawide monitors.\nBeware! You may see things outside the intended frame, such as upcoming NPCs popping in or T-posing.\n\nOriginal implementation by goat and Maple. Thanks to aers for the native discovery.",
   "InternalName": "Dalamud.FullscreenCutscenes.Community",
-  "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes",
-  "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/Dalamud.FullscreenCutscenes/icon.png",
+  "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
+  "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/UltrawideCutscenes/Dalamud.FullscreenCutscenes/icon.png",
   "ApplicableVersion": "any",
   "Tags": [
     "ultrawide",

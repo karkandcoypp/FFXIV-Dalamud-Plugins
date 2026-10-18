@@ -6,12 +6,12 @@
     "Description": "A community-maintained fork that removes 16:9 letterboxing from FFXIV cutscenes on ultrawide displays.",
     "InternalName": "Dalamud.FullscreenCutscenes.Community",
     "AssemblyVersion": "1.1.0.2",
-    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes",
+    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/v1.1.0.2/latest.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/v1.1.0.2/latest.zip",
-    "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/main/Dalamud.FullscreenCutscenes/icon.png",
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/v1.1.0.2/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/v1.1.0.2/latest.zip",
+    "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/UltrawideCutscenes/Dalamud.FullscreenCutscenes/icon.png",
     "Tags": [
       "ultrawide",
       "cutscene",
@@ -25,7 +25,7 @@
     "AssemblyVersion": "0.3.0.0",
     "Description": "Lodestone event dates, illustrated event guides, automatic quest completion and character reward tracking.",
     "ApplicableVersion": "any",
-    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes",
+    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
     "Tags": [
       "events",
       "seasonal",
@@ -38,8 +38,8 @@
     "LoadPriority": 0,
     "Punchline": "Lodestone event reminders and deadlines.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.3.0/EorzeaEventTracker.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.3.0/EorzeaEventTracker.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Ultrawide-Cutscenes/releases/download/eet-v0.3.0/EorzeaEventTracker.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/eet-v0.3.0/EorzeaEventTracker.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/eet-v0.3.0/EorzeaEventTracker.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/eet-v0.3.0/EorzeaEventTracker.zip"
   }
 ]
