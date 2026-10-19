@@ -1,0 +1,68 @@
+name: Release Eorzea Compass
+on:
+  push:
+    tags: ['ec-v*']
+permissions:
+  contents: write
+concurrency:
+  group: dalamud-publish
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test shared repository publisher
+        run: |
+          python -m unittest discover -s EorzeaEventTracker/tests -p test_repository.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Repository index tests failed' }
+      - name: Install Dalamud development files
+        run: |
+          $directory = Join-Path $env:APPDATA 'XIVLauncher/addon/Hooks/dev'
+          Invoke-WebRequest 'https://goatcorp.github.io/dalamud-distrib/latest.zip' -OutFile "$env:RUNNER_TEMP/dalamud.zip"
+          New-Item -ItemType Directory -Path $directory -Force | Out-Null
+          Expand-Archive "$env:RUNNER_TEMP/dalamud.zip" -DestinationPath $directory -Force
+      - name: Test and build plugin
+        run: |
+          dotnet run --project EorzeaCompass/tests/CompassChecks/CompassChecks.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Compass checks failed' }
+          dotnet build EorzeaCompass/EorzeaCompass/EorzeaCompass.csproj -c Release --warnaserror
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+          $output = 'EorzeaCompass/EorzeaCompass/bin/Release'
+          Copy-Item "$output/EorzeaCompass/latest.zip" "$env:RUNNER_TEMP/EorzeaCompass.zip"
+          Copy-Item "$output/EorzeaCompass.json" "$env:RUNNER_TEMP/EorzeaCompass.json"
+          python tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaCompass.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Invalid release metadata' }
+          git restore pluginmaster.json
+      - name: Publish release asset
+        run: |
+          gh release create $env:RELEASE_TAG "$env:RUNNER_TEMP/EorzeaCompass.zip" --repo $env:RELEASE_REPO --title "Eorzea Compass $env:RELEASE_TAG" --notes-file EorzeaCompass/RELEASE-NOTES.md --latest=false
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
+      - name: Add released plugin to custom repository
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+          python tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaCompass.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Index update failed' }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pluginmaster.json
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Release Eorzea Compass $env:RELEASE_TAG"
+            if ($LASTEXITCODE -ne 0) { throw 'Index commit failed' }
+            git push origin main
+            if ($LASTEXITCODE -ne 0) { throw 'Index push failed' }
+          }

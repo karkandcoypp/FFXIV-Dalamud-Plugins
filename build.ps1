@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('All', 'UltrawideCutscenes', 'EorzeaEventTracker')]
+    [ValidateSet('All', 'UltrawideCutscenes', 'EorzeaEventTracker', 'EorzeaCompass')]
     [string]$Plugin = 'All'
 )
 $ErrorActionPreference = 'Stop'
@@ -12,6 +12,7 @@ if (-not $dotnet) { $dotnet = 'dotnet' }
 $projects = [ordered]@{
     UltrawideCutscenes = 'UltrawideCutscenes\Dalamud.FullscreenCutscenes.sln'
     EorzeaEventTracker = 'EorzeaEventTracker\EorzeaEventTracker\EorzeaEventTracker.csproj'
+    EorzeaCompass = 'EorzeaCompass\EorzeaCompass\EorzeaCompass.csproj'
 }
 foreach ($name in $projects.Keys) {
     if ($Plugin -ne 'All' -and $Plugin -ne $name) { continue }

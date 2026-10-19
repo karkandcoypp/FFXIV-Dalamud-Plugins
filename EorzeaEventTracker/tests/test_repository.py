@@ -11,6 +11,28 @@ update = _module.update
 
 
 class RepositoryTests(unittest.TestCase):
+    def test_compass_release_preserves_both_plugins_and_is_idempotent(self):
+        with TemporaryDirectory() as folder:
+            index = Path(folder) / 'pluginmaster.json'
+            manifest = Path(folder) / 'EorzeaCompass.json'
+            previous = [
+                {'InternalName': 'EorzeaEventTracker', 'AssemblyVersion': '0.25.1.0'},
+                {'InternalName': 'Dalamud.FullscreenCutscenes.Community', 'AssemblyVersion': '1.1.0.3'},
+            ]
+            index.write_text(json.dumps(previous), encoding='utf-8')
+            manifest.write_text(json.dumps({'InternalName': 'EorzeaCompass', 'AssemblyVersion': '0.1.0.0'}), encoding='utf-8')
+            for _ in range(2):
+                update(index, manifest, 'owner/plugins', 'ec-v0.1.0')
+            result = json.loads(index.read_text(encoding='utf-8'))
+            self.assertEqual(result[:2], previous)
+            self.assertEqual(len(result), 3)
+            expected = 'https://github.com/owner/plugins/releases/download/ec-v0.1.0/EorzeaCompass.zip'
+            for field in ['DownloadLinkInstall', 'DownloadLinkUpdate', 'DownloadLinkTesting']:
+                self.assertEqual(result[2][field], expected)
+            with self.assertRaises(ValueError):
+                update(index, manifest, 'owner/plugins', 'eet-v0.1.0')
+            self.assertEqual(json.loads(index.read_text(encoding='utf-8')), result)
+
     def test_merge_preserves_existing_plugin_and_does_not_duplicate_tracker(self):
         with TemporaryDirectory() as folder:
             index = Path(folder) / 'pluginmaster.json'

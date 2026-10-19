@@ -6,6 +6,9 @@
 | --- | --- | --- | --- |
 | Ultrawide Cutscenes Community | Убирает полосы 16:9 из внутриигровых кат-сцен на широких мониторах | `/pcutscenes` | [UltrawideCutscenes](UltrawideCutscenes/README.md) |
 | Eorzea Event Tracker | Показывает текущие события, инструкции, награды и прогресс персонажа | `/events` | [EorzeaEventTracker](EorzeaEventTracker/README.md) |
+| Eorzea Compass (предварительная версия) | Неоткрытые подземелья, триалы и рейды, квестовые цепочки и точки NPC | `/compass` | [EorzeaCompass](EorzeaCompass/README.md) |
+
+Eorzea Compass доступен через общий репозиторий для проверки в игре. После установки откройте `/compass`.
 
 ## Установка через Dalamud
 
@@ -24,13 +27,14 @@ https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/plugin
 ```text
 UltrawideCutscenes/         проект кат-сцен, решение и документация
 EorzeaEventTracker/         проект трекера, лента событий, переводы и тесты
+EorzeaCompass/              навигатор по контенту, квестовые цепочки и тесты
 tools/                     общие инструменты публикации
 .github/workflows/         независимые сборки и обновление событий
-pluginmaster.json          общая лента установки обоих плагинов
-build.ps1                  сборка одного или обоих проектов
+pluginmaster.json          общая лента установки плагинов
+build.ps1                  сборка одного или всех проектов
 ```
 
-Каждый плагин выпускается независимо: теги `uc-v*` для Ultrawide Cutscenes и `eet-v*` для Event Tracker. Общий инструмент публикации обновляет соответствующую запись в `pluginmaster.json`, сохраняя другой плагин.
+Каждый плагин выпускается независимо: теги `uc-v*` для Ultrawide Cutscenes, `eet-v*` для Event Tracker и `ec-v*` для Eorzea Compass. Общий инструмент публикации обновляет соответствующую запись в `pluginmaster.json`, сохраняя остальные плагины.
 
 ## Сборка
 
@@ -42,6 +46,7 @@ build.ps1                  сборка одного или обоих прое�
 ./build.ps1
 ./build.ps1 -Plugin UltrawideCutscenes
 ./build.ps1 -Plugin EorzeaEventTracker
+./build.ps1 -Plugin EorzeaCompass
 ```
 
 Скрипт использует локальный `.dotnet`, если он есть, иначе системный SDK. Инструкции и ограничения каждого плагина находятся в его папке.

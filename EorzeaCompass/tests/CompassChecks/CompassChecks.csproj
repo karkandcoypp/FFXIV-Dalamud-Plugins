@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../EorzeaCompass/Models.cs" Link="Models.cs" />
+    <Compile Include="../../EorzeaCompass/Catalog.cs" Link="Catalog.cs" />
+    <Reference Include="Lumina" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Lumina.dll" />
+    <Reference Include="Lumina.Excel" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Lumina.Excel.dll" />
+  </ItemGroup>
+</Project>

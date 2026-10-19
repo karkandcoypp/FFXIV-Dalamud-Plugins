@@ -7,7 +7,8 @@ from pathlib import Path
 def update(index_path, manifest_path, repository, tag):
     index = json.loads(Path(index_path).read_text(encoding='utf-8-sig'))
     manifest = json.loads(Path(manifest_path).read_text(encoding='utf-8-sig'))
-    prefixes = {'EorzeaEventTracker': 'eet-v', 'Dalamud.FullscreenCutscenes.Community': 'uc-v'}
+    prefixes = {'EorzeaEventTracker': 'eet-v', 'Dalamud.FullscreenCutscenes.Community': 'uc-v',
+                'EorzeaCompass': 'ec-v'}
     name = manifest.get('InternalName')
     if name not in prefixes:
         raise ValueError('Unexpected plugin manifest')
@@ -15,7 +16,9 @@ def update(index_path, manifest_path, repository, tag):
     tag_version = version.rsplit('.', 1)[0] if version.endswith('.0') else version
     if tag != prefixes[name] + tag_version:
         raise ValueError('Release tag does not match assembly version')
-    asset = 'EorzeaEventTracker.zip' if name == 'EorzeaEventTracker' else 'UltrawideCutscenes.zip'
+    asset = {'EorzeaEventTracker': 'EorzeaEventTracker.zip',
+             'Dalamud.FullscreenCutscenes.Community': 'UltrawideCutscenes.zip',
+             'EorzeaCompass': 'EorzeaCompass.zip'}[name]
     link = f'https://github.com/{repository}/releases/download/{tag}/{asset}'
     manifest.update(RepoUrl=f'https://github.com/{repository}',
                     DownloadLinkInstall=link, DownloadLinkUpdate=link, DownloadLinkTesting=link)
