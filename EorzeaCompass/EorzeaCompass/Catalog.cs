@@ -13,8 +13,9 @@ public sealed class Catalog
     public IReadOnlySet<uint> RelevantQuests { get; }
     public IReadOnlyList<Story> Stories { get; }
     public IReadOnlyList<QuestReward> Rewards { get; }
+    public IReadOnlyList<string> Warnings { get; }
 
-    public Catalog(ExcelSheet<Quest> questSheet, ExcelSheet<ContentFinderCondition> duties)
+    public Catalog(ExcelSheet<Quest> questSheet, ExcelSheet<ContentFinderCondition> duties, ExcelModule? excel = null)
     {
         var quests = questSheet.Where(q => q.RowId > 65535 && !string.IsNullOrWhiteSpace(q.Name.ToString())).ToArray();
         Quests = quests.ToDictionary(q => q.RowId, q => new QuestNode(q.RowId, q.Name.ToString(),
@@ -87,7 +88,10 @@ public sealed class Catalog
             .OrderBy(a => a.Expansion).ThenBy(a => a.Level).ThenBy(a => a.Id).ToArray();
         var relevant = new HashSet<uint>();
         Stories = StoryCatalog.Build(Quests, Activities);
-        Rewards = RewardCatalog.Build(quests, Stories);
+        var warnings = new List<string>();
+        Rewards = RewardCatalog.Build(quests, Stories).Concat(excel == null ? [] : VendorCatalog.Build(excel, Stories, warnings))
+            .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ThenBy(r => r.Kind).ToArray();
+        Warnings = warnings;
         void Include(uint id)
         {
             if (!relevant.Add(id) || !Quests.TryGetValue(id, out var q)) return;
@@ -95,6 +99,7 @@ public sealed class Catalog
         }
         foreach (var id in Activities.SelectMany(a => a.QuestIds)) Include(id);
         foreach (var id in Stories.SelectMany(s => s.QuestIds)) Include(id);
+        foreach (var id in Rewards.Where(r => r.Vendor != null).SelectMany(r => r.Vendor!.Requirements).Where(r => r.Kind == "quest").Select(r => r.Id)) Include(id);
         RelevantQuests = relevant;
     }
 

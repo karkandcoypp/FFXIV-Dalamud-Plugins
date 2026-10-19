@@ -1,0 +1,775 @@
+[
+  {
+    "Id": "vendor-society-1",
+    "Name": "Amalj'aa",
+    "Group": "Society",
+    "Expansion": 0,
+    "StoryIds": [
+      "society-40"
+    ],
+    "Tribe": 1,
+    "Npcs": [
+      1005554
+    ],
+    "SpecialShops": [
+      1769627
+    ],
+    "GilShops": [
+      262692
+    ],
+    "NpcNames": [
+      "Amalj'aa vendor"
+    ],
+    "ShopNames": {
+      "1769627": "Steel Amalj'ok Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-2",
+    "Name": "Sylphs",
+    "Group": "Society",
+    "Expansion": 0,
+    "StoryIds": [
+      "society-42"
+    ],
+    "Tribe": 2,
+    "Npcs": [
+      1005569
+    ],
+    "SpecialShops": [
+      1769628
+    ],
+    "GilShops": [
+      262693
+    ],
+    "NpcNames": [
+      "sylphic vendor"
+    ],
+    "ShopNames": {
+      "1769628": "Sylphic Goldleaf Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-3",
+    "Name": "Kobolds",
+    "Group": "Society",
+    "Expansion": 0,
+    "StoryIds": [
+      "society-44"
+    ],
+    "Tribe": 3,
+    "Npcs": [
+      1008909
+    ],
+    "SpecialShops": [
+      1769629
+    ],
+    "GilShops": [
+      262694
+    ],
+    "NpcNames": [
+      "kobold vendor"
+    ],
+    "ShopNames": {
+      "1769629": "Titan Cobaltpiece Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-4",
+    "Name": "Sahagin",
+    "Group": "Society",
+    "Expansion": 0,
+    "StoryIds": [
+      "society-46"
+    ],
+    "Tribe": 4,
+    "Npcs": [
+      1008907
+    ],
+    "SpecialShops": [
+      1769630
+    ],
+    "GilShops": [
+      262695
+    ],
+    "NpcNames": [
+      "Sahagin vendor"
+    ],
+    "ShopNames": {
+      "1769630": "Rainbowtide Psashp Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-5",
+    "Name": "Ixal",
+    "Group": "Society",
+    "Expansion": 0,
+    "StoryIds": [
+      "society-48"
+    ],
+    "Tribe": 5,
+    "Npcs": [
+      1009205
+    ],
+    "SpecialShops": [
+      1769525,
+      1769731
+    ],
+    "GilShops": [
+      262696
+    ],
+    "NpcNames": [
+      "Ixali vendor"
+    ],
+    "ShopNames": {
+      "1769525": "Ixali Oaknot Exchange",
+      "1769731": "Ixali Oaknot Exchange (Materia)"
+    }
+  },
+  {
+    "Id": "vendor-society-6",
+    "Name": "Vanu Vanu",
+    "Group": "Society",
+    "Expansion": 1,
+    "StoryIds": [
+      "society-50"
+    ],
+    "Tribe": 6,
+    "Npcs": [
+      1016093
+    ],
+    "SpecialShops": [
+      1769631
+    ],
+    "GilShops": [
+      262697
+    ],
+    "NpcNames": [
+      "Luna Vanu"
+    ],
+    "ShopNames": {
+      "1769631": "Vanu Whitebone Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-7",
+    "Name": "Vath",
+    "Group": "Society",
+    "Expansion": 1,
+    "StoryIds": [
+      "society-52"
+    ],
+    "Tribe": 7,
+    "Npcs": [
+      1016804
+    ],
+    "SpecialShops": [
+      1769665
+    ],
+    "GilShops": [
+      262698
+    ],
+    "NpcNames": [
+      "Vath stickpeddler"
+    ],
+    "ShopNames": {
+      "1769665": "Black Copper Gil Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-8",
+    "Name": "Moogles",
+    "Group": "Society",
+    "Expansion": 1,
+    "StoryIds": [
+      "society-54"
+    ],
+    "Tribe": 8,
+    "Npcs": [
+      1017172
+    ],
+    "SpecialShops": [
+      1769685
+    ],
+    "GilShops": [
+      262699,
+      262621,
+      262622
+    ],
+    "NpcNames": [
+      "Mogmul Mogbelly"
+    ],
+    "ShopNames": {
+      "1769685": "Carved Kupo Nut Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-9",
+    "Name": "Kojin",
+    "Group": "Society",
+    "Expansion": 2,
+    "StoryIds": [
+      "society-56"
+    ],
+    "Tribe": 9,
+    "Npcs": [
+      1024219
+    ],
+    "SpecialShops": [
+      1769818
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "Shikitahe"
+    ],
+    "ShopNames": {
+      "1769818": "Kojin Sango Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-10",
+    "Name": "Ananta",
+    "Group": "Society",
+    "Expansion": 2,
+    "StoryIds": [
+      "society-58"
+    ],
+    "Tribe": 10,
+    "Npcs": [
+      1024774
+    ],
+    "SpecialShops": [
+      1769847
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "Madhura"
+    ],
+    "ShopNames": {
+      "1769847": "Ananta Dreamstaff Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-11",
+    "Name": "Namazu",
+    "Group": "Society",
+    "Expansion": 2,
+    "StoryIds": [
+      "society-60"
+    ],
+    "Tribe": 11,
+    "Npcs": [
+      1025604
+    ],
+    "SpecialShops": [
+      1769868
+    ],
+    "GilShops": [
+      262917
+    ],
+    "NpcNames": [
+      "Gyosho"
+    ],
+    "ShopNames": {
+      "1769868": "Namazu Koban Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-12",
+    "Name": "Pixies",
+    "Group": "Society",
+    "Expansion": 3,
+    "StoryIds": [
+      "society-62"
+    ],
+    "Tribe": 12,
+    "Npcs": [
+      1031810
+    ],
+    "SpecialShops": [
+      1770040
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "Jul Oul"
+    ],
+    "ShopNames": {
+      "1770040": "Fae Fancies"
+    }
+  },
+  {
+    "Id": "vendor-society-13",
+    "Name": "Qitari",
+    "Group": "Society",
+    "Expansion": 3,
+    "StoryIds": [
+      "society-64"
+    ],
+    "Tribe": 13,
+    "Npcs": [
+      1032661
+    ],
+    "SpecialShops": [
+      1770046
+    ],
+    "GilShops": [
+      263017,
+      263018,
+      263019
+    ],
+    "NpcNames": [
+      "Yuqurl Manl"
+    ],
+    "ShopNames": {
+      "1770046": "Qitari Compliment Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-14",
+    "Name": "Dwarves",
+    "Group": "Society",
+    "Expansion": 3,
+    "StoryIds": [
+      "society-66"
+    ],
+    "Tribe": 14,
+    "Npcs": [
+      1033714
+    ],
+    "SpecialShops": [
+      1770285
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "Mizutt"
+    ],
+    "ShopNames": {
+      "1770285": "Hammered Frogments Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-15",
+    "Name": "Arkasodara",
+    "Group": "Society",
+    "Expansion": 4,
+    "StoryIds": [
+      "society-68"
+    ],
+    "Tribe": 15,
+    "Npcs": [
+      1042424
+    ],
+    "SpecialShops": [
+      1770550
+    ],
+    "GilShops": [
+      263126
+    ],
+    "NpcNames": [
+      "Ghanta"
+    ],
+    "ShopNames": {
+      "1770550": "Arkasodara Pana Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-16",
+    "Name": "Omicrons",
+    "Group": "Society",
+    "Expansion": 4,
+    "StoryIds": [
+      "society-70"
+    ],
+    "Tribe": 16,
+    "Npcs": [
+      1043418
+    ],
+    "SpecialShops": [
+      1770605
+    ],
+    "GilShops": [
+      263142,
+      263143,
+      263144
+    ],
+    "NpcNames": [
+      "N-0598"
+    ],
+    "ShopNames": {
+      "1770605": "Omicron Omnitoken Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-17",
+    "Name": "Loporrits",
+    "Group": "Society",
+    "Expansion": 4,
+    "StoryIds": [
+      "society-72"
+    ],
+    "Tribe": 17,
+    "Npcs": [
+      1044404
+    ],
+    "SpecialShops": [
+      1770647
+    ],
+    "GilShops": [
+      263157,
+      263158,
+      263159
+    ],
+    "NpcNames": [
+      "Coiningway"
+    ],
+    "ShopNames": {
+      "1770647": "Loporrit Carat Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-18",
+    "Name": "Pelupelu",
+    "Group": "Society",
+    "Expansion": 5,
+    "StoryIds": [
+      "society-38"
+    ],
+    "Tribe": 18,
+    "Npcs": [
+      1051799
+    ],
+    "SpecialShops": [
+      1770890
+    ],
+    "GilShops": [
+      263221
+    ],
+    "NpcNames": [
+      "Pavli"
+    ],
+    "ShopNames": {
+      "1770890": "Pelu Pelplume Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-19",
+    "Name": "Mamool Ja",
+    "Group": "Society",
+    "Expansion": 5,
+    "StoryIds": [
+      "society-36"
+    ],
+    "Tribe": 19,
+    "Npcs": [
+      1052563
+    ],
+    "SpecialShops": [
+      1770924
+    ],
+    "GilShops": [
+      263245,
+      263246,
+      263237
+    ],
+    "NpcNames": [
+      "Veerul Ja"
+    ],
+    "ShopNames": {
+      "1770924": "Mamool Ja Nanook Exchange"
+    }
+  },
+  {
+    "Id": "vendor-society-20",
+    "Name": "Yok Huy",
+    "Group": "Society",
+    "Expansion": 5,
+    "StoryIds": [
+      "society-34"
+    ],
+    "Tribe": 20,
+    "Npcs": [
+      1054637
+    ],
+    "SpecialShops": [
+      1770952
+    ],
+    "GilShops": [
+      263284,
+      263285,
+      263283
+    ],
+    "NpcNames": [
+      "Rarkorgor"
+    ],
+    "ShopNames": {
+      "1770952": "Yok Huy Ward Exchange"
+    }
+  },
+  {
+    "Id": "vendor-bozja",
+    "Name": "Bozja / Zadnor",
+    "Group": "Exploration",
+    "Expansion": 3,
+    "StoryIds": [
+      "exploration-bozja"
+    ],
+    "Npcs": [
+      1034202,
+      1036722,
+      1036896
+    ],
+    "SpecialShops": [
+      1770087,
+      1770344
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "Resistance quartermaster",
+      "Resistance quartermaster",
+      "Resistance supplier"
+    ],
+    "ShopNames": {
+      "1770087": "",
+      "1770344": "Blade's Gear Exchange"
+    },
+    "ShopNpcs": {
+      "1770087": [
+        1034202,
+        1036722
+      ]
+    }
+  },
+  {
+    "Id": "vendor-occult-south",
+    "Name": "Occult Crescent · South Horn",
+    "Group": "Exploration",
+    "Expansion": 5,
+    "StoryIds": [
+      "exploration-occult"
+    ],
+    "Npcs": [
+      1053614
+    ],
+    "SpecialShops": [
+      1770927,
+      1770928,
+      1770929,
+      1770930,
+      1770931,
+      1770932
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "expedition antiquarian"
+    ],
+    "ShopNames": {
+      "1770927": "Enlightenment Silver Piece Exchange (IL 745)",
+      "1770928": "Enlightenment Silver Piece Exchange (Battlecraft Items)",
+      "1770929": "Enlightenment Silver Piece Exchange (Other)",
+      "1770930": "Enlightenment Gold Piece Exchange (Battlecraft Items)",
+      "1770931": "Enlightenment Gold Piece Exchange (Other)",
+      "1770932": "Sanguinite Exchange"
+    }
+  },
+  {
+    "Id": "vendor-occult-north",
+    "Name": "Occult Crescent · North Horn",
+    "Group": "Exploration",
+    "Expansion": 5,
+    "StoryIds": [
+      "exploration-occult"
+    ],
+    "Npcs": [
+      1059485
+    ],
+    "SpecialShops": [
+      1771027,
+      1771028,
+      1771029,
+      1771030
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "expedition antiquarian"
+    ],
+    "ShopNames": {
+      "1771027": "Enlightenment Silver Obol Exchange (IL 780)",
+      "1771028": "Enlightenment Silver Obol Exchange (Other)",
+      "1771029": "Enlightenment Gold Obol Exchange",
+      "1771030": "Arcane Amulet Exchange"
+    }
+  },
+  {
+    "Id": "vendor-cosmic",
+    "Name": "Cosmic Exploration",
+    "Group": "Exploration",
+    "Expansion": 5,
+    "StoryIds": [
+      "exploration-cosmic"
+    ],
+    "Npcs": [
+      1052588,
+      1052600,
+      1052607,
+      1052608,
+      1052640,
+      1052650,
+      1056824
+    ],
+    "SpecialShops": [
+      1770945,
+      1770974,
+      1771007,
+      1771037
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "Mesouaidonque",
+      "Mesouaidonque",
+      "Mesouaidonque",
+      "Mesouaidonque",
+      "Mesouaidonque",
+      "Mesouaidonque",
+      "Mesouaidonque"
+    ],
+    "ShopNames": {
+      "1770945": "Cosmocredit Exchange",
+      "1770974": "Cosmic Exploration Token Exchange",
+      "1771007": "Cosmic Exploration Token Exchange",
+      "1771037": "Cosmic Exploration Token Exchange"
+    }
+  },
+  {
+    "Id": "vendor-potd",
+    "Name": "Palace of the Dead",
+    "Group": "Exploration",
+    "Expansion": 0,
+    "StoryIds": [
+      "exploration-potd"
+    ],
+    "Npcs": [
+      1017338
+    ],
+    "SpecialShops": [
+      1769675
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "E-Una-Kotor"
+    ],
+    "ShopNames": {
+      "1769675": "Gelmorran Potsherd Exchange"
+    }
+  },
+  {
+    "Id": "vendor-hoh",
+    "Name": "Heaven-on-High",
+    "Group": "Exploration",
+    "Expansion": 2,
+    "StoryIds": [
+      "exploration-hoh"
+    ],
+    "Npcs": [
+      1025848
+    ],
+    "SpecialShops": [
+      1769871
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "Confederate custodian"
+    ],
+    "ShopNames": {
+      "1769871": ""
+    }
+  },
+  {
+    "Id": "vendor-orthos",
+    "Name": "Eureka Orthos",
+    "Group": "Exploration",
+    "Expansion": 4,
+    "StoryIds": [
+      "exploration-orthos"
+    ],
+    "Npcs": [
+      1044503
+    ],
+    "SpecialShops": [],
+    "GilShops": [],
+    "NpcNames": [
+      "synthesis node"
+    ],
+    "ShopNames": {}
+  },
+  {
+    "Id": "vendor-pilgrim",
+    "Name": "Pilgrim's Traverse",
+    "Group": "Exploration",
+    "Expansion": 5,
+    "StoryIds": [
+      "exploration-pilgrim"
+    ],
+    "Npcs": [
+      1054944
+    ],
+    "SpecialShops": [
+      1770968
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "Ose Wyd"
+    ],
+    "ShopNames": {
+      "1770968": ""
+    }
+  },
+  {
+    "Id": "vendor-island",
+    "Name": "Island Sanctuary",
+    "Group": "Exploration",
+    "Expansion": 4,
+    "StoryIds": [],
+    "Npcs": [
+      1043463
+    ],
+    "SpecialShops": [
+      1770601
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "horrendous hoarder"
+    ],
+    "ShopNames": {
+      "1770601": ""
+    }
+  },
+  {
+    "Id": "vendor-eureka",
+    "Name": "Eureka",
+    "Group": "Exploration",
+    "Expansion": 2,
+    "StoryIds": [
+      "eureka-anemos",
+      "eureka-pagos",
+      "eureka-pyros",
+      "eureka-hydatos"
+    ],
+    "Npcs": [
+      1009451,
+      1026185,
+      1026981
+    ],
+    "SpecialShops": [
+      1769897
+    ],
+    "GilShops": [],
+    "NpcNames": [
+      "expedition birdwatcher",
+      "expedition birdwatcher",
+      "expedition birdwatcher"
+    ],
+    "ShopNames": {
+      "1769897": "Feathers Aplenty"
+    }
+  }
+]

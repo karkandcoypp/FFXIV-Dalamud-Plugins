@@ -6,6 +6,8 @@
     <Compile Include="../../EorzeaCompass/Catalog.cs" Link="Catalog.cs" />
     <Compile Include="../../EorzeaCompass/StoryProgress.cs" Link="StoryProgress.cs" />
     <Compile Include="../../EorzeaCompass/Rewards.cs" Link="Rewards.cs" />
+    <Compile Include="../../EorzeaCompass/VendorCatalog.cs" Link="VendorCatalog.cs" />
+    <EmbeddedResource Include="../../config/vendors.json" LogicalName="EorzeaCompass.vendors.json" />
     <EmbeddedResource Include="../../config/stories.json" LogicalName="EorzeaCompass.stories.json" />
     <Reference Include="Lumina" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Lumina.dll" />
     <Reference Include="Lumina.Excel" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Lumina.Excel.dll" />

@@ -37,6 +37,10 @@ public sealed class Plugin : IDalamudPlugin
     internal string? Error { get; private set; }
     internal bool Available { get; private set; }
     internal IReadOnlyDictionary<uint, QuestObservation> QuestProgress { get; private set; } = new Dictionary<uint, QuestObservation>();
+    internal IReadOnlyDictionary<uint, string> Collected { get; private set; } = new Dictionary<uint, string>();
+    internal IReadOnlyDictionary<string, bool?> ShopConditions { get; private set; } = new Dictionary<string, bool?>();
+    internal string CollectionState(QuestReward reward) => Collected?.GetValueOrDefault(reward.ItemId) ?? "unknown";
+    internal bool? ShopCondition(RewardRequirement requirement) => ShopConditions?.GetValueOrDefault(requirement.Key);
     internal ulong CharacterId { get; private set; }
     private static readonly HashSet<uint> EmptyIds = new();
     internal IReadOnlySet<uint> Hidden => Settings.Hidden.GetValueOrDefault(CharacterId) ?? EmptyIds;
@@ -82,6 +86,8 @@ public sealed class Plugin : IDalamudPlugin
             Progress = Array.Empty<ActivityProgress>();
             Stories = Array.Empty<StoryProgress>();
             Expansions = Array.Empty<ExpansionProgress>();
+            Collected = new Dictionary<uint, string>();
+            ShopConditions = new Dictionary<string, bool?>();
             notified = false;
             return;
         }
@@ -91,6 +97,8 @@ public sealed class Plugin : IDalamudPlugin
             CharacterId = Player.ContentId;
             Available = false;
             Progress = Array.Empty<ActivityProgress>();
+            Collected = new Dictionary<uint, string>();
+            ShopConditions = new Dictionary<string, bool?>();
             notified = false;
             scanAfter = now.AddSeconds(5);
             notifyAfter = now.AddSeconds(12);
@@ -103,7 +111,7 @@ public sealed class Plugin : IDalamudPlugin
             if (Catalog == null)
             {
                 catalogTask ??= Task.Run(() => new Catalog(Data.GetExcelSheet<Quest>(ClientLanguage.English),
-                    Data.GetExcelSheet<ContentFinderCondition>(ClientLanguage.English)));
+                    Data.GetExcelSheet<ContentFinderCondition>(ClientLanguage.English), Data.Excel));
                 if (!catalogTask.IsCompleted) return;
                 Catalog = catalogTask.GetAwaiter().GetResult();
                 catalogTask = null;
@@ -199,6 +207,31 @@ public sealed class Plugin : IDalamudPlugin
         foreach (var story in Stories.Where(s => s.State == StoryState.InProgress)) dirty |= storyHistory.Add(story.Story.Definition.Id);
         Expansions = StoryCatalog.Summarize(Stories, Progress);
         QuestProgress = observations;
+        var collection = new Dictionary<uint, string>();
+        var items = Data.GetExcelSheet<Item>(ClientLanguage.English);
+        foreach (var reward in Catalog.Rewards.Where(r => r.CollectionKind.Length > 0).DistinctBy(r => r.ItemId))
+        {
+            var supported = CollectionRules.CanTrack(reward.CollectionKind) && items.TryGetRow(reward.ItemId, out var item) && Unlocks.IsItemUnlockable(item);
+            collection[reward.ItemId] = CollectionRules.State(Player.IsLoaded, supported,
+                supported && Unlocks.IsItemUnlocked(items.GetRow(reward.ItemId)));
+        }
+        Collected = collection;
+        var conditions = new Dictionary<string, bool?>();
+        var achievementRows = Data.GetExcelSheet<Achievement>(ClientLanguage.English);
+        var dutyRows = Data.GetExcelSheet<ContentFinderCondition>(ClientLanguage.English);
+        foreach (var requirement in Catalog.Rewards.Where(r => r.Vendor != null).SelectMany(r => r.Vendor!.Requirements).DistinctBy(r => r.Key))
+        {
+            bool? value = requirement.Kind switch
+            {
+                "quest" => observations.GetValueOrDefault(requirement.Id)?.Complete,
+                "achievement" when Unlocks.IsAchievementListLoaded && achievementRows.TryGetRow(requirement.Id, out var achievement) => Unlocks.IsAchievementComplete(achievement),
+                "duty-clear" when dutyRows.TryGetRow(requirement.Id, out var duty) && duty.ContentLinkType == 1 => UIState.IsInstanceContentCompleted(duty.Content.RowId),
+                "duty-unlock" when dutyRows.TryGetRow(requirement.Id, out var duty) && duty.ContentLinkType == 1 => Unlocks.IsInstanceContentUnlocked(Data.GetExcelSheet<InstanceContent>().GetRow(duty.Content.RowId)),
+                _ => null,
+            };
+            conditions[requirement.Key] = value;
+        }
+        ShopConditions = conditions;
         jobHints.Clear();
         Available = true;
         if (dirty) Save();

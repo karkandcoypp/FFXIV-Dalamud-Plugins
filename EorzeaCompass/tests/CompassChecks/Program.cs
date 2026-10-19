@@ -122,11 +122,22 @@ Check(!RewardCatalog.IsListedItem(true,1,0) && !RewardCatalog.IsListedItem(false
 var reward = new QuestReward(1,2,"Item",1,RewardKind.Choice,"",0,0,0,[]);
 Check(RewardCatalog.Status(reward,new(true,false,true,true)) == "choice-completed","completed choice quest does not imply ownership of each option");
 Check(RewardCatalog.Status(reward,null) == "unknown","missing reward progress remains unknown");
+Check(CollectionRules.State(false,true,true)=="unknown","logged-out character never gets collection proof");
+Check(CollectionRules.State(true,false,false)=="unknown","unsupported collection check is not a missing item");
+Check(CollectionRules.State(true,true,true)=="collected" && CollectionRules.State(true,true,false)=="missing","unlock flag drives collection state independently of quest completion");
+Check(CollectionRules.Kind(1322,"Horn")=="Mount" && CollectionRules.Kind(853,"Pet")=="Minion","mount and minion actions classified from game data");
+Check(CollectionRules.Kind(43142,"Soul shard")=="","zone-only phantom job state not treated as a permanent collection unlock");
+Check(CollectionRules.Conditions([true,null])=="unknown" && CollectionRules.Conditions([true,false])=="locked","unknown and incomplete purchase conditions stay distinct");
+Check(CollectionRules.Conditions([true,true])=="met","all listed purchase requirements must be met");
+var rewardSelection=new[]{reward,reward with {QuestId=2},reward with{ItemId=3}};
+Check(AtlasSelection.KeepVisible(1,rewardSelection,[0,1],[0])==1,"grouped collection preserves a selected alternate source");
+Check(AtlasSelection.KeepVisible(1,rewardSelection,[0],[0])==0,"source filtering replaces an offer that no longer matches");
+Check(AtlasSelection.KeepVisible(2,rewardSelection,[0,1],[0])==0 && AtlasSelection.KeepVisible(0,rewardSelection,[],[])==-1,"filtered and empty collection selection remains valid");
 
 if (args.Length > 0)
 {
     using var game = new GameData(args[0]);
-    var catalog = new Catalog(game.Excel.GetSheet<Quest>(), game.Excel.GetSheet<ContentFinderCondition>());
+    var catalog = new Catalog(game.Excel.GetSheet<Quest>(), game.Excel.GetSheet<ContentFinderCondition>(), game.Excel);
     Check(catalog.Activities.Count > 200, "real game coverage");
     Check(catalog.Quests.Count > 5000, "full quest index");
     Check(catalog.Stories.Count >= 30, "story catalog coverage");
@@ -137,8 +148,23 @@ if (args.Length > 0)
     foreach(var s in catalog.Stories.Where(s=>s.Definition.Achievement!=0))
         Check(game.Excel.GetSheet<Achievement>().GetRow(s.Definition.Achievement).Name.ToString()==s.Definition.AchievementName,"zone achievement identity "+s.Definition.Id);
     Check(catalog.Rewards.Count > 100,"game-derived reward coverage");
-    Check(catalog.Rewards.All(r=>r.Count>0 && r.ItemId!=0 && r.StoryIds.Length>0),"all atlas entries have quantities and source chains");
+    Check(catalog.Rewards.All(r=>r.Count>0 && r.ItemId!=0 && (r.StoryIds.Length>0 || r.Vendor!=null)),"all atlas entries have quantities and source chains");
     Check(catalog.Rewards.Any(r=>r.ItemId==17530 && r.QuestId==67934 && r.Kind==RewardKind.Guaranteed && r.Count==1),"Anima minion is a real fixed quest reward, not a scripted weapon placeholder");
+    var vendorRewards=catalog.Rewards.Where(r=>r.Vendor!=null).ToArray();
+    Check(catalog.Warnings.Count==0,"vendor source identities match the installed game without skipped shops");
+    Check(vendorRewards.Length>=200,"society and exploration shop coverage");
+    Check(vendorRewards.Where(r=>r.Vendor!.Group=="Society").Select(r=>r.Vendor!.SourceId).Distinct().Count()==20,"collectible shops cover all twenty societies");
+    Check(vendorRewards.Where(r=>r.Vendor!.Group=="Exploration").Select(r=>r.Vendor!.SourceId).Distinct().Count()>=8,"exploration shop coverage");
+    Check(vendorRewards.All(r=>r.Vendor!.Costs.Length>0 && r.Vendor.Costs.All(c=>c.Count>0 && c.ItemId>0 && c.Name.Length>0)),"every vendor offer has resolved positive costs");
+    Check(vendorRewards.All(r=>r.Vendor!.Requirements.Where(q=>q.Kind=="quest").All(q=>catalog.RelevantQuests.Contains(q.Id))),"vendor prerequisites are included in live quest scans");
+    Check(vendorRewards.Count(r=>r.Vendor!.Locations.Length>0)>=200,"verified vendor map coverage");
+    Check(vendorRewards.SelectMany(r=>r.Vendor!.Locations).All(l=>float.IsFinite(l.X) && float.IsFinite(l.Y) && game.Excel.GetSheet<Map>().GetRow(l.Map).TerritoryType.RowId==l.Territory),"every provided vendor coordinate belongs to its stated territory");
+    Check(vendorRewards.Single(r=>r.Name=="Marid Horn").Vendor!.Costs.Single() is {ItemId:21935,Count:18},"Marid costs eighteen Ananta Dreamstaves");
+    Check(vendorRewards.Single(r=>r.Name=="Sanuwa Horn").Vendor!.Costs.Single() is {ItemId:1,Count:200000},"gil shops use purchase price, not item sale value");
+    Check(vendorRewards.Single(r=>r.Name=="Construct 14 Identification Key").Vendor!.Costs.Single() is {ItemId:31135,Count:180},"Construct 14 cluster price");
+    Check(vendorRewards.Single(r=>r.Name=="Modern Aesthetics - Early to Rise").Vendor!.Costs.Length==2,"all simultaneous currency costs are preserved");
+    Check(vendorRewards.Single(r=>r.Name=="Modern Aesthetics - Early to Rise").Vendor!.Npcs.Single()=="Resistance supplier","Zadnor coin exchange uses its actual supplier, not the cluster quartermaster");
+    Check(vendorRewards.Single(r=>r.Name=="Cosmoboard").Vendor!.Locations.All(l=>l.Zone=="Phaenna"),"Phaenna token shop does not incorrectly point to the lunar hub");
     Check(catalog.Stories.Single(s=>s.Definition.Id=="relic-zodiac").QuestIds.Contains(66971u),"disconnected Zodiac milestones preserve early progress");
     Check(catalog.Stories.All(s=>s.QuestIds.Contains(s.Definition.EndQuest)), "final quest belongs to story route");
     Check(catalog.Stories.Single(s=>s.Definition.Name=="Crystal Tower").Definition.EndQuest==66031,"Crystal Tower ending excludes optional epilogue");

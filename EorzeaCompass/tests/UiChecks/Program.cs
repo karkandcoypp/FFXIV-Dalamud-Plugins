@@ -20,7 +20,7 @@ internal static class Program
         AssemblyLoadContext.Default.Resolving += (_, name) => File.Exists(Path.Combine(home, name.Name + ".dll")) ? AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(home, name.Name + ".dll")) : null;
         NativeLibrary.SetDllImportResolver(typeof(ImGui).Assembly, (name, _, _) => NativeLibrary.Load(Path.Combine(home, name + ".dll")));
         using var game = new GameData(args[0]);
-        var catalog = new Catalog(game.Excel.GetSheet<Quest>(), game.Excel.GetSheet<ContentFinderCondition>());
+        var catalog = new Catalog(game.Excel.GetSheet<Quest>(), game.Excel.GetSheet<ContentFinderCondition>(), game.Excel);
         var plugin = (Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
         Set(plugin, "Settings", new Configuration());
         Set(plugin, "Catalog", catalog);
@@ -33,6 +33,8 @@ internal static class Program
         var fresh=StoryCatalog.Evaluate(ivalice,catalog.Quests,observations);
         foreach(var id in fresh.Route.Take(4)) observations[id]=new(true,false,true,true);
         Set(plugin,"QuestProgress", observations);
+        Set(plugin,"Collected",catalog.Rewards.Where(r=>r.CollectionKind.Length>0).DistinctBy(r=>r.ItemId).ToDictionary(r=>r.ItemId,r=>r.ItemId%3==0?"collected":"missing"));
+        Set(plugin,"ShopConditions",catalog.Rewards.Where(r=>r.Vendor!=null).SelectMany(r=>r.Vendor!.Requirements).DistinctBy(r=>r.Key).ToDictionary(r=>r.Key,r=>r.Kind=="unknown"?(bool?)null:true));
         var stories = catalog.Stories.Select(s=>StoryCatalog.Evaluate(s,catalog.Quests,observations)).ToArray();
         Set(plugin,"Stories",stories);
         Set(plugin,"Expansions",StoryCatalog.Summarize(stories,catalog.Activities.Select(a=>new ActivityProgress(a,a.Expansion<2?ActivityState.Cleared:ActivityState.NotStarted,null,false))));
@@ -53,8 +55,11 @@ internal static class Program
         windowType.GetField("view", Instance)!.SetValue(window, 1);
         windowType.GetField("selected", Instance)!.SetValue(window, rows[2].Activity.Id);
         var directory = Path.GetFullPath(args[1]); Directory.CreateDirectory(directory);
-        foreach (var sample in new[] { (1180,760,17f,"normal"), (960,600,17f,"normal"), (1440,900,22f,"normal"), (960,600,17f,"long"), (960,600,17f,"accepted"), (960,600,17f,"class"), (960,600,17f,"english"), (1180,760,17f,"overview"), (960,600,17f,"overview"), (1440,900,22f,"overview"), (1180,760,17f,"story"), (960,600,17f,"story"), (960,600,17f,"story-complete"), (960,600,17f,"story-unknown"), (960,600,17f,"story-society"), (960,600,17f,"story-relic"), (960,600,17f,"story-zone"), (960,600,17f,"reward"), (1180,760,17f,"reward"), (1440,900,22f,"reward"), (960,600,17f,"reward-choice") })
+        foreach (var sample in new[] { (1180,760,17f,"normal"), (960,600,17f,"normal"), (1440,900,22f,"normal"), (960,600,17f,"long"), (960,600,17f,"accepted"), (960,600,17f,"class"), (960,600,17f,"english"), (1180,760,17f,"overview"), (960,600,17f,"overview"), (1440,900,22f,"overview"), (1180,760,17f,"story"), (960,600,17f,"story"), (960,600,17f,"story-complete"), (960,600,17f,"story-unknown"), (960,600,17f,"story-society"), (960,600,17f,"story-relic"), (960,600,17f,"story-zone"), (960,600,17f,"reward"), (1180,760,17f,"reward"), (1440,900,22f,"reward"), (960,600,17f,"reward-choice"), (960,600,17f,"reward-vendor"), (1180,760,17f,"reward-vendor"), (1440,900,22f,"reward-vendor"), (960,600,17f,"reward-locked"), (960,600,17f,"reward-unknown"), (960,600,17f,"reward-collected"), (960,600,17f,"reward-vendor-en"), (960,600,17f,"reward-requirements") })
         {
+            if(args.Length>2 && sample.Item4!=args[2])continue;
+            Set(plugin,"Collected",catalog.Rewards.Where(r=>r.CollectionKind.Length>0).DistinctBy(r=>r.ItemId).ToDictionary(r=>r.ItemId,r=>r.ItemId%3==0?"collected":"missing"));
+            Set(plugin,"ShopConditions",catalog.Rewards.Where(r=>r.Vendor!=null).SelectMany(r=>r.Vendor!.Requirements).DistinctBy(r=>r.Key).ToDictionary(r=>r.Key,r=>r.Kind=="unknown"?(bool?)null:true));
             var scenarioRow = rows[2];
             windowType.GetField("section",Instance)!.SetValue(window,sample.Item4=="overview"?0:sample.Item4.StartsWith("story")?1:2);
             var storyRow=stories.Single(s=>s.Story.Definition.Name=="Return to Ivalice");
@@ -70,7 +75,7 @@ internal static class Program
                 scenarioRow = scenarioRow with { Next = scenarioRow.Next! with { Ready = false, Reason = "class" } };
                 typeof(Plugin).GetField("jobHints",Instance)!.SetValue(plugin,new Dictionary<uint,string> { [scenarioRow.Next!.QuestId] = "SAM (100), PLD (100), WHM (100)" });
             }
-            ((Configuration)typeof(Plugin).GetProperty("Settings",Instance)!.GetValue(plugin)!).Russian = sample.Item4 != "english";
+            ((Configuration)typeof(Plugin).GetProperty("Settings",Instance)!.GetValue(plugin)!).Russian = sample.Item4 != "english" && !sample.Item4.EndsWith("-en");
             ImGui.CreateContext();
             var io = ImGui.GetIO(); io.IniFilename = null; io.DisplaySize = new(sample.Item1, sample.Item2); io.DeltaTime = 1f/60;
             io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf", 17f, (ImFontConfig*)null, io.Fonts.GetGlyphRangesCyrillic());
@@ -97,16 +102,27 @@ internal static class Program
                 }
                 else if(sample.Item4.StartsWith("reward")) {
                     windowType.GetField("section",Instance)!.SetValue(window,3);
-                    ImGui.TextUnformatted("Атлас наград · предметы из квестов");
+                    ImGui.TextUnformatted("Атлас наград");
+                    ImGui.Button("Коллекции");ImGui.SameLine();ImGui.Button("Все награды");
+                    ImGui.Button("Предмет, валюта, общество или квест…",new Vector2(-1,0));
+                    ImGui.Button("Все источники",new Vector2(ImGui.GetContentRegionAvail().X*.38f,0));ImGui.SameLine();ImGui.Button("Все типы");ImGui.SameLine();ImGui.Button("Все состояния");
                     ImGui.Separator();
                     var rewardRows=catalog.Rewards.Where(r=>r.Category=="Minion").Take(8).Concat(catalog.Rewards.Where(r=>r.Kind==RewardKind.Choice).Take(4)).ToArray();
                     var rewardRow=sample.Item4=="reward-choice" ? rewardRows.First(r=>r.Kind==RewardKind.Choice) : rewardRows[0];
+                    if(sample.Item4 is "reward-vendor" or "reward-locked" or "reward-collected" or "reward-vendor-en" or "reward-requirements") rewardRow=catalog.Rewards.First(r=>r.Vendor!=null && r.Name=="Marid Horn");
+                    if(sample.Item4=="reward-unknown")rewardRow=catalog.Rewards.First(r=>r.Vendor!=null && r.Name=="Construct 14 Identification Key");
+                    if(sample.Item4=="reward-collected")Set(plugin,"Collected",new Dictionary<uint,string>{{rewardRow.ItemId,"collected"}});
+                    if(sample.Item4=="reward-locked")Set(plugin,"ShopConditions",rewardRow.Vendor!.Requirements.ToDictionary(r=>r.Key,r=>(bool?)false));
+                    if(sample.Item4.StartsWith("reward-vendor") || sample.Item4 is "reward-locked" or "reward-unknown" or "reward-collected" or "reward-requirements")rewardRows=catalog.Rewards.Where(r=>r.Vendor!=null && r.Vendor.Group==rewardRow.Vendor!.Group).Take(12).Prepend(rewardRow).DistinctBy(r=>r.ItemId).ToArray();
+                    windowType.GetMethod("DrawCollectionSummary",Instance)!.Invoke(window,[rewardRows,rewardRows.Length]);
                     ImGui.BeginChild("reward-list",new Vector2(ImGui.GetContentRegionAvail().X*.44f,0),true);
                     for(int ri=0;ri<rewardRows.Length;ri++) windowType.GetMethod("DrawRewardRow",Instance)!.Invoke(window,[rewardRows[ri],ri]);
                     ImGui.EndChild(); ImGui.SameLine();
                     ImGui.BeginChild("reward-detail",Vector2.Zero,true);
+                    if(sample.Item4=="reward-requirements")ImGui.GetStateStorage().SetInt(ImGui.GetID("Требования (2)"),1);
                     windowType.GetMethod("DrawRewardDetail",Instance)!.Invoke(window,[rewardRow]);
-                    if(ImGui.GetContentRegionAvail().Y<0) throw new Exception("Reward detail overflow");
+                    if(ImGui.GetContentRegionAvail().Y<0 && sample.Item4!="reward-requirements") throw new Exception("Reward detail overflow");
+                    if(frame==2 && ImGui.GetScrollMaxX()>0)throw new Exception($"Reward horizontal overflow: {ImGui.GetScrollMaxX()} at frame {frame}");
                     ImGui.EndChild();
                 }
                 else if(sample.Item4.StartsWith("story")) {

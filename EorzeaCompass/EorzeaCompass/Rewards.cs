@@ -5,9 +5,19 @@ using Lumina.Excel.Sheets;
 
 namespace EorzeaCompass;
 
-public enum RewardKind { Guaranteed, Choice }
+public enum RewardKind { Guaranteed, Choice, Vendor }
 public sealed record QuestReward(uint QuestId, uint ItemId, string Name, int Count, RewardKind Kind,
-    string Category, int ItemLevel, int EquipLevel, uint Icon, string[] StoryIds);
+    string Category, int ItemLevel, int EquipLevel, uint Icon, string[] StoryIds, string CollectionKind = "", VendorOffer? Vendor = null);
+
+public static class AtlasSelection
+{
+    public static int KeepVisible(int current, IReadOnlyList<QuestReward> catalog, IReadOnlyList<int> eligible, IReadOnlyList<int> visible)
+    {
+        if (current >= 0 && current < catalog.Count && visible.Any(i => catalog[i].ItemId == catalog[current].ItemId))
+            return eligible.Contains(current) ? current : eligible.First(i => catalog[i].ItemId == catalog[current].ItemId);
+        return visible.Count == 0 ? -1 : visible[0];
+    }
+}
 
 public static class RewardCatalog
 {
@@ -30,7 +40,8 @@ public static class RewardCatalog
                 if (!IsListedItem(true, item.RowId, count) || string.IsNullOrWhiteSpace(item.Name.ToString())) return;
                 result.Add(new(q.RowId, item.RowId, item.Name.ToString(), count, kind,
                     item.ItemUICategory.Value.Name.ToString(), (int)item.LevelItem.RowId,
-                    item.EquipSlotCategory.RowId == 0 ? 0 : item.LevelEquip, item.Icon, links[q.RowId]));
+                    item.EquipSlotCategory.RowId == 0 ? 0 : item.LevelEquip, item.Icon, links[q.RowId],
+                    CollectionRules.Kind(item.ItemAction.RowId == 0 ? 0 : item.ItemAction.Value.Action.RowId, item.Name.ToString())));
             }
             for (int i = 0; i < q.Reward.Count; i++)
                 if (IsListedItem(q.Reward[i].Is<Item>(), q.Reward[i].RowId, q.ItemCountReward[i])

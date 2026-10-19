@@ -1,11 +1,11 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.4.0.0</Version>
+    <Version>0.5.0.0</Version>
     <Author>Carcosa Lyuman</Author>
     <Name>Eorzea Compass</Name>
-    <Punchline>Quest chains, exploration and a quest reward atlas.</Punchline>
-    <Description>Character progress journal with job and society quests, relic milestones, exploration, duties and a quest reward atlas.</Description>
+    <Punchline>Track your progress and collect society and exploration rewards.</Punchline>
+    <Description>Character progress journal and collectible atlas with society and exploration shops, purchase requirements and automatic collection tracking.</Description>
     <Tags>quests;unlocks;raids;progress</Tags>
   </PropertyGroup>
-  <ItemGroup><EmbeddedResource Include="..\config\stories.json" LogicalName="EorzeaCompass.stories.json" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="..\config\stories.json" LogicalName="EorzeaCompass.stories.json" /><EmbeddedResource Include="..\config\vendors.json" LogicalName="EorzeaCompass.vendors.json" /></ItemGroup>
 </Project>
