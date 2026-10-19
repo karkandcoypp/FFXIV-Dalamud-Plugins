@@ -91,7 +91,7 @@ Use Already obtained (manual) on a reward card when the plugin could not detect 
 Settings provides a plugin-local interface scale from75% to175% and background opacity from40% to100%, shared by the journal and widget. Text, icons and cover artwork remain opaque. Reset appearance restores100% scale and opacity. Changes persist when the slider edit finishes; other plugins' settings are not changed.
 
 
-## Feed trust and diagnostics (v0.25.0)
+## Feed trust and diagnostics (v0.25.1)
 
 Settings → Diagnostics and feed updates displays the installed assembly version, last successful network load, latest attempt, origin and error. Successful load time is restored only when a SHA-256 receipt matches the cached bytes. Loading a bundle or legacy cache does not invent a download timestamp. Copy diagnostics strips URL user info, query strings, fragments and local Windows paths, and includes no character identifiers or progress.
 

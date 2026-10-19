@@ -1,4 +1,4 @@
-# Eorzea Event Tracker 0.25.0
+# Eorzea Event Tracker 0.25.1
 
 - Event details now show a reliability badge: reviewed and recently validated, partial automatic data, cached data, or stale data. Hover for the meaning, relationship-check time and outstanding issues.
 - Settings → Diagnostics and feed updates shows the installed version, successful feed download time (persisted across restarts), latest attempt, data source and actual error. Copy diagnostics excludes character/progress information and strips URL credentials/query parameters and local file paths.

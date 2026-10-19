@@ -224,7 +224,7 @@
       },
       "validation": {
         "status": "partial",
-        "checkedAt": "2026-10-19T14:57:20.686188+00:00",
+        "checkedAt": "2026-10-19T15:04:31.245064+00:00",
         "lastVerifiedAt": null,
         "fingerprint": "9622c35fff78b8c8e42fb105135101b808ccef984c3f451fdb6ee21693fcf466",
         "checks": 22,
@@ -596,8 +596,8 @@
       },
       "validation": {
         "status": "passed",
-        "checkedAt": "2026-10-19T14:57:20.686188+00:00",
-        "lastVerifiedAt": "2026-10-19T14:57:20.686188+00:00",
+        "checkedAt": "2026-10-19T15:04:31.245064+00:00",
+        "lastVerifiedAt": "2026-10-19T15:04:31.245064+00:00",
         "fingerprint": "8582aba2346a4cf984f00ad37f9f928a6d65a0cbd765998dbe529687ac0c704e",
         "checks": 133,
         "issues": []
@@ -784,7 +784,7 @@
       },
       "validation": {
         "status": "partial",
-        "checkedAt": "2026-10-19T14:57:20.686188+00:00",
+        "checkedAt": "2026-10-19T15:04:31.245064+00:00",
         "lastVerifiedAt": null,
         "fingerprint": "d853871f65f5427c265baf25f76296d96f6a3a0c02acda17b286b81a60ca4e30",
         "checks": 56,

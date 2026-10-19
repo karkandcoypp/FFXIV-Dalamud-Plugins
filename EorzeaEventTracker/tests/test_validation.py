@@ -53,6 +53,9 @@ class ValidationChecks(unittest.TestCase):
         gate = Gate(self.api)
         with patch.object(gate, 'point', return_value=100):
             gate.reward(self.reward, {LOCATION['id']: LOCATION})
+            legacy = dict(self.reward, currencyItemId=41629)
+            del legacy['currency']
+            gate.reward(legacy, {LOCATION['id']: LOCATION})
             self.api.price = 999
             with self.assertRaises(Contradiction):
                 gate.reward(self.reward, {LOCATION['id']: LOCATION})

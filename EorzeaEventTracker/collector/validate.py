@@ -183,10 +183,12 @@ class Gate:
                     offers.add(tuple(costs[0]))
                 else:
                     unsupported = True
-        currency = reward.get('currencyItemId') or (41629 if reward.get('currency') == 'MGF' else 0)
-        if currency and not (currency == 41629 and reward.get('currency') == 'MGF'):
+        # Match TrackedReward.Currency's default when reading legacy feeds.
+        currency_label = reward.get('currency', 'MGF')
+        currency = reward.get('currencyItemId') or (41629 if currency_label == 'MGF' else 0)
+        if currency and not (currency == 41629 and currency_label == 'MGF'):
             name = self.get('sheet/Item/' + str(currency), fields='Name')['fields'].get('Name')
-            if not name or reward.get('currency', '').casefold() != name.casefold():
+            if not name or currency_label.casefold() != name.casefold():
                 raise Contradiction('Currency name disagrees with its item ID: ' + reward['name'])
         if not shops or not offers or not currency or reward.get('price', 0) <= 0:
             raise RuntimeError('Merchant/price relationship is not fully supported or known: ' + reward['name'])
