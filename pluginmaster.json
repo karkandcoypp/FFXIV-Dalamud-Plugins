@@ -28,7 +28,7 @@
     "Author": "Carcosa Lyuman",
     "Name": "Eorzea Event Tracker",
     "InternalName": "EorzeaEventTracker",
-    "AssemblyVersion": "0.21.0.0",
+    "AssemblyVersion": "0.22.0.0",
     "Description": "Lodestone event dates, illustrated event guides, automatic quest completion and character reward tracking.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
@@ -45,8 +45,8 @@
     "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/EorzeaEventTracker/assets/icon-v2.png",
     "Punchline": "Lodestone event reminders and deadlines.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/eet-v0.21.0/EorzeaEventTracker.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/eet-v0.21.0/EorzeaEventTracker.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/eet-v0.21.0/EorzeaEventTracker.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/eet-v0.22.0/EorzeaEventTracker.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/eet-v0.22.0/EorzeaEventTracker.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/eet-v0.22.0/EorzeaEventTracker.zip"
   }
 ]
