@@ -12,8 +12,8 @@ public sealed class CompactWidget : Window
     private static readonly Vector4 Teal = new(.49f, .69f, .62f, 1);
     private static readonly Vector4 Gold = new(.84f, .72f, .48f, 1);
     private Localizer L => plugin.Locale;
-    private float UiScale => AppearancePolicy.Scale(plugin.Settings);
-    private float Opacity => AppearancePolicy.Opacity(plugin.Settings);
+    private float UiScale => AppearancePolicy.Scale(plugin.Preferences);
+    private float Opacity => AppearancePolicy.Opacity(plugin.Preferences);
     private float S => ImGui.GetFontSize() / 17f;
 
     public CompactWidget(Plugin plugin) : base("Eorzea / Events###EETCompact", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoFocusOnAppearing)
@@ -23,6 +23,12 @@ public sealed class CompactWidget : Window
         Size = new Vector2(320, 290);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints { MinimumSize = new(260, 160), MaximumSize = new(520, 900) };
+    }
+
+    internal void SwitchCharacter(ulong contentId)
+    {
+        WindowName = "Eorzea / Events###EETCompact-" + contentId;
+        IsOpen = contentId != 0 && plugin.Preferences.ShowCompactWidget;
     }
 
     public override void PreDraw()
@@ -46,8 +52,8 @@ public sealed class CompactWidget : Window
 
     public override void OnClose()
     {
-        if (!plugin.Settings.ShowCompactWidget) return;
-        plugin.Settings.ShowCompactWidget = false;
+        if (!plugin.Preferences.ShowCompactWidget) return;
+        plugin.Preferences.ShowCompactWidget = false;
         plugin.Save();
     }
 
@@ -67,7 +73,7 @@ public sealed class CompactWidget : Window
         ImGui.Separator();
         var now = DateTimeOffset.UtcNow;
         var events = plugin.Feed.Feed.Events
-            .Where(e => !plugin.IsEventHidden(e) && e.Active(now) && (plugin.Settings.ShowUnverified || e.Verified))
+            .Where(e => !plugin.IsEventHidden(e) && e.Active(now) && (plugin.Preferences.ShowUnverified || e.Verified))
             .OrderBy(e => e.EndsAt).ToList();
         if (events.Count == 0) ImGui.TextWrapped(L.Text("No active events right now."));
         foreach (var e in events)
@@ -94,7 +100,7 @@ public sealed class CompactWidget : Window
             if (!plugin.Progress.ReadyForReminders) ImGui.TextWrapped(L.Text("Waiting for character data"));
             else if (plugin.Progress.Catalog.TryGetValue(e.Id, out var definition))
             {
-                var (count, total) = RewardPreferences.Progress(definition.Rewards, plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
+                var (count, total) = RewardPreferences.Progress(definition.Rewards, plugin.Preferences.IgnoredRewards, plugin.Progress.Rewards);
                 ImGui.TextDisabled(L.Format("{0} / {1} rewards confirmed", count, total));
                 ImGui.PushStyleColor(ImGuiCol.PlotHistogram, Teal);
                 ImGui.ProgressBar(total == 0 ? 0 : (float)count / total,

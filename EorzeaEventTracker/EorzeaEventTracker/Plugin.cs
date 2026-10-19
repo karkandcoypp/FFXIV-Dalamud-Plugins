@@ -29,26 +29,29 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static INotificationManager Notifications { get; private set; } = null!;
 
     internal Configuration Settings { get; }
+    internal CharacterSettings Preferences { get; private set; } = new();
+    private ulong activeCharacter;
+    internal bool HasCharacterPreferences => activeCharacter != 0;
     internal EventFeedService Feed { get; }
     internal CharacterProgress Progress { get; }
-    internal Localizer Locale { get; }
+    internal Localizer Locale { get; private set; }
     internal EventImages Images { get; }
     private readonly WindowSystem windows = new("EorzeaEventTracker");
     private readonly EventWindow window;
     private readonly CompactWidget widget;
-    private bool previousLoggedIn;
     private Task? loginRefresh;
     private DateTime nextFeedRefresh;
     private DateTimeOffset nextReminderCheck;
     private bool widgetOpenedManually;
     internal bool AllowWidgetDisplay => widgetOpenedManually || ShouldAutoOpen();
     private bool ShouldAutoOpen() => loginRefresh == null && EventCompletionPolicy.ShouldAutoOpen(new EventFeed { Events = Feed.Feed.Events.Where(e => !IsEventHidden(e)).ToList() }, Progress.Catalog,
-        Progress.Quests, Progress.ReadyForReminders, Settings.ShowUnverified, DateTimeOffset.UtcNow);
+        Progress.Quests, Progress.ReadyForReminders, Preferences.ShowUnverified, DateTimeOffset.UtcNow);
 
     public Plugin()
     {
         Settings = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-        Locale = new Localizer(Settings);
+        Preferences = Settings.NewCharacterDefaults();
+        Locale = new Localizer(Preferences);
         if (Settings.Version < 3)
         {
             if (Settings.FeedUrl == Configuration.LegacyFeedUrl || (Settings.Version < 2 && string.IsNullOrWhiteSpace(Settings.FeedUrl)))
@@ -56,13 +59,14 @@ public sealed class Plugin : IDalamudPlugin
             Settings.Version = 3;
             Save();
         }
+        if (Settings.Version < 4) { Settings.Version = 4; Save(); }
         var data = PluginInterface.GetPluginConfigDirectory();
         var bundled = Path.Combine(PluginInterface.AssemblyLocation.DirectoryName!, "events.json");
         Feed = new EventFeedService(Path.Combine(data, "events.json"), bundled);
         Images = new EventImages(Path.Combine(data, "event-images"));
         Progress = new CharacterProgress(this);
         window = new EventWindow(this);
-        widget = new CompactWidget(this) { IsOpen = Settings.ShowCompactWidget };
+        widget = new CompactWidget(this) { IsOpen = false };
         windows.AddWindow(window);
         windows.AddWindow(widget);
         Commands.AddHandler("/events", new CommandInfo((_, args) =>
@@ -84,7 +88,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         widget.IsOpen = visible;
         widgetOpenedManually = visible;
-        Settings.ShowCompactWidget = visible;
+        Preferences.ShowCompactWidget = visible;
         Save();
     }
     internal void OpenEvent(string eventId)
@@ -92,21 +96,32 @@ public sealed class Plugin : IDalamudPlugin
         window.SelectEvent(eventId);
         window.IsOpen = true;
     }
-    // Include the occurrence deadline so a returning seasonal event is visible again.
-    private static string EventVisibilityKey(EventInfo e) => e.Id + ":" + (e.EndsAt?.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unknown");
-    internal bool IsEventHidden(EventInfo e) => Settings.HiddenEvents.Contains(EventVisibilityKey(e));
+    internal bool IsEventHidden(EventInfo e) => Preferences.IsEventHidden(e);
     internal void SetEventHidden(EventInfo e, bool hidden)
     {
-        if (hidden) Settings.HiddenEvents.Add(EventVisibilityKey(e));
-        else Settings.HiddenEvents.Remove(EventVisibilityKey(e));
+        Preferences.SetEventHidden(e, hidden);
         Save();
     }
     internal void Save() => PluginInterface.SavePluginConfig(Settings);
     private void OnUpdate(IFramework framework)
     {
-        Progress.Update();
         var loggedIn = Client.IsLoggedIn;
-        if (loggedIn && !previousLoggedIn)
+        var character = loggedIn ? Player.ContentId : 0;
+        if (loggedIn && character == 0) character = activeCharacter; // Loading a zone is not a character switch.
+        var characterChanged = character != activeCharacter;
+        if (characterChanged)
+        {
+            activeCharacter = character;
+            Preferences = character == 0 ? Settings.NewCharacterDefaults() : Settings.ForCharacter(character);
+            Locale = new Localizer(Preferences);
+            widgetOpenedManually = false;
+            nextReminderCheck = DateTimeOffset.MinValue;
+            window.SwitchCharacter(character);
+            widget.SwitchCharacter(character);
+            if (character != 0) Save();
+        }
+        Progress.Update();
+        if (loggedIn && character != 0 && characterChanged)
         {
             widgetOpenedManually = false;
             loginRefresh = Feed.RefreshAsync(Settings.FeedUrl);
@@ -128,27 +143,26 @@ public sealed class Plugin : IDalamudPlugin
         if (loggedIn && loginRefresh?.IsCompleted == true && Progress.ReadyForReminders)
         {
             loginRefresh = null;
-            var active = Feed.Feed.Events.Count(e => e.Active(DateTimeOffset.UtcNow) && !IsEventHidden(e) && (Settings.ShowUnverified || e.Verified));
-            if (Settings.NotifyOnLogin && active > 0)
+            var active = Feed.Feed.Events.Count(e => e.Active(DateTimeOffset.UtcNow) && !IsEventHidden(e) && (Preferences.ShowUnverified || e.Verified));
+            if (Preferences.NotifyOnLogin && active > 0)
                 Chat.Print("[Eorzea Event Tracker] " + Locale.Format("{0} active event(s)! Type /events for details.", active));
-            if (Settings.OpenOnLogin && ShouldAutoOpen()) Open();
+            if (Preferences.OpenOnLogin && ShouldAutoOpen()) Open();
         }
-        previousLoggedIn = loggedIn;
         CheckDeadlineReminders();
     }
 
     private void CheckDeadlineReminders()
     {
         var now = DateTimeOffset.UtcNow;
-        if (!Settings.NotifyFavoriteDeadlines || !Client.IsLoggedIn || !Progress.ReadyForReminders
+        if (!Preferences.NotifyFavoriteDeadlines || !Client.IsLoggedIn || !Progress.ReadyForReminders
             || loginRefresh != null || now < nextReminderCheck) return;
         nextReminderCheck = now.AddMinutes(1);
         var changed = false;
-        foreach (var e in Feed.Feed.Events.Where(e => !IsEventHidden(e) && (Settings.ShowUnverified || e.Verified)))
+        foreach (var e in Feed.Feed.Events.Where(e => !IsEventHidden(e) && (Preferences.ShowUnverified || e.Verified)))
         {
             var pending = DeadlineReminderPolicy.Pending(e, Progress.Catalog.GetValueOrDefault(e.Id),
-                Settings.FavoriteRewards, Progress.Rewards, Settings.DeadlineRemindersSent,
-                Player.ContentId, Progress.ReadyForReminders, now, Settings.IgnoredRewards);
+                Preferences.FavoriteRewards, Progress.Rewards, Settings.DeadlineRemindersSent,
+                Player.ContentId, Progress.ReadyForReminders, now, Preferences.IgnoredRewards);
             if (pending is not { } reminder) continue;
             var deadline = Locale.Text(reminder.Stage == 2 ? "Ends within 24 hours" : "Ends within 3 days");
             var message = Locale.Text(e.Title, e) + " — " + deadline + ". "

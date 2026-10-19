@@ -9,10 +9,12 @@ class EnglishNameTests(unittest.TestCase):
     def test_names_do_not_use_translation_requests(self):
         with TemporaryDirectory() as folder:
             session = Mock()
-            event = {'title': 'Event', 'tracking': {'rewards': [{'name': 'Prize'}]}, 'locations': [{'npc': 'Lewena', 'zone': 'The Gold Saucer'}],
+            event = {'title': 'Event', 'tracking': {'quests': [{'name': 'Quest'}], 'rewards': [{'name': 'Prize'}]}, 'locations': [{'npc': 'Lewena', 'zone': 'The Gold Saucer'}],
                      'translations': {'ru': {'Event': 'Событие', 'The Gold Saucer': 'Золотое блюдце'}}}
             translator = RussianTranslator(Path(folder)/'cache.json', session=session)
             translator.apply(event)
+            self.assertEqual(event['translations']['ru']['Quest'], 'Quest')
+            self.assertNotIn('Quest', strings(event))
             self.assertEqual(event['translations']['ru']['Prize'], 'Prize')
             self.assertEqual(event['translations']['ru']['Lewena'], 'Lewena')
             self.assertNotIn('Prize', strings(event))

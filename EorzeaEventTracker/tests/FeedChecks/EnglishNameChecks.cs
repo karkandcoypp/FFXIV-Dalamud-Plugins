@@ -6,6 +6,7 @@ internal static class EnglishNameChecks
     public static void Run()
     {
         var e = new EventInfo { Title = "Event", Tracking = new() { Rewards = new() { new() { Id = 1, Name = "Gentlebean Parka" } } } };
+        e.Tracking!.Quests.Add(new() { Id = 71003, Name = "Quest" });
         e.Locations.Add(new() { Id = "npc", Npc = "Lewena" });
         e.Translations["ru"] = new()
         {
@@ -15,7 +16,7 @@ internal static class EnglishNameChecks
         var locale = new Localizer(new Configuration { Language = "ru" });
         Check(locale.Text("Gentlebean Parka", e) == "Gentlebean Parka", "item title stays English despite older online translation");
         Check(locale.Text("Lewena", e) == "Lewena", "NPC title stays English in lists and map tooltips");
-        Check(locale.Text("Event", e) == "Событие" && locale.Text("Quest", e) == "Квест", "event and quest translations remain available");
+        Check(locale.Text("Event", e) == "Событие" && locale.Text("Quest", e) == "Quest", "event titles stay localized while quest titles stay English");
         Check(locale.Text("Talk to Lewena for Gentlebean Parka.", e) == "Lewena выдаёт Gentlebean Parka.", "known translated entity names are restored inside translated descriptions");
         Check(locale.Text("Settings") == "Настройки", "Russian UI is preserved");
     }

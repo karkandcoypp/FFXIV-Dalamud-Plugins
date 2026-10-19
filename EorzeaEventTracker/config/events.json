@@ -197,9 +197,9 @@
           "Valse di Fantastica Orchestrion Roll": "Valse di Fantastica Orchestrion Roll",
           "Hammerhead Orchestrion Roll": "Hammerhead Orchestrion Roll",
           "The FINAL FANTASY XIV & FINAL FANTASY XV Collaboration Event Returns!": "Возвращается совместное событие FINAL FANTASY XIV и FINAL FANTASY XV!",
-          "The Man in Black": "Человек в черном",
-          "In the Dark of Night": "В темноте ночи",
-          "Messenger of the Winds": "Посланник ветров",
+          "The Man in Black": "The Man in Black",
+          "In the Dark of Night": "In the Dark of Night",
+          "Messenger of the Winds": "Messenger of the Winds",
           "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
           "New Gridania": "Новая Гридания",
           "Dates extracted automatically from official site.": "Даты, автоматически извлекаемые с официального сайта.",
@@ -516,8 +516,8 @@
           "Blunderous Framer's Kit": "Blunderous Framer's Kit",
           "Gentlebean Shoes": "Gentlebean Shoes",
           "Lewena": "Lewena",
-          "It Could Happen to You": "Это может случиться с вами",
-          "Just Crowning Around": "Просто коронуем вокруг",
+          "It Could Happen to You": "It Could Happen to You",
+          "Just Crowning Around": "Just Crowning Around",
           "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках."
         }
       },
@@ -756,8 +756,8 @@
           "Grisly Bear Head": "Grisly Bear Head",
           "All Saints' Wake MMXVI Advertisement": "All Saints' Wake MMXVI Advertisement",
           "Smiling Wakeshroom": "Smiling Wakeshroom",
-          "We Scare Bears": "Мы пугаем медведей",
-          "Grim and Grisly Games": "Мрачные и грязные игры",
+          "We Scare Bears": "We Scare Bears",
+          "Grim and Grisly Games": "Grim and Grisly Games",
           "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках."
         }
       }

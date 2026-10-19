@@ -145,5 +145,8 @@
   "Balance unavailable; the cost above is not the amount still to earn.": "Баланс пока недоступен. Выше указана полная стоимость, без вычета вашей валюты.",
   "Favorites with unknown prices: {0}. Not included in the total.": "Избранных наград с неизвестной ценой: {0}. Они не включены в сумму.",
   "Quest rewards require completing their quests, not currency.": "Для квестовых наград нужно завершить квесты; валюта не требуется.",
-  "Item and NPC names always stay in English. Interface and event descriptions use your selected language.": "Названия предметов и NPC всегда на английском. Интерфейс и описания событий используют выбранный язык."
+  "Item and NPC names always stay in English. Interface and event descriptions use your selected language.": "Названия предметов и NPC всегда на английском. Интерфейс и описания событий используют выбранный язык.",
+  "Item, NPC and quest names always stay in English. Interface and event descriptions use your selected language.": "Названия предметов, NPC и квестов всегда на английском. Интерфейс и описания событий используют выбранный язык.",
+  "Display and reward preferences belong to this character. The event feed URL is shared.": "Настройки отображения и выбор наград сохраняются для этого персонажа. Адрес ленты событий общий.",
+  "Log in to edit this character's preferences.": "Войдите персонажем, чтобы изменить его настройки."
 }

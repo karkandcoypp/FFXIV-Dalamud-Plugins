@@ -17,6 +17,7 @@ PENDING_RU = 'Часть русского перевода ещё не гото�
 
 def english_names(event):
     names = [reward.get('name', '') for reward in event.get('tracking', {}).get('rewards', [])]
+    names.extend(quest.get('name', '') for quest in event.get('tracking', {}).get('quests', []))
     for location in event.get('locations', []):
         names.append(location.get('npc', ''))
         names.append(location.get('navigation', {}).get('destination', {}).get('npc', ''))

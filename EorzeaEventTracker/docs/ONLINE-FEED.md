@@ -144,3 +144,13 @@ The isolated Fall Guys test feed was corrected through the same routing stage. I
 Item names and NPC labels always remain English, independently of the interface language. Localizer enforces this for tracked reward names and event NPC labels even if an older/custom feed includes Russian aliases. Existing aliases are also restored to English when encountered inside translated descriptions. Quest titles, event titles, interface labels, zones and descriptions keep their language behavior.
 
 The collector excludes item and NPC names from translation requests and publishes identity translations for these names so older 0.14.0 clients also keep English names. Previously cached/online aliases are normalized in event text where they match known names. This policy includes the original merchant NPC in entrance-route metadata. Names retain their source IDs and strings; tracking/favorite/manual state is unaffected.
+
+## Character-scoped preferences (0.16.0)
+
+Configuration.Characters is keyed by the invariant numeric ContentId, independent of display name and server. Hidden event occurrences, favorites, ignored rewards, remaining/favorites filters, language, scale, opacity, partial-entry visibility, login opening/notifications, deadline notification opt-in and widget preference belong to that profile. Journal/widget ImGui identities include ContentId for independent window layout. The shared FeedUrl is a data source, not a display preference.
+
+On character change the plugin switches profile before progress scanning and visibility/reminder decisions, resets transient journal selection/hidden-list/map-error state, and refreshes the feed. Zone loading does not count as changing character. Existing ManualRewards/ObservedRewards histories and sent deadline reminders remain partitioned by ContentId and are preserved.
+
+Legacy global hidden/favorite/ignored choices have no recorded owner. They remain archived in the root configuration for recovery, but are not copied into a new profile. This prevents mistakenly hiding unfinished events on an alternate character. New profiles start without those choices; legacy language/appearance/notification settings provide initial defaults, then profile edits are independent.
+
+Quest names join item/NPC names in the always-English policy, even with old cached translations. The collector excludes all three name categories from automatic translation and supplies English identity entries for older clients.

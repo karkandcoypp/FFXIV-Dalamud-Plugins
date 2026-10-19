@@ -16,8 +16,8 @@ public sealed class EventWindow : Window, IDisposable
     private bool settingsVisible;
     private string urlBuffer;
     private string selected = "";
-    private bool remainingOnly;
-    private bool favoritesOnly;
+    private bool remainingOnly { get => plugin.Preferences.RemainingOnly; set => plugin.Preferences.RemainingOnly = value; }
+    private bool favoritesOnly { get => plugin.Preferences.FavoritesOnly; set => plugin.Preferences.FavoritesOnly = value; }
     private bool showHidden;
     private DateTime mapErrorUntil;
     private EventInfo? localizedEvent;
@@ -28,9 +28,19 @@ public sealed class EventWindow : Window, IDisposable
     private string T(string text) => L.Text(text);
     private string E(string text) => L.Text(text, localizedEvent);
     private string F(string text, params object[] values) => L.Format(text, values);
-    private float UiScale => AppearancePolicy.Scale(plugin.Settings);
-    private float Opacity => AppearancePolicy.Opacity(plugin.Settings);
+    private float UiScale => AppearancePolicy.Scale(plugin.Preferences);
+    private float Opacity => AppearancePolicy.Opacity(plugin.Preferences);
     private float S => ImGui.GetFontSize() / 17f;
+    internal void SwitchCharacter(ulong contentId)
+    {
+        WindowName = "Eorzea Event Tracker###EETMain-" + contentId;
+        selected = "";
+        showHidden = false;
+        settingsVisible = false;
+        mapErrorUntil = default;
+        urlBuffer = plugin.Settings.FeedUrl;
+        IsOpen = false;
+    }
     internal void SelectEvent(string id) { selected = id; showHidden = false; }
 
     public EventWindow(Plugin plugin) : base("Eorzea Event Tracker###EETMain")
@@ -103,7 +113,7 @@ public sealed class EventWindow : Window, IDisposable
     private void DrawContent()
     {
         var now = DateTimeOffset.UtcNow;
-        var events = plugin.Feed.Feed.Events.Where(e => (plugin.Settings.ShowUnverified || e.Verified) && (e.Active(now) || e.Upcoming(now)))
+        var events = plugin.Feed.Feed.Events.Where(e => (plugin.Preferences.ShowUnverified || e.Verified) && (e.Active(now) || e.Upcoming(now)))
             .OrderBy(e => e.Upcoming(now)).ThenBy(e => e.EndsAt).ToList();
         var hiddenCount = events.Count(plugin.IsEventHidden);
         events = events.Where(e => plugin.IsEventHidden(e) == showHidden).ToList();
@@ -188,7 +198,7 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.TextColored(Muted, Countdown(e, now));
         if (plugin.Progress.Catalog.TryGetValue(e.Id, out var def))
         {
-            var (done, total) = RewardPreferences.Progress(def.Rewards, plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
+            var (done, total) = RewardPreferences.Progress(def.Rewards, plugin.Preferences.IgnoredRewards, plugin.Progress.Rewards);
             ImGui.SetCursorPosX(cursor.X + padding);
             ImGui.TextColored(Muted, F("{0} / {1} rewards confirmed", done, total));
             var bar = start + new Vector2(padding, height - 44 * S);
@@ -283,22 +293,24 @@ public sealed class EventWindow : Window, IDisposable
         }
         ImGui.TextWrapped(T("Quest completion does not mean all shop rewards are collected."));
         ImGui.Spacing();
-        var (count, total) = RewardPreferences.Progress(definition.Rewards, plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
+        var (count, total) = RewardPreferences.Progress(definition.Rewards, plugin.Preferences.IgnoredRewards, plugin.Progress.Rewards);
         ImGui.TextColored(Gold, F("REWARD COLLECTION   {0} / {1}", count, total));
         ImGui.PushStyleColor(ImGuiCol.PlotHistogram, Teal);
         ImGui.ProgressBar(total == 0 ? 0 : (float)count / total, new Vector2(-1, 9 * S), "");
         ImGui.PopStyleColor();
-        ImGui.Checkbox(T("Show remaining rewards only") + "###Show remaining rewards only", ref remainingOnly);
-        ImGui.Checkbox(T("Favorites only") + "###FavoritesOnly", ref favoritesOnly);
-        var favorites = definition.Rewards.Where(r => plugin.Settings.FavoriteRewards.Contains(r.Id) && !plugin.Settings.IgnoredRewards.Contains(r.Id)).ToList();
+        var remaining = remainingOnly;
+        if (ImGui.Checkbox(T("Show remaining rewards only") + "###Show remaining rewards only", ref remaining)) { remainingOnly = remaining; plugin.Save(); }
+        var onlyFavorites = favoritesOnly;
+        if (ImGui.Checkbox(T("Favorites only") + "###FavoritesOnly", ref onlyFavorites)) { favoritesOnly = onlyFavorites; plugin.Save(); }
+        var favorites = definition.Rewards.Where(r => plugin.Preferences.FavoriteRewards.Contains(r.Id) && !plugin.Preferences.IgnoredRewards.Contains(r.Id)).ToList();
         if (favorites.Count > 0)
         {
             var confirmed = favorites.Count(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed);
             ImGui.TextColored(Gold, F("FAVORITES   {0} / {1} obtained", confirmed, favorites.Count));
             DrawFavoriteBudget(definition);
         }
-        if (!definition.Rewards.Any(r => (!favoritesOnly || plugin.Settings.FavoriteRewards.Contains(r.Id))
-            && (!remainingOnly || (!plugin.Settings.IgnoredRewards.Contains(r.Id) && !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed))))
+        if (!definition.Rewards.Any(r => (!favoritesOnly || plugin.Preferences.FavoriteRewards.Contains(r.Id))
+            && (!remainingOnly || (!plugin.Preferences.IgnoredRewards.Contains(r.Id) && !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed))))
             ImGui.TextWrapped(T("No rewards match these filters. Mark rewards as favorites or change the filters."));
         var columns = ImGui.GetContentRegionAvail().X >= 560 * S ? 2 : 1;
         if (ImGui.BeginTable("Rewards", columns, ImGuiTableFlags.SizingStretchSame))
@@ -306,8 +318,8 @@ public sealed class EventWindow : Window, IDisposable
             foreach (var reward in definition.Rewards)
             {
                 var state = plugin.Progress.Rewards.GetValueOrDefault(reward.Id);
-                if (remainingOnly && (state.Confirmed || plugin.Settings.IgnoredRewards.Contains(reward.Id))) continue;
-                if (favoritesOnly && !plugin.Settings.FavoriteRewards.Contains(reward.Id)) continue;
+                if (remainingOnly && (state.Confirmed || plugin.Preferences.IgnoredRewards.Contains(reward.Id))) continue;
+                if (favoritesOnly && !plugin.Preferences.FavoriteRewards.Contains(reward.Id)) continue;
                 ImGui.TableNextColumn();
                 DrawReward(reward, state);
             }
@@ -328,8 +340,8 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.TextWrapped(T("Waiting for character data"));
             return;
         }
-        var pending = FavoriteBudget.Pending(definition.Rewards, plugin.Settings.FavoriteRewards,
-            plugin.Settings.IgnoredRewards, plugin.Progress.Rewards);
+        var pending = FavoriteBudget.Pending(definition.Rewards, plugin.Preferences.FavoriteRewards,
+            plugin.Preferences.IgnoredRewards, plugin.Progress.Rewards);
         if (pending.Count == 0)
         {
             ImGui.TextColored(Teal, T("All favorite rewards obtained."));
@@ -364,8 +376,8 @@ public sealed class EventWindow : Window, IDisposable
         var scale = S;
         var padding = 10 * scale;
         var gap = 5 * scale;
-        var ignored = plugin.Settings.IgnoredRewards.Contains(reward.Id);
-        var favorite = plugin.Settings.FavoriteRewards.Contains(reward.Id);
+        var ignored = plugin.Preferences.IgnoredRewards.Contains(reward.Id);
+        var favorite = plugin.Preferences.FavoriteRewards.Contains(reward.Id);
         var width = ImGui.GetContentRegionAvail().X - padding * 2;
         var textWidth = Math.Max(50 * scale, width - 52 * scale);
         var titleHeight = ImGui.CalcTextSize(E(reward.Name), false, textWidth).Y;
@@ -407,13 +419,13 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.PopTextWrapPos();
             if (ImGui.Checkbox(T("Favorite") + "###Favorite", ref favorite))
             {
-                RewardPreferences.Favorite(plugin.Settings, reward.Id, favorite);
+                RewardPreferences.Favorite(plugin.Preferences, reward.Id, favorite);
                 plugin.Save();
             }
             if (oneLine) ImGui.SameLine();
             if (ImGui.Checkbox(T("Not interested") + "###NotInterested", ref ignored))
             {
-                RewardPreferences.Ignore(plugin.Settings, reward.Id, ignored);
+                RewardPreferences.Ignore(plugin.Preferences, reward.Id, ignored);
                 plugin.Save();
             }
             if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Excluded from progress and reminders. Uncheck to count this reward again."));
@@ -492,14 +504,17 @@ public sealed class EventWindow : Window, IDisposable
 
     private void DrawSettings()
     {
-        var c = plugin.Settings;
+        var c = plugin.Preferences;
+        ImGui.TextWrapped(T("Display and reward preferences belong to this character. The event feed URL is shared."));
+        if (!plugin.HasCharacterPreferences) ImGui.TextWrapped(T("Log in to edit this character's preferences."));
+        ImGui.BeginDisabled(!plugin.HasCharacterPreferences);
         var language = L.IsRussian ? 1 : 0;
         if (ImGui.Combo(T("Language") + "###Language", ref language, "English\0Русский\0"))
         {
             c.Language = language == 1 ? "ru" : "en";
             plugin.Save();
         }
-        ImGui.TextWrapped(T("Item and NPC names always stay in English. Interface and event descriptions use your selected language."));
+        ImGui.TextWrapped(T("Item, NPC and quest names always stay in English. Interface and event descriptions use your selected language."));
         var uiScale = UiScale;
         if (ImGui.SliderFloat(T("Interface scale") + "###UiScale", ref uiScale, .75f, 1.75f, "%.2fx")) c.UiScale = uiScale;
         if (ImGui.IsItemDeactivatedAfterEdit()) plugin.Save();
@@ -520,8 +535,9 @@ public sealed class EventWindow : Window, IDisposable
         { c.NotifyFavoriteDeadlines = deadlines; plugin.Save(); }
         ImGui.TextWrapped(T("Reminders at 3 days and 24 hours, once per character and event deadline. If you were offline, the latest reminder appears after login. Unknown rewards are skipped."));
         var unverified = c.ShowUnverified; if (ImGui.Checkbox(T("Show partial event entries") + "###Show partial event entries", ref unverified)) { c.ShowUnverified = unverified; plugin.Save(); }
+        ImGui.EndDisabled();
         ImGui.InputText(T("HTTPS feed URL") + "###HTTPS feed URL", ref urlBuffer, 512);
-        if (ImGui.Button(T("Save feed URL") + "###Save feed URL")) { c.FeedUrl = urlBuffer.Trim(); plugin.Save(); _ = plugin.Feed.RefreshAsync(c.FeedUrl); }
+        if (ImGui.Button(T("Save feed URL") + "###Save feed URL")) { plugin.Settings.FeedUrl = urlBuffer.Trim(); plugin.Save(); _ = plugin.Feed.RefreshAsync(plugin.Settings.FeedUrl); }
         ImGui.TextWrapped(T("Events, quest IDs, rewards, artwork and translations update through the feed. New tracking mechanics may still require a plugin update."));
         ImGui.TextWrapped(T("Leave URL empty for bundled / cached data. Character tracking works locally and refreshes every second."));
     }

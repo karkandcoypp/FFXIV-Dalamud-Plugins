@@ -12,13 +12,13 @@ public static class RewardPreferences
         return (included.Count(r => progress.TryGetValue(r.Id, out var state) && state.Confirmed), included.Count);
     }
 
-    public static void Ignore(Configuration settings, uint id, bool ignored)
+    public static void Ignore(CharacterSettings settings, uint id, bool ignored)
     {
         if (ignored) { settings.IgnoredRewards.Add(id); settings.FavoriteRewards.Remove(id); }
         else settings.IgnoredRewards.Remove(id);
     }
 
-    public static void Favorite(Configuration settings, uint id, bool favorite)
+    public static void Favorite(CharacterSettings settings, uint id, bool favorite)
     {
         if (favorite) { settings.FavoriteRewards.Add(id); settings.IgnoredRewards.Remove(id); }
         else settings.FavoriteRewards.Remove(id);

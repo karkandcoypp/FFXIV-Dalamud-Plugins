@@ -9,17 +9,18 @@ namespace EorzeaEventTracker;
 
 public sealed class Localizer
 {
-    private readonly Configuration settings;
+    private readonly CharacterSettings settings;
     private static readonly Dictionary<string, string> Russian = LoadRussian();
-    public Localizer(Configuration settings) => this.settings = settings;
+    public Localizer(CharacterSettings settings) => this.settings = settings;
     public bool IsRussian => settings.Language == "ru";
     public CultureInfo Culture => CultureInfo.GetCultureInfo(IsRussian ? "ru-RU" : "en-US");
     public string Text(string text, EventInfo? context = null)
     {
         var names = context == null ? Array.Empty<string>() :
             (context.Tracking?.Rewards.Select(r => r.Name) ?? Enumerable.Empty<string>())
+            .Concat(context.Tracking?.Quests.Select(q => q.Name) ?? Enumerable.Empty<string>())
             .Concat(context.Locations.Select(l => l.Npc)).Distinct().ToArray();
-        // Entity names remain searchable in the English game, even with old translated feeds.
+        // Item, NPC and quest names remain searchable in the English game, even with old translated feeds.
         if (names.Contains(text, StringComparer.Ordinal)) return text;
         var value = text;
         if (context?.Translations.TryGetValue(IsRussian ? "ru" : "en", out var onlineEntries) == true
