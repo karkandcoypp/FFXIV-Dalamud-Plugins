@@ -87,6 +87,21 @@ internal static class InstalledDataChecks
         var crowning = quests.GetRow(70337);
         Check(crowning.PreviousQuest.Any(q => q.RowId == saucer.RowId),
             "Blunderville prerequisite points to Gold Saucer unlock");
+        var iconTypes = data.GetExcelSheet<EventIconType>();
+        foreach (var id in new uint[] { 65970, 70337 })
+        {
+            var quest = quests.GetRow(id);
+            var marker = iconTypes.GetRow(quest.EventIconType.RowId);
+            Check(marker.MapIconAvailable != 0 && marker.MapIconInvalid != 0,
+                "quest marker shape comes from installed EventIconType: " + quest.Name.ToString());
+            var icon = marker.MapIconAvailable;
+            Check(data.FileExists($"ui/icon/{icon / 1000 * 1000:000000}/{icon:000000}.tex"),
+                "quest marker texture exists in installed game files");
+        }
+        var currency = items.GetRow(41629);
+        Check(currency.Icon != 0 && data.FileExists($"ui/icon/{currency.Icon / 1000 * 1000:000000}/{currency.Icon:000000}.tex"),
+            "event currency icon exists in installed game files");
+        Check(items.GetRow(41560).Rarity == 1, "basic reward rarity comes from installed Item data");
         Console.WriteLine("READ-ONLY CHECK COMPLETE: installed data verified; no game process was controlled and no map was opened.");
     }
     private static void Check(bool value, string message)

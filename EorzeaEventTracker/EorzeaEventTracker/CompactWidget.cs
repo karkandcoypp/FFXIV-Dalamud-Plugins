@@ -37,7 +37,10 @@ public sealed class CompactWidget : Window
         ImGui.PushStyleColor(ImGuiCol.WindowBg, JournalTheme.WithOpacity(JournalTheme.Background, Opacity));
         ImGui.PushStyleColor(ImGuiCol.TitleBg, JournalTheme.WithOpacity(JournalTheme.Panel, Opacity));
         ImGui.PushStyleColor(ImGuiCol.TitleBgActive, JournalTheme.WithOpacity(JournalTheme.Active, Opacity));
-        ImGui.PushStyleColor(ImGuiCol.Border, JournalTheme.Border);
+        ImGui.PushStyleColor(ImGuiCol.Border, JournalTheme.FrameEdge);
+        ImGui.PushStyleColor(ImGuiCol.BorderShadow, JournalTheme.Shadow);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 8 * UiScale);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 1);
         ImGui.PushStyleColor(ImGuiCol.Button, JournalTheme.Button);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, JournalTheme.Hover);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, JournalTheme.Active);
@@ -48,7 +51,7 @@ public sealed class CompactWidget : Window
         ImGui.PushStyleColor(ImGuiCol.TextDisabled, JournalTheme.Muted);
     }
 
-    public override void PostDraw() => ImGui.PopStyleColor(12);
+    public override void PostDraw() { ImGui.PopStyleVar(2); ImGui.PopStyleColor(13); }
 
     public override bool DrawConditions() => Plugin.Client.IsLoggedIn && plugin.AllowWidgetDisplay;
 
@@ -90,7 +93,7 @@ public sealed class CompactWidget : Window
             if (ImGui.IsItemHovered())
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                ImGui.SetTooltip(L.Text("Click an event to open its journal."));
+                JournalChrome.Tooltip(UiScale, L.Text("Event journal"), L.Text("Click an event to open its journal."));
             }
             ImGui.SetCursorPos(cursor + new Vector2(4 * S, 4 * S));
             ImGui.PushTextWrapPos(cursor.X + width - 4 * S);
@@ -101,7 +104,7 @@ public sealed class CompactWidget : Window
             ImGui.PushTextWrapPos(0);
             ImGui.TextColored(JournalTheme.DeadlineColor(deadline), DeadlinePolicy.Countdown(e, now, L));
             ImGui.PopTextWrapPos();
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip(L.Text(DeadlinePolicy.Label(deadline)));
+            if (ImGui.IsItemHovered()) JournalChrome.Tooltip(UiScale, L.Text("Event deadline"), L.Text(DeadlinePolicy.Label(deadline)));
             if (!plugin.Progress.ReadyForReminders) ImGui.TextWrapped(L.Text("Waiting for character data"));
             else if (plugin.Progress.Catalog.TryGetValue(e.Id, out var definition))
             {
