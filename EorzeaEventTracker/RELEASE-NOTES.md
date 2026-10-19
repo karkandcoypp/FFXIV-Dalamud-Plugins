@@ -1,11 +1,10 @@
-# Eorzea Event Tracker 0.17.0
+# Eorzea Event Tracker 0.18.0
 
-- Quest progress now explains missing level, current class/job and previous quest requirements using installed game data for every tracked quest, including future feed events.
-- AND/OR prerequisite groups retain their meaning: Gold Saucer requires one city-state envoy quest, not all three.
-- Expand How to unlock to follow prerequisite chains (up to four levels) and open validated issuer map locations. Names remain English.
-- Already accepted quests display In progress and direct players to the current journal objective instead of the starting NPC.
-- Completed quests are green, unfinished quests amber, known access blockers soft red, and unavailable character data gray. Status labels remain visible alongside colors.
-- Seasonal and unsupported special conditions are explicitly identified; passing basic checks is not presented as guaranteed NPC availability.
-- Requirements refresh for the current character alongside quest progress. Existing profiles and acquisition history are preserved.
+- A shared FFXIV-inspired palette for the journal and compact widget: graphite panels, warm ivory text, restrained gold accents and softer status colors.
+- Quest progress uses a vertical marker layout with checkmarks for completed quests. Connectors follow actual prerequisite relationships; alternate unlock routes are not presented as mandatory sequential steps.
+- Completed quests are compact. Blocked and accepted quests keep their explanations visible; other access details expand under Requirements.
+- Reward cards retain item icons, wrapping English titles, prices and acquisition states while using less vertical space. A one-click star toggles favorites; Actions contains favorite, ignored and manual-obtained controls. Where to go remains available on the card.
+- Cards adapt between one and two columns, wrap long text, and move navigation to another row when needed. Scale, opacity, per-character progress and feed behavior are preserved.
 
-Validation: client policy tests, installed-game Gold Saucer/Blunderville prerequisite checks and Release build. Live in-game rendering and map clicks require player verification.
+Rollback: the previous release eet-v0.17.0 remains available with its original binary and source tag. No configuration migration is introduced.
+Validation: Release build with warnings as errors, client regression checks and collector tests. Live in-game appearance still needs player verification.

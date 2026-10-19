@@ -163,5 +163,9 @@
   "Required class or job: {0}": "Требуется класс или профессия: {0}",
   "Seasonal quest: its NPC is available only during the relevant event.": "Сезонный квест: его NPC доступен только во время соответствующего события.",
   "[IN PROGRESS]": "[В ПРОЦЕССЕ]",
-  "Quest already accepted. Open your quest journal and follow the current objective; the starting NPC may have moved.": "Квест уже принят. Откройте журнал заданий и следуйте текущей цели: начальный NPC мог переместиться."
+  "Quest already accepted. Open your quest journal and follow the current objective; the starting NPC may have moved.": "Квест уже принят. Откройте журнал заданий и следуйте текущей цели: начальный NPC мог переместиться.",
+  "Actions": "Действия",
+  "Requirements": "Условия доступа",
+  "Add to favorites": "Добавить в избранное",
+  "Remove from favorites": "Убрать из избранного"
 }

@@ -97,7 +97,7 @@ public sealed class CharacterProgress
                 if (quests.TryGetRow(quest.Id, out var row))
                 {
                     Quests[quest.Id] = Plugin.Unlocks.IsQuestCompleted(row);
-                    if (!Quests[quest.Id]) QuestAccess[quest.Id] = GameQuestAccess.Read(quest.Id);
+                    QuestAccess[quest.Id] = GameQuestAccess.Read(quest.Id);
                 }
             var items = Plugin.Data.GetExcelSheet<Item>();
             foreach (var reward in definitions.SelectMany(d => d.Rewards))

@@ -9,8 +9,8 @@ namespace EorzeaEventTracker;
 public sealed class CompactWidget : Window
 {
     private readonly Plugin plugin;
-    private static readonly Vector4 Teal = new(.49f, .69f, .62f, 1);
-    private static readonly Vector4 Gold = new(.84f, .72f, .48f, 1);
+    private static readonly Vector4 Teal = JournalTheme.Green;
+    private static readonly Vector4 Gold = JournalTheme.Gold;
     private Localizer L => plugin.Locale;
     private float UiScale => AppearancePolicy.Scale(plugin.Preferences);
     private float Opacity => AppearancePolicy.Opacity(plugin.Preferences);
@@ -34,19 +34,21 @@ public sealed class CompactWidget : Window
     public override void PreDraw()
     {
         SizeConstraints = new WindowSizeConstraints { MinimumSize = new Vector2(260, 160) * UiScale, MaximumSize = new Vector2(520, 900) * UiScale };
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(.075f, .072f, .065f, .96f * Opacity));
-        ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(.10f, .095f, .080f, Opacity));
-        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(.19f, .17f, .12f, Opacity));
-        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(.39f, .35f, .26f, .40f));
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.21f, .195f, .16f, 1));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.30f, .27f, .21f, 1));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(.35f, .29f, .19f, 1));
-        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(.28f, .25f, .18f, 1));
-        ImGui.PushStyleColor(ImGuiCol.Separator, new Vector4(.35f, .31f, .23f, .45f));
-        ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(.17f, .16f, .14f, 1));
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, JournalTheme.WithOpacity(JournalTheme.Background, Opacity));
+        ImGui.PushStyleColor(ImGuiCol.TitleBg, JournalTheme.WithOpacity(JournalTheme.Panel, Opacity));
+        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, JournalTheme.WithOpacity(JournalTheme.Active, Opacity));
+        ImGui.PushStyleColor(ImGuiCol.Border, JournalTheme.Border);
+        ImGui.PushStyleColor(ImGuiCol.Button, JournalTheme.Button);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, JournalTheme.Hover);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, JournalTheme.Active);
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, JournalTheme.Hover);
+        ImGui.PushStyleColor(ImGuiCol.Separator, JournalTheme.Border);
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, JournalTheme.Button);
+        ImGui.PushStyleColor(ImGuiCol.Text, JournalTheme.Text);
+        ImGui.PushStyleColor(ImGuiCol.TextDisabled, JournalTheme.Muted);
     }
 
-    public override void PostDraw() => ImGui.PopStyleColor(10);
+    public override void PostDraw() => ImGui.PopStyleColor(12);
 
     public override bool DrawConditions() => Plugin.Client.IsLoggedIn && plugin.AllowWidgetDisplay;
 
