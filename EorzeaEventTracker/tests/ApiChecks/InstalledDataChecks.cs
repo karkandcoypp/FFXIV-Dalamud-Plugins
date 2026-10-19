@@ -88,15 +88,21 @@ internal static class InstalledDataChecks
         Check(crowning.PreviousQuest.Any(q => q.RowId == saucer.RowId),
             "Blunderville prerequisite points to Gold Saucer unlock");
         var iconTypes = data.GetExcelSheet<EventIconType>();
-        foreach (var id in new uint[] { 65970, 70337 })
+        foreach (var id in new uint[] { 65970, 70337, 71003, 71004 })
         {
             var quest = quests.GetRow(id);
             var marker = iconTypes.GetRow(quest.EventIconType.RowId);
             Check(marker.MapIconAvailable != 0 && marker.MapIconInvalid != 0,
                 "quest marker shape comes from installed EventIconType: " + quest.Name.ToString());
-            var icon = marker.MapIconAvailable;
-            Check(data.FileExists($"ui/icon/{icon / 1000 * 1000:000000}/{icon:000000}.tex"),
-                "quest marker texture exists in installed game files");
+            var icon = EorzeaEventTracker.QuestMarkerPolicy.Offer(marker.NpcIconAvailable, marker.IconRange);
+            var invalid = EorzeaEventTracker.QuestMarkerPolicy.Offer(marker.NpcIconInvalid, marker.IconRange);
+            Check(icon != 0 && icon != marker.NpcIconAvailable && invalid != marker.NpcIconInvalid,
+                "runtime selects real offer variants rather than diagnostic labels");
+            Check(data.FileExists($"ui/icon/{icon / 1000 * 1000:000000}/{icon:000000}.tex")
+                && data.FileExists($"ui/icon/{invalid / 1000 * 1000:000000}/{invalid:000000}.tex"),
+                "actual available/unavailable quest textures exist in installed game files");
+            Check(icon == (id is 71003 or 71004 ? 71221u : 71341u),
+                "quest marker matches visually inspected ordinary/unlock artwork");
         }
         var currency = items.GetRow(41629);
         Check(currency.Icon != 0 && data.FileExists($"ui/icon/{currency.Icon / 1000 * 1000:000000}/{currency.Icon:000000}.tex"),

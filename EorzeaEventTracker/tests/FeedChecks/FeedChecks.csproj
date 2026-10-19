@@ -9,6 +9,7 @@
     <Compile Include="../../EorzeaEventTracker/DeadlinePolicy.cs" Link="DeadlinePolicy.cs" />
     <Compile Include="../../EorzeaEventTracker/RewardCategoryPolicy.cs" Link="RewardCategoryPolicy.cs" />
     <Compile Include="../../EorzeaEventTracker/EventDiscoveryPolicy.cs" Link="EventDiscoveryPolicy.cs" />
+    <Compile Include="../../EorzeaEventTracker/QuestMarkerPolicy.cs" Link="QuestMarkerPolicy.cs" />
     <Compile Include="../../EorzeaEventTracker/QuestAccess.cs" Link="QuestAccess.cs" />
     <Compile Include="../../EorzeaEventTracker/ProgressModels.cs" Link="ProgressModels.cs" />
     <Compile Include="../../EorzeaEventTracker/RewardPreferences.cs" Link="RewardPreferences.cs" />

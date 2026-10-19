@@ -42,6 +42,7 @@ internal static class Program
         EnglishNameChecks.Run();
         CharacterSettingsChecks.Run();
         QuestAccessChecks.Run();
+        QuestMarkerChecks.Run();
         NextStepChecks.Run();
         RewardListChecks.Run();
         RewardDiscoveryChecks.Run();

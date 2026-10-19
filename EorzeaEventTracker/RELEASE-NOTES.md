@@ -1,11 +1,8 @@
-# Eorzea Event Tracker 0.24.0
+# Eorzea Event Tracker 0.24.1
 
-- Quest headings now show their actual in-game quest marker, selected through Quest.EventIconType rather than guessed from event names. Known locked quests use that marker's unavailable variant.
-- Journal and widget frames use thin graphite borders, restrained highlights, rounding and a small native border shadow.
-- Journal tabs have equal-height headers, compact journal/compass/gift pictograms and a gold active underline. Narrow layouts retain readable tabs with native scrolling; content controls keep their original compact padding.
-- Reward icons have rarity-colored inventory frames and a separate obtained checkmark. Prices include the installed game's currency icon when available.
-- Shared styled tooltips across the journal and widget use a larger heading, divider, description and conditions. Reward tooltips include the game's item description when present; map and quest-state hints explain availability.
-- Reward cards receive a subtle hover highlight. Clickable reward names underline on hover and retain their verified wiki links.
-- Missing assets fall back to text. Character progress, preferences and prior releases are preserved.
+- Fixed quest icons showing diagnostic text such as MAP ANONC QUEST. EventIconType values identify a texture family; its base image is a debug label, while offset 1 is the real quest marker.
+- Use the larger NPC marker artwork for ordinary and unlock quests, including the proper unavailable variant. Unknown/incomplete families fall back to text instead of displaying diagnostic images.
+- Verified actual installed textures visually for ordinary, locked and unlock families, including We Scare Bears and Grim and Grisly Games. Added regression checks using those quests and the shared runtime marker selector.
+- Other interface changes and character data are preserved. Previous releases remain available for rollback.
 
-Validation: installed-game quest-marker/currency-texture/rarity checks, Release build with warnings as errors and existing client/collector regression checks. In-game rendering and interaction require player verification.
+Validation: visual inspection of installed quest-icon variants, installed-game checks, client/collector regressions and Release build with warnings as errors. Live in-game verification remains with the player.

@@ -24,8 +24,11 @@ internal static class GameUiAssets
         {
             if (!Plugin.Data.GetExcelSheet<Quest>().TryGetRow(id, out var quest)) return 0;
             if (Plugin.Data.GetExcelSheet<EventIconType>().TryGetRow(quest.EventIconType.RowId, out var icons))
-                asset = new(icons.MapIconAvailable, icons.MapIconInvalid);
-            if (asset.Available == 0) asset = new(quest.Icon, quest.Icon);
+            {
+                var available = icons.NpcIconAvailable != 0 ? icons.NpcIconAvailable : icons.MapIconAvailable;
+                var invalid = icons.NpcIconInvalid != 0 ? icons.NpcIconInvalid : icons.MapIconInvalid;
+                asset = new(QuestMarkerPolicy.Offer(available, icons.IconRange), QuestMarkerPolicy.Offer(invalid, icons.IconRange));
+            }
             Quests[id] = asset;
         }
         return blocked && asset.Invalid != 0 ? asset.Invalid : asset.Available;

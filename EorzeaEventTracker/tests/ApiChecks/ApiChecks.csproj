@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework></PropertyGroup>
+  <ItemGroup><Compile Include="../../EorzeaEventTracker/QuestMarkerPolicy.cs" Link="QuestMarkerPolicy.cs" /></ItemGroup>
   <ItemGroup><Reference Include="Dalamud" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Dalamud.dll" /><Reference Include="Lumina" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Lumina.dll" />
     <Reference Include="Lumina.Excel" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Lumina.Excel.dll" /></ItemGroup>
 </Project>

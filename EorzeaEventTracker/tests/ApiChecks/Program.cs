@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using Dalamud.Game.Inventory;
 
-if (args.Length == 3 && args[0] == "--installed-data")
+if (args.Length == 3 && args[0] is "--installed-data" or "--quest-icons")
 {
     var dev = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "XIVLauncher", "addon", "Hooks", "dev");
     System.Runtime.Loader.AssemblyLoadContext.Default.Resolving += (context, name) =>
@@ -10,7 +10,8 @@ if (args.Length == 3 && args[0] == "--installed-data")
         var path = System.IO.Path.Combine(dev, name.Name + ".dll");
         return System.IO.File.Exists(path) ? context.LoadFromAssemblyPath(path) : null;
     };
-    InstalledDataChecks.Run(args[1], args[2]);
+    if (args[0] == "--quest-icons") QuestIconDiagnostics.Export(args[1], args[2]);
+    else InstalledDataChecks.Run(args[1], args[2]);
     return;
 }
 var names = Enum.GetNames<GameInventoryType>();
