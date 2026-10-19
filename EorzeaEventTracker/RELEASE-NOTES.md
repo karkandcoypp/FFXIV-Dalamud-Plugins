@@ -1,10 +1,9 @@
-# Eorzea Event Tracker 0.21.0
+# Eorzea Event Tracker 0.22.0
 
-- Added case-insensitive reward search by English name, with multi-word queries, clear action and visible result count. Search combines with remaining/favorites filters and resets on event or character changes.
-- Rewards now group missing favorites first, other missing rewards next, ignored missing rewards below active goals, and all obtained rewards last (including manually obtained favorites).
-- Choose recommended/feed order, alphabetical order, or ascending prices within each currency and status group. Unknown prices follow known prices. Sort preference is saved per character; collection totals and favorite budgets are unaffected by search.
-- Added a prominent deadline panel with larger countdown, colored edge and text explanation: calm green above 72 hours, amber at 72 hours or less, red at 24 hours or less. The event list and widget use the same urgency colors.
-- Countdown omits zero days for short durations and explicitly identifies the final minute. Upcoming and ended events have separate states.
-- No progress migration. Previous releases remain available for rollback.
+- Obtained rewards now live in a separate Obtained — N section, collapsed by default. Expansion state is saved per character and event occurrence. Search and filters also apply to this section; collection totals and favorite budgets are unchanged.
+- Added reward-type filters: gear, mounts, minions, housing and other. Types come from installed item/equipment/action data, so new feed rewards are classified automatically. Housing includes exterior furniture and fixtures; unclassified items remain under Other.
+- New badges identify event occurrences not yet viewed on the current character. They clear after two seconds of continuous visible detail viewing. Ordinary feed/translation refreshes do not re-mark known occurrences; a later recurrence is new.
+- Added a clearly labeled feed publication timestamp beside event details, distinct from local refresh/download time. New markers also appear in the compact widget.
+- Type filters, obtained-section preferences and viewed-event history are character-specific. Existing progress and preferences are preserved.
 
-Validation: reward sorting/search/profile and deadline-boundary tests, full client checks, collector tests and Release build with warnings as errors. In-game appearance still requires player verification.
+Validation: category/filter/discovery/profile regression tests, installed-game category/action checks, full client/collector checks and Release build with warnings as errors. In-game rendering still requires player verification.

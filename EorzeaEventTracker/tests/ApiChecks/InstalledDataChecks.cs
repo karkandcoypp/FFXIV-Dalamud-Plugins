@@ -36,6 +36,13 @@ internal static class InstalledDataChecks
                 "NPC coordinates exist in installed Level/Map data: " + npc);
         }
         var items = data.GetExcelSheet<Item>(Language.English);
+        var mountItem = items.GetRow(41491);
+        var mountAction = data.GetExcelSheet<ItemAction>().GetRow(mountItem.ItemAction.RowId);
+        Check(mountItem.Name.ToString() == "Rhiyes Identification Key" && mountAction.Action.RowId == 1322,
+            "installed game identifies mount rewards by action 1322 rather than generic Other category");
+        Check(data.GetExcelSheet<ItemUICategory>(Language.English).GetRow(81).Name.ToString() == "Minion"
+            && data.GetExcelSheet<ItemUICategory>(Language.English).GetRow(57).Name.ToString() == "Furnishing",
+            "installed category IDs match minion and housing filters");
         var requested = new Dictionary<uint, (long Price, uint Currency)>();
         foreach (var reward in e.GetProperty("tracking").GetProperty("rewards").EnumerateArray())
         {

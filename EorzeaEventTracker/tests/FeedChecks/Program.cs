@@ -44,6 +44,7 @@ internal static class Program
         QuestAccessChecks.Run();
         NextStepChecks.Run();
         RewardListChecks.Run();
+        RewardDiscoveryChecks.Run();
         DeadlineDisplayChecks.Run();
         await ItemWikiChecks.Run();
         var settings = new Configuration();

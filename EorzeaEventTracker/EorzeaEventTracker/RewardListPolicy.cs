@@ -8,10 +8,13 @@ public enum RewardSortMode { Recommended, Name, Price }
 public static class RewardListPolicy
 {
     public static List<TrackedReward> Select(IEnumerable<TrackedReward> rewards, string search, RewardSortMode sort,
-        CharacterSettings preferences, IReadOnlyDictionary<uint, RewardProgress> progress, bool remainingOnly, bool favoritesOnly)
+        CharacterSettings preferences, IReadOnlyDictionary<uint, RewardProgress> progress, bool remainingOnly, bool favoritesOnly,
+        RewardCategory category = RewardCategory.All, IReadOnlyDictionary<uint, RewardCategory>? categories = null)
     {
         var terms = (search ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var filtered = rewards.Where(r => terms.All(term => r.Name.Contains(term, StringComparison.OrdinalIgnoreCase))
+        RewardCategory Category(TrackedReward r) => categories != null && categories.TryGetValue(r.Id, out var value) ? value : RewardCategory.Other;
+        var filtered = rewards.Where(r => (category == RewardCategory.All || Category(r) == category)
+            && terms.All(term => r.Name.Contains(term, StringComparison.OrdinalIgnoreCase))
             && (!favoritesOnly || preferences.FavoriteRewards.Contains(r.Id))
             && (!remainingOnly || !preferences.IgnoredRewards.Contains(r.Id) && !progress.GetValueOrDefault(r.Id).Confirmed));
         int Group(TrackedReward r) => progress.GetValueOrDefault(r.Id).Confirmed ? 3

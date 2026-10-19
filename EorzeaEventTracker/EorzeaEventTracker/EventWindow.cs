@@ -33,6 +33,9 @@ public sealed class EventWindow : Window, IDisposable
     private bool showHidden;
     private string rewardSearch = "";
     private string rewardSearchEvent = "";
+    private string viewingEventKey = "";
+    private DateTime viewStarted;
+    private DateTime lastViewFrame;
     private DateTime mapErrorUntil;
     private EventInfo? localizedEvent;
     private static readonly Vector4 Teal = JournalTheme.Green;
@@ -56,6 +59,7 @@ public sealed class EventWindow : Window, IDisposable
         requestedTab = "";
         rewardSearch = "";
         rewardSearchEvent = "";
+        viewingEventKey = "";
         showHidden = false;
         settingsVisible = false;
         mapErrorUntil = default;
@@ -216,6 +220,12 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.TextColored(active ? new Vector4(.96f, .93f, .85f, 1) : new Vector4(.84f, .82f, .76f, 1), title);
         ImGui.PopTextWrapPos();
         ImGui.SetCursorPosX(cursor.X + padding);
+        if (EventDiscoveryPolicy.IsNew(plugin.Preferences, e))
+        {
+            ImGui.TextColored(Gold, T("NEW"));
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Not yet viewed on this character. The mark clears after viewing event details."));
+            ImGui.SameLine();
+        }
         ImGui.TextColored(accent, T(e.Active(now) ? "LIVE NOW" : "UPCOMING"));
         ImGui.SetCursorPosX(cursor.X + padding);
         ImGui.PushTextWrapPos(cursor.X + width - padding);
@@ -258,6 +268,12 @@ public sealed class EventWindow : Window, IDisposable
     {
         plugin.Progress.Catalog.TryGetValue(e.Id, out var definition);
         DrawHero(e, now);
+        TrackViewedEvent(e);
+        if (plugin.Feed.Feed.GeneratedAt > DateTimeOffset.MinValue)
+        {
+            ImGui.TextDisabled(F("Feed updated: {0}", plugin.Feed.Feed.GeneratedAt.ToLocalTime().ToString("g", L.Culture)));
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Publication time of the event feed, not the last download or a change to this individual event."));
+        }
         DrawNextStep(e, definition, now);
         if (e.EndsAt.HasValue) ImGui.TextDisabled(F("Ends {0}", e.EndsAt.Value.ToLocalTime().ToString("f", L.Culture)));
         if (!e.Verified) ImGui.TextColored(Gold, T("Partial details — check the official page"));
@@ -487,6 +503,15 @@ public sealed class EventWindow : Window, IDisposable
             plugin.Save();
         }
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Sorts within groups. Missing favorites come first; obtained rewards stay at the end. Prices are compared within each currency; unknown prices follow known prices."));
+        var category = Enum.IsDefined(plugin.Preferences.RewardTypeFilter) ? (int)plugin.Preferences.RewardTypeFilter : 0;
+        ImGui.SetNextItemWidth(Math.Min(280 * S, ImGui.GetContentRegionAvail().X * .65f));
+        if (ImGui.Combo(T("Reward type") + "###RewardCategory", ref category,
+            T("All types") + "\0" + T("Gear") + "\0" + T("Mounts") + "\0" + T("Minions") + "\0" + T("Housing") + "\0" + T("Other") + "\0"))
+        {
+            plugin.Preferences.RewardTypeFilter = (RewardCategory)category;
+            plugin.Save();
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Types use installed item data. Gear includes equipment; Housing includes outdoor items. Unclassified items appear under Other."));
         var remaining = remainingOnly;
         if (ImGui.Checkbox(T("Show remaining rewards only") + "###Show remaining rewards only", ref remaining)) { remainingOnly = remaining; plugin.Save(); }
         var onlyFavorites = favoritesOnly;
@@ -499,20 +524,29 @@ public sealed class EventWindow : Window, IDisposable
             DrawFavoriteBudget(definition);
         }
         var visibleRewards = RewardListPolicy.Select(definition.Rewards, rewardSearch, plugin.Preferences.RewardSort,
-            plugin.Preferences, plugin.Progress.Rewards, remainingOnly, favoritesOnly);
+            plugin.Preferences, plugin.Progress.Rewards, remainingOnly, favoritesOnly,
+            (RewardCategory)category, plugin.Progress.Categories);
         ImGui.TextDisabled(F("Showing {0} of {1} rewards", visibleRewards.Count, definition.Rewards.Count));
         if (visibleRewards.Count == 0)
-            ImGui.TextWrapped(T("No rewards match. Change the search text or filters."));
-        var columns = ImGui.GetContentRegionAvail().X >= 560 * S ? 2 : 1;
-        if (ImGui.BeginTable("Rewards", columns, ImGuiTableFlags.SizingStretchSame))
+            ImGui.TextWrapped(T(!plugin.Progress.Available ? "Waiting for character data" : "No rewards match. Change the search text or filters."));
+        var pendingRewards = visibleRewards.Where(r => !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed).ToList();
+        var obtainedRewards = visibleRewards.Where(r => plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed).ToList();
+        DrawRewardGrid("PendingRewards", pendingRewards);
+        if (obtainedRewards.Count > 0)
         {
-            foreach (var reward in visibleRewards)
+            var key = EventDiscoveryPolicy.Key(localizedEvent!);
+            var expanded = plugin.Preferences.ExpandedObtainedEvents.Contains(key);
+            ImGui.SetNextItemOpen(expanded, ImGuiCond.Always);
+            var open = ImGui.CollapsingHeader(F("Obtained — {0}", obtainedRewards.Count) + "###ObtainedRewards");
+            if (open != expanded)
             {
-                var state = plugin.Progress.Rewards.GetValueOrDefault(reward.Id);
-                ImGui.TableNextColumn();
-                DrawReward(reward, state);
+                if (open) plugin.Preferences.ExpandedObtainedEvents.Add(key);
+                else plugin.Preferences.ExpandedObtainedEvents.Remove(key);
+                plugin.Save();
             }
-            ImGui.EndTable();
+            if (open) DrawRewardGrid("ObtainedRewards", obtainedRewards);
+            else if (rewardSearch.Length > 0 && pendingRewards.Count == 0)
+                ImGui.TextWrapped(T("Search matches are in the obtained section above. Expand it to view them."));
         }
         ImGui.Spacing();
         if (ImGui.CollapsingHeader(T("HOW TRACKING WORKS") + "###TrackingHelp"))
@@ -520,6 +554,33 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.TextWrapped(T("Unlocked = registered collection. In bags / equipped = currently found. Previously obtained = seen before on this character. Earned from quest = guaranteed quest reward."));
             ImGui.TextWrapped(T("Not detected does not mean never owned: retainers, housing, glamour dresser and armoire are not scanned. Items seen by this plugin are remembered per character."));
         }
+    }
+
+    private void TrackViewedEvent(EventInfo e)
+    {
+        if (!plugin.HasCharacterPreferences) return;
+        var key = EventDiscoveryPolicy.Key(e);
+        var now = DateTime.UtcNow;
+        if (viewingEventKey != key || now - lastViewFrame > TimeSpan.FromMilliseconds(500))
+        {
+            viewingEventKey = key;
+            viewStarted = now;
+        }
+        lastViewFrame = now;
+        if (now - viewStarted >= TimeSpan.FromSeconds(2) && EventDiscoveryPolicy.MarkViewed(plugin.Preferences, e)) plugin.Save();
+    }
+
+    private void DrawRewardGrid(string id, IReadOnlyList<TrackedReward> rewards)
+    {
+        if (rewards.Count == 0) return;
+        var columns = ImGui.GetContentRegionAvail().X >= 560 * S ? 2 : 1;
+        if (!ImGui.BeginTable(id, columns, ImGuiTableFlags.SizingStretchSame)) return;
+        foreach (var reward in rewards)
+        {
+            ImGui.TableNextColumn();
+            DrawReward(reward, plugin.Progress.Rewards.GetValueOrDefault(reward.Id));
+        }
+        ImGui.EndTable();
     }
 
     private void DrawFavoriteBudget(TrackingDefinition definition)

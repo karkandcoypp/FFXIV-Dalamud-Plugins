@@ -18,6 +18,7 @@ public sealed class CharacterProgress
     public Dictionary<uint, bool> Quests { get; } = new();
     public Dictionary<uint, QuestAccess> QuestAccess { get; } = new();
     public Dictionary<uint, RewardProgress> Rewards { get; } = new();
+    public Dictionary<uint, RewardCategory> Categories { get; } = new();
     public Dictionary<uint, long> CurrencyBalances { get; } = new();
     private readonly Dictionary<uint, RewardProgress> automaticRewards = new();
     public bool Available { get; private set; }
@@ -82,6 +83,7 @@ public sealed class CharacterProgress
             Quests.Clear();
             QuestAccess.Clear();
             Rewards.Clear();
+            Categories.Clear();
             var quantities = new Dictionary<uint, int>();
             foreach (var type in Containers)
                 foreach (var item in Plugin.Inventory.GetInventoryItems(type))
@@ -100,6 +102,7 @@ public sealed class CharacterProgress
                     QuestAccess[quest.Id] = GameQuestAccess.Read(quest.Id);
                 }
             var items = Plugin.Data.GetExcelSheet<Item>();
+            var actions = Plugin.Data.GetExcelSheet<ItemAction>();
             foreach (var reward in definitions.SelectMany(d => d.Rewards))
             {
                 if (!items.TryGetRow(reward.Id, out var row))
@@ -108,6 +111,8 @@ public sealed class CharacterProgress
                     Rewards[reward.Id] = ProgressPolicy.ApplyManual(new(RewardState.Unknown), manual.Contains(reward.Id));
                     continue;
                 }
+                var actionId = row.ItemAction.RowId != 0 && actions.TryGetRow(row.ItemAction.RowId, out var action) ? action.Action.RowId : 0;
+                Categories[reward.Id] = RewardCategoryPolicy.Classify(row.EquipSlotCategory.RowId, row.ItemUICategory.RowId, actionId);
                 bool? unlocked = Plugin.Unlocks.IsItemUnlockable(row) ? Plugin.Unlocks.IsItemUnlocked(row) : null;
                 var state = ProgressPolicy.Resolve(true, unlocked, quantities.GetValueOrDefault(reward.Id),
                     reward.EarnedByQuest != 0 && Quests.GetValueOrDefault(reward.EarnedByQuest)
@@ -158,7 +163,7 @@ public sealed class CharacterProgress
         }
     }
 
-    private void Clear() { CurrencyBalances.Clear(); Available = false; QuestAccess.Clear(); Quests.Clear(); Rewards.Clear(); automaticRewards.Clear(); }
+    private void Clear() { CurrencyBalances.Clear(); Available = false; Categories.Clear(); QuestAccess.Clear(); Quests.Clear(); Rewards.Clear(); automaticRewards.Clear(); }
     private static bool GuaranteesReward(uint questId, uint itemId)
     {
         if (!Plugin.Data.GetExcelSheet<Quest>().TryGetRow(questId, out var row)) return false;

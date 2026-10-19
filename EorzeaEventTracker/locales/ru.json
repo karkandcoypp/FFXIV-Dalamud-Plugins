@@ -219,5 +219,19 @@
   "Starts in {0}m": "Начнётся через {0} мин",
   "Ends in {0}m": "Осталось: {0} мин",
   "Starts in less than a minute": "Начнётся меньше чем через минуту",
-  "Less than a minute left": "Осталось меньше минуты"
+  "Less than a minute left": "Осталось меньше минуты",
+  "NEW": "НОВОЕ",
+  "Not yet viewed on this character. The mark clears after viewing event details.": "Это событие ещё не просмотрено этим персонажем. Отметка исчезнет после просмотра подробностей.",
+  "Feed updated: {0}": "Лента обновлена: {0}",
+  "Publication time of the event feed, not the last download or a change to this individual event.": "Время публикации ленты событий, а не последнего скачивания или изменения отдельного события.",
+  "Reward type": "Тип награды",
+  "All types": "Все типы",
+  "Gear": "Одежда и экипировка",
+  "Mounts": "Маунты",
+  "Minions": "Миньоны",
+  "Housing": "Интерьер",
+  "Other": "Прочее",
+  "Types use installed item data. Gear includes equipment; Housing includes outdoor items. Unclassified items appear under Other.": "Тип определяется по данным предмета из игры. Экипировка включает оружие и аксессуары; интерьер — также садовую мебель и элементы дома. Неопределённые предметы находятся в разделе «Прочее».",
+  "Obtained — {0}": "Получено — {0}",
+  "Search matches are in the obtained section above. Expand it to view them.": "Найденные награды находятся в разделе «Получено» выше. Разверните его, чтобы увидеть предметы."
 }

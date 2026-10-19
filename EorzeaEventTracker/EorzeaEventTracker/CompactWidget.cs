@@ -82,6 +82,7 @@ public sealed class CompactWidget : Window
         {
             ImGui.PushID(e.Id);
             var title = L.Text(e.Title, e);
+            if (EventDiscoveryPolicy.IsNew(plugin.Preferences, e)) title += "  · " + L.Text("NEW");
             var cursor = ImGui.GetCursorPos();
             var width = ImGui.GetContentRegionAvail().X;
             var height = ImGui.CalcTextSize(title, false, width - 8 * S).Y + 8 * S;

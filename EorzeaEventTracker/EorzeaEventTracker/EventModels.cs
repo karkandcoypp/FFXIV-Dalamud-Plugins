@@ -62,6 +62,9 @@ public class CharacterSettings
     public bool RemainingOnly { get; set; }
     public bool FavoritesOnly { get; set; }
     public RewardSortMode RewardSort { get; set; }
+    public RewardCategory RewardTypeFilter { get; set; }
+    public HashSet<string> ExpandedObtainedEvents { get; set; } = new();
+    public HashSet<string> ViewedEvents { get; set; } = new();
     private static string EventVisibilityKey(EventInfo e) => e.Id + ":" +
         (e.EndsAt?.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unknown");
     public bool IsEventHidden(EventInfo e) => HiddenEvents.Contains(EventVisibilityKey(e));
