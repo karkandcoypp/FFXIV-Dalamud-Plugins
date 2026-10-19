@@ -31,6 +31,8 @@ public sealed class EventWindow : Window, IDisposable
     private bool remainingOnly { get => plugin.Preferences.RemainingOnly; set => plugin.Preferences.RemainingOnly = value; }
     private bool favoritesOnly { get => plugin.Preferences.FavoritesOnly; set => plugin.Preferences.FavoritesOnly = value; }
     private bool showHidden;
+    private string rewardSearch = "";
+    private string rewardSearchEvent = "";
     private DateTime mapErrorUntil;
     private EventInfo? localizedEvent;
     private static readonly Vector4 Teal = JournalTheme.Green;
@@ -52,6 +54,8 @@ public sealed class EventWindow : Window, IDisposable
         selected = "";
         nextStep = null;
         requestedTab = "";
+        rewardSearch = "";
+        rewardSearchEvent = "";
         showHidden = false;
         settingsVisible = false;
         mapErrorUntil = default;
@@ -214,7 +218,9 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.SetCursorPosX(cursor.X + padding);
         ImGui.TextColored(accent, T(e.Active(now) ? "LIVE NOW" : "UPCOMING"));
         ImGui.SetCursorPosX(cursor.X + padding);
-        ImGui.TextColored(Muted, Countdown(e, now));
+        ImGui.PushTextWrapPos(cursor.X + width - padding);
+        ImGui.TextColored(JournalTheme.DeadlineColor(DeadlinePolicy.Status(e, now)), Countdown(e, now));
+        ImGui.PopTextWrapPos();
         if (plugin.Progress.Catalog.TryGetValue(e.Id, out var def))
         {
             var (done, total) = RewardPreferences.Progress(def.Rewards, plugin.Preferences.IgnoredRewards, plugin.Progress.Rewards);
@@ -461,6 +467,26 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.PlotHistogram, Teal);
         ImGui.ProgressBar(total == 0 ? 0 : (float)count / total, new Vector2(-1, 9 * S), "");
         ImGui.PopStyleColor();
+        if (rewardSearchEvent != localizedEvent?.Id)
+        {
+            rewardSearch = "";
+            rewardSearchEvent = localizedEvent?.Id ?? "";
+        }
+        ImGui.SetNextItemWidth(-1);
+        ImGui.InputTextWithHint("###RewardSearch", T("Search rewards by English name"), ref rewardSearch, 256);
+        if (rewardSearch.Length > 0)
+        {
+            if (ImGui.SmallButton(T("Clear search") + "###ClearRewardSearch")) rewardSearch = "";
+        }
+        var sort = Enum.IsDefined(plugin.Preferences.RewardSort) ? (int)plugin.Preferences.RewardSort : 0;
+        ImGui.SetNextItemWidth(Math.Min(280 * S, ImGui.GetContentRegionAvail().X * .65f));
+        if (ImGui.Combo(T("Sort") + "###RewardSort", ref sort,
+            T("Recommended") + "\0" + T("Name (A-Z)") + "\0" + T("Price (low to high)") + "\0"))
+        {
+            plugin.Preferences.RewardSort = (RewardSortMode)sort;
+            plugin.Save();
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Sorts within groups. Missing favorites come first; obtained rewards stay at the end. Prices are compared within each currency; unknown prices follow known prices."));
         var remaining = remainingOnly;
         if (ImGui.Checkbox(T("Show remaining rewards only") + "###Show remaining rewards only", ref remaining)) { remainingOnly = remaining; plugin.Save(); }
         var onlyFavorites = favoritesOnly;
@@ -472,17 +498,17 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.TextColored(Gold, F("FAVORITES   {0} / {1} obtained", confirmed, favorites.Count));
             DrawFavoriteBudget(definition);
         }
-        if (!definition.Rewards.Any(r => (!favoritesOnly || plugin.Preferences.FavoriteRewards.Contains(r.Id))
-            && (!remainingOnly || (!plugin.Preferences.IgnoredRewards.Contains(r.Id) && !plugin.Progress.Rewards.GetValueOrDefault(r.Id).Confirmed))))
-            ImGui.TextWrapped(T("No rewards match these filters. Mark rewards as favorites or change the filters."));
+        var visibleRewards = RewardListPolicy.Select(definition.Rewards, rewardSearch, plugin.Preferences.RewardSort,
+            plugin.Preferences, plugin.Progress.Rewards, remainingOnly, favoritesOnly);
+        ImGui.TextDisabled(F("Showing {0} of {1} rewards", visibleRewards.Count, definition.Rewards.Count));
+        if (visibleRewards.Count == 0)
+            ImGui.TextWrapped(T("No rewards match. Change the search text or filters."));
         var columns = ImGui.GetContentRegionAvail().X >= 560 * S ? 2 : 1;
         if (ImGui.BeginTable("Rewards", columns, ImGuiTableFlags.SizingStretchSame))
         {
-            foreach (var reward in definition.Rewards)
+            foreach (var reward in visibleRewards)
             {
                 var state = plugin.Progress.Rewards.GetValueOrDefault(reward.Id);
-                if (remainingOnly && (state.Confirmed || plugin.Preferences.IgnoredRewards.Contains(reward.Id))) continue;
-                if (favoritesOnly && !plugin.Preferences.FavoriteRewards.Contains(reward.Id)) continue;
                 ImGui.TableNextColumn();
                 DrawReward(reward, state);
             }
@@ -714,7 +740,7 @@ public sealed class EventWindow : Window, IDisposable
         var accent = ImGui.GetCursorScreenPos();
         draw.AddLine(accent, accent + new Vector2(46 * scale, 0), ImGui.ColorConvertFloat4ToU32(Gold), 2 * scale);
         ImGui.Dummy(new Vector2(0, 2 * scale));
-        ImGui.TextColored(Gold, Countdown(e, now));
+        DrawDeadline(e, now);
         ImGui.Spacing();
     }
 
@@ -788,12 +814,36 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.TextWrapped(T("Leave URL empty for bundled / cached data. Character tracking works locally and refreshes every second."));
     }
 
-    private string Countdown(EventInfo e, DateTimeOffset now)
+    private string Countdown(EventInfo e, DateTimeOffset now) => DeadlinePolicy.Countdown(e, now, L);
+
+    private void DrawDeadline(EventInfo e, DateTimeOffset now)
     {
-        var future = e.Upcoming(now);
-        var duration = (future ? e.StartsAt : e.EndsAt) - now;
-        if (duration is not { } remaining || remaining <= TimeSpan.Zero) return T("Ended");
-        return F(future ? "Starts in {0}d {1}h {2}m" : "Ends in {0}d {1}h {2}m", (int)remaining.TotalDays, remaining.Hours, remaining.Minutes);
+        var status = DeadlinePolicy.Status(e, now);
+        var color = JournalTheme.DeadlineColor(status);
+        var text = Countdown(e, now);
+        var scale = S;
+        var width = ImGui.GetContentRegionAvail().X;
+        var padding = 10 * scale;
+        var labelHeight = ImGui.CalcTextSize(T(DeadlinePolicy.Label(status)), false, width - padding * 2).Y;
+        float textHeight;
+        ImGui.SetWindowFontScale(UiScale * 1.3f);
+        try { textHeight = ImGui.CalcTextSize(text, false, width - padding * 2).Y; }
+        finally { ImGui.SetWindowFontScale(UiScale); }
+        var height = padding * 2 + labelHeight + 5 * scale + textHeight;
+        var start = ImGui.GetCursorScreenPos();
+        var cursor = ImGui.GetCursorPos();
+        var draw = ImGui.GetWindowDrawList();
+        draw.AddRectFilled(start, start + new Vector2(width, height),
+            ImGui.ColorConvertFloat4ToU32(new Vector4(color.X, color.Y, color.Z, .10f * Opacity)), 5 * scale);
+        draw.AddRectFilled(start, start + new Vector2(3 * scale, height), ImGui.ColorConvertFloat4ToU32(color), 2 * scale);
+        ImGui.SetCursorPos(cursor + new Vector2(padding));
+        ImGui.PushTextWrapPos(cursor.X + width - padding);
+        ImGui.TextColored(color, T(DeadlinePolicy.Label(status)));
+        ImGui.SetCursorPos(cursor + new Vector2(padding, padding + labelHeight + 5 * scale));
+        ImGui.SetWindowFontScale(UiScale * 1.3f);
+        try { ImGui.TextColored(JournalTheme.Text, text); }
+        finally { ImGui.SetWindowFontScale(UiScale); ImGui.PopTextWrapPos(); }
+        ImGui.SetCursorPos(cursor + new Vector2(0, height + 8 * scale));
     }
 
     private void Section(string title, System.Collections.Generic.IEnumerable<string> items)

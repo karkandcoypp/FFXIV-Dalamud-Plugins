@@ -61,6 +61,7 @@ public class CharacterSettings
     public bool ShowCompactWidget { get; set; }
     public bool RemainingOnly { get; set; }
     public bool FavoritesOnly { get; set; }
+    public RewardSortMode RewardSort { get; set; }
     private static string EventVisibilityKey(EventInfo e) => e.Id + ":" +
         (e.EndsAt?.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unknown");
     public bool IsEventHidden(EventInfo e) => HiddenEvents.Contains(EventVisibilityKey(e));

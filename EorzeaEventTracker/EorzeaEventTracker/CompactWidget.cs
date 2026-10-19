@@ -96,9 +96,11 @@ public sealed class CompactWidget : Window
             ImGui.TextColored(new Vector4(.92f, .90f, .84f, 1), title);
             ImGui.PopTextWrapPos();
             ImGui.SetCursorPos(cursor + new Vector2(0, height + 4 * S));
-            var remaining = e.EndsAt!.Value - now;
-            ImGui.TextColored(remaining <= TimeSpan.FromDays(1) ? Gold : Teal,
-                L.Format("Ends in {0}d {1}h {2}m", (int)remaining.TotalDays, remaining.Hours, remaining.Minutes));
+            var deadline = DeadlinePolicy.Status(e, now);
+            ImGui.PushTextWrapPos(0);
+            ImGui.TextColored(JournalTheme.DeadlineColor(deadline), DeadlinePolicy.Countdown(e, now, L));
+            ImGui.PopTextWrapPos();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(L.Text(DeadlinePolicy.Label(deadline)));
             if (!plugin.Progress.ReadyForReminders) ImGui.TextWrapped(L.Text("Waiting for character data"));
             else if (plugin.Progress.Catalog.TryGetValue(e.Id, out var definition))
             {

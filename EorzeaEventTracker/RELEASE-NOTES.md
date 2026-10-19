@@ -1,10 +1,10 @@
-# Eorzea Event Tracker 0.20.0
+# Eorzea Event Tracker 0.21.0
 
-- Added a Next step block below the selected event heading. It uses the current character's loaded quest progress, access requirements and reward goals.
-- Follow the main objective and its prerequisite chain; show class/level blockers and preserve alternative unlock routes instead of choosing an arbitrary city. Already accepted quests point to the current journal objective.
-- After quests, show the currency still needed for favorite rewards. Farming links to How to join; merchant maps are recommended only when known currency totals cover the selected rewards.
-- Unknown prices, balances or collection states prompt review instead of invented totals. Completed favorites or tracked collections offer to hide the event.
-- Future/ended events, incomplete tracking and unsupported conditions have explicit guidance. Prerequisite-only alternatives in automatic feeds are not treated as additional mandatory objectives.
-- No configuration migration. Previous releases remain available for rollback.
+- Added case-insensitive reward search by English name, with multi-word queries, clear action and visible result count. Search combines with remaining/favorites filters and resets on event or character changes.
+- Rewards now group missing favorites first, other missing rewards next, ignored missing rewards below active goals, and all obtained rewards last (including manually obtained favorites).
+- Choose recommended/feed order, alphabetical order, or ascending prices within each currency and status group. Unknown prices follow known prices. Sort preference is saved per character; collection totals and favorite budgets are unaffected by search.
+- Added a prominent deadline panel with larger countdown, colored edge and text explanation: calm green above 72 hours, amber at 72 hours or less, red at 24 hours or less. The event list and widget use the same urgency colors.
+- Countdown omits zero days for short durations and explicitly identifies the final minute. Upcoming and ended events have separate states.
+- No progress migration. Previous releases remain available for rollback.
 
-Validation: client decision-policy and regression checks, collector tests, Release build with warnings as errors. Live in-game rendering and map clicks require player verification.
+Validation: reward sorting/search/profile and deadline-boundary tests, full client checks, collector tests and Release build with warnings as errors. In-game appearance still requires player verification.

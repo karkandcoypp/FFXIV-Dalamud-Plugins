@@ -18,5 +18,13 @@ internal static class JournalTheme
     public static readonly Vector4 Green = new(.49f, .77f, .61f, 1);
     public static readonly Vector4 Amber = new(.88f, .73f, .44f, 1);
     public static readonly Vector4 Red = new(.85f, .54f, .49f, 1);
+    public static Vector4 DeadlineColor(DeadlineStatus status) => status switch
+    {
+        DeadlineStatus.Comfortable => Green,
+        DeadlineStatus.Soon => Amber,
+        DeadlineStatus.Urgent => Red,
+        DeadlineStatus.Upcoming => Gold,
+        _ => Muted,
+    };
     public static Vector4 WithOpacity(Vector4 color, float opacity) => new(color.X, color.Y, color.Z, color.W * opacity);
 }
