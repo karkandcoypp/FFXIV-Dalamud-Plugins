@@ -22,6 +22,9 @@ public sealed class EventWindow : Window, IDisposable
     private DateTime mapErrorUntil;
     private EventInfo? localizedEvent;
     private static readonly Vector4 Teal = new(.49f, .69f, .62f, 1);
+    private static readonly Vector4 QuestGreen = new(.48f, .83f, .59f, 1);
+    private static readonly Vector4 QuestAmber = new(.96f, .75f, .38f, 1);
+    private static readonly Vector4 QuestRed = new(.94f, .55f, .48f, 1);
     private static readonly Vector4 Gold = new(.84f, .72f, .48f, 1);
     private static readonly Vector4 Muted = new(.61f, .61f, .59f, 1);
     private Localizer L => plugin.Locale;
@@ -285,10 +288,17 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.PushID((int)quest.Id);
             var known = plugin.Progress.Available && plugin.Progress.Quests.TryGetValue(quest.Id, out _);
             var done = known && plugin.Progress.Quests[quest.Id];
-            ImGui.TextColored(done ? Teal : Muted, T(done ? "[DONE]" : known ? "[TODO]" : "[ ... ]"));
+            var access = known ? plugin.Progress.QuestAccess.GetValueOrDefault(quest.Id) : null;
+            var blocked = access?.Blocked == true;
+            ImGui.TextColored(done ? QuestGreen : !known ? Muted : blocked ? QuestRed : QuestAmber,
+                T(done ? "[DONE]" : !known ? "[ ... ]" : blocked ? "[LOCKED]" : access?.Accepted == true ? "[IN PROGRESS]" : "[TODO]"));
             ImGui.SameLine();
             ImGui.TextWrapped(E(quest.Name));
-            DrawLocationButton(quest.LocationId);
+            if (access?.Accepted != true) DrawLocationButton(quest.LocationId);
+            if (!done && known) DrawQuestAccess(access, 0, new HashSet<uint> { quest.Id });
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
             ImGui.PopID();
         }
         ImGui.TextWrapped(T("Quest completion does not mean all shop rewards are collected."));
@@ -441,6 +451,50 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.PopStyleColor();
         ImGui.PopStyleVar(3);
         ImGui.PopID();
+    }
+
+    private void DrawQuestAccess(QuestAccess? access, int depth, HashSet<uint> path)
+    {
+        if (access == null || !access.Known) { ImGui.TextWrapped(T("Quest requirements could not be checked.")); return; }
+        if (access.Accepted) { ImGui.TextWrapped(T("Quest already accepted. Open your quest journal and follow the current objective; the starting NPC may have moved.")); return; }
+        if (!access.LevelMet) ImGui.TextColored(QuestAmber, F("Required level: {0} (current class)", access.Level));
+        if (!access.ClassMet) ImGui.TextWrapped(F("Required class or job: {0}", access.ClassName));
+        var previousMet = QuestAccess.MeetsPrevious(access.Join, access.Previous);
+        if (previousMet != true && access.Previous.Count > 0)
+        {
+            ImGui.TextWrapped(T(previousMet == null ? "Check prerequisite quests (special conditions):"
+                : access.Join == 2 ? "Complete ONE of these quests:" : "Complete these quests first:"));
+            foreach (var requirement in access.Previous)
+            {
+                if (access.Join == 1 && requirement.Complete) continue;
+                ImGui.PushID((int)requirement.Id);
+                ImGui.Indent(12 * S);
+                ImGui.TextColored(requirement.Complete ? QuestGreen : QuestAmber, requirement.Complete ? "+" : "-");
+                ImGui.SameLine();
+                ImGui.TextWrapped(requirement.Name);
+                if (!requirement.Complete && depth < 4 && !path.Contains(requirement.Id)
+                    && ImGui.TreeNode(T("How to unlock") + "###Prerequisite"))
+                {
+                    var location = GameQuestAccess.Location(requirement.Id);
+                    if (location != null)
+                    {
+                        ImGui.TextWrapped($"{location.Npc} — {location.Zone} (X:{location.X:F1} Y:{location.Y:F1})");
+                        if (ImGui.SmallButton(T("Where to go") + "###PrerequisiteMap"))
+                            if (!EventNavigation.Open(location)) mapErrorUntil = DateTime.UtcNow.AddSeconds(10);
+                    }
+                    path.Add(requirement.Id);
+                    DrawQuestAccess(GameQuestAccess.Read(requirement.Id), depth + 1, path);
+                    path.Remove(requirement.Id);
+                    ImGui.TreePop();
+                }
+                ImGui.Unindent(12 * S);
+                ImGui.PopID();
+            }
+        }
+        if (access.Seasonal) ImGui.TextWrapped(T("Seasonal quest: its NPC is available only during the relevant event."));
+        if (access.Partial) ImGui.TextWrapped(T("Some conditions cannot be checked automatically. Check the quest requirements in the game or official guide."));
+        else if (!access.Blocked) ImGui.TextWrapped(T("Checked level and quest prerequisites are met. If the NPC is missing, check the event dates and whether the quest is already in your journal."));
+        if (access.Blocked) ImGui.TextWrapped(T("The quest NPC may be unavailable until these requirements are met."));
     }
 
     private void DrawLocationButton(string locationId)

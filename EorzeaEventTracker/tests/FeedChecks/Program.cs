@@ -31,6 +31,7 @@ internal static class Program
         FavoriteBudgetChecks.Run();
         EnglishNameChecks.Run();
         CharacterSettingsChecks.Run();
+        QuestAccessChecks.Run();
         var settings = new Configuration();
         Check(!settings.ShowCompactWidget, "compact widget starts hidden for existing configurations");
         settings.ShowCompactWidget = true;

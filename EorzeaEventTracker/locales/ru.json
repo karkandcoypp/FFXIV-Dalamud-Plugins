@@ -148,5 +148,20 @@
   "Item and NPC names always stay in English. Interface and event descriptions use your selected language.": "Названия предметов и NPC всегда на английском. Интерфейс и описания событий используют выбранный язык.",
   "Item, NPC and quest names always stay in English. Interface and event descriptions use your selected language.": "Названия предметов, NPC и квестов всегда на английском. Интерфейс и описания событий используют выбранный язык.",
   "Display and reward preferences belong to this character. The event feed URL is shared.": "Настройки отображения и выбор наград сохраняются для этого персонажа. Адрес ленты событий общий.",
-  "Log in to edit this character's preferences.": "Войдите персонажем, чтобы изменить его настройки."
+  "Log in to edit this character's preferences.": "Войдите персонажем, чтобы изменить его настройки.",
+  "[LOCKED]": "[НЕДОСТУПНО]",
+  "Required level: {0} (current class)": "Требуется уровень {0} на текущем классе",
+  "Switch to a class or job allowed for this quest.": "Переключитесь на класс или профессию, подходящие для этого квеста.",
+  "Check prerequisite quests (special conditions):": "Проверьте предварительные квесты (особые условия):",
+  "Complete ONE of these quests:": "Завершите ОДИН из этих квестов:",
+  "Complete these quests first:": "Сначала завершите эти квесты:",
+  "How to unlock": "Как открыть",
+  "Quest requirements could not be checked.": "Не удалось проверить условия доступа к квесту.",
+  "Some conditions cannot be checked automatically. Check the quest requirements in the game or official guide.": "Часть условий нельзя проверить автоматически. Уточните требования в игре или официальном руководстве.",
+  "Checked level and quest prerequisites are met. If the NPC is missing, check the event dates and whether the quest is already in your journal.": "Проверенные требования по уровню и предыдущим квестам выполнены. Если NPC нет, проверьте сроки события и наличие квеста в журнале.",
+  "The quest NPC may be unavailable until these requirements are met.": "NPC квеста может быть недоступен, пока эти условия не выполнены.",
+  "Required class or job: {0}": "Требуется класс или профессия: {0}",
+  "Seasonal quest: its NPC is available only during the relevant event.": "Сезонный квест: его NPC доступен только во время соответствующего события.",
+  "[IN PROGRESS]": "[В ПРОЦЕССЕ]",
+  "Quest already accepted. Open your quest journal and follow the current objective; the starting NPC may have moved.": "Квест уже принят. Откройте журнал заданий и следуйте текущей цели: начальный NPC мог переместиться."
 }

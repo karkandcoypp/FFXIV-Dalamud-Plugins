@@ -3,6 +3,7 @@
   <ItemGroup>
     <Compile Include="../../EorzeaEventTracker/EventFeedService.cs" Link="EventFeedService.cs" />
     <Compile Include="../../EorzeaEventTracker/EventModels.cs" Link="EventModels.cs" />
+    <Compile Include="../../EorzeaEventTracker/QuestAccess.cs" Link="QuestAccess.cs" />
     <Compile Include="../../EorzeaEventTracker/ProgressModels.cs" Link="ProgressModels.cs" />
     <Compile Include="../../EorzeaEventTracker/RewardPreferences.cs" Link="RewardPreferences.cs" />
     <Compile Include="../../EorzeaEventTracker/AppearancePolicy.cs" Link="AppearancePolicy.cs" />

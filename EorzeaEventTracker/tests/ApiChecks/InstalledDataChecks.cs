@@ -72,6 +72,14 @@ internal static class InstalledDataChecks
                 && Math.Abs(ToMap(level.Z, map.OffsetY) - loc.GetProperty("y").GetDouble()) < .002,
                 "quest coordinates agree with installed Level/Map data");
         }
+        var saucer = quests.GetRow(65970);
+        Check(saucer.Name.ToString() == "It Could Happen to You" && saucer.ClassJobLevel[0] == 15,
+            "Gold Saucer unlock level comes from installed quest data");
+        Check(saucer.PreviousQuestJoin == 2 && saucer.PreviousQuest.Count(q => q.RowId != 0) == 3,
+            "installed Gold Saucer unlock requires ANY of the three envoy quests");
+        var crowning = quests.GetRow(70337);
+        Check(crowning.PreviousQuest.Any(q => q.RowId == saucer.RowId),
+            "Blunderville prerequisite points to Gold Saucer unlock");
         Console.WriteLine("READ-ONLY CHECK COMPLETE: installed data verified; no game process was controlled and no map was opened.");
     }
     private static void Check(bool value, string message)

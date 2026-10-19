@@ -16,6 +16,7 @@ public sealed class CharacterProgress
     private readonly IReadOnlyDictionary<string, TrackingDefinition> bundledCatalog;
     private EventFeed? catalogFeed;
     public Dictionary<uint, bool> Quests { get; } = new();
+    public Dictionary<uint, QuestAccess> QuestAccess { get; } = new();
     public Dictionary<uint, RewardProgress> Rewards { get; } = new();
     public Dictionary<uint, long> CurrencyBalances { get; } = new();
     private readonly Dictionary<uint, RewardProgress> automaticRewards = new();
@@ -79,6 +80,7 @@ public sealed class CharacterProgress
         try
         {
             Quests.Clear();
+            QuestAccess.Clear();
             Rewards.Clear();
             var quantities = new Dictionary<uint, int>();
             foreach (var type in Containers)
@@ -92,7 +94,11 @@ public sealed class CharacterProgress
                 .Select(e => Catalog.GetValueOrDefault(e.Id)).OfType<TrackingDefinition>().ToList();
             var quests = Plugin.Data.GetExcelSheet<Quest>();
             foreach (var quest in definitions.SelectMany(d => d.Quests))
-                if (quests.TryGetRow(quest.Id, out var row)) Quests[quest.Id] = Plugin.Unlocks.IsQuestCompleted(row);
+                if (quests.TryGetRow(quest.Id, out var row))
+                {
+                    Quests[quest.Id] = Plugin.Unlocks.IsQuestCompleted(row);
+                    if (!Quests[quest.Id]) QuestAccess[quest.Id] = GameQuestAccess.Read(quest.Id);
+                }
             var items = Plugin.Data.GetExcelSheet<Item>();
             foreach (var reward in definitions.SelectMany(d => d.Rewards))
             {
@@ -152,7 +158,7 @@ public sealed class CharacterProgress
         }
     }
 
-    private void Clear() { CurrencyBalances.Clear(); Available = false; Quests.Clear(); Rewards.Clear(); automaticRewards.Clear(); }
+    private void Clear() { CurrencyBalances.Clear(); Available = false; QuestAccess.Clear(); Quests.Clear(); Rewards.Clear(); automaticRewards.Clear(); }
     private static bool GuaranteesReward(uint questId, uint itemId)
     {
         if (!Plugin.Data.GetExcelSheet<Quest>().TryGetRow(questId, out var row)) return false;
