@@ -60,12 +60,67 @@ obs[3] = obs[3] with { Complete = true };
 Check(Resolve(3) is { Ready: false, Reason: "completed" }, "completed unlock quest with locked duty not offered again");
 Console.WriteLine($"PASS: {count} progress checks");
 
+// Story progress is narrative completion, independent from a duty unlock/clear.
+var definition = new StoryDefinition("test", "Story", "Chronicles", 0, 1, 103, "Final");
+var story = new EorzeaCompass.Story(definition, [101, 102, 103], [100], true);
+var sq = new Dictionary<uint, QuestNode> {
+    [101] = new(101,"Start",[],1,1,1,1,false),
+    [102] = new(102,"Middle",[101],1,1,1,1,false),
+    [103] = new(103,"Final",[102],1,1,1,1,false),
+};
+var so = sq.Keys.ToDictionary(id=>id,_=>new QuestObservation(false,false,true,true));
+StoryProgress StoryResult() => StoryCatalog.Evaluate(story,sq,so);
+Check(StoryResult().State == StoryState.NotStarted, "story not started with no local quest progress");
+so[101] = so[101] with { Complete=true };
+Check(StoryResult() is { State:StoryState.InProgress, Done:1, Next.QuestId:102 }, "unfinished story identifies next quest");
+so[102] = so[102] with { Complete=true };
+Check(StoryResult().State == StoryState.InProgress, "all earlier quests do not finish narrative");
+var dutyCleared = new ActivityProgress(activity,ActivityState.Cleared,null,false);
+var summary = StoryCatalog.Summarize([StoryResult()],[dutyCleared]).Single();
+Check(summary.StoriesDone == 0 && summary.ActivitiesCleared == 1, "duty clear never substitutes for story completion");
+so[103] = so[103] with { Complete=true };
+Check(StoryResult() is { State:StoryState.Completed, Fraction:1 }, "explicit final quest confirms completion");
+Check(StoryCatalog.Evaluate(story with { Valid=false },sq,so).State==StoryState.Unknown, "invalid catalog rule not treated as complete");
+so.Clear();
+Check(StoryResult().State==StoryState.Unknown, "missing character data not treated as not started");
+foreach(var id in sq.Keys) so[id]=new(false,false,true,true);
+Check(StoryCatalog.Evaluate(story,sq,so,true).State==StoryState.InProgress, "saved story acceptance survives abandonment");
+sq[104]=new(104,"Alternative",[],1,1,1,1,false);
+so[104]=new(true,false,true,true);
+sq[102]=sq[102] with { Previous=[101,104],Join=2 };
+var alternativeStory=story with { QuestIds=[101,102,103,104] };
+var alternative=StoryCatalog.Evaluate(alternativeStory,sq,so);
+Check(alternative.Route.Contains(104u) && !alternative.Route.Contains(101u) && alternative.Route.Length==3,"mutually exclusive quest branches counted once");
+sq[105]=new(105,"Branch with active ancestor",[106],1,1,1,1,false);
+sq[106]=new(106,"Active ancestor",[],1,1,1,1,false);
+so[104]=so[104] with { Complete=false }; so[105]=new(false,false,true,true); so[106]=new(false,true,true,true);
+sq[102]=sq[102] with { Previous=[101,105] };
+var deeper=StoryCatalog.Evaluate(story with { QuestIds=[101,102,103,105,106] },sq,so);
+Check(deeper.Route.Contains(106u) && deeper.Next?.QuestId==106,"active quest deep in an alternative branch selects the correct route");
+Check(StoryCatalog.Summarize([],[]).Count==0,"empty journal has no invented progress");
+var unknownSummary=StoryCatalog.Summarize([StoryCatalog.Evaluate(story with { Valid=false },sq,so)],[dutyCleared]).Single();
+Check(unknownSummary.StoriesUnknown==1 && unknownSummary.StoriesDone==0,"unknown story progress remains explicit in overview");
+Console.WriteLine($"PASS: {count} checks including story state and overview");
+
 if (args.Length > 0)
 {
     using var game = new GameData(args[0]);
     var catalog = new Catalog(game.Excel.GetSheet<Quest>(), game.Excel.GetSheet<ContentFinderCondition>());
     Check(catalog.Activities.Count > 200, "real game coverage");
     Check(catalog.Quests.Count > 5000, "full quest index");
+    Check(catalog.Stories.Count >= 30, "story catalog coverage");
+    Check(catalog.Stories.All(s=>s.Valid), "all explicit story endpoints match installed game");
+    Check(catalog.Stories.All(s=>s.QuestIds.Contains(s.Definition.EndQuest)), "final quest belongs to story route");
+    Check(catalog.Stories.Single(s=>s.Definition.Name=="Crystal Tower").Definition.EndQuest==66031,"Crystal Tower ending excludes optional epilogue");
+    Check(catalog.Stories.Single(s=>s.Definition.Name=="Return to Ivalice").Definition.EndQuest==68725,"Ivalice ending excludes cooking side quests");
+    foreach(var storyItem in catalog.Stories)
+    {
+        var observations=catalog.RelevantQuests.ToDictionary(id=>id,_=>new QuestObservation(false,false,true,true));
+        var beginning=StoryCatalog.Evaluate(storyItem,catalog.Quests,observations);
+        Check(beginning.State==StoryState.NotStarted,"fresh story "+storyItem.Definition.Name);
+        observations[storyItem.Definition.EndQuest]=new(true,false,true,true);
+        Check(StoryCatalog.Evaluate(storyItem,catalog.Quests,observations).State==StoryState.Completed,"endpoint proof "+storyItem.Definition.Name);
+    }
     Check(catalog.Activities.Select(a => a.Id).Distinct().Count() == catalog.Activities.Count, "unique duties");
     Check(catalog.Activities.Count(a => a.Name.Equals("the Gilded Araya", StringComparison.OrdinalIgnoreCase)) == 1, "old fan event duplicate removed");
     Check(catalog.Activities.Single(a => a.Name.Equals("the Labyrinth of the Ancients", StringComparison.OrdinalIgnoreCase)).QuestIds.SequenceEqual(new uint[] { 66738 }), "Omega reference never treated as Crystal Tower unlock");
@@ -73,7 +128,7 @@ if (args.Length > 0)
         Check(catalog.Activities.Any(a => a.Kind == kind), "category " + kind);
     foreach (var a in catalog.Activities)
         Check(a.QuestIds.All(catalog.Quests.ContainsKey), "quest references " + a.Name);
-    if (args.Length > 1) File.WriteAllText(args[1], JsonSerializer.Serialize(new { Quests = catalog.Quests.Count, Duties = catalog.Activities }, new JsonSerializerOptions { WriteIndented = true }));
+    if (args.Length > 1) File.WriteAllText(args[1], JsonSerializer.Serialize(new { Quests = catalog.Quests.Count, Stories = catalog.Stories, Duties = catalog.Activities }, new JsonSerializerOptions { WriteIndented = true }));
     foreach (var name in new[] { "Sastasha", "the Labyrinth of the Ancients", "Halatali", "Alexander - The Fist of the Father", "the Royal City of Rabanastre", "the Singularity Reactor", "the Royal Menagerie", "the Dying Gasp", "the Final Day", "the Interphos" })
     {
         var duty = catalog.Activities.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));

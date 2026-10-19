@@ -26,7 +26,16 @@ internal static class Program
         Set(plugin, "Catalog", catalog);
         Set(plugin, "Available", true);
         Set(plugin, "CharacterId", 123ul);
-        Set(plugin, "QuestProgress", new Dictionary<uint, QuestObservation>());
+        var observations = catalog.RelevantQuests.ToDictionary(id => id, _ => new QuestObservation(false,false,true,true));
+        foreach (var story in catalog.Stories.Where(s=>s.Definition.Expansion < 2))
+            foreach(var id in story.QuestIds) observations[id]=new(true,false,true,true);
+        var ivalice=catalog.Stories.Single(s=>s.Definition.Name=="Return to Ivalice");
+        var fresh=StoryCatalog.Evaluate(ivalice,catalog.Quests,observations);
+        foreach(var id in fresh.Route.Take(4)) observations[id]=new(true,false,true,true);
+        Set(plugin,"QuestProgress", observations);
+        var stories = catalog.Stories.Select(s=>StoryCatalog.Evaluate(s,catalog.Quests,observations)).ToArray();
+        Set(plugin,"Stories",stories);
+        Set(plugin,"Expansions",StoryCatalog.Summarize(stories,catalog.Activities.Select(a=>new ActivityProgress(a,a.Expansion<2?ActivityState.Cleared:ActivityState.NotStarted,null,false))));
         var selectedNames = new[] { "Castrum Marinum", "the Cloud Deck", "Windurst: The Third Walk" };
         var rows = selectedNames.Select(name => catalog.Activities.First(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
             .Select(a => new ActivityProgress(a, ActivityState.InProgress, new(a.QuestIds[0], false, true, false, "offer"), true)).ToArray();
@@ -44,9 +53,14 @@ internal static class Program
         windowType.GetField("view", Instance)!.SetValue(window, 1);
         windowType.GetField("selected", Instance)!.SetValue(window, rows[2].Activity.Id);
         var directory = Path.GetFullPath(args[1]); Directory.CreateDirectory(directory);
-        foreach (var sample in new[] { (1180,760,17f,"normal"), (960,600,17f,"normal"), (1440,900,22f,"normal"), (960,600,17f,"long"), (960,600,17f,"accepted"), (960,600,17f,"class"), (960,600,17f,"english") })
+        foreach (var sample in new[] { (1180,760,17f,"normal"), (960,600,17f,"normal"), (1440,900,22f,"normal"), (960,600,17f,"long"), (960,600,17f,"accepted"), (960,600,17f,"class"), (960,600,17f,"english"), (1180,760,17f,"overview"), (960,600,17f,"overview"), (1440,900,22f,"overview"), (1180,760,17f,"story"), (960,600,17f,"story"), (960,600,17f,"story-complete"), (960,600,17f,"story-unknown") })
         {
             var scenarioRow = rows[2];
+            windowType.GetField("section",Instance)!.SetValue(window,sample.Item4=="overview"?0:sample.Item4.StartsWith("story")?1:2);
+            var storyRow=stories.Single(s=>s.Story.Definition.Name=="Return to Ivalice");
+            if(sample.Item4=="story-complete") storyRow=stories.Single(s=>s.Story.Definition.Name=="Crystal Tower");
+            if(sample.Item4=="story-unknown") storyRow=storyRow with {State=StoryState.Unknown,Next=null};
+            windowType.GetField("selectedStory",Instance)!.SetValue(window,storyRow.Story.Definition.Id);
             if (sample.Item4 == "long") scenarioRow = scenarioRow with { Activity = scenarioRow.Activity with { Name = "The Unending Coil of Bahamut - a deliberately long activity name to check wrapping" } };
             if (sample.Item4 == "accepted") scenarioRow = scenarioRow with { Next = scenarioRow.Next! with { Accepted = true, Reason = "accepted" } };
             if (sample.Item4 == "class") {
@@ -75,6 +89,21 @@ internal static class Program
                 windowType.GetMethod("DrawNavigation", Instance)!.Invoke(window,null);
                 ImGui.EndChild(); ImGui.SameLine();
                 ImGui.BeginChild("workspace",Vector2.Zero,false);
+                if(sample.Item4=="overview") {
+                    windowType.GetMethod("DrawOverview",Instance)!.Invoke(window,null);
+                }
+                else if(sample.Item4.StartsWith("story")) {
+                    ImGui.TextUnformatted("Сюжетные цепочки"); ImGui.Separator();
+                    ImGui.BeginChild("story-list",new Vector2(ImGui.GetContentRegionAvail().X*.44f,0),true);
+                    foreach(var item in stories.Where(s=>s.Story.Definition.Expansion==storyRow.Story.Definition.Expansion))
+                        windowType.GetMethod("DrawStoryRow",Instance)!.Invoke(window,[item]);
+                    ImGui.EndChild();ImGui.SameLine();
+                    ImGui.BeginChild("story-detail",Vector2.Zero,true);
+                    windowType.GetMethod("DrawStoryDetail",Instance)!.Invoke(window,[storyRow]);
+                    if(ImGui.GetContentRegionAvail().Y<0) throw new Exception("Story detail overflow");
+                    ImGui.EndChild();
+                }
+                else {
                 ImGui.TextUnformatted("Продолжить");
                 ImGui.Button("Поиск по активности или квесту…",new Vector2(ImGui.GetContentRegionAvail().X*.52f,0));
                 ImGui.SameLine(); ImGui.Button("Все дополнения",new Vector2(-1,0));
@@ -91,7 +120,9 @@ internal static class Program
                 windowType.GetMethod("DrawDetail",Instance)!.Invoke(window,[scenarioRow]);
                 if (ImGui.GetContentRegionAvail().Y < 0) throw new Exception($"Details overflow {sample}");
                 if(frame==2) Console.WriteLine($"PASS: geometry {sample}: remaining {ImGui.GetContentRegionAvail().Y}");
-                ImGui.EndChild(); ImGui.EndChild();
+                ImGui.EndChild();
+                }
+                ImGui.EndChild();
                 CompassTheme.Pop();
                 ImGui.End(); ImGui.Render();
             }

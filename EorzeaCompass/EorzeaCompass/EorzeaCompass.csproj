@@ -1,10 +1,11 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.2.1.0</Version>
+    <Version>0.3.0.0</Version>
     <Author>Carcosa Lyuman</Author>
     <Name>Eorzea Compass</Name>
-    <Punchline>Find the content you have yet to unlock.</Punchline>
-    <Description>A character-aware guide to dungeons, trials and raids, with quest prerequisites and map links.</Description>
+    <Punchline>Your story and duty progress across Eorzea.</Punchline>
+    <Description>A character progress journal: expansion dashboards, storylines, duties and quest guidance.</Description>
     <Tags>quests;unlocks;raids;progress</Tags>
   </PropertyGroup>
+  <ItemGroup><EmbeddedResource Include="..\config\stories.json" LogicalName="EorzeaCompass.stories.json" /></ItemGroup>
 </Project>

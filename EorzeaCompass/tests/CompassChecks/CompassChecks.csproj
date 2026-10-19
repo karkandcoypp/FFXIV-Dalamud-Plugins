@@ -4,6 +4,8 @@
     <Compile Include="../../EorzeaCompass/Models.cs" Link="Models.cs" />
     <Compile Include="../../EorzeaCompass/CompassSelection.cs" Link="CompassSelection.cs" />
     <Compile Include="../../EorzeaCompass/Catalog.cs" Link="Catalog.cs" />
+    <Compile Include="../../EorzeaCompass/StoryProgress.cs" Link="StoryProgress.cs" />
+    <EmbeddedResource Include="../../config/stories.json" LogicalName="EorzeaCompass.stories.json" />
     <Reference Include="Lumina" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Lumina.dll" />
     <Reference Include="Lumina.Excel" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Lumina.Excel.dll" />
   </ItemGroup>

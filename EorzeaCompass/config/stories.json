@@ -1,0 +1,372 @@
+[
+  {
+    "Id": "story-1",
+    "Name": "A Realm Reborn",
+    "Kind": "Main",
+    "Expansion": 0,
+    "Genre": 1,
+    "EndQuest": 70058,
+    "EndQuestName": "The Ultimate Weapon",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-17",
+    "Name": "The Coils of Bahamut",
+    "Kind": "Chronicles",
+    "Expansion": 0,
+    "Genre": 17,
+    "EndQuest": 65580,
+    "EndQuestName": "Alisaie's Path",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-2",
+    "Name": "Post-A Realm Reborn",
+    "Kind": "Main",
+    "Expansion": 0,
+    "Genre": 2,
+    "EndQuest": 65964,
+    "EndQuestName": "Before the Dawn",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-82",
+    "Name": "Hildibrand Adventures",
+    "Kind": "Side",
+    "Expansion": 0,
+    "Genre": 82,
+    "EndQuest": 66038,
+    "EndQuestName": "Her Last Vow",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-18",
+    "Name": "Crystal Tower",
+    "Kind": "Chronicles",
+    "Expansion": 0,
+    "Genre": 18,
+    "EndQuest": 66031,
+    "EndQuestName": "The Light of Hope",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-3",
+    "Name": "Heavensward",
+    "Kind": "Main",
+    "Expansion": 1,
+    "Genre": 3,
+    "EndQuest": 67205,
+    "EndQuestName": "Heavensward",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-19",
+    "Name": "Alexander",
+    "Kind": "Chronicles",
+    "Expansion": 1,
+    "Genre": 19,
+    "EndQuest": 67875,
+    "EndQuestName": "Of Endings and Beginnings",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-20",
+    "Name": "The Warring Triad",
+    "Kind": "Chronicles",
+    "Expansion": 1,
+    "Genre": 20,
+    "EndQuest": 67930,
+    "EndQuestName": "The Last Pillar to Fall",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-4",
+    "Name": "Dragonsong War",
+    "Kind": "Main",
+    "Expansion": 1,
+    "Genre": 4,
+    "EndQuest": 67783,
+    "EndQuestName": "Litany of Peace",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-21",
+    "Name": "Shadow of Mhach",
+    "Kind": "Chronicles",
+    "Expansion": 1,
+    "Genre": 21,
+    "EndQuest": 67910,
+    "EndQuestName": "A Redbill Farewell",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-83",
+    "Name": "Further Hildibrand Adventures",
+    "Kind": "Side",
+    "Expansion": 1,
+    "Genre": 83,
+    "EndQuest": 67908,
+    "EndQuestName": "If I Could Turn Back Time",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-5",
+    "Name": "Post-Dragonsong War",
+    "Kind": "Main",
+    "Expansion": 1,
+    "Genre": 5,
+    "EndQuest": 67895,
+    "EndQuestName": "The Far Edge of Fate",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-6",
+    "Name": "Stormblood",
+    "Kind": "Main",
+    "Expansion": 2,
+    "Genre": 6,
+    "EndQuest": 68089,
+    "EndQuestName": "Stormblood",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-22",
+    "Name": "Omega",
+    "Kind": "Chronicles",
+    "Expansion": 2,
+    "Genre": 22,
+    "EndQuest": 68693,
+    "EndQuestName": "To Kweh under Distant Skies",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-7",
+    "Name": "Post-Stormblood",
+    "Kind": "Main",
+    "Expansion": 2,
+    "Genre": 7,
+    "EndQuest": 68721,
+    "EndQuestName": "A Requiem for Heroes",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-24",
+    "Name": "Return to Ivalice",
+    "Kind": "Chronicles",
+    "Expansion": 2,
+    "Genre": 24,
+    "EndQuest": 68725,
+    "EndQuestName": "The City of Lost Angels",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-84",
+    "Name": "Even Further Hildibrand Adventures",
+    "Kind": "Side",
+    "Expansion": 2,
+    "Genre": 84,
+    "EndQuest": 68704,
+    "EndQuestName": "Don't Do the Dewprism",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-25",
+    "Name": "The Four Lords",
+    "Kind": "Chronicles",
+    "Expansion": 2,
+    "Genre": 25,
+    "EndQuest": 68702,
+    "EndQuestName": "The Fifth Lord",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-26",
+    "Name": "Eden",
+    "Kind": "Chronicles",
+    "Expansion": 3,
+    "Genre": 26,
+    "EndQuest": 69515,
+    "EndQuestName": "Where I Belong",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-8",
+    "Name": "Shadowbringers",
+    "Kind": "Main",
+    "Expansion": 3,
+    "Genre": 8,
+    "EndQuest": 69190,
+    "EndQuestName": "Shadowbringers",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-27",
+    "Name": "YoRHa: Dark Apocalypse",
+    "Kind": "Chronicles",
+    "Expansion": 3,
+    "Genre": 27,
+    "EndQuest": 69589,
+    "EndQuestName": "Whence the Heart Leads",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-9",
+    "Name": "The Voyage Home",
+    "Kind": "Main",
+    "Expansion": 3,
+    "Genre": 9,
+    "EndQuest": 69318,
+    "EndQuestName": "Reflections in Crystal",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-28",
+    "Name": "The Sorrow of Werlyt",
+    "Kind": "Chronicles",
+    "Expansion": 3,
+    "Genre": 28,
+    "EndQuest": 69568,
+    "EndQuestName": "Forever at Your Side",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-10",
+    "Name": "Dark Reprise",
+    "Kind": "Main",
+    "Expansion": 3,
+    "Genre": 10,
+    "EndQuest": 69602,
+    "EndQuestName": "Death Unto Dawn",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-11",
+    "Name": "Endwalker",
+    "Kind": "Main",
+    "Expansion": 4,
+    "Genre": 11,
+    "EndQuest": 70000,
+    "EndQuestName": "Endwalker",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-29",
+    "Name": "Pandæmonium",
+    "Kind": "Chronicles",
+    "Expansion": 4,
+    "Genre": 29,
+    "EndQuest": 70296,
+    "EndQuestName": "Guided by the Past",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-12",
+    "Name": "Post-Endwalker",
+    "Kind": "Main",
+    "Expansion": 4,
+    "Genre": 12,
+    "EndQuest": 70289,
+    "EndQuestName": "The Coming Dawn",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-31",
+    "Name": "Myths of the Realm",
+    "Kind": "Chronicles",
+    "Expansion": 4,
+    "Genre": 31,
+    "EndQuest": 70328,
+    "EndQuestName": "Embraced by Gods",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-85",
+    "Name": "Somehow Further Hildibrand Adventures",
+    "Kind": "Side",
+    "Expansion": 4,
+    "Genre": 85,
+    "EndQuest": 70336,
+    "EndQuestName": "Gentlemen at Heart",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-23",
+    "Name": "Omega: Beyond the Rift",
+    "Kind": "Chronicles",
+    "Expansion": 4,
+    "Genre": 23,
+    "EndQuest": 70123,
+    "EndQuestName": "Good-bye, ε̆│̆│Δ",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-13",
+    "Name": "Dawntrail",
+    "Kind": "Main",
+    "Expansion": 5,
+    "Genre": 13,
+    "EndQuest": 70495,
+    "EndQuestName": "Dawntrail",
+    "CurrentChapter": true
+  },
+  {
+    "Id": "story-32",
+    "Name": "The Arcadion",
+    "Kind": "Chronicles",
+    "Expansion": 5,
+    "Genre": 32,
+    "EndQuest": 70976,
+    "EndQuestName": "Glory Incarnate",
+    "CurrentChapter": true
+  },
+  {
+    "Id": "story-87",
+    "Name": "Inconceivably Further Hildibrand Adventures",
+    "Kind": "Side",
+    "Expansion": 5,
+    "Genre": 87,
+    "EndQuest": 71018,
+    "EndQuestName": "Clotted Crime",
+    "CurrentChapter": true
+  },
+  {
+    "Id": "story-33",
+    "Name": "Echoes of Vana'diel",
+    "Kind": "Chronicles",
+    "Expansion": 5,
+    "Genre": 33,
+    "EndQuest": 71016,
+    "EndQuestName": "Distant Promises",
+    "CurrentChapter": true
+  },
+  {
+    "Id": "story-14",
+    "Name": "The New Dawn",
+    "Kind": "Main",
+    "Expansion": 5,
+    "Genre": 14,
+    "EndQuest": 70909,
+    "EndQuestName": "The Promise of Tomorrow",
+    "CurrentChapter": true
+  },
+  {
+    "Id": "story-30",
+    "Name": "Pandæmonium: Epilogue",
+    "Kind": "Chronicles",
+    "Expansion": 4,
+    "Genre": 30,
+    "EndQuest": 70788,
+    "EndQuestName": "A Present from the Present",
+    "CurrentChapter": false
+  },
+  {
+    "Id": "story-15",
+    "Name": "Winter’s Prelude",
+    "Kind": "Main",
+    "Expansion": 5,
+    "Genre": 15,
+    "EndQuest": 71014,
+    "EndQuestName": "Windborne",
+    "CurrentChapter": true
+  }
+]

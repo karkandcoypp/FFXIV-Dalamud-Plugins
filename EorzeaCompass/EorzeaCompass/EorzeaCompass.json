@@ -2,10 +2,10 @@
   "Author": "Carcosa Lyuman",
   "Name": "Eorzea Compass",
   "InternalName": "EorzeaCompass",
-  "AssemblyVersion": "0.2.1.0",
+  "AssemblyVersion": "0.3.0.0",
   "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
-  "Punchline": "Find the content you have yet to unlock.",
-  "Description": "Dungeons, trials and raids: character unlocks, unfinished quest chains, prerequisites and NPC map links. Russian and English interface.",
+  "Punchline": "Your story and duty progress across Eorzea.",
+  "Description": "Progress journal with expansion dashboards, 37 storylines, duty unlocks and clears, quest prerequisites and NPC map links.",
   "ApplicableVersion": "any",
   "DalamudApiLevel": 15,
   "Tags": ["quests", "unlocks", "raids", "progress"]

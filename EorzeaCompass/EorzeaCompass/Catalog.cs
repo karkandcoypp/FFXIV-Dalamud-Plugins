@@ -11,6 +11,7 @@ public sealed class Catalog
     public IReadOnlyDictionary<uint, QuestNode> Quests { get; }
     public IReadOnlyList<Activity> Activities { get; }
     public IReadOnlySet<uint> RelevantQuests { get; }
+    public IReadOnlyList<Story> Stories { get; }
 
     public Catalog(ExcelSheet<Quest> questSheet, ExcelSheet<ContentFinderCondition> duties)
     {
@@ -84,12 +85,14 @@ public sealed class Catalog
                 && other.QuestIds.Length > 0 && string.Equals(a.Name, other.Name, StringComparison.OrdinalIgnoreCase)))
             .OrderBy(a => a.Expansion).ThenBy(a => a.Level).ThenBy(a => a.Id).ToArray();
         var relevant = new HashSet<uint>();
+        Stories = StoryCatalog.Build(Quests, Activities);
         void Include(uint id)
         {
             if (!relevant.Add(id) || !Quests.TryGetValue(id, out var q)) return;
             foreach (var p in q.Previous) Include(p);
         }
         foreach (var id in Activities.SelectMany(a => a.QuestIds)) Include(id);
+        foreach (var id in Stories.SelectMany(s => s.QuestIds)) Include(id);
         RelevantQuests = relevant;
     }
 

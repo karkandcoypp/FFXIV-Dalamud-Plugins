@@ -31,6 +31,8 @@ public sealed class Plugin : IDalamudPlugin
     internal Configuration Settings { get; }
     internal Catalog? Catalog { get; private set; }
     internal IReadOnlyList<ActivityProgress> Progress { get; private set; } = Array.Empty<ActivityProgress>();
+    internal IReadOnlyList<StoryProgress> Stories { get; private set; } = Array.Empty<StoryProgress>();
+    internal IReadOnlyList<ExpansionProgress> Expansions { get; private set; } = Array.Empty<ExpansionProgress>();
     internal string? Error { get; private set; }
     internal bool Available { get; private set; }
     internal IReadOnlyDictionary<uint, QuestObservation> QuestProgress { get; private set; } = new Dictionary<uint, QuestObservation>();
@@ -77,6 +79,8 @@ public sealed class Plugin : IDalamudPlugin
             Available = false;
             CharacterId = 0;
             Progress = Array.Empty<ActivityProgress>();
+            Stories = Array.Empty<StoryProgress>();
+            Expansions = Array.Empty<ExpansionProgress>();
             notified = false;
             return;
         }
@@ -113,14 +117,19 @@ public sealed class Plugin : IDalamudPlugin
             {
                 notified = true;
                 var remaining = Visible().Count(p => p.State is ActivityState.NotStarted or ActivityState.InProgress);
-                var suggestions = Suggestions().Take(3).ToArray();
-                if (Settings.NotifyOnLogin && remaining > 0)
+                var storyRemaining = Stories.Count(p => p.State is StoryState.NotStarted or StoryState.InProgress);
+                var suggestions = Stories.Where(p => p.State is StoryState.NotStarted or StoryState.InProgress && p.Next is { Ready: true, Partial: false })
+                    .OrderByDescending(p => p.State == StoryState.InProgress)
+                    .Select(p => new { Name = p.Story.Definition.Name, QuestId = p.Next!.QuestId })
+                    .Concat(Suggestions().Select(p => new { Name = p.Activity.Name, QuestId = p.Next!.QuestId }))
+                    .DistinctBy(p => p.QuestId).Take(3).ToArray();
+                if (Settings.NotifyOnLogin && remaining + storyRemaining > 0)
                 {
-                    Chat.Print($"[Eorzea Compass] {T("Ещё не открыто", "Still locked")}: {remaining}. /compass");
+                    Chat.Print($"[Eorzea Compass] {T("Незавершённых историй", "Unfinished stories")}: {storyRemaining}. {T("Не открыто активностей", "Locked duties")}: {remaining}. /compass");
                     foreach (var p in suggestions)
-                        Chat.Print($"[Eorzea Compass] {p.Activity.Name} → {QuestName(p.Next!.QuestId)}");
+                        Chat.Print($"[Eorzea Compass] {p.Name} → {QuestName(p.QuestId)}");
                 }
-                if (Settings.OpenOnLogin && remaining > 0) Open();
+                if (Settings.OpenOnLogin && remaining + storyRemaining > 0) Open();
             }
         }
         catch (Exception e)
@@ -177,6 +186,10 @@ public sealed class Plugin : IDalamudPlugin
                 UIState.IsInstanceContentCompleted(activity.InstanceId), started.Contains(activity.Id), Catalog.Quests, observations));
         }
         Progress = results;
+        if (!Settings.StartedStories.TryGetValue(CharacterId, out var storyHistory)) Settings.StartedStories[CharacterId] = storyHistory = new();
+        Stories = Catalog.Stories.Select(s => StoryCatalog.Evaluate(s, Catalog.Quests, observations, storyHistory.Contains(s.Definition.Id))).ToArray();
+        foreach (var story in Stories.Where(s => s.State == StoryState.InProgress)) dirty |= storyHistory.Add(story.Story.Definition.Id);
+        Expansions = StoryCatalog.Summarize(Stories, Progress);
         QuestProgress = observations;
         jobHints.Clear();
         Available = true;

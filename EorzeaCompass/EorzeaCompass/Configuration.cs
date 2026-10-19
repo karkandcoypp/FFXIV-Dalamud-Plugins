@@ -11,4 +11,5 @@ public sealed class Configuration : IPluginConfiguration
     public bool OpenOnLogin { get; set; }
     public Dictionary<ulong, HashSet<uint>> Started { get; set; } = new();
     public Dictionary<ulong, HashSet<uint>> Hidden { get; set; } = new();
+    public Dictionary<ulong, HashSet<string>> StartedStories { get; set; } = new();
 }

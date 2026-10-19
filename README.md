@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | Ultrawide Cutscenes Community | Убирает полосы 16:9 из внутриигровых кат-сцен на широких мониторах | `/pcutscenes` | [UltrawideCutscenes](UltrawideCutscenes/README.md) |
 | Eorzea Event Tracker | Показывает текущие события, инструкции, награды и прогресс персонажа | `/events` | [EorzeaEventTracker](EorzeaEventTracker/README.md) |
-| Eorzea Compass (предварительная версия) | Неоткрытые подземелья, триалы и рейды, квестовые цепочки и точки NPC | `/compass` | [EorzeaCompass](EorzeaCompass/README.md) |
+| Eorzea Compass (предварительная версия) | Журнал прогресса: обзор дополнений, сюжетные цепочки и активности | `/compass` | [EorzeaCompass](EorzeaCompass/README.md) |
 
 Eorzea Compass доступен через общий репозиторий для проверки в игре. После установки откройте `/compass`.
 
