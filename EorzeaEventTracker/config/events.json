@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-19T04:57:17.602848+00:00",
+  "generatedAt": "2026-10-19T13:40:55.862876+00:00",
   "events": [
     {
       "id": "0b841481931b7bc3",
@@ -179,7 +179,7 @@
         },
         "russian": {
           "status": "complete",
-          "translated": 23,
+          "translated": 20,
           "pending": 0,
           "provider": "MyMemory + reviewed glossary"
         }
@@ -187,19 +187,19 @@
       "translations": {
         "ru": {
           "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.": "Автоматически собранные сведения могут быть неполными. Основная цель не определяется автоматически; точки NPC добавляются только при точной связи в игровых данных.",
-          "Relax and Reflect Orchestrion Roll": "Relax and Reflect Orchestrion Roll",
-          "Veiled in Black Orchestrion Roll": "Veiled in Black Orchestrion Roll",
-          "Apocalypsis Noctis Orchestrion Roll": "Apocalypsis Noctis Orchestrion Roll",
-          "Noctis": "Noctis",
           "A Quick Pit Stop Orchestrion Roll": "A Quick Pit Stop Orchestrion Roll",
-          "Kipih Jakkya": "Kipih Jakkya",
-          "Noctis Lucis Caelum Card": "Noctis Lucis Caelum Card",
-          "Valse di Fantastica Orchestrion Roll": "Valse di Fantastica Orchestrion Roll",
-          "Hammerhead Orchestrion Roll": "Hammerhead Orchestrion Roll",
-          "The FINAL FANTASY XIV & FINAL FANTASY XV Collaboration Event Returns!": "Возвращается совместное событие FINAL FANTASY XIV и FINAL FANTASY XV!",
-          "The Man in Black": "The Man in Black",
           "In the Dark of Night": "In the Dark of Night",
+          "Valse di Fantastica Orchestrion Roll": "Valse di Fantastica Orchestrion Roll",
+          "Apocalypsis Noctis Orchestrion Roll": "Apocalypsis Noctis Orchestrion Roll",
+          "Veiled in Black Orchestrion Roll": "Veiled in Black Orchestrion Roll",
+          "Kipih Jakkya": "Kipih Jakkya",
+          "The Man in Black": "The Man in Black",
+          "Relax and Reflect Orchestrion Roll": "Relax and Reflect Orchestrion Roll",
           "Messenger of the Winds": "Messenger of the Winds",
+          "Hammerhead Orchestrion Roll": "Hammerhead Orchestrion Roll",
+          "Noctis Lucis Caelum Card": "Noctis Lucis Caelum Card",
+          "Noctis": "Noctis",
+          "The FINAL FANTASY XIV & FINAL FANTASY XV Collaboration Event Returns!": "Возвращается совместное событие FINAL FANTASY XIV и FINAL FANTASY XV!",
           "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
           "New Gridania": "Новая Гридания",
           "Dates extracted automatically from official site.": "Даты, автоматически извлекаемые с официального сайта.",
@@ -254,8 +254,7 @@
       "notes": [
         "To reach MGF Trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.",
         "All prices are MGF. Earn MGF during the event.",
-        "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/",
-        "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips."
+        "Official rules and full prize table checked 2026-10-18: https://na.finalfantasyxiv.com/lodestone/special/fallguys/"
       ],
       "tracking": {
         "eventId": "e9da20a481813c2f",
@@ -492,33 +491,32 @@
           "Wy — entrance to Blunderville Square": "Wy — entrance to Blunderville Square",
           "To reach MGF Trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.": "Чтобы попасть к MGF Trader в Площадь Blunderville (X:3.8 Y:3.1), поговорите с Wy в Золотое блюдце (X:6.1 Y:7.4). Кнопка «Куда идти» ведёт ко входу, а не к торговцу внутри.",
           "Ballroom Etiquette - Embracing Blunders": "Ballroom Etiquette - Embracing Blunders",
-          "Rhiyes Identification Key": "Rhiyes Identification Key",
-          "Blunderville Hammer": "Blunderville Hammer",
-          "Gentlebean Bottoms": "Gentlebean Bottoms",
-          "Blunder-villed Framer's Kit": "Blunder-villed Framer's Kit",
-          "Blunderville Donut Bumper": "Blunderville Donut Bumper",
-          "Blunderful Framer's Kit": "Blunderful Framer's Kit",
-          "Well-heeled Youth": "Well-heeled Youth",
-          "Wide Spectrum #1 Dye": "Wide Spectrum #1 Dye",
-          "Gentlebean Parka": "Gentlebean Parka",
-          "Matte Winner's Crown": "Matte Winner's Crown",
-          "Blunderville Padded Wall": "Blunderville Padded Wall",
-          "Standard Rationing Manual": "Standard Rationing Manual",
           "Pink Bean": "Pink Bean",
-          "Blunderville Rainbow": "Blunderville Rainbow",
-          "Gentlebean Knit Cap": "Gentlebean Knit Cap",
           "Gold Saucer Aetheryte Ticket": "Gold Saucer Aetheryte Ticket",
-          "Everybody Falls (Fall Guys Theme) Orchestrion Roll": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
-          "Pegwin": "Pegwin",
-          "Blunderville Crown": "Blunderville Crown",
-          "Blunderville Flag": "Blunderville Flag",
-          "Glossy Winner's Crown": "Glossy Winner's Crown",
-          "Blunderous Framer's Kit": "Blunderous Framer's Kit",
-          "Gentlebean Shoes": "Gentlebean Shoes",
+          "Blunderful Framer's Kit": "Blunderful Framer's Kit",
+          "Blunderville Hammer": "Blunderville Hammer",
+          "Standard Rationing Manual": "Standard Rationing Manual",
           "Lewena": "Lewena",
-          "It Could Happen to You": "It Could Happen to You",
+          "Blunderville Rainbow": "Blunderville Rainbow",
+          "Everybody Falls (Fall Guys Theme) Orchestrion Roll": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
+          "Blunderville Crown": "Blunderville Crown",
+          "Well-heeled Youth": "Well-heeled Youth",
+          "Blunderville Donut Bumper": "Blunderville Donut Bumper",
+          "Blunderville Flag": "Blunderville Flag",
+          "Wide Spectrum #1 Dye": "Wide Spectrum #1 Dye",
+          "Blunderous Framer's Kit": "Blunderous Framer's Kit",
           "Just Crowning Around": "Just Crowning Around",
-          "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках."
+          "It Could Happen to You": "It Could Happen to You",
+          "Rhiyes Identification Key": "Rhiyes Identification Key",
+          "Blunderville Padded Wall": "Blunderville Padded Wall",
+          "Pegwin": "Pegwin",
+          "Gentlebean Bottoms": "Gentlebean Bottoms",
+          "Gentlebean Knit Cap": "Gentlebean Knit Cap",
+          "Blunder-villed Framer's Kit": "Blunder-villed Framer's Kit",
+          "Gentlebean Parka": "Gentlebean Parka",
+          "Gentlebean Shoes": "Gentlebean Shoes",
+          "Glossy Winner's Crown": "Glossy Winner's Crown",
+          "Matte Winner's Crown": "Matte Winner's Crown"
         }
       },
       "locations": [
@@ -575,7 +573,7 @@
         },
         "russian": {
           "status": "complete",
-          "translated": 2,
+          "translated": 0,
           "pending": 0,
           "provider": "MyMemory + reviewed glossary"
         }
@@ -747,18 +745,17 @@
           "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
           "MGF Trader": "Торговец MGF",
           "Blunderville Square": "Площадь Blunderville",
-          "Pattin": "Pattin",
-          "Grisly Bear Suit": "Grisly Bear Suit",
-          "Wakesoul Buggy": "Wakesoul Buggy",
-          "Staring Wakeshroom": "Staring Wakeshroom",
-          "All Saints' Wake MMXXV Advertisement": "All Saints' Wake MMXXV Advertisement",
-          "Tabletop All Saints' Wake MMXXV Advertisement": "Tabletop All Saints' Wake MMXXV Advertisement",
-          "Grisly Bear Head": "Grisly Bear Head",
-          "All Saints' Wake MMXVI Advertisement": "All Saints' Wake MMXVI Advertisement",
           "Smiling Wakeshroom": "Smiling Wakeshroom",
-          "We Scare Bears": "We Scare Bears",
+          "All Saints' Wake MMXVI Advertisement": "All Saints' Wake MMXVI Advertisement",
           "Grim and Grisly Games": "Grim and Grisly Games",
-          "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках."
+          "Pattin": "Pattin",
+          "Staring Wakeshroom": "Staring Wakeshroom",
+          "Grisly Bear Suit": "Grisly Bear Suit",
+          "Grisly Bear Head": "Grisly Bear Head",
+          "Wakesoul Buggy": "Wakesoul Buggy",
+          "We Scare Bears": "We Scare Bears",
+          "All Saints' Wake MMXXV Advertisement": "All Saints' Wake MMXXV Advertisement",
+          "Tabletop All Saints' Wake MMXXV Advertisement": "Tabletop All Saints' Wake MMXXV Advertisement"
         }
       }
     }
