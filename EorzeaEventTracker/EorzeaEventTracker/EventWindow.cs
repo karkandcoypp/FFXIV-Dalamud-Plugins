@@ -21,6 +21,7 @@ public sealed class EventWindow : Window, IDisposable
     private string wikiItem = "";
     private string wikiMessage = "";
     private DateTime wikiMessageUntil;
+    private DateTime diagnosticsCopiedUntil;
     private bool settingsVisible;
     private string requestedTab = "";
     private DateTime nextStepRefresh;
@@ -286,9 +287,10 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.TextDisabled(F("Feed updated: {0}", plugin.Feed.Feed.GeneratedAt.ToLocalTime().ToString("g", L.Culture)));
             if (ImGui.IsItemHovered()) HelpTooltip(T("Event data"), T("Publication time of the event feed, not the last download or a change to this individual event."));
         }
+        DrawConfidence(e, now);
         DrawNextStep(e, definition, now);
         if (e.EndsAt.HasValue) ImGui.TextDisabled(F("Ends {0}", e.EndsAt.Value.ToLocalTime().ToString("f", L.Culture)));
-        if (!e.Verified) ImGui.TextColored(Gold, T("Partial details — check the official page"));
+
         if (plugin.Progress.ReadyForReminders && EventCompletionPolicy.IsComplete(definition, plugin.Progress.Quests))
             ImGui.TextColored(Teal, T("Main objective completed"));
         if (!string.IsNullOrWhiteSpace(e.Description)) ImGui.TextWrapped(E(e.Description));
@@ -333,6 +335,28 @@ public sealed class EventWindow : Window, IDisposable
             }
             ImGui.EndTabBar();
         }
+    }
+
+    private void DrawConfidence(EventInfo e, DateTimeOffset now)
+    {
+        var confidence = FeedHealth.Confidence(e, plugin.Feed.Feed, plugin.Feed.LoadInfo, now);
+        var label = confidence switch { DataConfidence.Confirmed => "Confirmed data", DataConfidence.Partial => "Partial data",
+            DataConfidence.Cached => "Cached data", _ => "Stale data" };
+        var detail = confidence switch
+        {
+            DataConfidence.Confirmed => "Reviewed data with a recent successful relationship check. Character access conditions still apply.",
+            DataConfidence.Partial => "Some details are automatic, incomplete or not independently validated. Check the official guide where information is missing.",
+            DataConfidence.Cached => "Showing previously loaded or bundled data. A fresh online load has not been confirmed in this session.",
+            _ => "The feed or its relationship checks are older than 48 hours, or its source reports stale data. Refresh before relying on prices and destinations."
+        };
+        var color = confidence == DataConfidence.Confirmed ? QuestGreen : confidence == DataConfidence.Stale ? QuestRed
+            : confidence == DataConfidence.Partial ? QuestAmber : Muted;
+        var body = T(detail);
+        if (confidence is DataConfidence.Cached or DataConfidence.Stale && (!e.Verified || e.Validation?.Status != "passed"))
+            body = T("Partial data") + ". " + body;
+        if (e.Validation?.CheckedAt is { } checkedAt) body += "\n\n" + F("Last relationship check: {0}", checkedAt.ToLocalTime().ToString("g", L.Culture));
+        if (e.Validation?.Issues.Count > 0) body += "\n\n" + string.Join("\n", e.Validation.Issues.Take(5));
+        StatusBadge(T(label), color, T("Data reliability"), body);
     }
 
     private bool BeginJournalTab(string title, string id, int icon)
@@ -1066,6 +1090,27 @@ public sealed class EventWindow : Window, IDisposable
         if (ImGui.Button(T("Save feed URL") + "###Save feed URL")) { plugin.Settings.FeedUrl = urlBuffer.Trim(); plugin.Save(); _ = plugin.Feed.RefreshAsync(plugin.Settings.FeedUrl); }
         ImGui.TextWrapped(T("Events, quest IDs, rewards, artwork and translations update through the feed. New tracking mechanics may still require a plugin update."));
         ImGui.TextWrapped(T("Leave URL empty for bundled / cached data. Character tracking works locally and refreshes every second."));
+        if (ImGui.CollapsingHeader(T("Diagnostics and feed updates") + "###FeedDiagnostics"))
+        {
+            var info = plugin.Feed.LoadInfo;
+            var version = typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown";
+            ImGui.TextWrapped(F("Installed plugin version: {0}", version));
+            ImGui.TextWrapped(F("Last successful feed load: {0}", info.LastSuccess is { } success ? success.ToLocalTime().ToString("g", L.Culture) : T("Not recorded")));
+            ImGui.TextWrapped(F("Last attempt: {0}", info.LastAttempt is { } attempt ? attempt.ToLocalTime().ToString("g", L.Culture) : T("Not recorded")));
+            ImGui.TextWrapped(F("Data source: {0}", T(info.Origin.ToString())));
+            ImGui.TextWrapped(F("Feed address: {0}", FeedHealth.SafeUrl(plugin.Settings.FeedUrl)));
+            if (info.Refreshing) ImGui.TextColored(Gold, T("Refreshing feed..."));
+            if (!string.IsNullOrEmpty(info.Error)) ImGui.TextWrapped(F("Last error: {0}", FeedHealth.SafeError(info.Error)));
+            else ImGui.TextColored(QuestGreen, T("No recorded feed error."));
+            if (ImGui.Button(T("Refresh feed now") + "###DiagnosticRefresh")) _ = plugin.Feed.RefreshAsync(plugin.Settings.FeedUrl);
+            if (ImGui.Button(T("Copy diagnostics") + "###CopyDiagnostics"))
+            {
+                ImGui.SetClipboardText(FeedHealth.Report(version, plugin.Settings.FeedUrl, plugin.Feed.Feed, info));
+                diagnosticsCopiedUntil = DateTime.UtcNow.AddSeconds(3);
+            }
+            if (DateTime.UtcNow < diagnosticsCopiedUntil) ImGui.TextColored(QuestGreen, T("Diagnostics copied."));
+            ImGui.TextWrapped(T("The diagnostic report excludes character names, ContentIds, reward progress, URL credentials and query parameters."));
+        }
     }
 
     private string Countdown(EventInfo e, DateTimeOffset now) => DeadlinePolicy.Countdown(e, now, L);

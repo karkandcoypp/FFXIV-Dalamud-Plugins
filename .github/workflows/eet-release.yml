@@ -34,6 +34,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Feed checks failed' }
           dotnet run --project tests/FeedChecks/FeedChecks.csproj -c Release -- --validate config/events.json
           if ($LASTEXITCODE -ne 0) { throw 'Feed metadata validation failed' }
+      - name: Audit bundled feed relationships before publication
+        working-directory: EorzeaEventTracker
+        run: |
+          python collector/validate.py --input config/events.json --check-only --report config/validation-report.json
+          if ($LASTEXITCODE -ne 0) { throw 'Contradictory feed relationships; publication blocked' }
+      - name: Upload relationship audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-feed-validation
+          path: EorzeaEventTracker/config/validation-report.json
+          if-no-files-found: ignore
       - name: Install Dalamud development files
         run: |
           $directory = Join-Path $env:APPDATA 'XIVLauncher/addon/Hooks/dev'

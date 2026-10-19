@@ -1,8 +1,8 @@
-# Eorzea Event Tracker 0.24.1
+# Eorzea Event Tracker 0.25.0
 
-- Fixed quest icons showing diagnostic text such as MAP ANONC QUEST. EventIconType values identify a texture family; its base image is a debug label, while offset 1 is the real quest marker.
-- Use the larger NPC marker artwork for ordinary and unlock quests, including the proper unavailable variant. Unknown/incomplete families fall back to text instead of displaying diagnostic images.
-- Verified actual installed textures visually for ordinary, locked and unlock families, including We Scare Bears and Grim and Grisly Games. Added regression checks using those quests and the shared runtime marker selector.
-- Other interface changes and character data are preserved. Previous releases remain available for rollback.
+- Event details now show a reliability badge: reviewed and recently validated, partial automatic data, cached data, or stale data. Hover for the meaning, relationship-check time and outstanding issues.
+- Settings → Diagnostics and feed updates shows the installed version, successful feed download time (persisted across restarts), latest attempt, data source and actual error. Copy diagnostics excludes character/progress information and strips URL credentials/query parameters and local file paths.
+- Automatic feed publication now audits quest → issuing NPC → map/coordinates and reward → quest or merchant → shop offer/currency/price. Entrance routes are checked separately from the actual destination inside an instance. Definite contradictions stop publication; unavailable, ambiguous and unsupported evidence remains partial. Audit reports are available in workflow artifacts.
+- Added regression coverage for mismatched prices, wrong icons and destinations, stale evidence, outages, safe diagnostics, failed downloads and cache receipt integrity. Previous releases remain available for rollback.
 
-Validation: visual inspection of installed quest-icon variants, installed-game checks, client/collector regressions and Release build with warnings as errors. Live in-game verification remains with the player.
+The audit verifies supported game-data relationships, not live NPC spawning, event phasing or every conditional shop type. Unsupported relationships are explicitly marked incomplete. In-game rendering and NPC availability still require player verification.

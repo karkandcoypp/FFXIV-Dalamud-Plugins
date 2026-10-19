@@ -89,3 +89,14 @@ Ignoring a favorite removes it from favorites and reminders; favoriting an ignor
 Use Already obtained (manual) on a reward card when the plugin could not detect an earlier acquisition. The mark belongs only to the currently loaded character and is stored separately from automatically observed items. It counts toward all progress displays and missing-favorite reminders. Clearing it never removes genuine automatic confirmation. Not interested still excludes a reward from totals regardless of acquisition.
 
 Settings provides a plugin-local interface scale from75% to175% and background opacity from40% to100%, shared by the journal and widget. Text, icons and cover artwork remain opaque. Reset appearance restores100% scale and opacity. Changes persist when the slider edit finishes; other plugins' settings are not changed.
+
+
+## Feed trust and diagnostics (v0.25.0)
+
+Settings → Diagnostics and feed updates displays the installed assembly version, last successful network load, latest attempt, origin and error. Successful load time is restored only when a SHA-256 receipt matches the cached bytes. Loading a bundle or legacy cache does not invent a download timestamp. Copy diagnostics strips URL user info, query strings, fragments and local Windows paths, and includes no character identifiers or progress.
+
+Event badges distinguish reviewed data with a recent passed relationship audit, incomplete automatic data, local/fallback data and stale data (48 hours). A passed link audit does not promote an automatically collected event to fully reviewed coverage. Publication time, download time and relationship-check time are separate.
+
+The collection workflow snapshots the previous feed, collects details/translations/routes, then runs `python collector/validate.py --input config/events.json --previous <previous-feed>`. A contradiction writes the audit report and fails before the candidate replaces the input or is committed. Network outages, ambiguous NPC identities, missing merchant links and unsupported prices remain partial. Prior successful evidence can be retained as stale only when the relationship fingerprint is unchanged. `--check-only` audits a bundle without rewriting it and also runs before a plugin release. Both workflows upload their validation reports even on failure.
+
+The audit checks quest names/icons and issuing NPC placements, item names/icons, guaranteed quest rewards, map/territory/coordinates, registered entrance routes and supported direct SpecialShop merchant handlers/offers. Exact NPC names can be disambiguated by placements; similar names are never accepted. Conditional/indirect shop handlers, unknown prices, live spawning and character phasing cannot be fully proven by this audit and must not be described as confirmed.

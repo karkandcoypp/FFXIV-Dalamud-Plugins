@@ -9,3 +9,4 @@ __pycache__/
 
 # Per-run collector diagnostics are uploaded as workflow artifacts.
 EorzeaEventTracker/config/collection-report.json
+EorzeaEventTracker/config/validation-report.json

@@ -29,9 +29,24 @@ public sealed class EventInfo
     [JsonPropertyName("imageUrl")] public string ImageUrl { get; set; } = "";
     [JsonPropertyName("translations")] public Dictionary<string, Dictionary<string, string>> Translations { get; set; } = new();
     [JsonPropertyName("locations")] public List<EventLocation> Locations { get; set; } = new();
+    [JsonPropertyName("validation")] public EventValidation? Validation { get; set; }
+    [JsonPropertyName("automation")] public EventAutomation? Automation { get; set; }
 
     public bool Active(DateTimeOffset now) => StartsAt <= now && EndsAt > now;
     public bool Upcoming(DateTimeOffset now) => StartsAt > now;
+}
+
+public sealed class EventValidation
+{
+    [JsonPropertyName("status")] public string Status { get; set; } = "partial";
+    [JsonPropertyName("checkedAt")] public DateTimeOffset? CheckedAt { get; set; }
+    [JsonPropertyName("lastVerifiedAt")] public DateTimeOffset? LastVerifiedAt { get; set; }
+    [JsonPropertyName("checks")] public int Checks { get; set; }
+    [JsonPropertyName("issues")] public List<string> Issues { get; set; } = new();
+}
+public sealed class EventAutomation
+{
+    [JsonPropertyName("status")] public string Status { get; set; } = "";
 }
 
 public sealed class EventLocation

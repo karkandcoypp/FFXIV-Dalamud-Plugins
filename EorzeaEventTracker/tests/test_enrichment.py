@@ -126,7 +126,16 @@ class EnrichmentTests(unittest.TestCase):
             args = Namespace(no_translate=True, output=str(target), overrides=folder+'/none', url=[URL], no_discover=True, limit=1)
             with patch('collector.collect.extract', side_effect=RuntimeError('offline')):
                 run(args)
-            self.assertEqual(json.loads(target.read_text(encoding='utf-8'))['events'], [old])
+            result = json.loads(target.read_text(encoding='utf-8'))['events'][0]
+            self.assertEqual(result['tracking'], old['tracking'])
+            self.assertEqual(result['automation']['status'], 'stale')
+            self.assertFalse(result['verified'])
+            args.url = []
+            run(args)
+            result = json.loads(target.read_text(encoding='utf-8'))['events'][0]
+            self.assertEqual(result['tracking'], old['tracking'])
+            self.assertEqual(result['automation']['status'], 'retained')
+            self.assertFalse(result['verified'])
 
     def test_partial_api_failure_preserves_previous_reward_evidence(self):
         with TemporaryDirectory() as folder:

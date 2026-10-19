@@ -23,7 +23,12 @@ jobs:
       - run: pip install -r EorzeaEventTracker/collector/requirements.txt
       - run: python -m unittest discover -s tests -v
         working-directory: EorzeaEventTracker
+      - run: cp config/events.json "$RUNNER_TEMP/previous-events.json"
+        working-directory: EorzeaEventTracker
       - run: python collector/collect.py --output config/events.json
+        working-directory: EorzeaEventTracker
+      - name: Validate quest, NPC, map and shop relationships
+        run: python collector/validate.py --input config/events.json --previous "$RUNNER_TEMP/previous-events.json" --report config/validation-report.json
         working-directory: EorzeaEventTracker
       - run: dotnet run --project tests/FeedChecks/FeedChecks.csproj -c Release -- --validate config/events.json
         working-directory: EorzeaEventTracker
@@ -32,7 +37,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: event-collection-report
-          path: EorzeaEventTracker/config/collection-report.json
+          path: |
+            EorzeaEventTracker/config/collection-report.json
+            EorzeaEventTracker/config/validation-report.json
           if-no-files-found: ignore
       - name: Commit updates
         run: |

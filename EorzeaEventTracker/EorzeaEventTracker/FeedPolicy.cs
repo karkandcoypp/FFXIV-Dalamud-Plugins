@@ -37,6 +37,10 @@ public static class FeedPolicy
                 || !List(e.Requirements) || !List(e.Steps) || !List(e.Rewards) || !List(e.Notes)
                 || e.Description == null || e.Description.Length > 10000 || e.ImageUrl == null
                 || (e.ImageUrl.Length > 0 && !IsImageUrl(e.ImageUrl))) throw new IOException("Malformed event");
+            if (e.Validation is { } validation && (validation.Status is not ("passed" or "partial" or "stale")
+                || validation.Checks < 0 || validation.Checks > 10000 || validation.Issues == null
+                || validation.Issues.Count > 200 || validation.Issues.Any(issue => !Text(issue, 2000))))
+                throw new IOException("Invalid validation report");
             if (e.Translations == null || e.Translations.Count > 10) throw new IOException("Invalid translations");
             foreach (var language in e.Translations)
                 if (!Text(language.Key, 16) || language.Value == null || language.Value.Count > 500

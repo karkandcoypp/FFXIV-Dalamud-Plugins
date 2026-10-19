@@ -34,6 +34,7 @@ internal static class Program
             return;
         }
         await OnlineFeedChecks.Run();
+        await FeedHealthChecks.Run();
         DeadlineReminderChecks.Run();
         EventCompletionChecks.Run();
         RewardPreferenceChecks.Run();

@@ -213,13 +213,17 @@ def run(args):
             print('PARTIAL:', url, exc)
             errors.append(dict(url=url, reason=str(exc)))
             if old:
-                events[old['id']] = old
+                # A newly generated feed must not make old official dates/details
+                # appear freshly sourced merely because game-data links still pass.
+                events[old['id']] = dict(old, verified=False,
+                    automation=dict(old.get('automation', {}), status='stale'))
     # A short discovery page or temporary source failure must not remove still-running events.
     now = datetime.now(timezone.utc)
     for ident, old in previous.items():
         try:
             if ident not in events and datetime.fromisoformat(old['endsAt'].replace('Z', '+00:00')) > now:
-                events[ident] = old
+                events[ident] = dict(old, verified=False,
+                    automation=dict(old.get('automation', {}), status='retained'))
                 report.append(dict(eventId=ident, url=old.get('url'), status='retained'))
         except (KeyError, ValueError, TypeError):
             continue
