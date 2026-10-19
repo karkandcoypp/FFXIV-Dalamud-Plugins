@@ -1,4 +1,4 @@
-# Eorzea Compass — 0.2.0
+# Eorzea Compass — 0.2.1
 
 Навигатор по неоткрытому контенту персонажа для Dalamud API 15. Команда: `/compass`.
 

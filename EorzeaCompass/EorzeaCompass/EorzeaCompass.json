@@ -2,7 +2,7 @@
   "Author": "Carcosa Lyuman",
   "Name": "Eorzea Compass",
   "InternalName": "EorzeaCompass",
-  "AssemblyVersion": "0.2.0.0",
+  "AssemblyVersion": "0.2.1.0",
   "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
   "Punchline": "Find the content you have yet to unlock.",
   "Description": "Dungeons, trials and raids: character unlocks, unfinished quest chains, prerequisites and NPC map links. Russian and English interface.",

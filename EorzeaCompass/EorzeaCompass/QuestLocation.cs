@@ -5,7 +5,7 @@ using Lumina.Excel.Sheets;
 
 namespace EorzeaCompass;
 
-internal sealed record QuestLocation(string Npc, string Zone, uint Territory, uint Map, float X, float Y)
+public sealed record QuestLocation(string Npc, string Zone, uint Territory, uint Map, float X, float Y)
 {
     public static QuestLocation? Read(uint id)
     {
