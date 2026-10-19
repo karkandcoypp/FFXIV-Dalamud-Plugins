@@ -20,60 +20,102 @@ internal sealed class CompassWindow : Window
     private bool settings;
     private static readonly Vector4 Accent = new(.45f, .85f, .75f, 1);
     private static readonly Vector4 Gold = new(1, .78f, .42f, 1);
+    private static readonly Vector4 Muted = new(.67f, .72f, .78f, 1);
     private string T(string ru, string en) => plugin.T(ru, en);
+    private float S => ImGui.GetFontSize() / 17f;
 
     public CompassWindow(Plugin plugin) : base("Eorzea Compass###CompassMain")
     {
         this.plugin = plugin;
-        Size = new(1100, 760);
+        Size = new(1180, 760);
         SizeCondition = ImGuiCond.FirstUseEver;
-        SizeConstraints = new() { MinimumSize = new(760, 500), MaximumSize = new(1800, 1400) };
+        SizeConstraints = new() { MinimumSize = new(960, 600), MaximumSize = new(2200, 1600) };
+    }
+
+    public override void PreDraw()
+    {
+        ImGui.SetNextWindowBgAlpha(1);
+        SizeConstraints = new() { MinimumSize = new(960 * S, 600 * S), MaximumSize = new(2200 * S, 1600 * S) };
     }
 
     public override void Draw()
     {
-        ImGui.TextColored(Accent, T("ЭОРЗЕЯ / КУДА ДАЛЬШЕ", "EORZEA / WHAT'S NEXT"));
-        ImGui.SameLine();
-        if (ImGui.SmallButton(T("Настройки", "Settings"))) settings = !settings;
-        ImGui.SameLine();
-        if (ImGui.SmallButton(T("Обновить", "Refresh"))) plugin.Refresh();
-        if (settings) DrawSettings();
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(10, 9) * S);
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(10, 7) * S);
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 7 * S);
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(.085f, .10f, .12f, 1));
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.16f, .24f, .28f, 1));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.21f, .37f, .40f, 1));
+        ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(.16f, .32f, .34f, 1));
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(.20f, .39f, .41f, 1));
+        try { DrawContent(); }
+        finally { ImGui.PopStyleColor(5); ImGui.PopStyleVar(3); }
+    }
+
+    private void DrawContent()
+    {
+        ImGui.TextColored(Accent, T("Твой путеводитель по Эорзее", "Your guide to Eorzea"));
+        if (plugin.Available)
+            ImGui.TextColored(Muted, $"{Plugin.Player.CharacterName}   /   {Plugin.Player.ClassJob.Value.Abbreviation} · {T("ур.", "Lv.")} {Plugin.Player.Level}");
+        ImGui.Separator();
         if (!plugin.Available)
         {
-            ImGui.TextWrapped(plugin.Error ?? T("Войди в игру. Прогресс появится через несколько секунд после загрузки персонажа.",
-                "Log in. Progress will appear a few seconds after your character loads."));
+            ImGui.TextWrapped(plugin.Error ?? T("Ожидание персонажа. После входа каталог загрузится автоматически.", "Waiting for your character. The catalog loads automatically after login."));
             return;
         }
-        ImGui.TextUnformatted(Plugin.Player.CharacterName);
-        var visible = plugin.Visible().ToArray();
-        var locked = visible.Count(p => p.State is ActivityState.NotStarted or ActivityState.InProgress);
-        var unlocked = visible.Count(p => p.State is ActivityState.Unlocked or ActivityState.Cleared);
-        ImGui.TextWrapped(T($"Ещё не открыто: {locked}   •   Открыто: {unlocked} / {visible.Length}",
-            $"Still locked: {locked}   •   Unlocked: {unlocked} / {visible.Length}"));
-        ImGui.TextDisabled(T("Счётчик обычного контента; прохождение = первый клир, а не все награды.",
-            "Standard content count; cleared means a first clear, not all rewards."));
+        if (ImGui.BeginChild("navigation", new Vector2(185 * S, 0), true)) DrawNavigation();
+        ImGui.EndChild();
+        ImGui.SameLine();
+        if (ImGui.BeginChild("workspace", Vector2.Zero, false))
+        {
+            if (settings) DrawSettings(); else DrawCatalog();
+        }
+        ImGui.EndChild();
+    }
+
+    private string ViewName(int index) => index switch
+    {
+        0 => T("Ещё не открыто", "Still locked"), 1 => T("Продолжить", "Continue"),
+        2 => T("Уже открыто", "Unlocked"), _ => T("Весь контент", "All content"),
+    };
+
+    private void DrawNavigation()
+    {
+        var normal = plugin.Visible().ToArray();
+        var unlocked = normal.Count(p => p.State is ActivityState.Unlocked or ActivityState.Cleared);
+        ImGui.TextColored(Muted, T("ОТКРЫТИЕ КОНТЕНТА", "CONTENT UNLOCKS"));
+        ImGui.TextUnformatted($"{unlocked} / {normal.Length}");
+        ImGui.ProgressBar(normal.Length == 0 ? 0 : (float)unlocked / normal.Length, new Vector2(-1, 7 * S), "");
+        ImGui.Spacing();
+        for (int i = 0; i < 4; i++)
+            if (ImGui.Selectable($"{ViewName(i)}  ({normal.Count(p => MatchesView(p, i))})###view{i}", !settings && view == i,
+                ImGuiSelectableFlags.None, new Vector2(0, 32 * S))) { view = i; settings = false; }
         ImGui.Separator();
-        if (ImGui.CollapsingHeader(T("Можно заняться сейчас", "Things to do now"), ImGuiTreeNodeFlags.DefaultOpen))
-        {
-            var suggestions = plugin.Suggestions().Take(3).ToArray();
-            foreach (var p in suggestions)
-                if (ImGui.Selectable($"{p.Activity.Name} → {plugin.QuestName(p.Next!.QuestId)}###suggest{p.Activity.Id}")) selected = p.Activity.Id;
-            if (suggestions.Length == 0) ImGui.TextWrapped(T("Нет подтверждённых рекомендаций для текущего класса и уровня. Посмотри требования в каталоге.",
-                "No confirmed recommendations for your current job and level. Check the catalog requirements."));
-        }
-        var labels = new[] { T("Ещё не открыто", "Still locked"), T("В процессе", "In progress"), T("Открыто", "Unlocked"), T("Весь каталог", "All content") };
-        for (int i = 0; i < labels.Length; i++)
-        {
-            if (i > 0) ImGui.SameLine();
-            if (ImGui.RadioButton(labels[i], view == i)) view = i;
-        }
-        ImGui.SetNextItemWidth(220);
-        ImGui.InputTextWithHint("##search", T("Название активности / квеста", "Activity / quest name"), ref search, 200);
+        ImGui.TextColored(Muted, T("КАТЕГОРИИ", "CATEGORIES"));
+        var names = new[] { T("Все активности", "All activities"), T("Подземелья", "Dungeons"), T("Триалы", "Trials"), T("Рейды", "Raids"), T("Альянс-рейды", "Alliance raids") };
+        for (int i = 0; i < names.Length; i++)
+            if (ImGui.Selectable(names[i], category == i, ImGuiSelectableFlags.None, new Vector2(0, 26 * S))) { category = i; settings = false; }
+        ImGui.Separator();
+        if (ImGui.Selectable(T("Настройки", "Settings"), settings, ImGuiSelectableFlags.None, new Vector2(0, 28 * S))) settings = !settings;
+        if (ImGui.Button(T("Обновить прогресс", "Refresh progress"), new Vector2(-1, 0))) plugin.Refresh();
+        ImGui.Spacing();
+        ImGui.TextWrapped(T("Счётчики: обычный контент", "Counts: standard duties"));
+    }
+
+    private static bool MatchesView(ActivityProgress p, int index) => index switch
+    {
+        0 => p.State is ActivityState.NotStarted or ActivityState.InProgress,
+        1 => p.State == ActivityState.InProgress,
+        2 => p.State is ActivityState.Unlocked or ActivityState.Cleared, _ => true,
+    };
+
+    private void DrawCatalog()
+    {
+        ImGui.TextColored(Accent, ViewName(view));
+        ImGui.SetNextItemWidth(Math.Max(160 * S, ImGui.GetContentRegionAvail().X * .52f));
+        ImGui.InputTextWithHint("##search", T("Поиск по активности или квесту…", "Search activities or quests…"), ref search, 200);
         ImGui.SameLine();
-        ImGui.SetNextItemWidth(190);
-        ImGui.Combo("##category", ref category, new[] { T("Все категории", "All categories"), T("Подземелья", "Dungeons"), T("Триалы", "Trials"), T("Рейды", "Raids"), T("Альянс-рейды", "Alliance raids") }, 5);
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(190);
+        ImGui.SetNextItemWidth(-1);
         var expansionName = expansion == uint.MaxValue ? T("Все дополнения", "All expansions")
             : plugin.Catalog!.Activities.First(a => a.Expansion == expansion).ExpansionName;
         if (ImGui.BeginCombo("##expansion", expansionName))
@@ -83,121 +125,169 @@ internal sealed class CompassWindow : Window
                 if (ImGui.Selectable(e.ExpansionName, expansion == e.Expansion)) expansion = e.Expansion;
             ImGui.EndCombo();
         }
-        ImGui.Checkbox(T("Доступен следующий шаг", "Next step available"), ref readyOnly);
+        ImGui.Checkbox(T("Можно начать сейчас", "Ready now"), ref readyOnly);
         ImGui.SameLine();
-        ImGui.Checkbox(T("Сложные версии", "Advanced duties"), ref advanced);
+        if (ImGui.Button(T("Ещё фильтры", "More filters"))) ImGui.OpenPopup("filters");
+        if (ImGui.BeginPopup("filters"))
+        {
+            ImGui.Checkbox(T("Сложные версии", "Advanced duties"), ref advanced);
+            ImGui.Checkbox(T("Показать скрытые", "Show hidden"), ref hidden);
+            ImGui.EndPopup();
+        }
         ImGui.SameLine();
-        ImGui.Checkbox(T("Показать скрытое", "Show hidden"), ref hidden);
+        if (ImGui.SmallButton(T("Сбросить", "Reset"))) { search = ""; category = 0; expansion = uint.MaxValue; readyOnly = advanced = hidden = false; }
         var rows = plugin.Progress.Where(p => (advanced || !p.Activity.Advanced) && (hidden || !plugin.Hidden.Contains(p.Activity.Id)))
-            .Where(p => view switch { 0 => p.State is ActivityState.NotStarted or ActivityState.InProgress,
-                1 => p.State == ActivityState.InProgress, 2 => p.State is ActivityState.Unlocked or ActivityState.Cleared, _ => true })
-            .Where(p => category == 0 || (int)p.Activity.Kind == category - 1)
+            .Where(p => MatchesView(p, view)).Where(p => category == 0 || (int)p.Activity.Kind == category - 1)
             .Where(p => expansion == uint.MaxValue || p.Activity.Expansion == expansion)
             .Where(p => !readyOnly || p.Next is { Ready: true, Partial: false })
             .Where(p => search.Length == 0 || p.Activity.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
                 || p.Activity.QuestIds.Any(q => plugin.QuestName(q).Contains(search, StringComparison.OrdinalIgnoreCase))
-                || p.Next is { } step && plugin.QuestName(step.QuestId).Contains(search, StringComparison.OrdinalIgnoreCase)).ToArray();
+                || p.Next is { } step && plugin.QuestName(step.QuestId).Contains(search, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(p => p.Next is { Ready: true, Partial: false }).ThenByDescending(p => p.State == ActivityState.InProgress)
+            .ThenBy(p => p.Activity.Expansion).ThenBy(p => p.Activity.Level).ToArray();
+        selected = CompassSelection.KeepVisible(selected, rows);
+        ImGui.TextColored(Muted, T($"Активностей: {rows.Length}", $"Activities: {rows.Length}"));
         ImGui.Separator();
-        if (ImGui.BeginChild("catalog", new Vector2(ImGui.GetContentRegionAvail().X * .48f, 0), true))
+        var width = Math.Clamp(ImGui.GetContentRegionAvail().X * .42f, 240 * S, 390 * S);
+        if (ImGui.BeginChild("activity-list", new Vector2(width, 0), true))
         {
-            ImGui.TextDisabled(T($"Найдено: {rows.Length}", $"Matches: {rows.Length}"));
-            foreach (var p in rows)
+            foreach (var p in rows) DrawRow(p);
+            if (rows.Length == 0)
             {
-                if (ImGui.Selectable($"{p.Activity.Name}###activity{p.Activity.Id}", selected == p.Activity.Id)) selected = p.Activity.Id;
-                ImGui.TextDisabled($"{Kind(p.Activity.Kind)} • Lv. {p.Activity.Level} • {State(p.State)}");
+                ImGui.TextWrapped(T("Здесь пока ничего нет.", "Nothing here right now."));
+                ImGui.TextWrapped(readyOnly ? T("На текущем классе нет подтверждённых шагов. Отключи фильтр «Можно начать сейчас», чтобы увидеть требования.", "No confirmed steps for your current job. Turn off Ready now to see requirements.")
+                    : T("Попробуй сбросить фильтры или выбрать «Весь контент».", "Reset filters or choose All content."));
             }
-            if (rows.Length == 0) ImGui.TextWrapped(T("Нет активностей с такими фильтрами.", "No activities match these filters."));
         }
         ImGui.EndChild();
         ImGui.SameLine();
-        if (ImGui.BeginChild("detail", Vector2.Zero, true))
+        if (ImGui.BeginChild("activity-detail", Vector2.Zero, true))
         {
-            // Keep selected details visible when a duty becomes unlocked and leaves the locked list.
-            var current = plugin.Progress.FirstOrDefault(p => p.Activity.Id == selected) ?? rows.FirstOrDefault();
+            var current = rows.FirstOrDefault(p => p.Activity.Id == selected);
             if (current != null) DrawDetail(current);
+            else ImGui.TextWrapped(T("Выбери активность в списке слева.", "Choose an activity from the list."));
         }
         ImGui.EndChild();
     }
 
+    private void DrawRow(ActivityProgress p)
+    {
+        ImGui.PushID((int)p.Activity.Id);
+        var start = ImGui.GetCursorPos();
+        var available = ImGui.GetContentRegionAvail().X;
+        var titleHeight = ImGui.CalcTextSize(p.Activity.Name, false, available - 16 * S).Y;
+        var height = Math.Max(94 * S, titleHeight + ImGui.GetTextLineHeight() * 2 + 36 * S);
+        if (ImGui.Selectable("##row", selected == p.Activity.Id, ImGuiSelectableFlags.None, new Vector2(0, height))) selected = p.Activity.Id;
+        var after = ImGui.GetCursorPos();
+        ImGui.SetCursorPos(start + new Vector2(8, 5) * S);
+        ImGui.PushTextWrapPos(start.X + available - 8 * S);
+        ImGui.TextUnformatted(p.Activity.Name);
+        ImGui.TextColored(Muted, $"{Kind(p.Activity.Kind)} · {T("ур.", "Lv.")} {p.Activity.Level}");
+        ImGui.TextColored(Color(p), ShortStatus(p));
+        ImGui.PopTextWrapPos();
+        ImGui.SetCursorPos(after);
+        ImGui.Separator();
+        ImGui.PopID();
+    }
+
+    private Vector4 Color(ActivityProgress p) => p.Next is { Ready: true } || p.State == ActivityState.Cleared ? Accent : p.State == ActivityState.InProgress ? Gold : Muted;
+    private string ShortStatus(ActivityProgress p) => p.Next?.Reason switch
+    {
+        "accepted" => T("Квест уже в журнале", "Quest in your journal"), "offer" => T("Можно взять квест", "Quest ready to accept"),
+        "class" => T("Нужен другой класс", "Switch class or job"), "level" => T("Нужен уровень выше", "Higher level needed"), _ => State(p.State),
+    };
+
     private void DrawDetail(ActivityProgress p)
     {
+        ImGui.TextColored(Accent, Kind(p.Activity.Kind));
         ImGui.TextWrapped(p.Activity.Name);
-        ImGui.TextColored(Accent, State(p.State));
-        ImGui.TextWrapped($"{p.Activity.ExpansionName} • {Kind(p.Activity.Kind)} • Lv. {p.Activity.Level} • iLv. {p.Activity.ItemLevel}");
-        var isHidden = plugin.Hidden.Contains(p.Activity.Id);
-        if (ImGui.SmallButton(isHidden ? T("Вернуть в рекомендации", "Restore to suggestions") : T("Скрыть активность", "Hide activity")))
-            plugin.Hide(p.Activity.Id, !isHidden);
+        ImGui.TextColored(Muted, $"{p.Activity.ExpansionName} · {T("ур.", "Lv.")} {p.Activity.Level} · iLv {p.Activity.ItemLevel}");
+        ImGui.Spacing();
+        ImGui.TextColored(Color(p), ShortStatus(p));
         ImGui.Separator();
-        if (p.State == ActivityState.Cleared)
-            ImGui.TextWrapped(T("Игра подтверждает первое прохождение этой активности. Завершение всей сюжетной линии и сбор наград здесь не оцениваются.",
-                "The game confirms a first clear. This does not measure completion of the whole storyline or reward collection."));
-        else if (p.State == ActivityState.Unlocked)
-            ImGui.TextWrapped(T("Активность открыта. Первое прохождение ещё не подтверждено.", "Duty unlocked. First clear is not yet confirmed."));
-        else if (p.State == ActivityState.Unknown)
-            ImGui.TextWrapped(T("Данные этой активности пока недоступны.", "This duty's data is unavailable."));
+        ImGui.Spacing();
+        ImGui.TextColored(Gold, T("ЧТО СДЕЛАТЬ ДАЛЬШЕ", "WHAT TO DO NEXT"));
+        if (p.State is ActivityState.Cleared or ActivityState.Unlocked)
+            ImGui.TextWrapped(p.State == ActivityState.Cleared
+                ? T("Активность открыта и пройдена. Можно повторить её через Duty Finder.", "Unlocked and cleared. You can replay it through Duty Finder.")
+                : T("Открой Duty Finder и выбери эту активность для первого прохождения.", "Open Duty Finder and select this duty for your first clear."));
         else if (p.Next is { } step)
         {
-            ImGui.TextColored(Gold, T("Следующий шаг", "Next step"));
             ImGui.TextWrapped(Reason(step));
             if (step.QuestId != 0)
             {
+                ImGui.Spacing();
+                ImGui.TextColored(Muted, T("КВЕСТ", "QUEST"));
                 ImGui.TextWrapped(plugin.QuestName(step.QuestId));
                 if (plugin.Catalog!.Quests.TryGetValue(step.QuestId, out var q))
                 {
-                    ImGui.TextUnformatted($"Lv. {q.Level} • Quest #{q.Id}");
-                    if (q.Previous.Length > 0)
-                    {
-                        ImGui.TextWrapped(T(q.Join == 2 ? "Нужен один из квестов:" : "Предыдущие квесты:", q.Join == 2 ? "Requires one of:" : "Previous quests:"));
-                        foreach (var id in q.Previous) ImGui.TextWrapped("• " + plugin.QuestName(id));
-                    }
+                    ImGui.TextColored(Muted, T($"Требуется уровень {q.Level}", $"Required level: {q.Level}"));
+                    if (step.Reason == "class") ImGui.TextWrapped(plugin.EligibleJobs(q));
                 }
                 if (step.Accepted)
-                    ImGui.TextWrapped(T("Продолжи задание по игровому журналу. Точка выдачи не является текущей целью.",
-                        "Continue using your quest journal. The starting NPC is not your current objective."));
-                else
+                    ImGui.TextWrapped(T("Открой журнал заданий (J) и продолжи этот квест по текущей цели.", "Open your quest journal (J) and follow this quest's current objective."));
+                else if (step.Reason != "completed")
                 {
                     var location = QuestLocation.Read(step.QuestId);
                     if (location != null)
                     {
-                        ImGui.TextWrapped($"{location.Npc}\n{location.Zone} (X: {location.X:F1}, Y: {location.Y:F1})");
-                        if (ImGui.Button(T("Показать NPC на карте", "Show NPC on map"))) location.Open();
+                        ImGui.Spacing();
+                        ImGui.TextColored(Muted, T("ГДЕ ВЗЯТЬ", "WHERE TO START"));
+                        ImGui.TextWrapped(location.Npc);
+                        ImGui.TextWrapped($"{location.Zone}\nX: {location.X:F1}   Y: {location.Y:F1}");
+                        ImGui.Spacing();
+                        if (ImGui.Button(T("Показать на карте", "Show on map"), new Vector2(-1, 40 * S))) location.Open();
                     }
-                    else ImGui.TextWrapped(T("Точная точка выдачи не подтверждена в игровых данных.", "The exact starting location is not confirmed by game data."));
+                    else ImGui.TextWrapped(T("Точка выдачи пока не определена.", "Starting location is not yet available."));
                 }
             }
-            if (p.Activity.QuestIds.Length > 0)
-            {
-                ImGui.Separator();
-                ImGui.TextWrapped(T("Квесты, связанные с открытием:", "Quests linked to the unlock:"));
-                foreach (var id in p.Activity.QuestIds) ImGui.TextWrapped("• " + plugin.QuestName(id));
-                ImGui.TextDisabled(T("Связь: ", "Source: ") + p.Activity.Source);
-                if (p.Activity.Source == "Quest.INSTANCEDUNGEON")
-                    ImGui.TextWrapped(T("Связь найдена по упоминанию активности в квесте; это ориентир для цепочки, а не гарантия момента открытия.",
-                        "Linked through a quest script reference; this guides you to the chain but does not guarantee the exact unlock step."));
-            }
-            ImGui.Spacing();
-            ImGui.TextWrapped(T("Прогресс цепочки определяется по принятым квестам и выполненным заданиям той же сюжетной линии Chronicles. История брошенных квестов до установки может отсутствовать.",
-                "Chain progress uses accepted quests and completed prerequisites in the same Chronicles storyline. Pre-install abandonment history may be unavailable."));
         }
+        else ImGui.TextWrapped(T("Прогресс пока недоступен. Нажми «Обновить прогресс».", "Progress is unavailable. Click Refresh progress."));
+        ImGui.Spacing();
+        ImGui.Separator();
+        if (ImGui.CollapsingHeader(T("Требования и связанные квесты", "Requirements and linked quests")))
+        {
+            var id = p.Next?.QuestId ?? 0;
+            if (plugin.Catalog!.Quests.TryGetValue(id, out var q))
+            {
+                ImGui.TextWrapped(T(q.Join == 2 ? "Достаточно одного предыдущего квеста:" : "Предыдущие квесты:", q.Join == 2 ? "Complete one prerequisite:" : "Previous quests:"));
+                foreach (var previous in q.Previous)
+                {
+                    var done = plugin.QuestProgress.TryGetValue(previous, out var observation) && observation.Complete;
+                    ImGui.TextWrapped($"{(done ? "[+]" : "[ ]")} {plugin.QuestName(previous)}");
+                }
+                if (q.Previous.Length == 0) ImGui.TextWrapped(T("Предыдущие квесты не указаны.", "No previous quests listed."));
+            }
+            foreach (var quest in p.Activity.QuestIds) ImGui.TextWrapped("• " + plugin.QuestName(quest));
+        }
+        if (ImGui.CollapsingHeader(T("Как определяется прогресс", "How progress is tracked")))
+        {
+            ImGui.TextWrapped(T("«Пройдено» означает первый клир активности, а не сбор всех наград. История отменённых до установки квестов может отсутствовать.", "Cleared means a first clear, not all rewards. Quests abandoned before installation may have no history."));
+            if (p.Activity.Source == "Quest.INSTANCEDUNGEON")
+                ImGui.TextWrapped(T("Связь с квестом найдена в сценарии игры. Точный момент открытия может отличаться.", "The quest link comes from a game script. The exact unlock moment may differ."));
+            ImGui.TextDisabled($"Duty #{p.Activity.Id} · {p.Activity.Source}");
+        }
+        ImGui.Spacing();
+        var isHidden = plugin.Hidden.Contains(p.Activity.Id);
+        if (ImGui.SmallButton(isHidden ? T("Вернуть в список", "Restore activity") : T("Скрыть эту активность", "Hide this activity"))) plugin.Hide(p.Activity.Id, !isHidden);
     }
 
     private string Reason(NextStep s) => s.Reason switch
     {
-        "accepted" => T("Задание уже в журнале — можно продолжить.", "Quest already in your journal — continue it."),
-        "offer" => T("Проверенные требования выполнены на текущем классе. Начни с этого квеста.", "Checked requirements are met on your current job. Start with this quest."),
-        "level" => T("Нужен более высокий уровень текущего класса.", "Your current job needs a higher level."),
-        "class" => T("Для этого задания нужен другой класс или профессия.", "This quest requires a different class or job."),
-        "completed" => T("Квест выполнен, но активность ещё закрыта. Проверь дальнейшие условия в игре.", "Quest complete, but the duty is still locked. Check further requirements in game."),
-        "unmapped" => T("Статус открытия известен, но надёжная связь с квестом пока не найдена.", "Unlock status is known, but no reliable quest link was found."),
-        "ambiguous" => T("Найдено несколько возможных квестов. Точный маршрут требует проверки.", "Several possible quests found. The exact route needs verification."),
-        _ => T("Есть дополнительные или неподтверждённые условия. Проверь требования в игре.", "Additional or unverified requirements exist. Check them in game."),
+        "accepted" => T("Продолжи принятое задание.", "Continue the quest you have accepted."),
+        "offer" => T("Поговори с NPC и возьми задание.", "Speak to the NPC and accept the quest."),
+        "level" => T("Повысь уровень текущего класса или переключись на подходящую профессию.", "Level up your current class or switch to an eligible job."),
+        "class" => T("Переключись на подходящий класс, затем возьми задание у NPC.", "Switch to an eligible class or job, then accept the quest from the NPC."),
+        "completed" => T("Квест выполнен, но активность ещё закрыта. Проверь дополнительные условия в игре.", "Quest complete, but the duty is locked. Check further requirements in game."),
+        "unmapped" => T("Активность ещё закрыта. Маршрут открытия пока не добавлен.", "This duty is locked. Its unlock route is not available yet."),
+        "ambiguous" => T("Есть несколько вариантов открытия. Посмотри связанные квесты ниже.", "Several unlock routes were found. See the linked quests below."),
+        _ => T("Сначала проверь дополнительные условия этого задания в игре.", "Check this quest's additional requirements in game first."),
     };
     private string State(ActivityState s) => s switch
     {
-        ActivityState.NotStarted => T("Ещё не открыто", "Still locked"),
-        ActivityState.InProgress => T("В процессе", "In progress"),
-        ActivityState.Unlocked => T("Открыто", "Unlocked"),
-        ActivityState.Cleared => T("Пройдено", "Cleared"), _ => T("Неизвестно", "Unknown"),
+        ActivityState.NotStarted => T("Не открыто", "Locked"), ActivityState.InProgress => T("Цепочка начата", "Chain started"),
+        ActivityState.Unlocked => T("Открыто · ещё не пройдено", "Unlocked · not yet cleared"),
+        ActivityState.Cleared => T("Открыто и пройдено", "Unlocked and cleared"), _ => T("Прогресс неизвестен", "Progress unknown"),
     };
     private string Kind(ActivityKind k) => k switch
     {
@@ -207,6 +297,8 @@ internal sealed class CompassWindow : Window
 
     private void DrawSettings()
     {
+        ImGui.TextColored(Accent, T("Настройки", "Settings"));
+        ImGui.Spacing();
         var ru = plugin.Settings.Russian;
         var notify = plugin.Settings.NotifyOnLogin;
         var open = plugin.Settings.OpenOnLogin;
@@ -220,8 +312,9 @@ internal sealed class CompassWindow : Window
             plugin.Settings.OpenOnLogin = open;
             plugin.Save();
         }
-        ImGui.TextWrapped(T("Названия квестов и контента — на английском для поиска в игре. Прогресс и скрытые активности раздельны для каждого персонажа.",
-            "Quest and duty names use English for in-game lookup. History and hidden duties are separate for each character."));
-        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.TextWrapped(T("Названия квестов и активностей оставлены на английском для поиска в игре. Прогресс и скрытые активности сохраняются отдельно для каждого персонажа.", "Quest and duty names use English for in-game lookup. Progress and hidden activities are saved separately for each character."));
+        ImGui.Spacing();
+        if (ImGui.Button(T("Вернуться к активностям", "Back to activities"))) settings = false;
     }
 }

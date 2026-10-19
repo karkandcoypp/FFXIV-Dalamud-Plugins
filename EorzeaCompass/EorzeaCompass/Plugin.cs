@@ -33,6 +33,7 @@ public sealed class Plugin : IDalamudPlugin
     internal IReadOnlyList<ActivityProgress> Progress { get; private set; } = Array.Empty<ActivityProgress>();
     internal string? Error { get; private set; }
     internal bool Available { get; private set; }
+    internal IReadOnlyDictionary<uint, QuestObservation> QuestProgress { get; private set; } = new Dictionary<uint, QuestObservation>();
     internal ulong CharacterId { get; private set; }
     private static readonly HashSet<uint> EmptyIds = new();
     internal IReadOnlySet<uint> Hidden => Settings.Hidden.GetValueOrDefault(CharacterId) ?? EmptyIds;
@@ -43,6 +44,7 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime retryCatalogAfter;
     private bool notified;
     private Task<Catalog>? catalogTask;
+    private readonly Dictionary<uint, string> jobHints = new();
 
     public Plugin()
     {
@@ -175,6 +177,8 @@ public sealed class Plugin : IDalamudPlugin
                 UIState.IsInstanceContentCompleted(activity.InstanceId), started.Contains(activity.Id), Catalog.Quests, observations));
         }
         Progress = results;
+        QuestProgress = observations;
+        jobHints.Clear();
         Available = true;
         if (dirty) Save();
     }
@@ -185,6 +189,22 @@ public sealed class Plugin : IDalamudPlugin
         .OrderByDescending(p => p.State == ActivityState.InProgress).ThenBy(p => p.Activity.Level)
         .DistinctBy(p => p.Next!.QuestId);
     internal string QuestName(uint id) => Catalog?.Quests.GetValueOrDefault(id)?.Name ?? $"Quest #{id}";
+
+    internal string EligibleJobs(QuestNode quest)
+    {
+        if (jobHints.TryGetValue(quest.Id, out var cached)) return cached;
+        if (!Data.GetExcelSheet<ClassJobCategory>(ClientLanguage.English).TryGetRow(quest.ClassCategory, out var category))
+            return T("Посмотри разрешённые классы в журнале заданий.", "Check eligible jobs in the quest journal.");
+        var jobs = Data.GetExcelSheet<ClassJob>(ClientLanguage.English)
+            .Where(job => job.RowId != 0 && typeof(ClassJobCategory).GetProperty(job.Abbreviation.ToString())?.GetValue(category) is true)
+            .Select(job => new { Name = job.Abbreviation.ToString(), Level = Player.GetClassJobLevel(job) })
+            .Where(job => job.Level >= quest.Level).OrderByDescending(job => job.Level).Take(6)
+            .Select(job => $"{job.Name} ({job.Level})").ToArray();
+        var result = jobs.Length > 0 ? T("Можно переключиться на: ", "You can switch to: ") + string.Join(", ", jobs)
+            : T("Нужный класс: ", "Eligible classes: ") + category.Name.ToString();
+        jobHints[quest.Id] = result;
+        return result;
+    }
 
     public void Dispose()
     {
