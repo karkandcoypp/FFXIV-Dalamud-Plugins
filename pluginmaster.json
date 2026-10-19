@@ -53,8 +53,8 @@
     "Author": "Carcosa Lyuman",
     "Name": "Eorzea Compass",
     "InternalName": "EorzeaCompass",
-    "AssemblyVersion": "0.4.0.0",
-    "Description": "Progress journal with 220 quest chains: story, jobs, societies, relic milestones and exploration. Quest reward atlas with item sources, guaranteed and choice rewards. Duty unlocks, clears and NPC map links.",
+    "AssemblyVersion": "0.5.0.0",
+    "Description": "Progress journal with 220 quest chains and a collectible atlas. Society and exploration vendors, currencies and prices, purchase requirements, automatic collection tracking, source filters, quest rewards and NPC map links.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
     "Tags": [
@@ -68,10 +68,10 @@
     "LoadSync": false,
     "CanUnloadAsync": false,
     "LoadPriority": 0,
-    "Punchline": "Quest chains, exploration and a quest reward atlas.",
+    "Punchline": "Track your progress and collect society and exploration rewards.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.4.0/EorzeaCompass.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.4.0/EorzeaCompass.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.4.0/EorzeaCompass.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.5.0/EorzeaCompass.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.5.0/EorzeaCompass.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.5.0/EorzeaCompass.zip"
   }
 ]
