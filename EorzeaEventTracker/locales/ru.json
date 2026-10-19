@@ -233,5 +233,14 @@
   "Other": "Прочее",
   "Types use installed item data. Gear includes equipment; Housing includes outdoor items. Unclassified items appear under Other.": "Тип определяется по данным предмета из игры. Экипировка включает оружие и аксессуары; интерьер — также садовую мебель и элементы дома. Неопределённые предметы находятся в разделе «Прочее».",
   "Obtained — {0}": "Получено — {0}",
-  "Search matches are in the obtained section above. Expand it to view them.": "Найденные награды находятся в разделе «Получено» выше. Разверните его, чтобы увидеть предметы."
+  "Search matches are in the obtained section above. Expand it to view them.": "Найденные награды находятся в разделе «Получено» выше. Разверните его, чтобы увидеть предметы.",
+  "Continue quest": "Продолжите квест",
+  "Start quest": "Начните квест",
+  "Required class or job": "Подходящий класс или профессия",
+  "To unlock": "Чтобы открыть",
+  "Required level": "Требуемый уровень",
+  "Check quest requirements": "Проверьте условия квеста",
+  "Still to earn for favorites": "Осталось заработать на избранное",
+  "Ready to buy": "Можно купить",
+  "Enough currency for your favorite rewards.": "Валюты на избранные награды достаточно."
 }

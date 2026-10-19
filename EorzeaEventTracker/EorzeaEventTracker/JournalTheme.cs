@@ -11,6 +11,9 @@ internal static class JournalTheme
     public static readonly Vector4 Gold = new(.79f, .71f, .53f, 1);
     public static readonly Vector4 Text = new(.91f, .89f, .83f, 1);
     public static readonly Vector4 Muted = new(.64f, .66f, .65f, 1);
+    public static readonly Vector4 QuestTitle = new(.91f, .81f, .60f, 1);
+    public static readonly Vector4 NpcTitle = new(.64f, .80f, .87f, 1);
+    public static readonly Vector4 CompletedTitle = new(.64f, .76f, .66f, 1);
     public static readonly Vector4 Border = new(.48f, .45f, .36f, .45f);
     public static readonly Vector4 Button = new(.19f, .205f, .215f, 1);
     public static readonly Vector4 Hover = new(.26f, .275f, .28f, 1);

@@ -299,11 +299,11 @@ public sealed class EventWindow : Window, IDisposable
                 Section("YOUR NEXT STEPS", e.Steps);
                 if (e.Locations.Count > 0)
                 {
-                    ImGui.TextColored(Gold, T("EVENT NPCs"));
+                    SectionHeading(T("EVENT NPCs"));
                     foreach (var location in e.Locations)
                     {
                         ImGui.PushID(location.Id);
-                        ImGui.TextWrapped($"{E(location.Npc)} — {E(location.Zone)} (X:{location.X:F1} Y:{location.Y:F1})");
+                        LocationSummary(location);
                         DrawLocationButton(location.Id);
                         ImGui.PopID();
                     }
@@ -318,6 +318,55 @@ public sealed class EventWindow : Window, IDisposable
             }
             ImGui.EndTabBar();
         }
+    }
+
+    private void Emphasis(string text, Vector4 color, float factor = 1.14f)
+    {
+        var wrap = ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - 6 * S;
+        ImGui.SetWindowFontScale(UiScale * factor);
+        ImGui.PushTextWrapPos(wrap);
+        try { ImGui.TextColored(color, text); }
+        finally { ImGui.PopTextWrapPos(); ImGui.SetWindowFontScale(UiScale); }
+    }
+
+    private void KeyValue(string label, string value, Vector4 color, float factor = 1.18f)
+    {
+        ImGui.PushTextWrapPos(0);
+        ImGui.TextColored(Muted, label);
+        ImGui.PopTextWrapPos();
+        Emphasis(value, color, factor);
+    }
+
+    private void SectionHeading(string title)
+    {
+        ImGui.TextColored(Gold, title);
+        var right = ImGui.GetWindowPos().X + ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X;
+        var end = ImGui.GetItemRectMax();
+        var left = end.X + 12 * S;
+        if (right - left > 20 * S)
+            ImGui.GetWindowDrawList().AddLine(new Vector2(left, (ImGui.GetItemRectMin().Y + end.Y) * .5f),
+                new Vector2(right, (ImGui.GetItemRectMin().Y + end.Y) * .5f), ImGui.ColorConvertFloat4ToU32(JournalTheme.Border));
+    }
+
+    private void StatusBadge(string text, Vector4 color)
+    {
+        text = text.Trim('[', ']', ' ');
+        var start = ImGui.GetCursorScreenPos();
+        var padding = new Vector2(8, 3) * S;
+        var size = ImGui.CalcTextSize(text) + padding * 2;
+        var draw = ImGui.GetWindowDrawList();
+        draw.AddRectFilled(start, start + size, ImGui.ColorConvertFloat4ToU32(new Vector4(color.X, color.Y, color.Z, .13f * Opacity)), 4 * S);
+        draw.AddRect(start, start + size, ImGui.ColorConvertFloat4ToU32(new Vector4(color.X, color.Y, color.Z, .35f)), 4 * S);
+        draw.AddText(start + padding, ImGui.ColorConvertFloat4ToU32(color), text);
+        ImGui.Dummy(size);
+    }
+
+    private void LocationSummary(EventLocation location)
+    {
+        Emphasis(E(location.Npc), JournalTheme.NpcTitle, 1.08f);
+        ImGui.PushTextWrapPos(0);
+        ImGui.TextColored(Muted, $"{E(location.Zone)}  ·  X:{location.X:F1} Y:{location.Y:F1}");
+        ImGui.PopTextWrapPos();
     }
 
     private ImGuiTabItemFlags SelectRequestedTab(string tab)
@@ -339,76 +388,83 @@ public sealed class EventWindow : Window, IDisposable
         }
         var step = nextStep;
         ImGui.PushID("NextStep");
-        ImGui.Separator();
-        ImGui.TextColored(Gold, T("NEXT STEP"));
-        ImGui.PushTextWrapPos(0);
+        var panelStart = ImGui.GetCursorScreenPos();
+        var panelWidth = ImGui.GetContentRegionAvail().X;
+        var panelScale = S;
+        ImGui.BeginGroup();
+        ImGui.Dummy(new Vector2(0, 6 * panelScale));
+        ImGui.Indent(14 * panelScale);
+        SectionHeading(T("NEXT STEP"));
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - 12 * panelScale);
         switch (step.Kind)
         {
-            case NextStepKind.Waiting: ImGui.TextWrapped(T("Waiting for character data")); break;
-            case NextStepKind.Upcoming: ImGui.TextWrapped(T("This event has not started yet. Check the participation guide before it begins.")); break;
-            case NextStepKind.Ended: ImGui.TextWrapped(T("This event has ended. Check the official page for future dates.")); break;
-            case NextStepKind.Unmapped: ImGui.TextWrapped(T("There is not enough tracking data to determine the next step. Check the official guide.")); break;
+            case NextStepKind.Waiting: ImGui.TextColored(Muted, T("Waiting for character data")); break;
+            case NextStepKind.Upcoming: ImGui.TextColored(Muted, T("This event has not started yet. Check the participation guide before it begins.")); break;
+            case NextStepKind.Ended: ImGui.TextColored(Muted, T("This event has ended. Check the official page for future dates.")); break;
+            case NextStepKind.Unmapped: ImGui.TextColored(Muted, T("There is not enough tracking data to determine the next step. Check the official guide.")); break;
             case NextStepKind.Accepted:
-                ImGui.TextColored(QuestAmber, F("Continue quest: {0}", step.Name));
-                ImGui.TextWrapped(T("Open your quest journal and follow the current objective. The starting NPC is not necessarily your destination."));
+                KeyValue(T("Continue quest"), step.Name, JournalTheme.QuestTitle, 1.24f);
+                ImGui.TextColored(Muted, T("Open your quest journal and follow the current objective. The starting NPC is not necessarily your destination."));
                 break;
             case NextStepKind.Class:
-                ImGui.TextWrapped(F("Switch to the required class or job: {0}", step.ClassName));
-                ImGui.TextWrapped(F("To unlock: {0}", step.Name));
+                KeyValue(T("Required class or job"), step.ClassName, QuestAmber);
+                KeyValue(T("To unlock"), step.Name, JournalTheme.QuestTitle);
                 break;
             case NextStepKind.Level:
-                ImGui.TextWrapped(F("Reach level {0} on the required class to unlock {1}.", step.Level, step.Name));
+                KeyValue(T("Required level"), step.Level.ToString(L.Culture), QuestAmber, 1.3f);
+                KeyValue(T("To unlock"), step.Name, JournalTheme.QuestTitle);
                 break;
             case NextStepKind.Choices:
-                ImGui.TextWrapped(T("Complete ONE of these prerequisite quests:"));
-                foreach (var name in step.Choices ?? Array.Empty<string>()) ImGui.BulletText(name);
-                ImGui.TextWrapped(T("Choose the route appropriate for your character. Requirements are shown in quest progress."));
+                ImGui.TextColored(Muted, T("Complete ONE of these prerequisite quests:"));
+                foreach (var name in step.Choices ?? Array.Empty<string>()) Emphasis(name, JournalTheme.QuestTitle, 1.1f);
+                ImGui.TextColored(Muted, T("Choose the route appropriate for your character. Requirements are shown in quest progress."));
                 break;
             case NextStepKind.Requirements:
-                ImGui.TextWrapped(F("Check the requirements for: {0}", step.Name));
-                ImGui.TextWrapped(T("Availability cannot be confirmed automatically. Check quest progress or the official guide."));
+                KeyValue(T("Check quest requirements"), step.Name, JournalTheme.QuestTitle);
+                ImGui.TextColored(Muted, T("Availability cannot be confirmed automatically. Check quest progress or the official guide."));
                 break;
             case NextStepKind.Quest:
-                ImGui.TextWrapped(F("Start quest: {0}", step.Name));
-                if (step.Partial) ImGui.TextWrapped(T("Special conditions may apply. Check the event dates and quest requirements if the NPC is missing."));
+                KeyValue(T("Start quest"), step.Name, JournalTheme.QuestTitle, 1.24f);
+                if (step.Partial) ImGui.TextColored(Muted, T("Special conditions may apply. Check the event dates and quest requirements if the NPC is missing."));
                 var tracked = definition?.Quests.FirstOrDefault(q => q.Id == step.QuestId);
                 var location = e.Locations.FirstOrDefault(l => l.Id == tracked?.LocationId) ?? GameQuestAccess.Location(step.QuestId);
                 if (location != null)
                 {
-                    ImGui.TextWrapped($"{E(location.Npc)} — {E(location.Zone)} (X:{location.X:F1} Y:{location.Y:F1})");
+                    LocationSummary(location);
                     if (ImGui.SmallButton(T("Where to go") + "###NextQuestMap"))
                         if (!EventNavigation.Open(location)) mapErrorUntil = DateTime.UtcNow.AddSeconds(10);
                 }
-                else ImGui.TextWrapped(T("No confirmed map destination is available. Check the participation guide."));
+                else ImGui.TextColored(Muted, T("No confirmed map destination is available. Check the participation guide."));
                 break;
             case NextStepKind.Farm:
                 foreach (var budget in (step.Budgets ?? Array.Empty<CurrencyBudget>()).Where(b => b.Remaining > 0))
-                    ImGui.TextWrapped(F("Earn {0} more {1} for your favorite rewards.", budget.Remaining!.Value.ToString("N0", L.Culture), E(budget.Currency)));
-                if (step.Partial) ImGui.TextWrapped(T("Some favorite costs or currency balances are unknown. The amount above may not cover every selected reward."));
-                ImGui.TextWrapped(T("See How to join for the event activities. The merchant is where you spend currency, not necessarily where you earn it."));
+                    KeyValue(T("Still to earn for favorites"), $"{budget.Remaining!.Value.ToString("N0", L.Culture)} {E(budget.Currency)}", Gold, 1.25f);
+                if (step.Partial) ImGui.TextColored(Muted, T("Some favorite costs or currency balances are unknown. The amount above may not cover every selected reward."));
+                ImGui.TextColored(Muted, T("See How to join for the event activities. The merchant is where you spend currency, not necessarily where you earn it."));
                 if (ImGui.SmallButton(T("How to join") + "###NextJoin")) requestedTab = "join";
                 break;
             case NextStepKind.Buy:
-                ImGui.TextWrapped(F("You have enough currency for your favorite rewards. Buy: {0}", step.Name));
+                KeyValue(T("Ready to buy"), step.Name, JournalTheme.QuestTitle);
+                ImGui.TextColored(QuestGreen, T("Enough currency for your favorite rewards."));
                 var merchant = e.Locations.FirstOrDefault(l => l.Id == step.LocationId);
-                if (merchant != null) ImGui.TextWrapped($"{E(merchant.Npc)} — {E(merchant.Zone)}");
+                if (merchant != null) LocationSummary(merchant);
                 DrawLocationButton(step.LocationId);
                 break;
             case NextStepKind.ReviewRewards:
-                ImGui.TextWrapped(T("Check your favorite rewards: some prices, balances or acquisition states are unknown. Use Already obtained for items collected earlier."));
+                ImGui.TextColored(Muted, T("Check your favorite rewards: some prices, balances or acquisition states are unknown. Use Already obtained for items collected earlier."));
                 break;
             case NextStepKind.FavoritesComplete:
                 ImGui.TextColored(QuestGreen, T("All favorite rewards obtained."));
-                ImGui.TextWrapped(T("Choose more rewards or hide the event when you are finished."));
+                ImGui.TextColored(Muted, T("Choose more rewards or hide the event when you are finished."));
                 break;
             case NextStepKind.CollectionComplete:
-                ImGui.TextWrapped(T("All tracked, non-ignored rewards are collected. You can hide the event when you are finished."));
+                ImGui.TextColored(Muted, T("All tracked, non-ignored rewards are collected. You can hide the event when you are finished."));
                 break;
             case NextStepKind.TrackedQuestsComplete:
-                ImGui.TextWrapped(T("Tracked quests are complete. Check the official guide for rewards not listed in the feed."));
+                ImGui.TextColored(Muted, T("Tracked quests are complete. Check the official guide for rewards not listed in the feed."));
                 break;
             case NextStepKind.ChooseRewards:
-                ImGui.TextWrapped(T("Choose the rewards you want and mark them as favorites. Your next step will include their remaining currency cost."));
+                ImGui.TextColored(Muted, T("Choose the rewards you want and mark them as favorites. Your next step will include their remaining currency cost."));
                 break;
         }
         ImGui.PopTextWrapPos();
@@ -418,7 +474,14 @@ public sealed class EventWindow : Window, IDisposable
             if (ImGui.SmallButton(T("Official event guide") + "###NextOfficial")) OpenUrl(e.Url);
         if (step.Kind is NextStepKind.FavoritesComplete or NextStepKind.CollectionComplete)
             if (ImGui.SmallButton(T("Hide event") + "###NextHide")) plugin.SetEventHidden(e, true);
-        ImGui.Separator();
+        ImGui.Unindent(14 * panelScale);
+        ImGui.Dummy(new Vector2(0, 6 * panelScale));
+        ImGui.EndGroup();
+        var panelEnd = new Vector2(panelStart.X + panelWidth, ImGui.GetItemRectMax().Y);
+        var panelDraw = ImGui.GetWindowDrawList();
+        panelDraw.AddRect(panelStart, panelEnd, ImGui.ColorConvertFloat4ToU32(JournalTheme.Border), 6 * panelScale);
+        panelDraw.AddRectFilled(panelStart + new Vector2(0, 8 * panelScale), new Vector2(panelStart.X + 3 * panelScale, panelEnd.Y - 8 * panelScale),
+            ImGui.ColorConvertFloat4ToU32(Gold), 2 * panelScale);
         ImGui.Spacing();
         ImGui.PopID();
     }
@@ -426,7 +489,7 @@ public sealed class EventWindow : Window, IDisposable
     private void DrawProgress(TrackingDefinition definition)
     {
         ImGui.Spacing();
-        ImGui.TextColored(Gold, T("QUEST JOURNAL"));
+        SectionHeading(T("QUEST JOURNAL"));
         uint previousId = 0;
         foreach (var quest in definition.Quests)
         {
@@ -453,9 +516,9 @@ public sealed class EventWindow : Window, IDisposable
             }
             else draw.AddCircleFilled(marker, 2.5f * S, ImGui.ColorConvertFloat4ToU32(color));
             ImGui.Indent(28 * S);
-            ImGui.TextWrapped(E(quest.Name));
-            ImGui.TextColored(color, T(done ? "[DONE]" : !known ? "[ ... ]" : blocked ? "[LOCKED]"
-                : access?.Accepted == true ? "[IN PROGRESS]" : "[TODO]"));
+            Emphasis(E(quest.Name), done ? JournalTheme.CompletedTitle : JournalTheme.QuestTitle, done ? 1.08f : 1.16f);
+            StatusBadge(T(done ? "[DONE]" : !known ? "[ ... ]" : blocked ? "[LOCKED]"
+                : access?.Accepted == true ? "[IN PROGRESS]" : "[TODO]"), color);
             if (!done)
             {
                 if (access?.Accepted != true) DrawLocationButton(quest.LocationId);
@@ -598,7 +661,7 @@ public sealed class EventWindow : Window, IDisposable
             return;
         }
         ImGui.Separator();
-        ImGui.TextColored(Gold, T("CURRENCY FOR FAVORITES"));
+        SectionHeading(T("CURRENCY FOR FAVORITES"));
         foreach (var budget in FavoriteBudget.Calculate(pending, plugin.Progress.CurrencyBalances))
         {
             ImGui.TextWrapped(F("Remaining rewards cost: {0} {1}", budget.Required.ToString("N0", L.Culture), E(budget.Currency)));
@@ -719,7 +782,7 @@ public sealed class EventWindow : Window, IDisposable
         if (access == null || !access.Known) { ImGui.TextWrapped(T("Quest requirements could not be checked.")); return; }
         if (access.Accepted) { ImGui.TextWrapped(T("Quest already accepted. Open your quest journal and follow the current objective; the starting NPC may have moved.")); return; }
         if (!access.LevelMet) ImGui.TextColored(QuestAmber, F("Required level: {0} (current class)", access.Level));
-        if (!access.ClassMet) ImGui.TextWrapped(F("Required class or job: {0}", access.ClassName));
+        if (!access.ClassMet) KeyValue(T("Required class or job"), access.ClassName, QuestAmber, 1.1f);
         var previousMet = QuestAccess.MeetsPrevious(access.Join, access.Previous);
         if (previousMet != true && access.Previous.Count > 0)
         {
@@ -732,14 +795,14 @@ public sealed class EventWindow : Window, IDisposable
                 ImGui.Indent(12 * S);
                 ImGui.TextColored(requirement.Complete ? QuestGreen : QuestAmber, requirement.Complete ? "+" : "-");
                 ImGui.SameLine();
-                ImGui.TextWrapped(requirement.Name);
+                Emphasis(requirement.Name, requirement.Complete ? JournalTheme.CompletedTitle : JournalTheme.QuestTitle, 1.08f);
                 if (!requirement.Complete && depth < 4 && !path.Contains(requirement.Id)
                     && ImGui.TreeNode(T("How to unlock") + "###Prerequisite"))
                 {
                     var location = GameQuestAccess.Location(requirement.Id);
                     if (location != null)
                     {
-                        ImGui.TextWrapped($"{location.Npc} — {location.Zone} (X:{location.X:F1} Y:{location.Y:F1})");
+                        LocationSummary(location);
                         if (ImGui.SmallButton(T("Where to go") + "###PrerequisiteMap"))
                             if (!EventNavigation.Open(location)) mapErrorUntil = DateTime.UtcNow.AddSeconds(10);
                     }
@@ -912,7 +975,7 @@ public sealed class EventWindow : Window, IDisposable
         var list = items.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
         if (list.Count == 0) return;
         ImGui.Spacing();
-        ImGui.TextColored(Gold, T(title));
+        SectionHeading(T(title));
         ImGui.PushTextWrapPos(0);
         foreach (var item in list) ImGui.BulletText(E(item));
         ImGui.PopTextWrapPos();
