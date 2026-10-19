@@ -46,4 +46,10 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add EorzeaEventTracker/config/events.json EorzeaEventTracker/config/translation-cache.json
-          git diff --cached --quiet || (git commit -m 'Refresh event data' && git push)
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh event data'
+            # workflow_dispatch/scheduled runs can be queued at an older SHA
+            # while the preceding release updates pluginmaster.json.
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
