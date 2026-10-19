@@ -42,6 +42,7 @@ internal static class Program
         EnglishNameChecks.Run();
         CharacterSettingsChecks.Run();
         QuestAccessChecks.Run();
+        NextStepChecks.Run();
         await ItemWikiChecks.Run();
         var settings = new Configuration();
         Check(!settings.ShowCompactWidget, "compact widget starts hidden for existing configurations");

@@ -1,8 +1,10 @@
-# Eorzea Event Tracker 0.19.0
+# Eorzea Event Tracker 0.20.0
 
-- Selected events now have a clean cover image and a prominent 1.65x heading below it, with a short gold accent and countdown. Removed the redundant Seasonal journal / Live text and text overlays on artwork.
-- Clicking a reward icon or English item title opens its existing FFXIV Online Wiki page in the default browser. Exact title lookups follow wiki redirects and reject missing or disambiguation pages.
-- Wiki checks are asynchronous, cached and performed only on click. Network failures display a retry message; missing pages do not open a browser. Only validated HTTPS item-page URLs on the wiki host are accepted.
-- Previous releases remain available for rollback; character progress and preferences are unchanged.
+- Added a Next step block below the selected event heading. It uses the current character's loaded quest progress, access requirements and reward goals.
+- Follow the main objective and its prerequisite chain; show class/level blockers and preserve alternative unlock routes instead of choosing an arbitrary city. Already accepted quests point to the current journal objective.
+- After quests, show the currency still needed for favorite rewards. Farming links to How to join; merchant maps are recommended only when known currency totals cover the selected rewards.
+- Unknown prices, balances or collection states prompt review instead of invented totals. Completed favorites or tracked collections offer to hide the event.
+- Future/ended events, incomplete tracking and unsupported conditions have explicit guidance. Prerequisite-only alternatives in automatic feeds are not treated as additional mandatory objectives.
+- No configuration migration. Previous releases remain available for rollback.
 
-Validation: Release build with warnings as errors, client/collector checks and live read-only wiki lookup. In-game rendering and browser interaction require player verification.
+Validation: client decision-policy and regression checks, collector tests, Release build with warnings as errors. Live in-game rendering and map clicks require player verification.

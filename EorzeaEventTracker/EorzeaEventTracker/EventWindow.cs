@@ -22,6 +22,10 @@ public sealed class EventWindow : Window, IDisposable
     private string wikiMessage = "";
     private DateTime wikiMessageUntil;
     private bool settingsVisible;
+    private string requestedTab = "";
+    private DateTime nextStepRefresh;
+    private NextStep? nextStep;
+    private string nextStepEvent = "";
     private string urlBuffer;
     private string selected = "";
     private bool remainingOnly { get => plugin.Preferences.RemainingOnly; set => plugin.Preferences.RemainingOnly = value; }
@@ -46,6 +50,8 @@ public sealed class EventWindow : Window, IDisposable
     {
         WindowName = "Eorzea Event Tracker###EETMain-" + contentId;
         selected = "";
+        nextStep = null;
+        requestedTab = "";
         showHidden = false;
         settingsVisible = false;
         mapErrorUntil = default;
@@ -246,6 +252,7 @@ public sealed class EventWindow : Window, IDisposable
     {
         plugin.Progress.Catalog.TryGetValue(e.Id, out var definition);
         DrawHero(e, now);
+        DrawNextStep(e, definition, now);
         if (e.EndsAt.HasValue) ImGui.TextDisabled(F("Ends {0}", e.EndsAt.Value.ToLocalTime().ToString("f", L.Culture)));
         if (!e.Verified) ImGui.TextColored(Gold, T("Partial details — check the official page"));
         if (plugin.Progress.ReadyForReminders && EventCompletionPolicy.IsComplete(definition, plugin.Progress.Quests))
@@ -258,13 +265,13 @@ public sealed class EventWindow : Window, IDisposable
         ImGui.Spacing();
         if (ImGui.BeginTabBar("Event tabs"))
         {
-            if (ImGui.BeginTabItem(T("Your progress") + "###Your progress"))
+            if (ImGui.BeginTabItem(T("Your progress") + "###Your progress", SelectRequestedTab("progress")))
             {
                 if (definition == null) ImGui.TextWrapped(T("Automatic tracking has not been mapped for this event yet."));
                 else DrawProgress(definition);
                 ImGui.EndTabItem();
             }
-            if (ImGui.BeginTabItem(T("How to join") + "###How to join"))
+            if (ImGui.BeginTabItem(T("How to join") + "###How to join", SelectRequestedTab("join")))
             {
                 Section("REQUIREMENTS", e.Requirements);
                 Section("YOUR NEXT STEPS", e.Steps);
@@ -289,6 +296,109 @@ public sealed class EventWindow : Window, IDisposable
             }
             ImGui.EndTabBar();
         }
+    }
+
+    private ImGuiTabItemFlags SelectRequestedTab(string tab)
+    {
+        if (requestedTab != tab) return ImGuiTabItemFlags.None;
+        requestedTab = "";
+        return ImGuiTabItemFlags.SetSelected;
+    }
+
+    private void DrawNextStep(EventInfo e, TrackingDefinition? definition, DateTimeOffset now)
+    {
+        if (nextStep == null || nextStepEvent != e.Id || DateTime.UtcNow >= nextStepRefresh)
+        {
+            nextStep = NextStepPolicy.Decide(e, definition, now, plugin.Progress.ReadyForReminders,
+                plugin.Preferences, plugin.Progress.Quests, plugin.Progress.QuestAccess, plugin.Progress.Rewards,
+                plugin.Progress.CurrencyBalances, id => plugin.Progress.QuestAccess.GetValueOrDefault(id) ?? GameQuestAccess.Read(id));
+            nextStepEvent = e.Id;
+            nextStepRefresh = DateTime.UtcNow.AddSeconds(1);
+        }
+        var step = nextStep;
+        ImGui.PushID("NextStep");
+        ImGui.Separator();
+        ImGui.TextColored(Gold, T("NEXT STEP"));
+        ImGui.PushTextWrapPos(0);
+        switch (step.Kind)
+        {
+            case NextStepKind.Waiting: ImGui.TextWrapped(T("Waiting for character data")); break;
+            case NextStepKind.Upcoming: ImGui.TextWrapped(T("This event has not started yet. Check the participation guide before it begins.")); break;
+            case NextStepKind.Ended: ImGui.TextWrapped(T("This event has ended. Check the official page for future dates.")); break;
+            case NextStepKind.Unmapped: ImGui.TextWrapped(T("There is not enough tracking data to determine the next step. Check the official guide.")); break;
+            case NextStepKind.Accepted:
+                ImGui.TextColored(QuestAmber, F("Continue quest: {0}", step.Name));
+                ImGui.TextWrapped(T("Open your quest journal and follow the current objective. The starting NPC is not necessarily your destination."));
+                break;
+            case NextStepKind.Class:
+                ImGui.TextWrapped(F("Switch to the required class or job: {0}", step.ClassName));
+                ImGui.TextWrapped(F("To unlock: {0}", step.Name));
+                break;
+            case NextStepKind.Level:
+                ImGui.TextWrapped(F("Reach level {0} on the required class to unlock {1}.", step.Level, step.Name));
+                break;
+            case NextStepKind.Choices:
+                ImGui.TextWrapped(T("Complete ONE of these prerequisite quests:"));
+                foreach (var name in step.Choices ?? Array.Empty<string>()) ImGui.BulletText(name);
+                ImGui.TextWrapped(T("Choose the route appropriate for your character. Requirements are shown in quest progress."));
+                break;
+            case NextStepKind.Requirements:
+                ImGui.TextWrapped(F("Check the requirements for: {0}", step.Name));
+                ImGui.TextWrapped(T("Availability cannot be confirmed automatically. Check quest progress or the official guide."));
+                break;
+            case NextStepKind.Quest:
+                ImGui.TextWrapped(F("Start quest: {0}", step.Name));
+                if (step.Partial) ImGui.TextWrapped(T("Special conditions may apply. Check the event dates and quest requirements if the NPC is missing."));
+                var tracked = definition?.Quests.FirstOrDefault(q => q.Id == step.QuestId);
+                var location = e.Locations.FirstOrDefault(l => l.Id == tracked?.LocationId) ?? GameQuestAccess.Location(step.QuestId);
+                if (location != null)
+                {
+                    ImGui.TextWrapped($"{E(location.Npc)} — {E(location.Zone)} (X:{location.X:F1} Y:{location.Y:F1})");
+                    if (ImGui.SmallButton(T("Where to go") + "###NextQuestMap"))
+                        if (!EventNavigation.Open(location)) mapErrorUntil = DateTime.UtcNow.AddSeconds(10);
+                }
+                else ImGui.TextWrapped(T("No confirmed map destination is available. Check the participation guide."));
+                break;
+            case NextStepKind.Farm:
+                foreach (var budget in (step.Budgets ?? Array.Empty<CurrencyBudget>()).Where(b => b.Remaining > 0))
+                    ImGui.TextWrapped(F("Earn {0} more {1} for your favorite rewards.", budget.Remaining!.Value.ToString("N0", L.Culture), E(budget.Currency)));
+                if (step.Partial) ImGui.TextWrapped(T("Some favorite costs or currency balances are unknown. The amount above may not cover every selected reward."));
+                ImGui.TextWrapped(T("See How to join for the event activities. The merchant is where you spend currency, not necessarily where you earn it."));
+                if (ImGui.SmallButton(T("How to join") + "###NextJoin")) requestedTab = "join";
+                break;
+            case NextStepKind.Buy:
+                ImGui.TextWrapped(F("You have enough currency for your favorite rewards. Buy: {0}", step.Name));
+                var merchant = e.Locations.FirstOrDefault(l => l.Id == step.LocationId);
+                if (merchant != null) ImGui.TextWrapped($"{E(merchant.Npc)} — {E(merchant.Zone)}");
+                DrawLocationButton(step.LocationId);
+                break;
+            case NextStepKind.ReviewRewards:
+                ImGui.TextWrapped(T("Check your favorite rewards: some prices, balances or acquisition states are unknown. Use Already obtained for items collected earlier."));
+                break;
+            case NextStepKind.FavoritesComplete:
+                ImGui.TextColored(QuestGreen, T("All favorite rewards obtained."));
+                ImGui.TextWrapped(T("Choose more rewards or hide the event when you are finished."));
+                break;
+            case NextStepKind.CollectionComplete:
+                ImGui.TextWrapped(T("All tracked, non-ignored rewards are collected. You can hide the event when you are finished."));
+                break;
+            case NextStepKind.TrackedQuestsComplete:
+                ImGui.TextWrapped(T("Tracked quests are complete. Check the official guide for rewards not listed in the feed."));
+                break;
+            case NextStepKind.ChooseRewards:
+                ImGui.TextWrapped(T("Choose the rewards you want and mark them as favorites. Your next step will include their remaining currency cost."));
+                break;
+        }
+        ImGui.PopTextWrapPos();
+        if (step.Kind is NextStepKind.Choices or NextStepKind.Requirements or NextStepKind.Class or NextStepKind.Level or NextStepKind.ReviewRewards or NextStepKind.ChooseRewards)
+            if (ImGui.SmallButton(T("Your progress") + "###NextProgress")) requestedTab = "progress";
+        if (step.Kind is NextStepKind.Unmapped or NextStepKind.Upcoming or NextStepKind.Ended or NextStepKind.Requirements or NextStepKind.TrackedQuestsComplete)
+            if (ImGui.SmallButton(T("Official event guide") + "###NextOfficial")) OpenUrl(e.Url);
+        if (step.Kind is NextStepKind.FavoritesComplete or NextStepKind.CollectionComplete)
+            if (ImGui.SmallButton(T("Hide event") + "###NextHide")) plugin.SetEventHidden(e, true);
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.PopID();
     }
 
     private void DrawProgress(TrackingDefinition definition)

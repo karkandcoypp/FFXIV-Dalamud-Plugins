@@ -2,7 +2,7 @@
   "Author": "Carcosa Lyuman",
   "Name": "Eorzea Event Tracker",
   "InternalName": "EorzeaEventTracker",
-  "AssemblyVersion": "0.19.0.0",
+  "AssemblyVersion": "0.20.0.0",
   "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/EorzeaEventTracker/assets/icon-v2.png",
   "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
   "Description": "Lodestone event dates, illustrated event guides, automatic quest completion and character reward tracking.",
