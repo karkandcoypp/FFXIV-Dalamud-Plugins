@@ -53,7 +53,7 @@
     "Author": "Carcosa Lyuman",
     "Name": "Eorzea Compass",
     "InternalName": "EorzeaCompass",
-    "AssemblyVersion": "0.1.0.0",
+    "AssemblyVersion": "0.2.0.0",
     "Description": "Dungeons, trials and raids: character unlocks, unfinished quest chains, prerequisites and NPC map links. Russian and English interface.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
@@ -70,8 +70,8 @@
     "LoadPriority": 0,
     "Punchline": "Find the content you have yet to unlock.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.1.0/EorzeaCompass.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.1.0/EorzeaCompass.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.1.0/EorzeaCompass.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.2.0/EorzeaCompass.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.2.0/EorzeaCompass.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.2.0/EorzeaCompass.zip"
   }
 ]
