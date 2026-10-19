@@ -105,6 +105,7 @@ public sealed class Plugin : IDalamudPlugin
     internal void Save() => PluginInterface.SavePluginConfig(Settings);
     private void OnUpdate(IFramework framework)
     {
+        window.UpdateExternalLinks();
         var loggedIn = Client.IsLoggedIn;
         var character = loggedIn ? Player.ContentId : 0;
         if (loggedIn && character == 0) character = activeCharacter; // Loading a zone is not a character switch.

@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Windowing;
@@ -13,6 +15,12 @@ namespace EorzeaEventTracker;
 public sealed class EventWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
+    private readonly ItemWiki wiki = new();
+    private readonly CancellationTokenSource wikiCancellation = new();
+    private Task<WikiResult>? wikiRequest;
+    private string wikiItem = "";
+    private string wikiMessage = "";
+    private DateTime wikiMessageUntil;
     private bool settingsVisible;
     private string urlBuffer;
     private string selected = "";
@@ -41,6 +49,8 @@ public sealed class EventWindow : Window, IDisposable
         showHidden = false;
         settingsVisible = false;
         mapErrorUntil = default;
+        wikiRequest = null;
+        wikiMessage = "";
         urlBuffer = plugin.Settings.FeedUrl;
         IsOpen = false;
     }
@@ -242,6 +252,8 @@ public sealed class EventWindow : Window, IDisposable
             ImGui.TextColored(Teal, T("Main objective completed"));
         if (!string.IsNullOrWhiteSpace(e.Description)) ImGui.TextWrapped(E(e.Description));
         if (ImGui.Button(T("Official event guide") + "###Official event guide")) OpenUrl(e.Url);
+        if (wikiRequest != null) ImGui.TextWrapped(F("Checking wiki: {0}", wikiItem));
+        else if (DateTime.UtcNow < wikiMessageUntil) ImGui.TextWrapped(T(wikiMessage));
         if (DateTime.UtcNow < mapErrorUntil) ImGui.TextWrapped(T("Could not open the map. Log in and try again; this area may be unavailable."));
         ImGui.Spacing();
         if (ImGui.BeginTabBar("Event tabs"))
@@ -447,12 +459,12 @@ public sealed class EventWindow : Window, IDisposable
             else ImGui.Dummy(new Vector2(44 * scale));
             ImGui.GetWindowDrawList().AddRect(iconStart, iconStart + new Vector2(44 * scale),
                 ImGui.ColorConvertFloat4ToU32(progress.Confirmed && !ignored ? QuestGreen : JournalTheme.Border), 3 * scale);
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip(reward.Name);
+            DrawWikiLink(reward);
             ImGui.SameLine();
             ImGui.BeginGroup();
             ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + textWidth);
             ImGui.TextColored(ignored ? Muted : favorite ? Gold : JournalTheme.Text, title);
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip(reward.Name);
+            DrawWikiLink(reward);
             if (price.Length > 0) ImGui.TextColored(ignored ? Muted : Gold, price);
             ImGui.PopTextWrapPos();
             ImGui.EndGroup();
@@ -565,20 +577,11 @@ public sealed class EventWindow : Window, IDisposable
     {
         var scale = S;
         var width = ImGui.GetContentRegionAvail().X;
-        var padding = 18 * scale;
-        var title = E(e.Title);
-        float titleHeight;
-        ImGui.SetWindowFontScale(UiScale * 1.2f);
-        try { titleHeight = ImGui.CalcTextSize(title, false, width - padding * 2).Y; }
-        finally { ImGui.SetWindowFontScale(UiScale); }
-        var height = Math.Max(Math.Clamp(width * .31f, 150 * scale, 205 * scale),
-            titleHeight + ImGui.GetTextLineHeightWithSpacing() * 2 + padding * 2);
+        var height = Math.Clamp(width * .25f, 125 * scale, 185 * scale);
         var start = ImGui.GetCursorScreenPos();
-        var cursor = ImGui.GetCursorPos();
-        var size = new Vector2(width, height);
-        ImGui.Dummy(size);
         var draw = ImGui.GetWindowDrawList();
-        draw.AddRectFilled(start, start + size, ImGui.ColorConvertFloat4ToU32(new Vector4(.13f, .12f, .095f, 1)), 6 * scale);
+        var size = new Vector2(width, height);
+        draw.AddRectFilled(start, start + size, ImGui.ColorConvertFloat4ToU32(JournalTheme.Panel), 5 * scale);
         var file = EventImagePath(e);
         if (file != null && Plugin.Textures.GetFromFile(file).TryGetWrap(out var wrap, out _))
         {
@@ -587,25 +590,52 @@ public sealed class EventWindow : Window, IDisposable
             var visible = imageRatio > displayRatio ? new Vector2(displayRatio / imageRatio, 1) : new Vector2(1, imageRatio / displayRatio);
             draw.AddImage(wrap.Handle, start, start + size, (Vector2.One - visible) / 2, (Vector2.One + visible) / 2);
         }
-        var shadeTop = ImGui.ColorConvertFloat4ToU32(new Vector4(.025f, .023f, .02f, .15f));
-        var shadeBottom = ImGui.ColorConvertFloat4ToU32(new Vector4(.025f, .023f, .02f, .97f));
-        draw.AddRectFilledMultiColor(start, start + size, shadeTop, shadeTop, shadeBottom, shadeBottom);
-        draw.AddRect(start, start + size, ImGui.ColorConvertFloat4ToU32(new Vector4(Gold.X, Gold.Y, Gold.Z, .45f)), 4 * scale);
-        var textY = height - padding - titleHeight - ImGui.GetTextLineHeightWithSpacing() * 2;
-        ImGui.SetCursorPos(cursor + new Vector2(padding, textY));
-        ImGui.TextColored(Gold, T(e.Active(now) ? "SEASONAL JOURNAL  /  LIVE" : "SEASONAL JOURNAL  /  UPCOMING"));
-        ImGui.SetCursorPosX(cursor.X + padding);
-        ImGui.SetWindowFontScale(UiScale * 1.2f);
+        draw.AddRect(start, start + size, ImGui.ColorConvertFloat4ToU32(JournalTheme.Border), 4 * scale);
+        ImGui.Dummy(size);
+        ImGui.Dummy(new Vector2(0, 3 * scale));
+        ImGui.SetWindowFontScale(UiScale * 1.65f);
         try
         {
-            ImGui.PushTextWrapPos(cursor.X + width - padding);
-            ImGui.TextColored(new Vector4(.98f, .95f, .88f, 1), title);
+            ImGui.PushTextWrapPos(0);
+            ImGui.TextColored(JournalTheme.Text, E(e.Title));
             ImGui.PopTextWrapPos();
         }
         finally { ImGui.SetWindowFontScale(UiScale); }
-        ImGui.SetCursorPosX(cursor.X + padding);
-        ImGui.TextColored(new Vector4(.88f, .86f, .80f, 1), Countdown(e, now));
-        ImGui.SetCursorPos(cursor + new Vector2(0, height + 12 * scale));
+        var accent = ImGui.GetCursorScreenPos();
+        draw.AddLine(accent, accent + new Vector2(46 * scale, 0), ImGui.ColorConvertFloat4ToU32(Gold), 2 * scale);
+        ImGui.Dummy(new Vector2(0, 2 * scale));
+        ImGui.TextColored(Gold, Countdown(e, now));
+        ImGui.Spacing();
+    }
+
+    private void DrawWikiLink(TrackedReward reward)
+    {
+        if (!ImGui.IsItemHovered()) return;
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        var hint = wikiItem == reward.Name && wikiRequest != null ? F("Checking wiki: {0}", wikiItem)
+            : wikiItem == reward.Name && DateTime.UtcNow < wikiMessageUntil && wikiMessage.Length > 0 ? T(wikiMessage)
+            : T("Click to open this item on the FFXIV wiki.");
+        ImGui.SetTooltip(reward.Name + "\n" + hint);
+        if (!ImGui.IsItemClicked(ImGuiMouseButton.Left)) return;
+        if (wikiItem == reward.Name && wikiRequest != null) return;
+        wikiItem = reward.Name;
+        wikiMessage = "";
+        wikiRequest = wiki.FindAsync(reward.Name, wikiCancellation.Token);
+    }
+
+    internal void UpdateExternalLinks()
+    {
+        if (wikiRequest is not { IsCompleted: true } request) return;
+        wikiRequest = null;
+        var result = request.IsCompletedSuccessfully ? request.Result : new WikiResult(WikiState.Unavailable);
+        if (request.IsFaulted) Plugin.Log.Warning(request.Exception!, "Item wiki lookup failed");
+        if (result.State == WikiState.Found) OpenUrl(result.Url);
+        else
+        {
+            wikiMessage = result.State == WikiState.Missing ? "No unambiguous wiki page found for this item."
+                : "Could not reach the wiki. Please try again.";
+            wikiMessageUntil = DateTime.UtcNow.AddSeconds(10);
+        }
     }
 
     private void DrawSettings()
@@ -670,9 +700,9 @@ public sealed class EventWindow : Window, IDisposable
     private static void OpenUrl(string url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "https" ||
-            !(uri.Host.Equals("finalfantasyxiv.com", StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith(".finalfantasyxiv.com", StringComparison.OrdinalIgnoreCase))) return;
+            !(uri.Host.Equals("finalfantasyxiv.com", StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith(".finalfantasyxiv.com", StringComparison.OrdinalIgnoreCase) || ItemWiki.IsPageUrl(url))) return;
         try { Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true }); }
-        catch (Exception ex) { Plugin.Log.Error(ex, "Could not open official page"); }
+        catch (Exception ex) { Plugin.Log.Error(ex, "Could not open external page"); }
     }
-    public void Dispose() { }
+    public void Dispose() { wikiRequest = null; wikiCancellation.Cancel(); wiki.Dispose(); wikiCancellation.Dispose(); }
 }

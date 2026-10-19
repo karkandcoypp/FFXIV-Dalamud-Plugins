@@ -167,5 +167,9 @@
   "Actions": "Действия",
   "Requirements": "Условия доступа",
   "Add to favorites": "Добавить в избранное",
-  "Remove from favorites": "Убрать из избранного"
+  "Remove from favorites": "Убрать из избранного",
+  "Checking wiki: {0}": "Ищем в вики: {0}",
+  "Click to open this item on the FFXIV wiki.": "Нажмите, чтобы открыть предмет в FFXIV Wiki.",
+  "No unambiguous wiki page found for this item.": "Не найдена однозначная страница этого предмета в вики.",
+  "Could not reach the wiki. Please try again.": "Не удалось подключиться к вики. Попробуйте ещё раз."
 }

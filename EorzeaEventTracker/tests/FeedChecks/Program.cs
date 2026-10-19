@@ -11,6 +11,16 @@ internal static class Program
 {
     private static async Task Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--wiki-live")
+        {
+            using var wiki = new ItemWiki();
+            var found = await wiki.FindAsync("Gentlebean Knit Cap");
+            var missing = await wiki.FindAsync("EET nonexistent item 7eb2656a-451a-45e9");
+            Check(found.State == WikiState.Found && ItemWiki.IsPageUrl(found.Url), "live wiki resolves a real reward to a validated page");
+            Check(missing.State == WikiState.Missing, "live wiki identifies a nonexistent page without launching a browser");
+            Console.WriteLine(found.Url);
+            return;
+        }
         if (args.Length is 2 or 3 && args[0] == "--integration-url")
         {
             await LiveFeedChecks.Run(args[1], args.Length == 3 ? args[2] : null);
@@ -32,6 +42,7 @@ internal static class Program
         EnglishNameChecks.Run();
         CharacterSettingsChecks.Run();
         QuestAccessChecks.Run();
+        await ItemWikiChecks.Run();
         var settings = new Configuration();
         Check(!settings.ShowCompactWidget, "compact widget starts hidden for existing configurations");
         settings.ShowCompactWidget = true;

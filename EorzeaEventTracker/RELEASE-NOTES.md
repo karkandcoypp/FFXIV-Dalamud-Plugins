@@ -1,10 +1,8 @@
-# Eorzea Event Tracker 0.18.0
+# Eorzea Event Tracker 0.19.0
 
-- A shared FFXIV-inspired palette for the journal and compact widget: graphite panels, warm ivory text, restrained gold accents and softer status colors.
-- Quest progress uses a vertical marker layout with checkmarks for completed quests. Connectors follow actual prerequisite relationships; alternate unlock routes are not presented as mandatory sequential steps.
-- Completed quests are compact. Blocked and accepted quests keep their explanations visible; other access details expand under Requirements.
-- Reward cards retain item icons, wrapping English titles, prices and acquisition states while using less vertical space. A one-click star toggles favorites; Actions contains favorite, ignored and manual-obtained controls. Where to go remains available on the card.
-- Cards adapt between one and two columns, wrap long text, and move navigation to another row when needed. Scale, opacity, per-character progress and feed behavior are preserved.
+- Selected events now have a clean cover image and a prominent 1.65x heading below it, with a short gold accent and countdown. Removed the redundant Seasonal journal / Live text and text overlays on artwork.
+- Clicking a reward icon or English item title opens its existing FFXIV Online Wiki page in the default browser. Exact title lookups follow wiki redirects and reject missing or disambiguation pages.
+- Wiki checks are asynchronous, cached and performed only on click. Network failures display a retry message; missing pages do not open a browser. Only validated HTTPS item-page URLs on the wiki host are accepted.
+- Previous releases remain available for rollback; character progress and preferences are unchanged.
 
-Rollback: the previous release eet-v0.17.0 remains available with its original binary and source tag. No configuration migration is introduced.
-Validation: Release build with warnings as errors, client regression checks and collector tests. Live in-game appearance still needs player verification.
+Validation: Release build with warnings as errors, client/collector checks and live read-only wiki lookup. In-game rendering and browser interaction require player verification.
