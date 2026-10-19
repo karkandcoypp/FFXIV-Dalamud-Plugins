@@ -27,6 +27,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
+    [PluginService] internal static ITextureProvider Textures { get; private set; } = null!;
 
     internal Configuration Settings { get; }
     internal Catalog? Catalog { get; private set; }
@@ -187,7 +188,14 @@ public sealed class Plugin : IDalamudPlugin
         }
         Progress = results;
         if (!Settings.StartedStories.TryGetValue(CharacterId, out var storyHistory)) Settings.StartedStories[CharacterId] = storyHistory = new();
-        Stories = Catalog.Stories.Select(s => StoryCatalog.Evaluate(s, Catalog.Quests, observations, storyHistory.Contains(s.Definition.Id))).ToArray();
+        var achievements = new Dictionary<uint, bool>();
+        if (Unlocks.IsAchievementListLoaded)
+        {
+            var achievementSheet = Data.GetExcelSheet<Achievement>(ClientLanguage.English);
+            foreach (var id in Catalog.Stories.Select(s => s.Definition.Achievement).Where(id => id != 0).Distinct())
+                if (achievementSheet.TryGetRow(id, out var achievement)) achievements[id] = Unlocks.IsAchievementComplete(achievement);
+        }
+        Stories = Catalog.Stories.Select(s => StoryCatalog.Evaluate(s, Catalog.Quests, observations, storyHistory.Contains(s.Definition.Id), achievements)).ToArray();
         foreach (var story in Stories.Where(s => s.State == StoryState.InProgress)) dirty |= storyHistory.Add(story.Story.Definition.Id);
         Expansions = StoryCatalog.Summarize(Stories, Progress);
         QuestProgress = observations;

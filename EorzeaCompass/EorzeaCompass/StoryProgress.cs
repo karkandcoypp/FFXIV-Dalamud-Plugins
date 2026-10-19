@@ -8,7 +8,9 @@ namespace EorzeaCompass;
 
 public enum StoryState { Unknown, NotStarted, InProgress, Completed }
 public sealed record StoryDefinition(string Id, string Name, string Kind, uint Expansion, uint Genre,
-    uint EndQuest, string EndQuestName, uint StartQuest = 0, bool CurrentChapter = false);
+    uint EndQuest, string EndQuestName, uint StartQuest = 0, bool CurrentChapter = false,
+    string Scope = "", string ScopeRu = "", bool Segment = false, uint Achievement = 0, string AchievementName = "",
+    uint[]? Milestones = null);
 public sealed record Story(StoryDefinition Definition, uint[] QuestIds, uint[] ActivityIds, bool Valid);
 public sealed record StoryProgress(Story Story, StoryState State, int Done, uint[] Route, NextStep? Next)
 {
@@ -31,12 +33,14 @@ public static class StoryCatalog
             var included = new HashSet<uint>();
             void Include(uint id)
             {
-                if (!quests.TryGetValue(id, out var q) || q.Genre != d.Genre || !included.Add(id) || id == d.StartQuest) return;
+                if (!quests.TryGetValue(id, out var q) || q.Genre != d.Genre
+                    || d.Segment && q.Expansion != d.Expansion || !included.Add(id) || id == d.StartQuest) return;
                 foreach (var previous in q.Previous) Include(previous);
             }
             Include(d.EndQuest);
+            foreach (var milestone in d.Milestones ?? []) Include(milestone);
             var valid = quests.TryGetValue(d.EndQuest, out var end) && end.Name == d.EndQuestName && end.Genre == d.Genre
-                && (d.StartQuest == 0 || included.Contains(d.StartQuest));
+                && (d.StartQuest == 0 || included.Contains(d.StartQuest)) && (d.Milestones ?? []).All(included.Contains);
             // This is a relation to a story, not proof that clearing a duty finishes its narrative.
             var linked = activities.Where(a => !a.Advanced && a.QuestIds.Any(included.Contains)).Select(a => a.Id).ToArray();
             return new Story(d, included.Order().ToArray(), linked, valid);
@@ -44,12 +48,14 @@ public static class StoryCatalog
     }
 
     public static StoryProgress Evaluate(Story story, IReadOnlyDictionary<uint, QuestNode> quests,
-        IReadOnlyDictionary<uint, QuestObservation> observations, bool history = false)
+        IReadOnlyDictionary<uint, QuestObservation> observations, bool history = false,
+        IReadOnlyDictionary<uint, bool>? achievements = null)
     {
         if (!story.Valid) return new(story, StoryState.Unknown, 0, [], null);
         var allowed = story.QuestIds.ToHashSet();
         var visited = new HashSet<uint>();
         var route = new List<uint>();
+        var routePrevious = new Dictionary<uint, uint[]>();
         bool broken = false;
         int Evidence(uint id, HashSet<uint> seen)
         {
@@ -72,23 +78,54 @@ public static class StoryCatalog
                     // Prefer the actual completed/accepted branch; don't count mutually exclusive routes twice.
                     var branch = previous.OrderByDescending(p => observations.GetValueOrDefault(p)?.Complete == true)
                         .ThenByDescending(p => Evidence(p, new())).ThenBy(p => p).First();
+                    routePrevious[id] = [branch];
                     Visit(branch, path);
                 }
-                else foreach (var p in previous) Visit(p, path);
+                else
+                {
+                    routePrevious[id] = previous;
+                    foreach (var p in previous) Visit(p, path);
+                }
             }
             path.Remove(id); visited.Add(id); route.Add(id);
         }
+        foreach (var milestone in story.Definition.Milestones ?? []) Visit(milestone, new());
         Visit(story.Definition.EndQuest, new());
+        if (story.Definition.Achievement != 0)
+        {
+            if (achievements?.GetValueOrDefault(story.Definition.Achievement) == true)
+                return new(story, StoryState.Completed, route.Count, route.ToArray(), null);
+            if (observations.GetValueOrDefault(story.Definition.EndQuest)?.Complete == true)
+                return new(story, achievements?.ContainsKey(story.Definition.Achievement) == true ? StoryState.InProgress : StoryState.Unknown,
+                    0, route.ToArray(), null);
+        }
         if (observations.GetValueOrDefault(story.Definition.EndQuest)?.Complete == true)
             return new(story, StoryState.Completed, route.Count, route.ToArray(), null);
         if (broken || route.Count == 0 || route.Any(id => !observations.ContainsKey(id)))
             return new(story, StoryState.Unknown, route.Count(id => observations.GetValueOrDefault(id)?.Complete == true), route.ToArray(), null);
-        var done = route.Count(id => observations[id].Complete);
-        var active = route.FirstOrDefault(id => observations[id].Accepted && !observations[id].Complete);
-        var nextId = active != 0 ? active : route.First(id => !observations[id].Complete);
+        // Only an actual descendant proves a repeatable prerequisite was passed.
+        // A completed sibling in an AND branch must not prove the other branch.
+        var inferred = new HashSet<uint>();
+        var proven = new HashSet<uint>();
+        void ProveAncestors(uint id)
+        {
+            if (!proven.Add(id)) return;
+            foreach (var previous in routePrevious.GetValueOrDefault(id) ?? [])
+            {
+                if (quests[previous].Repeatable) inferred.Add(previous);
+                ProveAncestors(previous);
+            }
+        }
+        foreach (var id in route.Where(id => observations[id].Complete)) ProveAncestors(id);
+        bool Passed(uint id) => observations[id].Complete || inferred.Contains(id);
+        var done = route.Count(Passed);
+        var active = route.FirstOrDefault(id => observations[id].Accepted && !Passed(id));
+        var nextId = active != 0 ? active : route.First(id => !Passed(id));
         var started = history || done > 0 || active != 0;
+        var effective = inferred.Count == 0 ? observations : observations.ToDictionary(p => p.Key,
+            p => inferred.Contains(p.Key) ? p.Value with { Complete = true, Accepted = false } : p.Value);
         return new(story, started ? StoryState.InProgress : StoryState.NotStarted, done, route.ToArray(),
-            ProgressResolver.Resolve(nextId, quests, observations));
+            ProgressResolver.Resolve(nextId, quests, effective));
     }
 
     public static IReadOnlyList<ExpansionProgress> Summarize(IEnumerable<StoryProgress> stories, IEnumerable<ActivityProgress> activities)

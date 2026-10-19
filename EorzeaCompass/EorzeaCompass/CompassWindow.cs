@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using Dalamud.Interface.Textures;
 
 namespace EorzeaCompass;
 
@@ -24,6 +25,10 @@ internal sealed class CompassWindow : Window
     private int storyFilter;
     private int storyKind;
     private string selectedStory = "";
+    private string atlasStory = "";
+    private int rewardFilter;
+    private int selectedReward = -1;
+    private int rewardCategory;
     private static readonly Vector4 Accent = new(.45f, .85f, .75f, 1);
     private static readonly Vector4 Gold = new(1, .78f, .42f, 1);
     private static readonly Vector4 Muted = new(.67f, .72f, .78f, 1);
@@ -74,7 +79,8 @@ internal sealed class CompassWindow : Window
             if (settings) DrawSettings();
             else if (section == 0) DrawOverview();
             else if (section == 1) DrawStories();
-            else DrawCatalog();
+            else if (section == 2) DrawCatalog();
+            else DrawAtlas();
         }
         ImGui.EndChild();
     }
@@ -88,10 +94,10 @@ internal sealed class CompassWindow : Window
     private void DrawNavigation()
     {
         ImGui.TextColored(Accent, T("ЖУРНАЛ ПРОГРЕССА", "PROGRESS JOURNAL"));
-        var labels = new[] { T("Обзор дополнений", "Expansion overview"), T("Сюжетные цепочки", "Storylines"), T("Активности", "Activities") };
+        var labels = new[] { T("Обзор дополнений", "Expansion overview"), T("Цепочки заданий", "Quest chains"), T("Активности", "Activities"), T("Атлас наград", "Reward atlas") };
         for (int i = 0; i < labels.Length; i++)
             if (ImGui.Selectable(labels[i], !settings && section == i, ImGuiSelectableFlags.None, new Vector2(0, 28 * S)))
-            { section = i; settings = false; }
+            { section = i; settings = false; if (i == 3) atlasStory = ""; }
         ImGui.Separator();
         ImGui.TextColored(Muted, T("ДОПОЛНЕНИЕ", "EXPANSION"));
         if (ImGui.Selectable(T("Все дополнения", "All expansions"), expansion == uint.MaxValue)) expansion = uint.MaxValue;
@@ -151,15 +157,15 @@ internal sealed class CompassWindow : Window
 
     private void DrawStories()
     {
-        ImGui.TextColored(Accent, T("Сюжетные цепочки", "Storylines"));
+        ImGui.TextColored(Accent, T("Цепочки заданий", "Quest chains"));
         ImGui.SetNextItemWidth(-1);
         ImGui.InputTextWithHint("##story-search", T("Поиск истории или квеста…", "Search a story or quest…"), ref search, 200);
         ImGui.SetNextItemWidth(180 * S);
         ImGui.Combo("##story-state", ref storyFilter, new[] { T("Все состояния", "All states"), T("Не начато", "Not started"), T("В процессе", "In progress"), T("Завершено", "Completed") }, 4);
         ImGui.SameLine();
         ImGui.SetNextItemWidth(180 * S);
-        ImGui.Combo("##story-kind", ref storyKind, new[] { T("Все истории", "All stories"), T("Основной сюжет", "Main scenario"), T("Рейды и триалы", "Chronicles"), T("Побочные истории", "Side stories") }, 4);
-        var kinds = new[] { "", "Main", "Chronicles", "Side" };
+        ImGui.Combo("##story-kind", ref storyKind, new[] { T("Все цепочки", "All chains"), T("Основной сюжет", "Main scenario"), T("Рейды и триалы", "Chronicles"), T("Побочные истории", "Side stories"), T("Классы и профессии", "Classes and jobs"), T("Общества", "Societies"), T("Реликты", "Relics"), T("Исследование", "Exploration") }, 8);
+        var kinds = new[] { "", "Main", "Chronicles", "Side", "Jobs", "Society", "Relic", "Exploration" };
         var rows = plugin.Stories.Where(p => expansion == uint.MaxValue || p.Story.Definition.Expansion == expansion)
             .Where(p => storyFilter == 0 || (int)p.State == storyFilter)
             .Where(p => storyKind == 0 || p.Story.Definition.Kind == kinds[storyKind])
@@ -197,7 +203,8 @@ internal sealed class CompassWindow : Window
     private Vector4 StoryColor(StoryProgress p) => p.State == StoryState.Completed ? Accent : p.State == StoryState.InProgress ? Gold : Muted;
     private string StoryStatus(StoryProgress p) => p.State switch
     {
-        StoryState.Completed => p.Story.Definition.CurrentChapter ? T("Пройден текущий этап", "Current chapter completed") : T("История завершена", "Story completed"),
+        StoryState.Completed => p.Story.Definition.CurrentChapter ? T("Пройден текущий этап", "Current chapter completed")
+            : p.Story.Definition.Kind is "Relic" or "Jobs" ? T("Этапы цепочки пройдены", "Chain milestones completed") : T("История завершена", "Story completed"),
         StoryState.InProgress => T("В процессе", "In progress"), StoryState.NotStarted => T("Не начато", "Not started"), _ => T("Нет данных", "Unknown"),
     };
     private void DrawStoryRow(StoryProgress p)
@@ -220,20 +227,37 @@ internal sealed class CompassWindow : Window
     {
         ImGui.TextWrapped(p.Story.Definition.Name);
         ImGui.TextColored(StoryColor(p), StoryStatus(p));
-        if (p.State != StoryState.Unknown)
+        var coverage = p.Story.Definition.Kind switch
+        {
+            "Jobs" => T("Квесты выбранного дополнения", "Quests for this expansion"),
+            "Society" => T("История общества · репутация отдельно", "Society story · reputation separate"),
+            "Relic" => T("Однократные этапы · не коллекция оружия", "One-time milestones · not a weapon collection"),
+            "Exploration" => T("Сюжет зоны · не все этажи и награды", "Zone story · not all floors or rewards"),
+            _ => "",
+        };
+        if (coverage.Length > 0) ImGui.TextWrapped(coverage);
+        if (p.State != StoryState.Unknown && p.Story.Definition.Achievement == 0)
         {
             ImGui.TextUnformatted(T($"Задания маршрута: {p.Done} из {p.Route.Length}", $"Route quests: {p.Done} of {p.Route.Length}"));
             ImGui.ProgressBar(p.Fraction, new Vector2(-1, 5 * S), "");
         }
         ImGui.Separator();
         if (p.State == StoryState.Completed)
-            ImGui.TextWrapped(T("Финальный квест выполнен. Эта сюжетная линия завершена в пределах указанного этапа.", "The final quest is complete. This storyline is finished through the indicated chapter."));
+            ImGui.TextWrapped(T("Условие завершения подтверждено. Указанный этап пройден.", "Completion confirmed. The indicated chapter is finished."));
         else if (p.Next != null)
         {
             ImGui.TextColored(Gold, T("СЛЕДУЮЩИЙ ШАГ", "NEXT STEP"));
             DrawQuestAction(p.Next, p.State == StoryState.InProgress);
         }
+        else if (p.Story.Definition.Achievement != 0)
+            ImGui.TextWrapped(p.State == StoryState.Unknown
+                ? T("Открой окно достижений в игре, затем обнови прогресс.", "Open the in-game Achievements window, then refresh progress.")
+                : T("Продолжи сюжет внутри зоны. Завершение подтвердит достижение:", "Continue the scenario inside the zone. Completion requires this achievement:"));
         else ImGui.TextWrapped(T("Данных недостаточно для подтверждения прогресса. Нажми «Обновить прогресс».", "Not enough data to confirm progress. Click Refresh progress."));
+        if (p.Story.Definition.Achievement != 0) ImGui.TextWrapped(p.Story.Definition.AchievementName);
+        var rewards = plugin.Catalog!.Rewards.Count(r => r.StoryIds.Contains(p.Story.Definition.Id));
+        if (rewards > 0 && ImGui.Button(T($"Награды цепочки ({rewards})", $"Chain rewards ({rewards})"), new Vector2(-1, 0)))
+        { atlasStory = p.Story.Definition.Id; section = 3; search = ""; rewardFilter = rewardCategory = 0; selectedReward = -1; }
         if (p.Story.Definition.CurrentChapter)
             ImGui.TextWrapped(T("Считаются задания до текущей точки каталога; история может продолжиться в новых обновлениях.", "Tracks the catalog's current endpoint; future patches may continue this story."));
         ImGui.Separator();
@@ -257,11 +281,111 @@ internal sealed class CompassWindow : Window
         }
         if (ImGui.CollapsingHeader(T("Условие завершения", "Completion rule")))
         {
-            ImGui.TextWrapped(T("Выполнить финальный квест:", "Complete the final quest:"));
-            ImGui.TextWrapped(p.Story.Definition.EndQuestName);
+            ImGui.TextWrapped(p.Story.Definition.Achievement == 0 ? T("Выполнить финальный квест:", "Complete the final quest:") : T("Получить достижение:", "Earn this achievement:"));
+            ImGui.TextWrapped(p.Story.Definition.Achievement == 0 ? p.Story.Definition.EndQuestName : p.Story.Definition.AchievementName);
+            if (p.Story.Definition.Scope.Length > 0) ImGui.TextWrapped(T(p.Story.Definition.ScopeRu, p.Story.Definition.Scope));
             ImGui.TextWrapped(T("Счётчик охватывает маршрут к этому квесту. Дополнительные ветки и награды не входят в процент истории.", "The count covers the route to this quest. Optional branches and rewards are not part of story completion."));
         }
         ImGui.PopStyleColor();
+    }
+
+    private void DrawAtlas()
+    {
+        ImGui.TextColored(Accent, T("Атлас наград", "Reward atlas"));
+        ImGui.SetNextItemWidth(-1);
+        ImGui.InputTextWithHint("##reward-search", T("Название предмета или квеста…", "Item or quest name…"), ref search, 200);
+        ImGui.SetNextItemWidth(200 * S);
+        ImGui.Combo("##reward-state", ref rewardFilter, new[] { T("Все награды", "All rewards"), T("Квест ещё не выполнен", "Quest incomplete"), T("Квест выполнен", "Quest completed"), T("На выбор", "Choice rewards") }, 4);
+        ImGui.SameLine();
+        if (ImGui.SmallButton(T("Все цепочки", "All chains"))) { atlasStory = ""; search = ""; }
+        if (atlasStory.Length > 0) ImGui.TextWrapped(plugin.Catalog!.Stories.First(s => s.Definition.Id == atlasStory).Definition.Name);
+        var categories = new[] { T("Все типы предметов", "All item categories") }.Concat(plugin.Catalog!.Rewards.Select(r => r.Category).Distinct().Order()).ToArray();
+        ImGui.SetNextItemWidth(-1);
+        ImGui.Combo("##reward-category", ref rewardCategory, categories, categories.Length);
+        var allowedStories = plugin.Catalog!.Stories.Where(s => expansion == uint.MaxValue || s.Definition.Expansion == expansion).Select(s => s.Definition.Id).ToHashSet();
+        var rows = plugin.Catalog.Rewards.Select((r, index) => (Reward: r, Index: index))
+            .Where(x => atlasStory.Length == 0 || x.Reward.StoryIds.Contains(atlasStory))
+            .Where(x => x.Reward.StoryIds.Any(allowedStories.Contains))
+            .Where(x => rewardCategory == 0 || x.Reward.Category == categories[rewardCategory])
+            .Where(x => rewardFilter == 0 || rewardFilter == 3 && x.Reward.Kind == RewardKind.Choice
+                || rewardFilter == 1 && plugin.QuestProgress.GetValueOrDefault(x.Reward.QuestId)?.Complete == false
+                || rewardFilter == 2 && plugin.QuestProgress.GetValueOrDefault(x.Reward.QuestId)?.Complete == true)
+            .Where(x => search.Length == 0 || x.Reward.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || plugin.QuestName(x.Reward.QuestId).Contains(search, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (!rows.Any(x => x.Index == selectedReward)) selectedReward = rows.Length == 0 ? -1 : rows[0].Index;
+        ImGui.TextColored(Muted, T($"Наград: {rows.Length} · предметы из квестов", $"Rewards: {rows.Length} · quest items"));
+        ImGui.Separator();
+        if (ImGui.BeginChild("reward-list", new Vector2(ImGui.GetContentRegionAvail().X * .44f, 0), true))
+        {
+            foreach (var row in rows) DrawRewardRow(row.Reward, row.Index);
+            if (rows.Length == 0) ImGui.TextWrapped(T("Нет наград с такими фильтрами.", "No matching rewards."));
+        }
+        ImGui.EndChild(); ImGui.SameLine();
+        if (ImGui.BeginChild("reward-detail", Vector2.Zero, true))
+        {
+            if (selectedReward >= 0) DrawRewardDetail(plugin.Catalog.Rewards[selectedReward]);
+            else ImGui.TextWrapped(T("Выбери награду слева.", "Choose a reward on the left."));
+        }
+        ImGui.EndChild();
+    }
+
+    private string RewardType(QuestReward r) => r.Kind == RewardKind.Choice ? T("На выбор", "Choose one") : T("Награда за квест", "Quest reward");
+    private void DrawRewardRow(QuestReward r, int index)
+    {
+        ImGui.PushID(index);
+        var start = ImGui.GetCursorPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var complete = plugin.QuestProgress.GetValueOrDefault(r.QuestId)?.Complete == true;
+        var summary = RewardType(r) + (complete ? T(" · квест выполнен", " · quest completed") : "");
+        var height = ImGui.CalcTextSize(r.Name, false, width - 16 * S).Y + ImGui.CalcTextSize(summary, false, width - 16 * S).Y + 14 * S;
+        // Avoid generating text geometry for the thousands of off-screen atlas rows.
+        if (!ImGui.IsRectVisible(new Vector2(width, height)))
+        { ImGui.Dummy(new Vector2(width, height)); ImGui.Separator(); ImGui.PopID(); return; }
+        if (ImGui.Selectable("##reward", index == selectedReward, ImGuiSelectableFlags.None, new Vector2(0, height))) selectedReward = index;
+        var after = ImGui.GetCursorPos();
+        ImGui.SetCursorPos(start + new Vector2(8, 4) * S);
+        ImGui.PushTextWrapPos(start.X + width - 8 * S);
+        ImGui.TextUnformatted(r.Name);
+        ImGui.TextColored(complete ? Accent : r.Kind == RewardKind.Choice ? Gold : Muted, summary);
+        ImGui.PopTextWrapPos(); ImGui.SetCursorPos(after); ImGui.Separator(); ImGui.PopID();
+    }
+
+    private void DrawRewardDetail(QuestReward r)
+    {
+        if (Plugin.Textures != null && r.Icon != 0)
+        {
+            var icon = Plugin.Textures.GetFromGameIcon(new GameIconLookup(r.Icon)).GetWrapOrEmpty();
+            ImGui.Image(icon.Handle, new Vector2(40, 40) * S);
+        }
+        ImGui.TextWrapped(r.Name);
+        ImGui.TextColored(Accent, RewardType(r));
+        ImGui.TextWrapped($"{r.Category} · ×{r.Count}");
+        if (r.EquipLevel > 0) ImGui.TextColored(Muted, $"{T("ур.", "Lv.")} {r.EquipLevel} · iLv {r.ItemLevel}");
+        ImGui.Separator();
+        ImGui.TextColored(Gold, T("КАК ПОЛУЧИТЬ", "HOW TO OBTAIN"));
+        ImGui.TextWrapped(plugin.QuestName(r.QuestId));
+        ImGui.TextWrapped(RewardCatalog.Status(r, plugin.QuestProgress.GetValueOrDefault(r.QuestId)) switch
+        {
+            "choice-completed" => T("Квест выполнен. История выбора недоступна; получение именно этого предмета не подтверждено.", "Quest completed. The past choice is unavailable; this specific reward is unconfirmed."),
+            "quest-completed" => T("Квест выполнен. Это награда за его завершение; наличие предмета сейчас не проверяется.", "Quest completed. This is its completion reward; current possession is not checked."),
+            "pending" => r.Kind == RewardKind.Choice ? T("Заверши квест и выбери этот предмет среди предложенных наград.", "Complete the quest and choose this item from the reward options.") : T("Заверши этот квест, чтобы получить указанный предмет.", "Complete this quest to receive the listed item."),
+            _ => T("Прогресс квеста пока неизвестен.", "Quest progress is unknown."),
+        });
+        var location = locate(r.QuestId);
+        if (location != null)
+        {
+            ImGui.TextWrapped($"{location.Npc} · {location.Zone}");
+            if (ImGui.Button(T("NPC на карте", "Quest giver on map"), new Vector2(-1, 0))) location.Open();
+        }
+        ImGui.Separator();
+        ImGui.TextColored(Muted, T("ЦЕПОЧКИ", "QUEST CHAINS"));
+        foreach (var id in r.StoryIds)
+        {
+            var story = plugin.Catalog!.Stories.First(s => s.Definition.Id == id);
+            if (ImGui.Selectable(story.Definition.Name + "##" + id))
+            { selectedStory = id; section = 1; storyKind = storyFilter = 0; expansion = story.Definition.Expansion; search = ""; }
+        }
+        if (ImGui.CollapsingHeader(T("Что входит в атлас", "Atlas coverage")))
+            ImGui.TextWrapped(T("Указанные в игровых данных предметы квестовых цепочек. Покупки у торговцев, случайный лут и сценарные награды без явного количества пока не включены.", "Items explicitly listed in quest data. Vendor purchases, random drops and scripted rewards without an explicit quantity are not yet included."));
     }
 
     private static bool MatchesView(ActivityProgress p, int index) => index switch

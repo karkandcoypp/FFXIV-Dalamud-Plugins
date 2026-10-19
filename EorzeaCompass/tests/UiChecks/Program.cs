@@ -53,13 +53,16 @@ internal static class Program
         windowType.GetField("view", Instance)!.SetValue(window, 1);
         windowType.GetField("selected", Instance)!.SetValue(window, rows[2].Activity.Id);
         var directory = Path.GetFullPath(args[1]); Directory.CreateDirectory(directory);
-        foreach (var sample in new[] { (1180,760,17f,"normal"), (960,600,17f,"normal"), (1440,900,22f,"normal"), (960,600,17f,"long"), (960,600,17f,"accepted"), (960,600,17f,"class"), (960,600,17f,"english"), (1180,760,17f,"overview"), (960,600,17f,"overview"), (1440,900,22f,"overview"), (1180,760,17f,"story"), (960,600,17f,"story"), (960,600,17f,"story-complete"), (960,600,17f,"story-unknown") })
+        foreach (var sample in new[] { (1180,760,17f,"normal"), (960,600,17f,"normal"), (1440,900,22f,"normal"), (960,600,17f,"long"), (960,600,17f,"accepted"), (960,600,17f,"class"), (960,600,17f,"english"), (1180,760,17f,"overview"), (960,600,17f,"overview"), (1440,900,22f,"overview"), (1180,760,17f,"story"), (960,600,17f,"story"), (960,600,17f,"story-complete"), (960,600,17f,"story-unknown"), (960,600,17f,"story-society"), (960,600,17f,"story-relic"), (960,600,17f,"story-zone"), (960,600,17f,"reward"), (1180,760,17f,"reward"), (1440,900,22f,"reward"), (960,600,17f,"reward-choice") })
         {
             var scenarioRow = rows[2];
             windowType.GetField("section",Instance)!.SetValue(window,sample.Item4=="overview"?0:sample.Item4.StartsWith("story")?1:2);
             var storyRow=stories.Single(s=>s.Story.Definition.Name=="Return to Ivalice");
             if(sample.Item4=="story-complete") storyRow=stories.Single(s=>s.Story.Definition.Name=="Crystal Tower");
             if(sample.Item4=="story-unknown") storyRow=storyRow with {State=StoryState.Unknown,Next=null};
+            if(sample.Item4=="story-society") storyRow=stories.First(s=>s.Story.Definition.Kind=="Society" && s.Story.Definition.Expansion==5);
+            if(sample.Item4=="story-relic") storyRow=stories.First(s=>s.Story.Definition.Kind=="Relic" && s.Story.Definition.Expansion==5);
+            if(sample.Item4=="story-zone") storyRow=stories.First(s=>s.Story.Definition.Achievement!=0) with {State=StoryState.Unknown,Next=null};
             windowType.GetField("selectedStory",Instance)!.SetValue(window,storyRow.Story.Definition.Id);
             if (sample.Item4 == "long") scenarioRow = scenarioRow with { Activity = scenarioRow.Activity with { Name = "The Unending Coil of Bahamut - a deliberately long activity name to check wrapping" } };
             if (sample.Item4 == "accepted") scenarioRow = scenarioRow with { Next = scenarioRow.Next! with { Accepted = true, Reason = "accepted" } };
@@ -91,6 +94,20 @@ internal static class Program
                 ImGui.BeginChild("workspace",Vector2.Zero,false);
                 if(sample.Item4=="overview") {
                     windowType.GetMethod("DrawOverview",Instance)!.Invoke(window,null);
+                }
+                else if(sample.Item4.StartsWith("reward")) {
+                    windowType.GetField("section",Instance)!.SetValue(window,3);
+                    ImGui.TextUnformatted("Атлас наград · предметы из квестов");
+                    ImGui.Separator();
+                    var rewardRows=catalog.Rewards.Where(r=>r.Category=="Minion").Take(8).Concat(catalog.Rewards.Where(r=>r.Kind==RewardKind.Choice).Take(4)).ToArray();
+                    var rewardRow=sample.Item4=="reward-choice" ? rewardRows.First(r=>r.Kind==RewardKind.Choice) : rewardRows[0];
+                    ImGui.BeginChild("reward-list",new Vector2(ImGui.GetContentRegionAvail().X*.44f,0),true);
+                    for(int ri=0;ri<rewardRows.Length;ri++) windowType.GetMethod("DrawRewardRow",Instance)!.Invoke(window,[rewardRows[ri],ri]);
+                    ImGui.EndChild(); ImGui.SameLine();
+                    ImGui.BeginChild("reward-detail",Vector2.Zero,true);
+                    windowType.GetMethod("DrawRewardDetail",Instance)!.Invoke(window,[rewardRow]);
+                    if(ImGui.GetContentRegionAvail().Y<0) throw new Exception("Reward detail overflow");
+                    ImGui.EndChild();
                 }
                 else if(sample.Item4.StartsWith("story")) {
                     ImGui.TextUnformatted("Сюжетные цепочки"); ImGui.Separator();

@@ -7,7 +7,7 @@ namespace EorzeaCompass;
 public enum ActivityKind { Dungeon, Trial, Raid, AllianceRaid }
 public enum ActivityState { Unknown, NotStarted, InProgress, Unlocked, Cleared }
 public sealed record QuestNode(uint Id, string Name, uint[] Previous, byte Join, int Level,
-    uint Genre, uint ClassCategory, bool Partial, bool StoryChain = false);
+    uint Genre, uint ClassCategory, bool Partial, bool StoryChain = false, uint Expansion = 0, bool Repeatable = false);
 public sealed record Activity(uint Id, uint InstanceId, string Name, ActivityKind Kind, uint Expansion,
     string ExpansionName, int Level, int ItemLevel, bool Advanced, uint[] QuestIds, string Source);
 public sealed record QuestObservation(bool Complete, bool Accepted, bool LevelMet, bool ClassMet);

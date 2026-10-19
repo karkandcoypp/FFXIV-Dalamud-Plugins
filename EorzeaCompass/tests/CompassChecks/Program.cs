@@ -102,6 +102,27 @@ var unknownSummary=StoryCatalog.Summarize([StoryCatalog.Evaluate(story with { Va
 Check(unknownSummary.StoriesUnknown==1 && unknownSummary.StoriesDone==0,"unknown story progress remains explicit in overview");
 Console.WriteLine($"PASS: {count} checks including story state and overview");
 
+var repeatStory = story with { QuestIds = [101,102,103] };
+sq[101] = sq[101] with { Repeatable = true };
+sq[102] = sq[102] with { Previous = [101], Join = 1 };
+so[102] = new(true,false,true,true);
+so[103] = new(false,false,true,true);
+Check(StoryCatalog.Evaluate(repeatStory,sq,so).Next?.QuestId == 103,"completed later milestone proves earlier repeatable stage");
+sq[102] = sq[102] with { Previous=[] };
+sq[103] = sq[103] with { Previous=[101,102], Join=1 };
+Check(StoryCatalog.Evaluate(repeatStory,sq,so).Next?.QuestId == 101,"completed AND sibling does not prove repeatable branch");
+sq[102] = sq[102] with { Previous=[101] };
+sq[103] = sq[103] with { Previous=[102] };
+var zone = story with { Definition = definition with { Achievement = 2045 }, QuestIds = [103] };
+so[103] = new(true,false,true,true);
+Check(StoryCatalog.Evaluate(zone,sq,so).State == StoryState.Unknown,"zone unlock alone cannot prove scenario completion when achievements not loaded");
+Check(StoryCatalog.Evaluate(zone,sq,so,achievements:new Dictionary<uint,bool>{{2045,false}}).State == StoryState.InProgress,"loaded missing zone achievement means scenario unfinished");
+Check(StoryCatalog.Evaluate(zone,sq,so,achievements:new Dictionary<uint,bool>{{2045,true}}).State == StoryState.Completed,"zone scenario achievement proves completion");
+Check(!RewardCatalog.IsListedItem(true,1,0) && !RewardCatalog.IsListedItem(false,1,1),"script placeholders and polymorphic non-items are not guaranteed loot");
+var reward = new QuestReward(1,2,"Item",1,RewardKind.Choice,"",0,0,0,[]);
+Check(RewardCatalog.Status(reward,new(true,false,true,true)) == "choice-completed","completed choice quest does not imply ownership of each option");
+Check(RewardCatalog.Status(reward,null) == "unknown","missing reward progress remains unknown");
+
 if (args.Length > 0)
 {
     using var game = new GameData(args[0]);
@@ -110,6 +131,15 @@ if (args.Length > 0)
     Check(catalog.Quests.Count > 5000, "full quest index");
     Check(catalog.Stories.Count >= 30, "story catalog coverage");
     Check(catalog.Stories.All(s=>s.Valid), "all explicit story endpoints match installed game");
+    foreach (var kind in new[]{"Jobs","Society","Relic","Exploration"})
+        Check(catalog.Stories.Any(s=>s.Definition.Kind==kind),"extended catalog coverage "+kind);
+    Check(catalog.Stories.Where(s=>s.Definition.Segment).All(s=>s.QuestIds.All(id=>catalog.Quests[id].Expansion==s.Definition.Expansion)),"job phases never count quests from earlier expansions");
+    foreach(var s in catalog.Stories.Where(s=>s.Definition.Achievement!=0))
+        Check(game.Excel.GetSheet<Achievement>().GetRow(s.Definition.Achievement).Name.ToString()==s.Definition.AchievementName,"zone achievement identity "+s.Definition.Id);
+    Check(catalog.Rewards.Count > 100,"game-derived reward coverage");
+    Check(catalog.Rewards.All(r=>r.Count>0 && r.ItemId!=0 && r.StoryIds.Length>0),"all atlas entries have quantities and source chains");
+    Check(catalog.Rewards.Any(r=>r.ItemId==17530 && r.QuestId==67934 && r.Kind==RewardKind.Guaranteed && r.Count==1),"Anima minion is a real fixed quest reward, not a scripted weapon placeholder");
+    Check(catalog.Stories.Single(s=>s.Definition.Id=="relic-zodiac").QuestIds.Contains(66971u),"disconnected Zodiac milestones preserve early progress");
     Check(catalog.Stories.All(s=>s.QuestIds.Contains(s.Definition.EndQuest)), "final quest belongs to story route");
     Check(catalog.Stories.Single(s=>s.Definition.Name=="Crystal Tower").Definition.EndQuest==66031,"Crystal Tower ending excludes optional epilogue");
     Check(catalog.Stories.Single(s=>s.Definition.Name=="Return to Ivalice").Definition.EndQuest==68725,"Ivalice ending excludes cooking side quests");
@@ -119,7 +149,8 @@ if (args.Length > 0)
         var beginning=StoryCatalog.Evaluate(storyItem,catalog.Quests,observations);
         Check(beginning.State==StoryState.NotStarted,"fresh story "+storyItem.Definition.Name);
         observations[storyItem.Definition.EndQuest]=new(true,false,true,true);
-        Check(StoryCatalog.Evaluate(storyItem,catalog.Quests,observations).State==StoryState.Completed,"endpoint proof "+storyItem.Definition.Name);
+        var achievementProof = storyItem.Definition.Achievement == 0 ? null : new Dictionary<uint,bool>{{storyItem.Definition.Achievement,true}};
+        Check(StoryCatalog.Evaluate(storyItem,catalog.Quests,observations,achievements:achievementProof).State==StoryState.Completed,"endpoint proof "+storyItem.Definition.Name);
     }
     Check(catalog.Activities.Select(a => a.Id).Distinct().Count() == catalog.Activities.Count, "unique duties");
     Check(catalog.Activities.Count(a => a.Name.Equals("the Gilded Araya", StringComparison.OrdinalIgnoreCase)) == 1, "old fan event duplicate removed");
@@ -137,6 +168,6 @@ if (args.Length > 0)
     }
     Console.WriteLine($"CATALOG: {catalog.Quests.Count} quests, {catalog.Activities.Count} duties, {catalog.Activities.Count(a => !a.Advanced)} standard, {catalog.Activities.Count(a => a.QuestIds.Length == 1)} single quest links, {catalog.Activities.Count(a => a.QuestIds.Length == 0)} unmapped, {catalog.Activities.Count(a => a.QuestIds.Length > 1)} ambiguous");
     foreach (var group in catalog.Activities.GroupBy(a => a.Kind)) Console.WriteLine($"  {group.Key}: {group.Count()}");
-    if (args.Length > 1) File.WriteAllText(args[1], JsonSerializer.Serialize(new { Quests = catalog.Quests.Count, Duties = catalog.Activities }, new JsonSerializerOptions { WriteIndented = true }));
+    if (args.Length > 1) File.WriteAllText(args[1], JsonSerializer.Serialize(new { Quests = catalog.Quests.Count, Stories = catalog.Stories, Rewards = catalog.Rewards, Duties = catalog.Activities }, new JsonSerializerOptions { WriteIndented = true }));
     Console.WriteLine($"PASS: {count} total checks including installed game catalog");
 }

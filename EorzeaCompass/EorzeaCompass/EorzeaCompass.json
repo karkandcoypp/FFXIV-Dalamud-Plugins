@@ -2,11 +2,16 @@
   "Author": "Carcosa Lyuman",
   "Name": "Eorzea Compass",
   "InternalName": "EorzeaCompass",
-  "AssemblyVersion": "0.3.0.0",
+  "AssemblyVersion": "0.4.0.0",
   "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
-  "Punchline": "Your story and duty progress across Eorzea.",
-  "Description": "Progress journal with expansion dashboards, 37 storylines, duty unlocks and clears, quest prerequisites and NPC map links.",
+  "Punchline": "Quest chains, exploration and a quest reward atlas.",
+  "Description": "Progress journal with 220 quest chains: story, jobs, societies, relic milestones and exploration. Quest reward atlas with item sources, guaranteed and choice rewards. Duty unlocks, clears and NPC map links.",
   "ApplicableVersion": "any",
   "DalamudApiLevel": 15,
-  "Tags": ["quests", "unlocks", "raids", "progress"]
+  "Tags": [
+    "quests",
+    "unlocks",
+    "raids",
+    "progress"
+  ]
 }

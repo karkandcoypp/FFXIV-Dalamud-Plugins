@@ -12,15 +12,16 @@ public sealed class Catalog
     public IReadOnlyList<Activity> Activities { get; }
     public IReadOnlySet<uint> RelevantQuests { get; }
     public IReadOnlyList<Story> Stories { get; }
+    public IReadOnlyList<QuestReward> Rewards { get; }
 
     public Catalog(ExcelSheet<Quest> questSheet, ExcelSheet<ContentFinderCondition> duties)
     {
         var quests = questSheet.Where(q => q.RowId > 65535 && !string.IsNullOrWhiteSpace(q.Name.ToString())).ToArray();
         Quests = quests.ToDictionary(q => q.RowId, q => new QuestNode(q.RowId, q.Name.ToString(),
             q.PreviousQuest.Where(p => p.RowId != 0).Select(p => p.RowId).ToArray(),
-            q.Unknown7 != 0 ? (byte)0 : q.PreviousQuestJoin, q.ClassJobLevel[0], q.JournalGenre.RowId,
+            q.PreviousQuestJoin, q.ClassJobLevel[0], q.JournalGenre.RowId,
             q.ClassJobCategory0.RowId, IsPartial(q), q.JournalGenre.RowId != 0
-                && q.JournalGenre.Value.JournalCategory.Value.JournalSection.RowId == 2));
+                && q.JournalGenre.Value.JournalCategory.Value.JournalSection.RowId == 2, q.Expansion.RowId, q.IsRepeatable));
         var unlocks = new Dictionary<uint, HashSet<uint>>();
         var scripted = new Dictionary<uint, HashSet<uint>>();
         var secondary = new Dictionary<uint, HashSet<uint>>();
@@ -86,6 +87,7 @@ public sealed class Catalog
             .OrderBy(a => a.Expansion).ThenBy(a => a.Level).ThenBy(a => a.Id).ToArray();
         var relevant = new HashSet<uint>();
         Stories = StoryCatalog.Build(Quests, Activities);
+        Rewards = RewardCatalog.Build(quests, Stories);
         void Include(uint id)
         {
             if (!relevant.Add(id) || !Quests.TryGetValue(id, out var q)) return;
