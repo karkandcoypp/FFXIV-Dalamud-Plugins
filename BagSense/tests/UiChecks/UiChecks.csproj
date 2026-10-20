@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><ImplicitUsings>enable</ImplicitUsings><AllowUnsafeBlocks>true</AllowUnsafeBlocks><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BagSense" HintPath="../../BagSense/bin/Release/BagSense.dll" />
+    <Reference Include="Dalamud" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Dalamud.dll" />
+    <Reference Include="Dalamud.Bindings.ImGui" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Dalamud.Bindings.ImGui.dll" />
+    <Content Include="$(APPDATA)/XIVLauncher/addon/Hooks/dev/cimgui.dll" Link="cimgui.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

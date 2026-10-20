@@ -1,0 +1,32 @@
+name: BagSense build
+on:
+  workflow_dispatch:
+  push:
+    paths: ['BagSense/**', '.github/workflows/bagsense-build.yml']
+  pull_request:
+    paths: ['BagSense/**', '.github/workflows/bagsense-build.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Download official Dalamud development libraries
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile dalamud.zip
+          Expand-Archive -LiteralPath dalamud.zip -DestinationPath "$env:RUNNER_TEMP/dalamud"
+          "DALAMUD_HOME=$env:RUNNER_TEMP/dalamud" >> $env:GITHUB_ENV
+      - name: Build, check and package
+        shell: pwsh
+        run: ./BagSense/build.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BagSense
+          path: |
+            BagSense/artifacts/BagSense.zip
+            BagSense/artifacts/BagSense.zip.sha256

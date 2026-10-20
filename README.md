@@ -7,8 +7,11 @@
 | Ultrawide Cutscenes Community | Убирает полосы 16:9 из внутриигровых кат-сцен на широких мониторах | `/pcutscenes` | [UltrawideCutscenes](UltrawideCutscenes/README.md) |
 | Eorzea Event Tracker | Показывает текущие события, инструкции, награды и прогресс персонажа | `/events` | [EorzeaEventTracker](EorzeaEventTracker/README.md) |
 | Eorzea Compass (предварительная версия) | Журнал прогресса: 220 цепочек и атлас коллекций с магазинами обществ/зон и автоматической отметкой собранного | `/compass` | [EorzeaCompass](EorzeaCompass/README.md) |
+| BagSense | Личные цели, причины хранения предметов и объяснимый план очистки инвентаря, RU / EN | `/bagsense` | [BagSense](BagSense/README.md) |
 
 Eorzea Compass доступен через общий репозиторий для проверки в игре. После установки откройте `/compass`.
+
+BagSense доступен через общий репозиторий: установите его в `/xlplugins` и откройте `/bagsense`. Если использовали локальную DLL, сначала отключите копию в Dev Plugins.
 
 ## Установка через Dalamud
 
@@ -28,13 +31,14 @@ https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/plugin
 UltrawideCutscenes/         проект кат-сцен, решение и документация
 EorzeaEventTracker/         проект трекера, лента событий, переводы и тесты
 EorzeaCompass/              навигатор по контенту, квестовые цепочки и тесты
+BagSense/                   цели персонажа, заметки предметов и план очистки
 tools/                     общие инструменты публикации
 .github/workflows/         независимые сборки и обновление событий
 pluginmaster.json          общая лента установки плагинов
 build.ps1                  сборка одного или всех проектов
 ```
 
-Каждый плагин выпускается независимо: теги `uc-v*` для Ultrawide Cutscenes, `eet-v*` для Event Tracker и `ec-v*` для Eorzea Compass. Общий инструмент публикации обновляет соответствующую запись в `pluginmaster.json`, сохраняя остальные плагины.
+Каждый плагин выпускается независимо: теги `uc-v*` для Ultrawide Cutscenes, `eet-v*` для Event Tracker, `ec-v*` для Eorzea Compass и `bs-v*` для BagSense. Общий инструмент публикации обновляет соответствующую запись в `pluginmaster.json`, сохраняя остальные плагины.
 
 ## Сборка
 
@@ -47,6 +51,7 @@ build.ps1                  сборка одного или всех проек�
 ./build.ps1 -Plugin UltrawideCutscenes
 ./build.ps1 -Plugin EorzeaEventTracker
 ./build.ps1 -Plugin EorzeaCompass
+./build.ps1 -Plugin BagSense
 ```
 
 Скрипт использует локальный `.dotnet`, если он есть, иначе системный SDK. Инструкции и ограничения каждого плагина находятся в его папке.

@@ -8,7 +8,7 @@ def update(index_path, manifest_path, repository, tag):
     index = json.loads(Path(index_path).read_text(encoding='utf-8-sig'))
     manifest = json.loads(Path(manifest_path).read_text(encoding='utf-8-sig'))
     prefixes = {'EorzeaEventTracker': 'eet-v', 'Dalamud.FullscreenCutscenes.Community': 'uc-v',
-                'EorzeaCompass': 'ec-v'}
+                'EorzeaCompass': 'ec-v', 'BagSense': 'bs-v'}
     name = manifest.get('InternalName')
     if name not in prefixes:
         raise ValueError('Unexpected plugin manifest')
@@ -18,7 +18,7 @@ def update(index_path, manifest_path, repository, tag):
         raise ValueError('Release tag does not match assembly version')
     asset = {'EorzeaEventTracker': 'EorzeaEventTracker.zip',
              'Dalamud.FullscreenCutscenes.Community': 'UltrawideCutscenes.zip',
-             'EorzeaCompass': 'EorzeaCompass.zip'}[name]
+             'EorzeaCompass': 'EorzeaCompass.zip', 'BagSense': 'BagSense.zip'}[name]
     link = f'https://github.com/{repository}/releases/download/{tag}/{asset}'
     manifest.update(RepoUrl=f'https://github.com/{repository}',
                     DownloadLinkInstall=link, DownloadLinkUpdate=link, DownloadLinkTesting=link)

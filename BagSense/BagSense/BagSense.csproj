@@ -1,0 +1,12 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <Version>0.1.0.0</Version>
+    <Author>Carcosa Lyuman</Author>
+    <Name>BagSense</Name>
+    <Punchline>Remember why you keep items. Make an explained cleanup plan.</Punchline>
+    <Description>Character-specific item notes, quantity reservations, personal goals and an explained inventory cleanup plan. English and Russian interface. All inventory actions are manual.</Description>
+    <Tags>inventory;goals;planning;qol</Tags>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+  </PropertyGroup>
+</Project>

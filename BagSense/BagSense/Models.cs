@@ -1,0 +1,165 @@
+namespace BagSense;
+
+public enum ContainerKind { Bag, Armoury, Equipped }
+public enum PlanAction { Use, Vendor, Desynthesize, ExchangeReview, ManualReview }
+public enum AdviceKind { Protected, Reserved, Learn, Vendor, Gear, Exchange, Review, Deferred }
+public enum Reason
+{
+    UnknownItem, AlwaysKeep, Equipped, Gearset, GearsetsUnknown, Indisposable, SpecialInstance,
+    GoalReserve, FullReserve, Learn, AlreadyLearned, VendorSource, GearReview, ExchangeUses, RecipeUses, UnknownUse, Deferred,
+}
+
+public sealed record InventoryStack(uint ItemId, ContainerKind Container, int Slot, int Quantity,
+    bool Hq = false, bool Collectable = false, bool ValuableInstance = false);
+public sealed record BuyOffer(string Shop, uint Price, bool Conditional);
+public sealed record ExchangeUse(string Shop, string Reward, uint Cost);
+public sealed record ItemFacts(uint Id, string Name, uint Icon, string Category, string Description,
+    bool Equipment = false, bool Indisposable = false, bool Marketable = false, uint SellPrice = 0,
+    bool Desynth = false, bool? Unlocked = null, BuyOffer[]? Offers = null, string[]? Recipes = null,
+    ExchangeUse[]? Exchanges = null)
+{
+    public BuyOffer[] BuyOffers => Offers ?? [];
+    public string[] RecipeUses => Recipes ?? [];
+    public ExchangeUse[] ExchangeUses => Exchanges ?? [];
+}
+
+public sealed class ItemDecision
+{
+    public string Note { get; set; } = "";
+    public bool AlwaysKeep { get; set; }
+    public int KeepQuantity { get; set; }
+    public DateTimeOffset? DeferUntil { get; set; }
+}
+public sealed class Goal
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Name { get; set; } = "";
+    public string Note { get; set; } = "";
+    public bool Completed { get; set; }
+    public Dictionary<uint, int> Items { get; set; } = new();
+}
+public sealed class PlanEntry
+{
+    public uint ItemId { get; set; }
+    public PlanAction Action { get; set; }
+    public int Quantity { get; set; }
+    public int BaselineQuantity { get; set; }
+    public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.UtcNow;
+    // An inventory decrease cannot prove that a sale or hand-in happened.
+    public bool ObservedDecrease { get; set; }
+}
+public sealed class CharacterData
+{
+    public Dictionary<uint, ItemDecision> Decisions { get; set; } = new();
+    public List<Goal> Goals { get; set; } = new();
+    public List<PlanEntry> Plan { get; set; } = new();
+    public ItemDecision Decision(uint id) => Decisions.GetValueOrDefault(id) ?? new();
+    public ItemDecision Edit(uint id)
+    {
+        if (!Decisions.TryGetValue(id, out var value)) Decisions[id] = value = new();
+        return value;
+    }
+}
+public sealed record InventorySnapshot(ulong CharacterId, string CharacterName, DateTimeOffset CapturedAt,
+    IReadOnlyList<InventoryStack> Stacks, IReadOnlyDictionary<uint, ItemFacts> Items,
+    IReadOnlyDictionary<uint, string[]> Gearsets, bool GearsetsKnown, int BagCapacity)
+{
+    public int Quantity(uint id) => Stacks.Where(s => s.ItemId == id).Sum(s => s.Quantity);
+    public int BagSlots => Stacks.Count(s => s.Container == ContainerKind.Bag);
+    public int ArmourySlots => Stacks.Count(s => s.Container == ContainerKind.Armoury);
+}
+public sealed record Advice(uint ItemId, AdviceKind Kind, Reason Reason, int Total, int Reserved, int Available,
+    bool CanPlan, PlanAction DefaultAction, string[] GoalNames);
+public sealed record PlanProjection(int Quantity, int BagSlots, int ArmourySlots, bool Blocked, bool Stale);
+
+public static class CleanupPolicy
+{
+    public static int Allocated(InventorySnapshot snapshot, CharacterData data, Goal goal, uint itemId)
+    {
+        if (goal.Completed) return 0;
+        int remaining = snapshot.Quantity(itemId);
+        foreach (var current in data.Goals.Where(g => !g.Completed))
+        {
+            int allocation = Math.Min(remaining, Math.Max(0, current.Items.GetValueOrDefault(itemId)));
+            if (current.Id == goal.Id) return allocation;
+            remaining -= allocation;
+        }
+        return 0;
+    }
+
+    public static int Reservation(CharacterData data, uint itemId)
+    {
+        long goals = data.Goals.Where(g => !g.Completed).Sum(g => (long)Math.Max(0, g.Items.GetValueOrDefault(itemId)));
+        return (int)Math.Min(int.MaxValue, Math.Max(Math.Max(0, data.Decision(itemId).KeepQuantity), goals));
+    }
+
+    public static Advice Evaluate(InventorySnapshot snapshot, CharacterData data, uint id, DateTimeOffset now)
+    {
+        int total = snapshot.Quantity(id), reserved = Reservation(data, id);
+        var goals = data.Goals.Where(g => !g.Completed && g.Items.GetValueOrDefault(id) > 0).Select(g => g.Name).ToArray();
+        var decision = data.Decision(id);
+        Advice Result(AdviceKind kind, Reason reason, bool canPlan = false, PlanAction action = PlanAction.ManualReview) =>
+            new(id, kind, reason, total, reserved, Math.Max(0, total - reserved), canPlan, action, goals);
+        if (!snapshot.Items.TryGetValue(id, out var item)) return Result(AdviceKind.Protected, Reason.UnknownItem);
+        if (decision.AlwaysKeep) return Result(AdviceKind.Protected, Reason.AlwaysKeep);
+        if (snapshot.Stacks.Any(s => s.ItemId == id && s.Container == ContainerKind.Equipped)) return Result(AdviceKind.Protected, Reason.Equipped);
+        if (snapshot.Gearsets.ContainsKey(id)) return Result(AdviceKind.Protected, Reason.Gearset);
+        if (item.Equipment && !snapshot.GearsetsKnown) return Result(AdviceKind.Protected, Reason.GearsetsUnknown);
+        if (item.Indisposable) return Result(AdviceKind.Protected, Reason.Indisposable);
+        if (snapshot.Stacks.Any(s => s.ItemId == id && (s.Collectable || s.ValuableInstance))) return Result(AdviceKind.Protected, Reason.SpecialInstance);
+        if (total <= reserved) return Result(AdviceKind.Reserved, Reason.FullReserve);
+        if (decision.DeferUntil > now) return Result(AdviceKind.Deferred, Reason.Deferred);
+        if (item.Unlocked == false) return Result(AdviceKind.Learn, Reason.Learn, true, PlanAction.Use);
+        if (item.Unlocked == true) return Result(AdviceKind.Review, Reason.AlreadyLearned, true);
+        if (item.Equipment) return Result(AdviceKind.Gear, Reason.GearReview, true,
+            item.Desynth ? PlanAction.Desynthesize : PlanAction.ManualReview);
+        if (item.ExchangeUses.Length > 0) return Result(AdviceKind.Exchange, Reason.ExchangeUses, true, PlanAction.ExchangeReview);
+        // A merchant listing is evidence of a reacquisition route, not a statement that the item is useless.
+        if (item.BuyOffers.Any(o => !o.Conditional) && item.SellPrice > 0)
+            return Result(AdviceKind.Vendor, Reason.VendorSource, true, PlanAction.Vendor);
+        if (reserved > 0) return Result(AdviceKind.Review, Reason.GoalReserve, true);
+        return Result(AdviceKind.Review, item.RecipeUses.Length > 0 ? Reason.RecipeUses : Reason.UnknownUse, true);
+    }
+
+    public static bool Supports(ItemFacts item, PlanAction action) => action switch
+    {
+        PlanAction.Use => item.Unlocked == false,
+        PlanAction.Vendor => item.SellPrice > 0 && !item.Indisposable,
+        PlanAction.Desynthesize => item.Desynth,
+        PlanAction.ExchangeReview => item.ExchangeUses.Length > 0,
+        _ => true,
+    };
+
+    public static PlanProjection Project(InventorySnapshot snapshot, CharacterData data, PlanEntry entry, DateTimeOffset now)
+    {
+        var advice = Evaluate(snapshot, data, entry.ItemId, now);
+        if (!advice.CanPlan || !snapshot.Items.TryGetValue(entry.ItemId, out var item) || !Supports(item, entry.Action))
+            return new(0, 0, 0, true, entry.ObservedDecrease);
+        int quantity = Math.Min(Math.Max(0, entry.Quantity), advice.Available);
+        if (entry.Action == PlanAction.Use) quantity = Math.Min(1, quantity);
+        bool stale = entry.ObservedDecrease || snapshot.Quantity(entry.ItemId) < entry.BaselineQuantity;
+        if (stale) return new(quantity, 0, 0, false, true);
+        // Review-only steps do not promise that an item will leave inventory.
+        if (entry.Action is PlanAction.ManualReview or PlanAction.ExchangeReview) return new(quantity, 0, 0, false, false);
+        var stacks = snapshot.Stacks.Where(s => s.ItemId == entry.ItemId && s.Container != ContainerKind.Equipped)
+            .OrderBy(s => s.Quantity).ThenBy(s => s.Container).ThenBy(s => s.Slot);
+        int remaining = quantity, bags = 0, armoury = 0;
+        foreach (var stack in stacks)
+        {
+            if (stack.Quantity > remaining) break;
+            remaining -= stack.Quantity;
+            if (stack.Container == ContainerKind.Bag) bags++; else armoury++;
+        }
+        return new(quantity, bags, armoury, false, false);
+    }
+
+    public static void AddToPlan(InventorySnapshot snapshot, CharacterData data, Advice advice, PlanAction action, int quantity)
+    {
+        if (!advice.CanPlan || !snapshot.Items.TryGetValue(advice.ItemId, out var item) || !Supports(item, action)) return;
+        quantity = Math.Clamp(quantity, 0, advice.Available);
+        if (action == PlanAction.Use) quantity = Math.Min(1, quantity);
+        if (quantity == 0) return;
+        data.Plan.RemoveAll(p => p.ItemId == advice.ItemId);
+        data.Plan.Add(new() { ItemId = advice.ItemId, Action = action, Quantity = quantity, BaselineQuantity = advice.Total });
+    }
+}
