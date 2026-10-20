@@ -9,6 +9,8 @@ namespace BagSense;
 public sealed class ItemCatalog
 {
     private readonly ExcelSheet<Item> items;
+    private readonly ExcelSheet<Mount> mounts;
+    private readonly ExcelSheet<MountTransient> mountText;
     private readonly Dictionary<uint, List<BuyOffer>> shops = new();
     private readonly Dictionary<uint, List<string>> recipes = new();
     private readonly Dictionary<uint, List<ExchangeUse>> exchanges = new();
@@ -32,6 +34,8 @@ public sealed class ItemCatalog
     public ItemCatalog(ExcelModule excel, Func<string, LgbFile?>? readLayer = null)
     {
         items = excel.GetSheet<Item>(Language.English);
+        mounts = excel.GetSheet<Mount>(Language.English);
+        mountText = excel.GetSheet<MountTransient>(Language.English);
         World = new WorldCatalog(excel, readLayer);
         foreach (var recipe in excel.GetSheet<Recipe>(Language.English))
         {
@@ -112,7 +116,20 @@ public sealed class ItemCatalog
             row.EquipSlotCategory.RowId != 0, row.IsIndisposable, !row.IsUntradable, row.PriceLow, row.Desynth > 0,
             Offers: shops.GetValueOrDefault(id)?.Distinct().OrderBy(o => o.Conditional).ThenBy(o => o.Price).Take(8).ToArray(),
             Recipes: recipes.GetValueOrDefault(id)?.ToArray(), Exchanges: exchanges.GetValueOrDefault(id)?.ToArray(),
-            Quests: QuestUses(id), Merchants: World.Merchants);
+            Quests: QuestUses(id), Merchants: World.Merchants, Reward: Reward(row));
+    }
+
+    private RewardDetails Reward(Item item)
+    {
+        uint action = item.ItemAction.RowId == 0 ? 0 : item.ItemAction.Value.Action.RowId;
+        string kind = RewardPolicy.Kind(action, item.EquipSlotCategory.RowId != 0, item.ItemUICategory.Value.Name.ToString(), item.Name.ToString());
+        if (kind == "Mount" && item.ItemAction.Value.Data.Count > 0 && mounts.TryGetRow(item.ItemAction.Value.Data[0], out var mount))
+        {
+            string description = mountText.TryGetRow(mount.RowId, out var text) ? text.Description.ToString() : item.Description.ToString();
+            return new(kind, mount.Singular.ToString(), description, mount.Icon == 0 ? 0 : (uint)(mount.Icon + 64000), mount.RowId);
+        }
+        return new(kind, item.Name.ToString(), item.Description.ToString(), Detail: kind == "Equipment"
+            ? $"{item.ItemUICategory.Value.Name} · iLvl {item.LevelItem.RowId} · Lv {item.LevelEquip} · {item.ClassJobCategory.Value.Name}" : "");
     }
 
     private QuestUse[] QuestUses(uint id)
@@ -127,7 +144,8 @@ public sealed class ItemCatalog
             local.Add(new(need.QuestId, need.QuestName, false, need.Repeatable,
                 need.Contacts.Length > 0 ? need.Contacts : need.Objective.Length > 0 ? [] : old?.Contacts ?? [],
                 need.Contacts.Length == 0 && (old?.IssuerContact ?? true), need.Count, need.Quality,
-                need.Objective, need.TodoIndex, need.CompleteSequence, need.Evidence, need.Source));
+                need.Objective, need.TodoIndex, need.CompleteSequence, need.Evidence, need.Source,
+                need.Variants?.Select(v => $"{v.Job}: {v.Count}" + (v.Hq ? " HQ" : "")).ToArray(), need.Variants));
         }
         return local.ToArray();
     }

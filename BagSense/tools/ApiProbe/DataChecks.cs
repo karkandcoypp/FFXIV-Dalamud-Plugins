@@ -23,6 +23,12 @@ internal static class DataChecks
         Check(!catalog.Search("x").Any(), "Short search does not enumerate the item database");
         Check(catalog.Search("Iron").Count() <= 40, "Search is bounded to 40 results");
         Check(catalog.Find(uint.MaxValue) == null, "Unknown item has no fabricated metadata");
+        var mountReward = catalog.Find(6001)!;
+        Check(mountReward.Reward is { Kind: "Mount", CollectionId: 1, PreviewIcon: 68001 }, "Chocobo Whistle resolves to the actual mount and its journal artwork");
+        Check(catalog.Find(41079)!.ExchangeUses.Any(e => catalog.Find(e.RewardId)?.Reward?.Kind == "Mount"), "Aloalo Coin has a mount reward with explained collection metadata");
+        Check(catalog.Find(9829)!.Reward?.Kind == "Card", "Triple Triad cards are explicitly identified");
+        Check(weaponReward(), "Equipment reward metadata explains level and job");
+        bool weaponReward() => catalog.Find(1601)?.Reward?.Kind == "Equipment" && catalog.Find(1601)!.Reward!.Detail.Contains("iLvl");
         var minion = catalog.Search("Wind-up Airship").First(i => i.Name == "Wind-up Airship");
         Check(minion.Icon > 0 && minion.Unlocked == null, "Catalog never fabricates character unlock state");
         var weapon = catalog.Search("Weathered Shortsword").First(i => i.Name == "Weathered Shortsword");

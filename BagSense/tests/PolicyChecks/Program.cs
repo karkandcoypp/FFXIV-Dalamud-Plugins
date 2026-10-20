@@ -161,4 +161,14 @@ Check(QuestPolicy.Required(snapshot with { ActiveQuests = null }, 900001) == 35,
 Check(QuestPolicy.Required(snapshot with { ActiveQuests = new Dictionary<uint, byte>() }, 900001) == 0, "Inactive quests do not silently reserve stock");
 questFacts[900001] = questFacts[900001] with { Quests = [quest with { Reward = true }] };
 Check(QuestPolicy.Required(snapshot, 900001) == 0, "Quest rewards never become hand-in reservations");
+var alternativeJob = quest with { RequiredCount = 9, Quality = "any", RequirementVariants = [new("MIN", 2, false, [16]), new("BTN", 9, false, [17])] };
+snapshot = snapshot with { QuestJobs = new Dictionary<uint, byte> { [66135] = 16 } };
+Check(QuestPolicy.Amount(snapshot, alternativeJob) == 2, "Accepted quest job chooses its own required quantity");
+Check(QuestPolicy.Amount(snapshot, alternativeJob with { RequirementVariants = [new("BTN", 9, false, [17])] }) == 0, "Other job branch does not reserve an unrelated material");
+Check(QuestPolicy.Amount(snapshot with { QuestJobs = new Dictionary<uint, byte> { [66135] = 0 } }, alternativeJob) == 9, "Unknown accepted job cannot release a possible requirement");
+Check(RewardPolicy.Kind(1322, false, "Other", "Horn") == "Mount", "Mount type comes from the unlock action, not item-name guessing");
+Check(RewardPolicy.Kind(853, false, "Other", "Wind-up") == "Minion" && RewardPolicy.Kind(25183, false, "Other", "Roll") == "Music", "Minion and music classifications use game actions");
+Check(RewardPolicy.Kind(0, true, "Bracelets", "Gear") == "Equipment", "Equipment rewards are explicitly identified");
+Check(RewardPolicy.Unlocked(snapshot, 99999) == null, "Unknown collection state is not presented as missing");
+Check(RewardPolicy.Unlocked(snapshot with { RewardUnlocks = new Dictionary<uint, bool?> { [99999] = true } }, 99999) == true, "Known collection ownership survives snapshot lookup");
 Console.WriteLine($"PASS: {checks} policy, persistence, isolation, routing and localization checks");

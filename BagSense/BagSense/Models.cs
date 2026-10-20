@@ -19,9 +19,11 @@ public sealed record NpcLocation(uint NpcId, string Npc, string Zone, uint Terri
 public sealed record RouteRequirement(string Kind, uint Id, string Name);
 public sealed record ShopRoute(uint ShopId, string Menu, NpcLocation Location, RouteRequirement[] Requirements);
 public sealed record TradeCost(uint ItemId, string Name, uint Count, ushort Collectability = 0);
+public sealed record QuestVariant(string Job, int Count, bool Hq, uint[]? Jobs = null);
 public sealed record QuestUse(uint QuestId, string Name, bool Reward, bool Repeatable, NpcLocation[] Contacts, bool IssuerContact,
     int? RequiredCount = null, string Quality = "unknown", string Objective = "", int? TodoIndex = null,
-    int? CompleteSequence = null, string Evidence = "", string Source = "");
+    int? CompleteSequence = null, string Evidence = "", string Source = "", string[]? Variants = null, QuestVariant[]? RequirementVariants = null);
+public sealed record RewardDetails(string Kind, string Name, string Description, uint PreviewIcon = 0, uint CollectionId = 0, string Detail = "");
 public sealed record BuyOffer(string Shop, uint Price, bool Conditional, uint ShopId = 0, ShopRoute[]? Routes = null)
 {
     public ShopRoute[] Destinations => Routes ?? [];
@@ -38,7 +40,7 @@ public sealed record ExchangeUse(string Shop, string Reward, uint Cost, uint Sho
 public sealed record ItemFacts(uint Id, string Name, uint Icon, string Category, string Description,
     bool Equipment = false, bool Indisposable = false, bool Marketable = false, uint SellPrice = 0,
     bool Desynth = false, bool? Unlocked = null, BuyOffer[]? Offers = null, string[]? Recipes = null,
-    ExchangeUse[]? Exchanges = null, QuestUse[]? Quests = null, NpcLocation[]? Merchants = null)
+    ExchangeUse[]? Exchanges = null, QuestUse[]? Quests = null, NpcLocation[]? Merchants = null, RewardDetails? Reward = null)
 {
     public BuyOffer[] BuyOffers => Offers ?? [];
     public string[] RecipeUses => Recipes ?? [];
@@ -91,7 +93,8 @@ public sealed record InventorySnapshot(ulong CharacterId, string CharacterName, 
     IReadOnlyList<InventoryStack> Stacks, IReadOnlyDictionary<uint, ItemFacts> Items,
     IReadOnlyDictionary<uint, string[]> Gearsets, bool GearsetsKnown, int BagCapacity,
     uint TerritoryId = 0, IReadOnlyDictionary<uint, bool>? CompletedQuests = null,
-    IReadOnlyDictionary<uint, byte>? ActiveQuests = null)
+    IReadOnlyDictionary<uint, byte>? ActiveQuests = null, IReadOnlyDictionary<uint, bool?>? RewardUnlocks = null,
+    IReadOnlyDictionary<uint, byte>? QuestJobs = null)
 {
     public int Quantity(uint id) => Stacks.Where(s => s.ItemId == id).Sum(s => s.Quantity);
     public int BagSlots => Stacks.Count(s => s.Container == ContainerKind.Bag);

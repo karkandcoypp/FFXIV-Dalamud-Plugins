@@ -6,10 +6,14 @@ using System.Text.RegularExpressions;
 
 namespace BagSense;
 
-public sealed record CatalogItem(uint Id, string Name, uint Icon, string Category, string Description);
+public sealed record CatalogItem(uint Id, string Name, uint Icon, string Category, string Description, bool EventItem = false);
 public sealed record CatalogNeed(uint QuestId, uint ItemId, string QuestName, bool Repeatable, int? Count, string Quality,
-    string Objective, int? TodoIndex, int? CompleteSequence, NpcLocation[] Contacts, string Evidence, string Source);
-public sealed record CatalogDocument(int Schema, DateTimeOffset GeneratedAt, string SourceCommit, CatalogItem[] Items, CatalogNeed[] Needs);
+    string Objective, int? TodoIndex, int? CompleteSequence, NpcLocation[] Contacts, string Evidence, string Source,
+    bool EventItem = false, QuestVariant[]? Variants = null);
+public sealed record CatalogQuestStep(int Index, int CompleteSequence, string Text, NpcLocation[] Contacts);
+public sealed record CatalogQuest(uint QuestId, string Name, bool Repeatable, CatalogQuestStep[] Steps, uint[] ItemIds, string Source);
+public sealed record CatalogDocument(int Schema, DateTimeOffset GeneratedAt, string SourceCommit, CatalogItem[] Items, CatalogNeed[] Needs,
+    CatalogQuest[]? Quests = null);
 public sealed record CatalogManifest(int Schema, DateTimeOffset GeneratedAt, string SourceCommit, string File, string Sha256,
     int Bytes, int ItemCount, int QuestItemCount, int ExactCount);
 public sealed record DatabaseResult(CatalogDocument? Document, bool Offline, string Error);
@@ -43,11 +47,16 @@ public static class DatabaseCatalog
             || document.Items.DistinctBy(i => i.Id).Count() != document.Items.Length
             || document.Needs.Any(n => n.QuestId < 65536 || n.ItemId == 0 || string.IsNullOrWhiteSpace(n.QuestName)
                 || n.Count is <= 0 or > 9999 || n.Quality is not ("any" or "hq" or "unknown")
-                || n.Contacts == null || n.Contacts.Any(l => !l.CanMap) || n.TodoIndex is < 0 or > 23 || n.CompleteSequence is < 0 or > 255))
+                || n.Contacts == null || n.Contacts.Any(l => !l.CanMap) || n.TodoIndex is < 0 or > 23 || n.CompleteSequence is < 0 or > 255
+                || n.Variants?.Any(v => v.Count is <= 0 or > 9999 || v.Jobs?.Any(j => j > 100) == true) == true))
             throw new InvalidDataException("Invalid catalog data");
         var ids = document.Items.Select(i => i.Id).ToHashSet();
         if (document.Needs.Any(n => !ids.Contains(n.ItemId)) || document.Needs.DistinctBy(n => (n.QuestId, n.ItemId)).Count() != document.Needs.Length)
             throw new InvalidDataException("Invalid quest-item references");
+        if (document.Quests is { } quests && (quests.Length > 20000 || quests.DistinctBy(q => q.QuestId).Count() != quests.Length
+            || quests.Any(q => q.QuestId < 65536 || string.IsNullOrWhiteSpace(q.Name) || q.Steps == null || q.ItemIds == null
+                || q.ItemIds.Any(i => !ids.Contains(i)) || q.Steps.Any(s => s.Index is < 0 or > 23 || s.CompleteSequence is < 0 or > 255
+                    || s.Contacts == null || s.Contacts.Any(l => !l.CanMap))))) throw new InvalidDataException("Invalid quest catalog");
         return document;
     }
 

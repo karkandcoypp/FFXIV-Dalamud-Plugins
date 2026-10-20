@@ -16,8 +16,8 @@ public sealed partial class BagWindow
         ImGui.TextColored(Teal, T("Полный каталог предметов", "Complete item catalog"));
         ImGui.TextWrapped(database == null
             ? T("Данные установленной игры. Онлайн-каталог ещё не загружен.", "Installed game data. Online catalog has not loaded yet.")
-            : T($"{database.Items.Length:N0} предметов · Квестовых связей: {database.Needs.Length:N0} · Точное количество: {database.Needs.Count(n => n.Count.HasValue):N0}",
-                $"{database.Items.Length:N0} items · Quest links: {database.Needs.Length:N0} · Exact quantities: {database.Needs.Count(n => n.Count.HasValue):N0}"));
+            : T($"{database.Items.Length:N0} предметов · {database.Quests?.Length ?? 0:N0} квестов · {database.Needs.Count(n => n.Count.HasValue):N0} известных количеств",
+                $"{database.Items.Length:N0} items · {database.Quests?.Length ?? 0:N0} quests · {database.Needs.Count(n => n.Count.HasValue):N0} known quantities"));
         if (database != null) ImGui.TextDisabled(T($"Обновлено {database.GeneratedAt.ToLocalTime():dd.MM.yyyy HH:mm} · Источник: ffxiv-datamining / GitHub",
             $"Updated {database.GeneratedAt.ToLocalTime():yyyy-MM-dd HH:mm} · Source: ffxiv-datamining / GitHub"));
         if (plugin.DatabaseOffline) ImGui.TextWrapped(T("Сеть недоступна. Используется сохранённая база или данные игры.", "Offline. Using the saved catalog or installed game data."));
@@ -49,6 +49,7 @@ public sealed partial class BagWindow
             ImGui.TextWrapped(item.Description);
             if (plugin.Snapshot is { } snapshot)
             {
+                if (item.Reward is { Kind: not "Item" }) DrawRewardCard(item, 1, snapshot);
                 ImGui.TextWrapped(T($"В сумках: {snapshot.Quantity(item.Id)}", $"In bags: {snapshot.Quantity(item.Id)}"));
                 if (snapshot.Quantity(item.Id) > 0 && ImGui.Button(T("Открыть в инвентаре", "Open in inventory") + "###DbInventory")) Select(item.Id);
                 if (item.QuestUses.Any(q => !q.Reward)) DrawQuestUses(item, snapshot, false);

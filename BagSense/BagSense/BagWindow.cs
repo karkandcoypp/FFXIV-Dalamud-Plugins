@@ -142,6 +142,8 @@ public sealed partial class BagWindow : Window, IDisposable
             { DrawPlan(snapshot, data); ImGui.EndTabItem(); }
             if (ImGui.BeginTabItem(T("База предметов", "Item database") + "###Database", requestedTab == 3 ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None))
             { DrawDatabase(); ImGui.EndTabItem(); }
+            if (ImGui.BeginTabItem(T("Квесты", "Quests") + "###Quests", requestedTab == 4 ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None))
+            { DrawQuests(snapshot); ImGui.EndTabItem(); }
             ImGui.EndTabBar();
             requestedTab = -1;
         }
@@ -520,9 +522,7 @@ public sealed partial class BagWindow : Window, IDisposable
     }
     private void DrawIcon(ItemFacts? item, float size)
     {
-        var texture = item?.Icon > 0 ? Plugin.Textures.GetFromGameIcon(new GameIconLookup(item.Icon)).GetWrapOrDefault() : null;
-        if (texture != null) ImGui.Image(texture.Handle, new(size * S, size * S));
-        else ImGui.Dummy(new(size * S, size * S));
+        if (item == null || !DrawGameImage(item.Icon, new(size * S, size * S))) ImGui.Dummy(new(size * S, size * S));
     }
     public void Dispose() { }
 }

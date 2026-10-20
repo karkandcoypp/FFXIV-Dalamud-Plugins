@@ -50,17 +50,23 @@ public static class InventoryReader
             .Concat(f.ExchangeUses.SelectMany(e => e.Conditions.Concat(e.Destinations.SelectMany(r => r.Requirements))).Where(r => r.Kind == "quest").Select(r => r.Id)));
         foreach (uint questId in questIds.Distinct())
             if (quests.TryGetRow(questId, out var quest)) completed[questId] = Plugin.Unlocks.IsQuestCompleted(quest);
+        var rewards = new Dictionary<uint, bool?>();
+        foreach (uint rewardId in facts.Values.SelectMany(f => f.ExchangeUses.Select(e => e.RewardId)).Distinct())
+            if (itemSheet.TryGetRow(rewardId, out var reward) && Plugin.Unlocks.IsItemUnlockable(reward))
+                rewards[rewardId] = Plugin.Unlocks.IsItemUnlocked(reward);
         if (id != Plugin.Player.ContentId || !Plugin.Client.IsLoggedIn) throw new InvalidOperationException("Character changed during scan");
-        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity, Plugin.Client.TerritoryType, completed, ReadActiveQuests());
+        var activeQuests = ReadActiveQuests(out var questJobs);
+        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity, Plugin.Client.TerritoryType, completed, activeQuests, rewards, questJobs);
     }
 
-    private static unsafe Dictionary<uint, byte>? ReadActiveQuests()
+    private static unsafe Dictionary<uint, byte>? ReadActiveQuests(out Dictionary<uint, byte> jobs)
     {
+        jobs = new();
         var manager = FFXIVClientStructs.FFXIV.Client.Game.QuestManager.Instance();
         if (manager == null) return null;
         var active = new Dictionary<uint, byte>();
         foreach (ref var quest in manager->NormalQuests)
-            if (quest.QuestId != 0) active[(uint)quest.QuestId + 65536] = quest.Sequence;
+            if (quest.QuestId != 0) { active[(uint)quest.QuestId + 65536] = quest.Sequence; jobs[(uint)quest.QuestId + 65536] = quest.AcceptClassJob; }
         return active;
     }
 

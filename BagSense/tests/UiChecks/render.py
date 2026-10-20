@@ -8,6 +8,9 @@ for path in Path(sys.argv[1]).glob('bagsense-*.json'):
     data = json.loads(path.read_text())
     width, height = data['Width'], data['Height']
     texture = np.fromfile(path.parent / f"font-{data['Font']}.rgba", dtype=np.uint8).reshape(data['TextureHeight'], data['TextureWidth'], 4).astype(float)/255
+    textures = {1: texture}
+    for info in data.get('Textures', []):
+        textures[info['Id']] = np.fromfile(path.parent / info['File'], dtype=np.uint8).reshape(info['Height'], info['Width'], 4).astype(float)/255
     target = np.zeros((height, width, 3),dtype=float)
     for draw in data['Lists']:
         vertices = np.array(draw['Vertices'])
@@ -15,6 +18,7 @@ for path in Path(sys.argv[1]).glob('bagsense-*.json'):
         packed = vertices[:,4].astype(np.uint32)
         colors = np.stack([(packed >> shift)&255 for shift in (0,8,16,24)],axis=1)/255.
         for command in draw['Commands']:
+            texture = textures[command.get('Texture', 1)]
             x0,y0,x1,y1=command['Clip']
             for at in range(command['Offset'],command['Offset']+command['Count'],3):
                 ids=indices[at:at+3]+command['VertexOffset']
@@ -32,8 +36,8 @@ for path in Path(sys.argv[1]).glob('bagsense-*.json'):
                 if not mask.any(): continue
                 bary=np.stack([u[mask],v[mask],w[mask]],axis=1)
                 uv=bary @ tri[:,2:4]
-                tx=np.clip((uv[:,0]*data['TextureWidth']).astype(int),0,data['TextureWidth']-1)
-                ty=np.clip((uv[:,1]*data['TextureHeight']).astype(int),0,data['TextureHeight']-1)
+                tx=np.clip((uv[:,0]*texture.shape[1]).astype(int),0,texture.shape[1]-1)
+                ty=np.clip((uv[:,1]*texture.shape[0]).astype(int),0,texture.shape[0]-1)
                 source=(bary@rgb)*texture[ty,tx]
                 dest=target[top:bottom,left:right]
                 alpha=source[:,3:4]

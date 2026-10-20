@@ -6,5 +6,6 @@
     <Compile Include="../../BagSense/Text.cs" Link="Text.cs" />
     <Compile Include="../../BagSense/DestinationPolicy.cs" Link="DestinationPolicy.cs" />
     <Compile Include="../../BagSense/QuestPolicy.cs" Link="QuestPolicy.cs" />
+    <Compile Include="../../BagSense/RewardPolicy.cs" Link="RewardPolicy.cs" />
   </ItemGroup>
 </Project>

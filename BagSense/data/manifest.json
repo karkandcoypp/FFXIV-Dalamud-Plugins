@@ -1,11 +1,13 @@
 {
   "Schema": 1,
-  "GeneratedAt": "2026-10-20T21:48:51.598297+00:00",
+  "CollectorVersion": 2,
+  "GeneratedAt": "2026-10-20T22:53:35.359271+00:00",
   "SourceCommit": "44948e4cda5846eab0baa9872122a888fcc4f1b1",
-  "File": "catalog-689b3df61f6319b9.json.gz",
-  "Sha256": "689b3df61f6319b9666e18bea7c24af574b609921d2bc48310210a06b55b00c1",
-  "Bytes": 1320576,
-  "ItemCount": 50880,
-  "QuestItemCount": 1020,
-  "ExactCount": 118
+  "File": "catalog-d280b69dbe3cba88.json.gz",
+  "Sha256": "d280b69dbe3cba881c73e953b906361437521c902e75d61cbc05f68cf8c7b9be",
+  "Bytes": 2077050,
+  "ItemCount": 54411,
+  "QuestCount": 5193,
+  "QuestItemCount": 4177,
+  "ExactCount": 687
 }

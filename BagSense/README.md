@@ -1,4 +1,4 @@
-# BagSense 0.3.0
+# BagSense 0.4.0
 
 **Русский:** помощник, который сохраняет причины хранения предметов и составляет объяснимый план освобождения места. Интерфейс на русском и английском, переключается сразу. Все продажи, использование, разбор и обмены игрок выполняет вручную.
 
@@ -19,17 +19,17 @@ Requires Dalamud API 15 and .NET 10. Command: `/bagsense`. `/bagsense demo` open
 
 Если общий репозиторий уже подключён для других наших плагинов, второй раз добавлять адрес не нужно. Обнови список в `/xlplugins` и найди **BagSense**. Если ранее использовал локальную DLL, сначала отключи её в Dev Plugins. Дальнейшие версии приходят через обычное обновление Dalamud.
 
-Release: [bs-v0.3.0](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/tag/bs-v0.3.0).
+Release: [bs-v0.4.0](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/tag/bs-v0.4.0).
 
 ## Quest protection and online catalog / Квесты и обновляемая база
 
-Вкладка **База предметов** содержит весь каталог именованных предметов (50 880 в первоначальной базе), поиск по названию/ID и просмотр предметов, которых нет в сумках. Источник — публичный [ffxiv-datamining](https://github.com/xivapi/ffxiv-datamining). Наш [ежедневный сборщик](../.github/workflows/bagsense-data.yml) закрепляет ревизию исходников, публикует сжатую базу и SHA-256 в [data](data). Плагин проверяет обновления при загрузке и раз в сутки; доступна ручная проверка. Без сети используется проверенная локальная копия, затем данные установленной игры. Данные персонажа не отправляются.
+Вкладка **База предметов** содержит весь каталог именованных предметов (54 411, включая 3 531 ключевой предмет), поиск по названию/ID и просмотр предметов, которых нет в сумках. Источник — публичный [ffxiv-datamining](https://github.com/xivapi/ffxiv-datamining). Наш [ежедневный сборщик](../.github/workflows/bagsense-data.yml) закрепляет ревизию исходников, публикует сжатую базу и SHA-256 в [data](data). Плагин проверяет обновления при загрузке и раз в сутки; доступна ручная проверка. Без сети используется проверенная локальная копия, затем данные установленной игры. Данные персонажа не отправляются.
 
 Для предмета показываются текст задачи, её номер, точное количество (если подтверждено), качество и NPC именно этого этапа с картой. Состояние активных квестов читается локально. Для завершающего этапа определяется состояние сдачи; произвольные промежуточные флаги скрипта не выдаются за подтверждённую готовность.
 
 Резервы активных квестов автоматически исключаются из всех количеств плана очистки и складываются с отдельными личными целями. До завершения квеста запас сохраняется: исчезновение предметов не считается доказательством сдачи. Для неизвестного количества, неизвестного качества или недоступного журнала сохраняется весь возможный запас. HQ-требования также защищают все экземпляры, поскольку план оперирует общим количеством типа предмета. Неактивные квесты не создают автоматический резерв; для будущего квеста можно создать личную цель. Защита ограничивает план BagSense и **не перехватывает ручные продажи в интерфейсе игры**.
 
-Initial coverage is 1,020 item/quest links across 629 quests, with 245 identified hand-in objectives and 118 unambiguous quantities. Full item coverage is not complete quest-script coverage. Quantities are extracted conservatively from literal journal phrases using the item's singular/plural forms; evidence is retained. `ToDoQty` is never treated as a hand-in quantity. Unknown NPCs/amounts remain explicit. Names and original objectives follow the English game data; the plugin interface is RU/EN.
+Current coverage is 5,193 journal quests, 4,177 item/quest links and 687 known quantities. Full item coverage is not complete quest-script coverage. Quantities are extracted conservatively from literal journal phrases using the item's singular/plural forms; evidence is retained. `ToDoQty` is never treated as a hand-in quantity. Unknown NPCs/amounts remain explicit. Names and original objectives follow the English game data; the plugin interface is RU/EN.
 
 ## Item purpose and NPC destinations / Назначение и NPC
 
@@ -115,3 +115,11 @@ See [VALIDATION.md](VALIDATION.md) for the evidence collected for this build.
 ## Release maintenance
 
 Versions use tags `bs-v*`, for example `bs-v0.1.0` for assembly version `0.1.0.0`. The `bagsense-release.yml` workflow builds and checks the plugin, validates package metadata, publishes `BagSense.zip` and its SHA-256, then merges the released manifest into the shared `pluginmaster.json`. It preserves the other plugins and updates the existing BagSense entry on future releases. The index is updated only after the release assets are available.
+
+## 0.4.0: all journal quests and reward cards
+
+The new **Quests / Квесты** tab enumerates all 5,193 named journal quests in the current source, rather than only quests with RITEM parameters. It lists objective text, item requirements, accepting-job alternatives and supported objective NPC maps. The item database now also includes 3,531 key items in their original EventItem ID space. Ordinary bags and key items are not conflated.
+
+Requirements combine semantic script references, literal hand-in objectives, explicit journal/dialogue requests and structured QuestClassJobSupply records. Initial coverage: 4,177 quest-item links and 687 known quantities, compared with 118 in 0.3.0. Job variants use the class/job on which the quest was accepted. Unknown/HQ needs remain conservative. Full enumeration does not solve every server script, and separate Leve/delivery systems are not represented as normal Quest rows.
+
+Exchange cards explain **what you get**: icon, localized type and usage instructions, description, known collection state and complete required/owned/missing costs. Mount cards link the whistle/key to its Mount record and load the actual journal artwork from installed game data. No external image site is required. Filters cover mounts, minions, music and gear. Existing selected exchange routes and plans remain compatible.

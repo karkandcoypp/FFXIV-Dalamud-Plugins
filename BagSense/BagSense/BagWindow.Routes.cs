@@ -99,30 +99,47 @@ public sealed partial class BagWindow
 
     private void DrawExchange(ItemFacts item, InventorySnapshot snapshot)
     {
-        var offers = item.ExchangeUses.OrderByDescending(e => e.Destinations.Any(r => r.Location.CanMap)).ThenBy(e => e.Cost).ToArray();
+        var offers = item.ExchangeUses.OrderBy(e => RewardPolicy.Unlocked(snapshot, e.RewardId) == true)
+            .ThenBy(e => plugin.Catalog?.Find(e.RewardId)?.Reward?.Kind switch { "Mount" => 0, "Minion" => 1, "Music" => 2, _ => 3 })
+            .ThenByDescending(e => e.Destinations.Any(r => r.Location.CanMap)).ThenBy(e => e.Cost).ToArray();
         var offer = offers.FirstOrDefault(e => e.Key == exchangeKey) ?? offers[0];
         exchangeKey = offer.Key;
         Heading("Что получить за этот предмет", "What you can exchange it for");
+        string[] rewardFilters = [T("Все награды", "All rewards"), T("Маунты", "Mounts"), T("Миньоны", "Minions"), T("Музыка", "Music"), T("Экипировка", "Equipment")];
+        ImGui.SetNextItemWidth(210 * S);
+        ImGui.Combo("###RewardFilter", ref rewardFilter, rewardFilters, rewardFilters.Length);
+        string[] kinds = ["", "Mount", "Minion", "Music", "Equipment"];
+        var filtered = offers.Where(e => rewardFilter == 0 || plugin.Catalog?.Find(e.RewardId)?.Reward?.Kind == kinds[rewardFilter]).ToArray();
+        if (filtered.Length == 0) ImGui.TextWrapped(T("Наград выбранного типа нет. Показаны остальные варианты.", "No rewards of this type. Showing other options."));
+        else offers = filtered;
+        offer = offers.FirstOrDefault(e => e.Key == exchangeKey) ?? offers[0]; exchangeKey = offer.Key;
         if (offers.Length > 1)
         {
             ImGui.SetNextItemWidth(-1);
             if (ImGui.BeginCombo("###ExchangeReward", offer.Reward))
             {
                 foreach (var candidate in offers)
-                    if (ImGui.Selectable($"{candidate.Reward}  ·  {candidate.Cost} × {item.Name}###" + candidate.Key, candidate.Key == exchangeKey))
+                {
+                    var reward = plugin.Catalog?.Find(candidate.RewardId);
+                    if (reward != null) { DrawIcon(reward, 28); ImGui.SameLine(); }
+                    if (ImGui.Selectable($"{candidate.Reward} · {RewardType(reward?.Reward?.Kind ?? "Item")}###" + candidate.Key, candidate.Key == exchangeKey))
                     { exchangeKey = candidate.Key; destinationKey = ""; }
+                }
                 ImGui.EndCombo();
             }
             offer = offers.First(e => e.Key == exchangeKey);
         }
         else ImGui.TextWrapped(offer.Reward);
-        ImGui.TextDisabled(T($"Получишь: {offer.RewardCount} шт.  ·  Вариантов обмена: {offers.Length}",
-            $"Receive: {offer.RewardCount}  ·  Exchange options: {offers.Length}"));
+        if (plugin.Catalog?.Find(offer.RewardId) is { } selectedReward) DrawRewardCard(selectedReward, offer.RewardCount, snapshot);
+        else ImGui.TextWrapped(T($"Получишь: {offer.RewardCount} × {offer.Reward}", $"You receive: {offer.RewardCount} × {offer.Reward}"));
+        Heading("Что отдать за награду", "What you pay");
         foreach (var cost in offer.FullCosts)
         {
             int held = snapshot.Quantity(cost.ItemId);
             string quantity = cost.ItemId < 100 ? T("не проверено", "not checked") : held.ToString();
-            ImGui.TextColored(cost.ItemId >= 100 && held < cost.Count ? Gold : Muted, $"{cost.Name}: {quantity} / {cost.Count}");
+            string missing = cost.ItemId >= 100 && held < cost.Count ? T($" · не хватает {cost.Count - held}", $" · need {cost.Count - held} more") : "";
+            ImGui.TextColored(cost.ItemId >= 100 && held < cost.Count ? Gold : Muted, T($"{cost.Name}: нужно {cost.Count}, есть {quantity}",
+                $"{cost.Name}: required {cost.Count}, owned {quantity}") + missing);
             if (cost.Collectability > 0) ImGui.TextWrapped(T($"Требуемая коллекционная ценность: {cost.Collectability}", $"Required collectability: {cost.Collectability}"));
         }
         var affordable = DestinationPolicy.Affordable(offer, snapshot);
@@ -223,7 +240,11 @@ public sealed partial class BagWindow
                 : T("Запрашивается в ходе квеста. Точный этап не подтверждён — проверь журнал.", "Requested during this quest. Exact objective is unconfirmed — check your journal."));
             if (!rewards)
             {
+                foreach (string variant in quest.Variants ?? []) ImGui.TextWrapped(T("Вариант по профессии: ", "Job variant: ") + variant);
                 bool active = snapshot.ActiveQuests?.ContainsKey(quest.QuestId) == true;
+                if (active && quest.RequirementVariants is { Length: > 0 } && QuestPolicy.Amount(snapshot, quest) == 0)
+                    ImGui.TextColored(Muted, T("Этот предмет нужен другой профессии. Для принятого варианта резерв не создаётся.",
+                        "This item is for a different job. No reserve is needed for your accepted variant."));
                 if (active)
                 {
                     bool final = snapshot.ActiveQuests![quest.QuestId] == 255 && quest.CompleteSequence == 255;
@@ -232,8 +253,10 @@ public sealed partial class BagWindow
                 }
                 else if (snapshot.ActiveQuests != null) ImGui.TextDisabled(T("Сейчас не активен — автоматический резерв не создаётся.", "Not active — no automatic reservation."));
                 else ImGui.TextWrapped(T("Журнал недоступен: возможный квестовый запас сохранён целиком.", "Journal unavailable: all potentially needed stock is protected."));
-                ImGui.TextWrapped(quest.RequiredCount.HasValue
-                    ? T($"Требуется: {quest.RequiredCount} шт.", $"Required: {quest.RequiredCount} items.") + (quest.Quality == "hq" ? " HQ" : "")
+                int? amount = active && quest.RequirementVariants is { Length: > 0 } && QuestPolicy.Amount(snapshot, quest).HasValue
+                    ? QuestPolicy.Amount(snapshot, quest) : quest.RequiredCount;
+                ImGui.TextWrapped(amount.HasValue
+                    ? T($"Требуется: {amount} шт.", $"Required: {amount} items.") + (quest.Quality == "hq" ? " HQ" : "")
                     : T("Количество не подтверждено: для активного квеста сохраняется весь запас.", "Quantity unconfirmed: all stock is kept for an active quest."));
                 if (quest.Quality == "hq") ImGui.TextWrapped(T("Нужен HQ. В целях защиты качества сохраняются все экземпляры этого предмета.", "HQ required. All copies are protected to preserve item quality."));
                 if (quest.Evidence.Length > 0 && ImGui.CollapsingHeader(T("Источник требования", "Requirement evidence") + "###Evidence"))
@@ -264,6 +287,11 @@ public sealed partial class BagWindow
             if (exchange != null)
             {
                 ImGui.TextWrapped(T("Цель обмена: ", "Exchange target: ") + exchange.Reward);
+                if (plugin.Catalog?.Find(exchange.RewardId) is { } reward)
+                {
+                    DrawIcon(reward, 32); ImGui.SameLine();
+                    ImGui.TextWrapped(RewardType(reward.Reward?.Kind ?? "Item") + " · " + (reward.Reward?.Name ?? reward.Name));
+                }
                 ImGui.TextWrapped(T("Полная цена: ", "Full cost: ") + string.Join(" + ", exchange.FullCosts.Select(c => $"{c.Count} × {c.Name}")));
                 var affordable = DestinationPolicy.Affordable(exchange, snapshot);
                 ImGui.TextColored(affordable == 0 ? Gold : Muted, affordable.HasValue

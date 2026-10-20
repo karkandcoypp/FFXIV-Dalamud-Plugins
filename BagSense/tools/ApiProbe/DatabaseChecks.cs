@@ -30,12 +30,17 @@ internal static class DatabaseChecks
         Check(copper.Evidence.Contains("ten chunks of copper ore"), "Exact amount retains its literal source evidence");
         Check(document.Needs.Any(n => n.Count == null), "Unknown quantities remain explicitly unknown");
         Check(document.Needs.Any(n => n.Quality == "hq"), "Quality requirements retained");
+        Check(document.Quests is { Length: >= 5000 }, "Catalog includes all named journal quests, not only RITEM quests");
+        Check(document.Needs.Count(n => n.Count.HasValue) >= 600, "Structured supplies and explicit dialogue requests expand exact quantities");
+        Check(document.Items.Any(i => i.EventItem && i.Id >= 2000000), "Key items retain their separate ID namespace");
+        Check(document.Needs.Any(n => n.Variants?.Any(v => v.Jobs?.Length > 0) == true && n.Count > 0), "Structured profession requirements retain applicable jobs");
+        Check(document.Quests!.SelectMany(q => q.Steps).All(s => s.Contacts.All(l => l.CanMap)), "Invalid zero-territory NPC placements are never exposed");
         Reject(() => DatabaseCatalog.Decode(manifest with { Sha256 = new string('0', 64) }, packed), "Corrupt checksum must fail");
         Reject(() => DatabaseCatalog.Decode(manifest with { File = "../other.json.gz" }, packed), "Path traversal must fail");
         Reject(() => DatabaseCatalog.Decode(manifest with { ItemCount = 1 }, packed), "Incomplete count must fail");
         Reject(() => DatabaseCatalog.Decode(manifest with { Schema = 99 }, packed), "Unknown schema must fail");
         string cache = Path.GetFullPath(Path.Combine(directory, "..", "artifacts", "cache-test-" + Guid.NewGuid().ToString("N")));
-        using var source = new CatalogSource(File.ReadAllText(Path.Combine(directory, "manifest.json")), packed);
+        using var source = new CatalogSource(JsonSerializer.Serialize(manifest), packed);
         var online = DatabaseCatalog.LoadAsync(cache, CancellationToken.None, source).GetAwaiter().GetResult();
         Check(!online.Offline && online.Document?.Items.Length == document.Items.Length, "Online source is validated and applied: " + online.Error);
         Check(File.Exists(Path.Combine(cache, "catalog-cache.json")), "Validated update persists a cache manifest");

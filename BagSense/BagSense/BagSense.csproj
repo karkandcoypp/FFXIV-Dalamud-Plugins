@@ -1,10 +1,10 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.3.0.0</Version>
+    <Version>0.4.0.0</Version>
     <Author>Carcosa Lyuman</Author>
     <Name>BagSense</Name>
     <Punchline>Remember why you keep items. Make an explained cleanup plan.</Punchline>
-    <Description>Quest hand-in objectives, automatic active-quest reservations, concrete NPC map links and an auto-updating complete item catalog. Personal goals and notes, English and Russian.</Description>
+    <Description>Explained exchange rewards with icons and mount artwork. Complete journal-quest catalog, job-specific hand-ins, active-quest reservations and NPC maps. Auto-updating item database. English and Russian.</Description>
     <Tags>inventory;goals;planning;qol</Tags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Use_DalamudPackager>false</Use_DalamudPackager>

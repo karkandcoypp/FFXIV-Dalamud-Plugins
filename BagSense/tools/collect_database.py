@@ -20,6 +20,7 @@ import urllib.parse
 import urllib.request
 
 ROOT = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/'
+COLLECTOR_VERSION = 2
 WORDS = dict(zip('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety'.split(),
                  [*range(1, 21), 30, 40, 50, 60, 70, 80, 90]))
 
@@ -35,6 +36,12 @@ def get(url):
             time.sleep(2 ** attempt)
 
 
+def requested_instruction(instruction, item_id, ordinary, event):
+    if re.fullmatch(r'ITEM\d+', instruction):
+        return item_id in event
+    return bool(re.fullmatch(r'(?:RITEM\d+|RITEM_ADD_\d+|QUEST_ITEM_?\d*)', instruction)) and (item_id in ordinary or item_id in event)
+
+
 def number(text):
     if text.isdigit():
         return int(text)
@@ -46,16 +53,18 @@ def number(text):
     return value
 
 
-def quantity(item, journal):
-    forms = [re.escape(item[k].lower()) for k in ('Singular', 'Plural') if item.get(k)]
+def quantity(item, journal, requests_only=False):
+    forms = [re.escape(item[k].lower()).replace(r'\ ', r'\s+(?:high[- ]quality\s+)?') for k in ('Singular', 'Plural', 'Name') if item.get(k)]
     if not forms:
         return None, 'unknown', ''
     unit = r'(?:one|two|three|four|five|six|seven|eight|nine)'
     basic = r'(?:' + '|'.join(WORDS) + r')(?:[- ]' + unit + r')?'
     n = r'(?:\d+|' + unit + r' hundred(?: (?:and )?' + basic + r')?|' + basic + r'|a|an)'
     pattern = re.compile(r'\b(' + n + r')\s+(?:(high-quality|high quality)\s+)?(?:' + '|'.join(forms) + r')\b', re.I)
-    matches = [m for text in journal for m in pattern.finditer(text)]
-    values = {(number(m[1].lower()), 'hq' if m[2] else 'any') for m in matches}
+    matches = [m for text in journal for m in pattern.finditer(text)
+               if not requests_only or (re.search(r'\b(?:need|require|bring|deliver|gather|collect|craft|fashion|prepare|make|obtain|provide|request|present|synthesize|forge|want)\b', text[max(0,m.start()-120):m.start()], re.I)
+                   and not re.search(r"(?:not|never|don't|no longer)\s+(?:need|require|want)", text[max(0,m.start()-45):m.start()], re.I))]
+    values = {(number(m[1].lower()), 'hq' if re.search(r'high[- ]quality', m[0], re.I) else 'any') for m in matches}
     # Mixed quantities/qualities are ambiguous. Never choose the smallest value.
     if len(values) != 1:
         return None, 'unknown', ''
@@ -82,21 +91,37 @@ def collect(output, cache, revision=None):
         return int(row.get(key, '0') or 0)
     sources = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
-        futures = {pool.submit(sheet, name): name for name in ('Item', 'Quest', 'Level', 'Map', 'ENpcResident', 'PlaceName', 'ItemUICategory')}
+        futures = {pool.submit(sheet, name): name for name in ('Item', 'EventItem', 'Quest', 'QuestClassJobSupply', 'ClassJobCategory', 'ClassJob', 'Level', 'Map', 'ENpcResident', 'PlaceName', 'ItemUICategory')}
         for future in concurrent.futures.as_completed(futures):
             sources[futures[future]] = future.result()
     items = {val(i, '#'): i for i in sources['Item'] if i.get('Name')}
+    event_items = {val(i, '#'): i for i in sources['EventItem'] if i.get('Name')}
+    all_items = items | event_items
+    events_by_quest = {}
+    for item_id, event in event_items.items():
+        if val(event, 'Quest'):
+            events_by_quest.setdefault(val(event, 'Quest'), set()).add(item_id)
+    supplies = {}
+    for supply in sources['QuestClassJobSupply']:
+        if val(supply, 'Item') in items and val(supply, 'AmountRequired') > 0:
+            supplies.setdefault(int(supply['#'].split('.')[0]), []).append(supply)
+    jobs = {val(i, '#'): i.get('Name', '') for i in sources['ClassJobCategory']}
+    job_members = {val(i, '#'): [val(j, '#') for j in sources['ClassJob'] if j.get('Abbreviation') and i.get(j['Abbreviation']) == 'True'] for i in sources['ClassJobCategory']}
     maps = {val(i, '#'): i for i in sources['Map']}
     names = {val(i, '#'): i.get('Singular', '') for i in sources['ENpcResident']}
     places = {val(i, '#'): i.get('Name', '') for i in sources['PlaceName']}
     categories = {val(i, '#'): i.get('Name', '') for i in sources['ItemUICategory']}
     levels = {val(i, '#'): i for i in sources['Level']}
+    npc_levels = {}
+    for level in levels.values():
+        if val(level, 'Type') == 8:
+            npc_levels.setdefault(val(level, 'Object'), []).append(level)
     def location(level):
         if not level or val(level, 'Type') != 8:
             return None
         m = maps.get(val(level, 'Map'))
         npc = val(level, 'Object')
-        if not m or not names.get(npc) or val(m, 'TerritoryType') != val(level, 'Territory') or not val(m, 'SizeFactor'):
+        if not m or not names.get(npc) or not val(m, '#') or not val(level, 'Territory') or val(m, 'TerritoryType') != val(level, 'Territory') or not val(m, 'SizeFactor'):
             return None
         def coord(world, offset):
             return round(41 / (val(m, 'SizeFactor') / 100) * (((float(world) + offset) * val(m, 'SizeFactor') / 100 + 1024) / 2048) + 1, 4)
@@ -104,14 +129,35 @@ def collect(output, cache, revision=None):
         if not (1 <= x < 100 and 1 <= y < 100):
             return None
         return dict(NpcId=npc, Npc=names[npc], Zone=places.get(val(m, 'PlaceName'), ''), Territory=val(level, 'Territory'), Map=val(m, '#'), X=x, Y=y)
+    # Literal aliases let explicit hand-in objectives discover items absent from RITEM.
+    aliases = {}
+    for item_id, item in all_items.items():
+        for key in ('Name', 'Singular', 'Plural'):
+            form = ' '.join(re.findall(r"[\w'-]+", item.get(key, '').lower()))
+            if len(form) >= 6:
+                aliases.setdefault(form, set()).add(item_id)
+    def objective_items(text):
+        if not re.match(r'^(Deliver|Present|Give|Hand over|Submit)\b', text, re.I):
+            return set()
+        words = re.findall(r"[\w'-]+", text.lower())
+        matches = []
+        for start in range(1, len(words)):
+            for end in range(min(start + 14, len(words)), start, -1):
+                form = ' '.join(words[start:end])
+                ids = aliases.get(form, set())
+                if len(ids) == 1 and (end == len(words) or words[end] not in ('materials', 'material')):
+                    matches.append((start, end, next(iter(ids))))
+        # A longer specific item phrase wins over a substring such as a base material.
+        return {i for start, end, i in matches if not any(a <= start and b >= end and (b-a) > (end-start) for a,b,_ in matches)}
     quests = []
     for q in sources['Quest']:
         if not q.get('Name') or not val(q, 'JournalGenre'):
             continue
-        requested = sorted({val(q, f'QuestParams[{i}].ScriptArg') for i in range(50)
-                            if re.fullmatch(r'RITEM\d+', q.get(f'QuestParams[{i}].ScriptInstruction', ''))})
-        if any(i in items for i in requested):
-            quests.append((q, requested))
+        requested = {val(q, f'QuestParams[{i}].ScriptArg') for i in range(50)
+                     if requested_instruction(q.get(f'QuestParams[{i}].ScriptInstruction', ''), val(q, f'QuestParams[{i}].ScriptArg'), items, event_items)}
+        requested.update(val(s, 'Item') for s in supplies.get(val(q, 'QuestClassJobSupply'), []))
+        requested.update(events_by_quest.get(val(q, '#'), set()))
+        quests.append((q, requested))
     def quest_data(pair):
         q, requested = pair
         quest_id = val(q, '#')
@@ -119,22 +165,37 @@ def collect(output, cache, revision=None):
         texts = list(csv.reader(io.StringIO(download(path))))
         journal = [r[2] for r in texts if len(r) > 2 and re.search(r'_SEQ_\d+$', r[1]) and r[2]]
         todos = {int(r[1].rsplit('_', 1)[1]): r[2] for r in texts if len(r) > 2 and re.search(r'_TODO_\d+$', r[1]) and r[2]}
+        discovered = {index: objective_items(text) for index, text in todos.items()}
+        requested = requested | set().union(*discovered.values()) if discovered else requested
+        steps = []
+        for index, text in todos.items():
+            locations = [location(levels.get(val(q, f'TodoParams[{index}].ToDoLocation[{i}]'))) for i in range(8)]
+            locations = [l for l in locations if l]
+            if not locations:
+                actors = {val(q, f'QuestParams[{i}].ScriptArg') for i in range(50)
+                          if re.fullmatch(r'ACTOR\d+', q.get(f'QuestParams[{i}].ScriptInstruction', ''))}
+                actors = [npc for npc in actors if names.get(npc) and re.search(r'\b' + re.escape(names[npc]) + r'\b', text, re.I)]
+                if len(actors) == 1:
+                    candidates = [location(l) for l in npc_levels.get(actors[0], [])]
+                    candidates = [l for l in candidates if l]
+                    if len({(l['Map'], l['X'], l['Y']) for l in candidates}) == 1:
+                        locations = candidates[:1]
+            steps.append(dict(Index=index, CompleteSequence=val(q, f'TodoParams[{index}].ToDoCompleteSeq'), Text=text,
+                              Contacts=locations))
         result = []
         for item_id in requested:
-            if item_id not in items:
+            if item_id not in all_items:
                 continue
-            item = items[item_id]
+            item = all_items[item_id]
             count, quality, evidence = quantity(item, journal)
             # Link a hand-in only when the objective explicitly names this item and its
             # location is an NPC. Multiple candidates stay distinct instead of guessing.
             forms = [item.get(k, '').lower() for k in ('Singular', 'Plural', 'Name') if item.get(k)]
             candidates = []
             for index, text in todos.items():
-                if not re.match(r'^(Deliver|Present|Give|Hand over)\b', text, re.I) or not any(
-                        re.search(r'\b' + re.escape(form) + r'\b(?!s? materials?\b)', text, re.I) for form in forms):
+                if not re.match(r'^(Deliver|Present|Give|Hand over|Submit)\b', text, re.I) or item_id not in discovered[index]:
                     continue
-                locations = [location(levels.get(val(q, f'TodoParams[{index}].ToDoLocation[{i}]'))) for i in range(8)]
-                locations = [l for l in locations if l]
+                locations = next(s['Contacts'] for s in steps if s['Index'] == index)
                 candidates.append((index, text, val(q, f'TodoParams[{index}].ToDoCompleteSeq'), locations))
             if len(candidates) == 1:
                 index, objective, sequence, locations = candidates[0]
@@ -144,30 +205,65 @@ def collect(output, cache, revision=None):
             # Keep it unknown unless a unique hand-in objective was identified.
             if len(candidates) != 1:
                 count, quality, evidence = None, 'unknown', ''
-            result.append(dict(QuestId=quest_id, ItemId=item_id, QuestName=q['Name'], Repeatable=q.get('IsRepeatable') == 'True',
+            elif count is None:
+                count, quality, evidence = quantity(item, [r[2] for r in texts if len(r) > 2 and r[2]], requests_only=True)
+                if evidence:
+                    evidence = 'Dialogue request: ' + evidence
+            use = dict(QuestId=quest_id, ItemId=item_id, QuestName=q['Name'], Repeatable=q.get('IsRepeatable') == 'True',
                                Count=count, Quality=quality, Objective=objective, TodoIndex=index, CompleteSequence=sequence,
-                               Contacts=locations, Evidence=evidence, Source=path))
-        return result
+                               Contacts=locations, Evidence=evidence, Source=path, EventItem=item_id in event_items, Variants=[])
+            structured = [s for s in supplies.get(val(q, 'QuestClassJobSupply'), []) if val(s, 'Item') == item_id]
+            if structured:
+                use['Count'] = max(val(s, 'AmountRequired') for s in structured)
+                use['Quality'] = 'hq' if any(s['ItemHQ'] == 'True' for s in structured) else 'any'
+                use['Evidence'] = '; '.join(f"QuestClassJobSupply[{s['#']}]: AmountRequired={s['AmountRequired']}, ItemHQ={s['ItemHQ']}" for s in structured)
+                use['Source'] = 'csv/en/QuestClassJobSupply.csv'
+                use['Variants'] = [dict(Job=jobs.get(val(s, 'ClassJobCategory'), ''), Count=val(s, 'AmountRequired'), Hq=s['ItemHQ'] == 'True',
+                                        Jobs=job_members.get(val(s, 'ClassJobCategory'), [])) for s in structured]
+                direct = []
+                for s in structured:
+                    npc = val(s, 'ENpcResident')
+                    # Prefer the quest's actual objective placements. Global fallback is
+                    # used only when that NPC has one unambiguous location.
+                    candidates_for_npc = [l for step in steps for l in step['Contacts'] if l['NpcId'] == npc]
+                    if not candidates_for_npc:
+                        global_locations = [location(l) for l in npc_levels.get(npc, [])]
+                        global_locations = [l for l in global_locations if l]
+                        if len({(l['Map'], l['X'], l['Y']) for l in global_locations}) == 1:
+                            candidates_for_npc = global_locations[:1]
+                    direct.extend(candidates_for_npc)
+                if direct:
+                    use['Contacts'] = list({(l['NpcId'],l['Map'],l['X'],l['Y']): l for l in direct}.values())
+            result.append(use)
+        quest = dict(QuestId=quest_id, Name=q['Name'], Repeatable=q.get('IsRepeatable') == 'True', Steps=steps,
+                     ItemIds=sorted(requested), Source=path)
+        return result, quest
     needs = []
+    quest_catalog = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
-        for records in pool.map(quest_data, quests):
+        for records, quest in pool.map(quest_data, quests):
             needs.extend(records)
+            quest_catalog.append(quest)
     catalog_items = [dict(Id=i, Name=r['Name'], Icon=val(r, 'Icon'), Category=categories.get(val(r, 'ItemUICategory'), ''), Description=r.get('Description', '')) for i, r in sorted(items.items())]
-    if len(catalog_items) < 40000 or len(needs) < 500:
+    catalog_items.extend(dict(Id=i, Name=r['Name'], Icon=val(r, 'Icon'), Category='Key item', Description='', EventItem=True) for i,r in sorted(event_items.items()))
+    if len(catalog_items) < 40000 or len(needs) < 500 or len(quest_catalog) < 5000:
         raise ValueError('Incomplete catalog; refusing publication')
     output.mkdir(parents=True, exist_ok=True)
     previous = json.loads((output / 'manifest.json').read_text(encoding='utf-8')) if (output / 'manifest.json').exists() else {}
     if previous and len(catalog_items) < previous['ItemCount'] * .99:
         raise ValueError('Unexpected item count reduction; refusing publication')
-    generated = previous.get('GeneratedAt') if previous.get('SourceCommit') == revision else datetime.now(timezone.utc).isoformat()
-    document = dict(Schema=1, GeneratedAt=generated, SourceCommit=revision, Items=catalog_items, Needs=sorted(needs, key=lambda r: (r['QuestId'], r['ItemId'])))
+    if previous.get('QuestCount') and len(quest_catalog) < previous['QuestCount'] * .99:
+        raise ValueError('Unexpected quest count reduction; refusing publication')
+    generated = previous.get('GeneratedAt') if previous.get('SourceCommit') == revision and previous.get('CollectorVersion') == COLLECTOR_VERSION else datetime.now(timezone.utc).isoformat()
+    document = dict(Schema=1, GeneratedAt=generated, SourceCommit=revision, Items=catalog_items, Needs=sorted(needs, key=lambda r: (r['QuestId'], r['ItemId'])),
+                    Quests=sorted(quest_catalog, key=lambda q:q['QuestId']))
     data = gzip.compress(json.dumps(document, ensure_ascii=False, separators=(',', ':')).encode(), mtime=0)
     digest = hashlib.sha256(data).hexdigest()
     # Content-addressed files prevent manifest/payload races through GitHub's CDN.
     asset = f'catalog-{digest[:16]}.json.gz'
     (output / asset).write_bytes(data)
-    manifest = dict(Schema=1, GeneratedAt=generated, SourceCommit=revision, File=asset, Sha256=digest, Bytes=len(data),
-                    ItemCount=len(catalog_items), QuestItemCount=len(needs), ExactCount=sum(n['Count'] is not None for n in needs))
+    manifest = dict(Schema=1, CollectorVersion=COLLECTOR_VERSION, GeneratedAt=generated, SourceCommit=revision, File=asset, Sha256=digest, Bytes=len(data),
+                    ItemCount=len(catalog_items), QuestCount=len(quest_catalog), QuestItemCount=len(needs), ExactCount=sum(n['Count'] is not None for n in needs))
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     # Keep the current and immediately previous content-addressed payload for CDN readers.
     keep = {asset, previous.get('File')}

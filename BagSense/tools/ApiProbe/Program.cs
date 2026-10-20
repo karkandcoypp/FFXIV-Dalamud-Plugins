@@ -12,6 +12,7 @@ System.Runtime.Loader.AssemblyLoadContext.Default.Resolving += (context, name) =
 };
 if (args.Length == 1 && args[0] == "--configuration") { ConfigurationChecks.Run(); return; }
 if (args.Length == 2 && args[0] == "--database") { DatabaseChecks.Run(args[1]); return; }
+if (args.Length == 3 && args[0] == "--assets") { AssetChecks.Run(args[1], args[2]); return; }
 if (args.Length == 2 && args[0] == "--online-database")
 {
     var result = await BagSense.DatabaseCatalog.LoadAsync(args[1], CancellationToken.None);

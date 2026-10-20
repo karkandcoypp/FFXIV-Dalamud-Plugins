@@ -6,6 +6,7 @@
     <Compile Include="../../BagSense/WorldCatalog.cs" Link="WorldCatalog.cs" />
     <Compile Include="../../BagSense/DestinationPolicy.cs" Link="DestinationPolicy.cs" />
     <Compile Include="../../BagSense/QuestPolicy.cs" Link="QuestPolicy.cs" />
+    <Compile Include="../../BagSense/RewardPolicy.cs" Link="RewardPolicy.cs" />
     <Compile Include="../../BagSense/DatabaseCatalog.cs" Link="DatabaseCatalog.cs" />
     <Compile Include="../../BagSense/Configuration.cs" Link="Configuration.cs" />
     <Reference Include="Newtonsoft.Json" HintPath="$(APPDATA)/XIVLauncher/addon/Hooks/dev/Newtonsoft.Json.dll" />

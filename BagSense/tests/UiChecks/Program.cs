@@ -34,22 +34,26 @@ internal static class Program
                 var manifest = JsonSerializer.Deserialize<CatalogManifest>(File.ReadAllText(Path.Combine(args[2], "manifest.json")))!;
                 catalog.ApplyDatabase(DatabaseCatalog.Decode(manifest, File.ReadAllBytes(Path.Combine(args[2], manifest.File))));
             }
-            var items = new uint[] { 47866, 41078, 23165, 5106, 5823 }.Select(id => catalog.Find(id)!).ToDictionary(i => i.Id,
-                i => i with { Icon = 0, Merchants = catalog.World.Merchants.Where(m => m.Npc is "Bango Zango" or "Roarich" or "Maisenta").Take(5).ToArray() });
+            var items = new uint[] { 47866, 41078, 41079, 23165, 5106, 5823 }.Select(id => catalog.Find(id)!).ToDictionary(i => i.Id,
+                i => i with { Merchants = catalog.World.Merchants.Where(m => m.Npc is "Bango Zango" or "Roarich" or "Maisenta").Take(5).ToArray() });
             var snapshot = new InventorySnapshot(ulong.MaxValue, "Sample character / Пример персонажа", DateTimeOffset.UtcNow,
                 [new(47866, ContainerKind.Bag, 0, 1), new(41078, ContainerKind.Bag, 1, 18), new(23165, ContainerKind.Bag, 2, 26),
-                    new(5106, ContainerKind.Bag, 3, 35), new(5823, ContainerKind.Bag, 4, 1)], items, new Dictionary<uint, string[]>(), true, 140,
+                    new(5106, ContainerKind.Bag, 3, 35), new(5823, ContainerKind.Bag, 4, 1), new(41079, ContainerKind.Bag, 5, 100)], items, new Dictionary<uint, string[]>(), true, 140,
                 CompletedQuests: new Dictionary<uint, bool> { [70325] = false, [66135] = false }, ActiveQuests: new Dictionary<uint, byte> { [66135] = 255 });
             foreach (bool ru in new[] { true, false })
                 foreach (uint id in items.Keys)
-                    Render(directory, ru, 0, 1240, 860, 1, snapshot, id, catalog);
-            Render(directory, true, 2, 1240, 860, 1, snapshot, 47866, catalog);
+                    Render(directory, ru, 0, 1240, 860, 1, snapshot, id, catalog, game);
+            Render(directory, true, 2, 1240, 860, 1, snapshot, 47866, catalog, game);
             foreach (bool ru in new[] { true, false })
-                Render(directory, ru, 3, 1240, 860, 1, snapshot, 5106, catalog);
+            {
+                Render(directory, ru, 3, 1240, 860, 1, snapshot, 5106, catalog, game);
+                Render(directory, ru, 4, 1240, 860, 1, snapshot, 5106, catalog, game);
+                Render(directory, ru, 0, 860, 570, 1, snapshot, 41079, catalog, game);
+            }
         }
     }
 
-    private static unsafe void Render(string directory, bool ru, int tab, int width, int height, float scale, InventorySnapshot? actual = null, uint selected = 0, ItemCatalog? catalog = null)
+    private static unsafe void Render(string directory, bool ru, int tab, int width, int height, float scale, InventorySnapshot? actual = null, uint selected = 0, ItemCatalog? catalog = null, GameData? game = null)
     {
         var plugin = (Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
         var settings = new Configuration { Russian = ru, Scale = scale };
@@ -71,6 +75,23 @@ internal static class Program
         typeof(Plugin).GetField("demoData", Instance)!.SetValue(plugin, demo.Data);
         var window = new BagWindow(plugin, staticPreview: true);
         typeof(BagWindow).GetField("databaseItem", Instance)!.SetValue(window, selected);
+        typeof(BagWindow).GetField("selectedQuest", Instance)!.SetValue(window, 66135u);
+        var textures = new Dictionary<uint, (int Width, int Height)>();
+        if (game != null) Set(window, "PreviewImage", (Func<uint, Vector2, bool>)((icon, maximum) =>
+        {
+            if (!textures.TryGetValue(icon, out var size))
+            {
+                var tex = game.GetFile<Lumina.Data.Files.TexFile>($"ui/icon/{icon / 1000 * 1000:000000}/{icon:000000}.tex");
+                if (tex == null) return false;
+                byte[] rgba = tex.ImageData.ToArray();
+                for (int n = 0; n < rgba.Length; n += 4) (rgba[n], rgba[n + 2]) = (rgba[n + 2], rgba[n]);
+                File.WriteAllBytes(Path.Combine(directory, $"icon-{icon}.rgba"), rgba);
+                size = (tex.Header.Width, tex.Header.Height); textures[icon] = size;
+            }
+            float fit = Math.Min(maximum.X / size.Width, maximum.Y / size.Height);
+            ImGui.Image(new ImTextureID(icon + 2ul), new(size.Width * fit, size.Height * fit));
+            return true;
+        }));
         if (selected != 0) window.Select(selected);
         ImGui.CreateContext();
         var io = ImGui.GetIO();
@@ -102,10 +123,11 @@ internal static class Program
             var vertices = new List<double[]>(); var indices = new List<ushort>(); var commands = new List<object>();
             for (int n = 0; n < list.VtxBuffer.Size; n++) { var v = list.VtxBuffer[n]; vertices.Add([v.Pos.X, v.Pos.Y, v.Uv.X, v.Uv.Y, v.Col]); }
             for (int n = 0; n < list.IdxBuffer.Size; n++) indices.Add(list.IdxBuffer[n]);
-            for (int n = 0; n < list.CmdBuffer.Size; n++) { var c = list.CmdBuffer[n]; commands.Add(new { Clip = new[] { c.ClipRect.X, c.ClipRect.Y, c.ClipRect.Z, c.ClipRect.W }, Count = c.ElemCount, Offset = c.IdxOffset, VertexOffset = c.VtxOffset }); }
+            for (int n = 0; n < list.CmdBuffer.Size; n++) { var c = list.CmdBuffer[n]; commands.Add(new { Texture = c.TextureId.Handle, Clip = new[] { c.ClipRect.X, c.ClipRect.Y, c.ClipRect.Z, c.ClipRect.W }, Count = c.ElemCount, Offset = c.IdxOffset, VertexOffset = c.VtxOffset }); }
             lists.Add(new { Vertices = vertices, Indices = indices, Commands = commands });
         }
-        File.WriteAllText(Path.Combine(directory, name + ".json"), JsonSerializer.Serialize(new { Width = width, Height = height, Font = name, TextureWidth = tw, TextureHeight = th, Lists = lists }));
+        File.WriteAllText(Path.Combine(directory, name + ".json"), JsonSerializer.Serialize(new { Width = width, Height = height, Font = name, TextureWidth = tw, TextureHeight = th, Lists = lists,
+            Textures = textures.Select(t => new { Id = t.Key + 2ul, Width = t.Value.Width, Height = t.Value.Height, File = $"icon-{t.Key}.rgba" }) }));
         Console.WriteLine($"PASS: production UI {name} ({draw.TotalVtxCount} vertices)");
         ImGui.DestroyContext();
     }

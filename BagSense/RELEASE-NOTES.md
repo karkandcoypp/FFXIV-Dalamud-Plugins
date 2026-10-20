@@ -1,15 +1,14 @@
-# BagSense 0.3.0 — quest protection and an updating item database
+# BagSense 0.4.0 — all journal quests and understandable exchange rewards
 
-- Complete searchable item catalog: 50,880 named items in the initial data set.
-- Daily GitHub collection from a pinned ffxiv-datamining revision; the plugin checks for updates on load and daily, with a manual refresh button.
-- SHA-256, schema, count and reference validation before applying a catalog. Verified disk cache and installed-game fallback keep the plugin usable offline.
-- Quest objective text, objective number, known quantity/quality, evidence and the specific hand-in NPC/map when resolved.
-- Active quests automatically reserve required stock and constrain existing cleanup plans. Independent personal goals add to these reservations.
-- Unknown quantities, unknown quality, unreadable journals and HQ needs keep all potentially needed copies. Inactive quests create no automatic reserve.
-- Inventory disappearance does not prove a hand-in. Reservations stay until the quest completes.
+- A searchable Quest tab covering all 5,193 named journal quests in the current source, with objectives, relevant items, profession alternatives and mapped NPC destinations when available.
+- Expanded data: 50,880 ordinary items plus 3,531 key items in a separate ID namespace; 4,177 quest-item links and 687 known quantities (up from 118).
+- Explicit QuestClassJobSupply quantities, HQ requirements and accepting-job branches. Clear literal objective/journal/dialogue requests add further evidence. ToDo counters and unrelated script constants are not interpreted as item quantities.
+- Active quest reservations select the accepted profession's requirement. Unknown or HQ requirements remain protected conservatively.
+- Exchange rewards now have an icon, a plain-language type (mount, minion, music, equipment, etc.), a usage explanation, game description and known collection ownership.
+- Mount rewards show the actual 192px journal artwork loaded from the installed game, plus mount name and the whistle/key item that unlocks it.
+- Reward filters, explicit required/owned/missing costs and collection types in cleanup-plan destinations.
+- Daily catalog updates, verified cache and existing goals/plans remain compatible.
 
-Initial quest coverage: 1,020 item links across 629 quests, 245 identified hand-in objectives, 118 exact quantities. Other scripts and intermediate variable flags remain partial. ToDoQty is not an item count. My First Pickaxe correctly keeps ten Copper Ore for Adalberta rather than interpreting its one NPC interaction as one ore.
+Обновись через `/xlplugins`, открой `/bagsense`. Во вкладке «Квесты» доступны все квесты текущего каталога. В обменах видно, что именно получишь и как использовать награду. Изображения маунтов берутся из игры.
 
-Обновись через `/xlplugins`, открой `/bagsense`. Новая вкладка «База предметов» показывает полный каталог и дату обновления. Квестовые карточки объясняют, сколько оставить и куда сдавать. При неизвестном количестве активного квеста весь запас сохраняется.
-
-Protection applies to BagSense's cleanup plan; the plugin does not intercept manual in-game sales. All actions remain manual. Character data stays local. Quest/item names and original journal text use English; UI supports RU/EN. In-game quest transitions and map clicks still need live testing.
+Complete quest enumeration does not mean every server script has a recoverable exact quantity. Unresolved counts/positions remain explicit, and possible needed stock remains protected in BagSense's plan. Leve and other separate delivery systems are not claimed as ordinary Quest records. Quest text uses original English data; interface and explanations support RU/EN. Live map clicks, quest transitions and actual Dalamud texture loading still require in-game testing.
