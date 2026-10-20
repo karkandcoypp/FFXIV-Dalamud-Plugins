@@ -78,7 +78,7 @@
     "Author": "Carcosa Lyuman",
     "Name": "BagSense",
     "InternalName": "BagSense",
-    "AssemblyVersion": "0.4.0.0",
+    "AssemblyVersion": "0.5.0.0",
     "Punchline": "Remember why you keep items. Make an explained cleanup plan.",
     "Description": "Understand every exchange reward with icons, collection types, descriptions and mount artwork. Complete journal-quest catalog, objective NPC maps, profession hand-in requirements and active-quest reservations. Auto-updating item database, goals and notes. English / Русский. Open /bagsense.",
     "ApplicableVersion": "any",
@@ -90,8 +90,8 @@
       "planning",
       "qol"
     ],
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.4.0/BagSense.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.4.0/BagSense.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.4.0/BagSense.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.5.0/BagSense.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.5.0/BagSense.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.5.0/BagSense.zip"
   }
 ]
