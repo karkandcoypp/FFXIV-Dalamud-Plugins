@@ -7,15 +7,15 @@ using Dalamud.Interface.Windowing;
 
 namespace BagSense;
 
-public sealed class BagWindow : Window, IDisposable
+public sealed partial class BagWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
     private readonly bool staticPreview;
     private Text L => plugin.Locale;
     private string T(string ru, string en) => L.T(ru, en);
-    private static readonly Vector4 Teal = new(.40f, .85f, .74f, 1);
+    private static readonly Vector4 Teal = BagTheme.Accent;
     private static readonly Vector4 Gold = new(.96f, .75f, .41f, 1);
-    private static readonly Vector4 Muted = new(.65f, .69f, .75f, 1);
+    private static readonly Vector4 Muted = BagTheme.Muted;
     private uint selected;
     private string search = "";
     private int filter;
@@ -40,7 +40,7 @@ public sealed class BagWindow : Window, IDisposable
     {
         this.plugin = plugin;
         this.staticPreview = staticPreview;
-        Size = new(1120, 760);
+        Size = new(1240, 860);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new() { MinimumSize = new(860, 570), MaximumSize = new(2100, 1600) };
     }
@@ -68,29 +68,32 @@ public sealed class BagWindow : Window, IDisposable
         note = decision.Note;
         keepQuantity = decision.KeepQuantity;
         var advice = CleanupPolicy.Evaluate(snapshot, data, selected, DateTimeOffset.UtcNow);
+        exchangeKey = "";
+        destinationKey = "";
+        routeKey = "";
         action = advice.DefaultAction;
         planQuantity = action == PlanAction.Use ? 1 : Math.Max(1, advice.Available);
     }
 
+    public override void PreDraw()
+    {
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, BagTheme.Background);
+        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 1f);
+    }
+    public override void PostDraw() { ImGui.PopStyleVar(); ImGui.PopStyleColor(); }
     public override void Draw()
     {
         ImGui.SetWindowFontScale(plugin.Settings.Scale);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 5 * S);
-        ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, 8 * S);
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(9, 8) * S);
-        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(.075f, .09f, .12f, .96f));
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.13f, .24f, .26f, 1));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.18f, .35f, .36f, 1));
-        ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(.13f, .29f, .28f, 1));
+        BagTheme.Push(S);
         try { DrawContent(); }
-        finally { ImGui.PopStyleColor(4); ImGui.PopStyleVar(3); }
+        finally { BagTheme.Pop(); }
     }
 
     private void DrawContent()
     {
-        ImGui.TextColored(Teal, "B A G S E N S E");
+        ImGui.TextColored(Teal, "BagSense");
         ImGui.SameLine();
-        ImGui.TextDisabled(T("У каждой вещи есть причина", "Give every item a reason"));
+        ImGui.TextDisabled(T("Предметы, их назначение и твой маршрут", "Your items, their purpose and your next stop"));
         ImGui.SameLine();
         if (ImGui.SmallButton("RU###RU")) { plugin.Settings.Russian = true; plugin.Save(); }
         ImGui.SameLine();
@@ -128,7 +131,7 @@ public sealed class BagWindow : Window, IDisposable
         ImGui.SameLine();
         if (ImGui.SmallButton(T("Обновить", "Refresh") + "###Scan")) plugin.Refresh();
         ImGui.ProgressBar(snapshot.BagCapacity == 0 ? 0 : (float)snapshot.BagSlots / snapshot.BagCapacity,
-            new(-1, 6 * S), "");
+            new(-1, 3 * S), "");
         if (ImGui.BeginTabBar("Sections"))
         {
             if (ImGui.BeginTabItem(T("Инвентарь", "Inventory") + "###Inventory", requestedTab == 0 ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None))
@@ -141,10 +144,10 @@ public sealed class BagWindow : Window, IDisposable
             requestedTab = -1;
         }
         ImGui.Separator();
-        ImGui.TextDisabled(T("Все действия выполняешь ты. Предметы и цены — из установленной игры; интерфейс RU / EN.",
-            "You perform all actions. Item names and prices come from your installed game. RU / EN interface."));
-        ImGui.TextDisabled(T($"Снимок: {snapshot.CapturedAt.ToLocalTime():HH:mm:ss}  ·  Ретейнеры, Saddlebag и комод не учитываются.",
-            $"Snapshot: {snapshot.CapturedAt.ToLocalTime():HH:mm:ss}  ·  Retainers, saddlebags and dresser are not scanned."));
+        ImGui.TextDisabled(T($"Обновлено {snapshot.CapturedAt.ToLocalTime():HH:mm:ss}  ·  Действия вручную  ·  Сумки + Armoury",
+            $"Updated {snapshot.CapturedAt.ToLocalTime():HH:mm:ss}  ·  Manual actions  ·  Bags + Armoury"));
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Ретейнеры, Saddlebag и комод не учитываются. Прогресс и заметки хранятся на этом компьютере.",
+            "Retainers, saddlebags and dresser are not scanned. Progress and notes stay on this computer."));
     }
 
     private void DrawSettings()
@@ -188,8 +191,8 @@ public sealed class BagWindow : Window, IDisposable
             .Where(a => Match(a, snapshot, data)).OrderBy(a => a.Kind == AdviceKind.Learn ? 0 : a.Kind == AdviceKind.Vendor ? 1 : 2)
             .ThenBy(a => snapshot.Items.GetValueOrDefault(a.ItemId)?.Name).ToList();
         if (advice.All(a => a.ItemId != selected)) { selected = advice.FirstOrDefault()?.ItemId ?? 0; LoadSelection(); }
-        float height = Math.Max(180 * S, ImGui.GetContentRegionAvail().Y - 65 * S);
-        if (ImGui.BeginChild("ItemList", new(ImGui.GetContentRegionAvail().X * .43f, height), true))
+        float height = Math.Max(180 * S, ImGui.GetContentRegionAvail().Y - 42 * S);
+        if (ImGui.BeginChild("ItemList", new(ImGui.GetContentRegionAvail().X * .34f, height), true))
         {
             ImGui.TextColored(Muted, T($"ПРЕДМЕТЫ  /  {advice.Count}", $"ITEMS  /  {advice.Count}"));
             if (advice.Count == 0) ImGui.TextWrapped(T("Здесь пока пусто. Проверь фильтр или открой все предметы.", "Nothing here. Check the filters or open All items."));
@@ -198,14 +201,23 @@ public sealed class BagWindow : Window, IDisposable
             {
                 ImGui.PushID((int)entry.ItemId);
                 var item = snapshot.Items.GetValueOrDefault(entry.ItemId);
-                DrawIcon(item, 30);
-                ImGui.SameLine();
-                if (ImGui.Selectable($"{item?.Name ?? $"#{entry.ItemId}"}  ×{entry.Total}###Item", selected == entry.ItemId))
+                var start = ImGui.GetCursorScreenPos();
+                if (ImGui.Selectable("###Item", selected == entry.ItemId, ImGuiSelectableFlags.None, new(0, 68 * S)))
                 { selected = entry.ItemId; LoadSelection(); }
-                ImGui.TextColored(entry.CanPlan ? Teal : Muted, L.Kind(entry.Kind));
-                if (entry.Reserved > 0) ImGui.TextDisabled(T($"Резерв {entry.Reserved} · Остаток {entry.Available}", $"Reserve {entry.Reserved} · Surplus {entry.Available}"));
-                if (data.Plan.Any(p => p.ItemId == entry.ItemId)) ImGui.TextColored(Gold, T("В плане", "In your plan"));
-                ImGui.Separator();
+                var end = ImGui.GetCursorScreenPos();
+                ImGui.SetCursorScreenPos(start + new Vector2(6, 8) * S); DrawIcon(item, 32);
+                ImGui.SetCursorScreenPos(start + new Vector2(48, 7) * S);
+                string title = item?.Name ?? $"#{entry.ItemId}";
+                int max = Math.Max(18, (int)((ImGui.GetWindowWidth() / S - 70) / 8));
+                if (title.Length > max) title = title[..(max - 1)] + "…";
+                ImGui.TextUnformatted(title);
+                ImGui.SetCursorScreenPos(start + new Vector2(48, 30) * S);
+                ImGui.TextColored(entry.CanPlan ? Teal : Muted, $"×{entry.Total}  ·  " + L.Kind(entry.Kind));
+                if (data.Plan.Any(p => p.ItemId == entry.ItemId))
+                { ImGui.SetCursorScreenPos(start + new Vector2(48, 49) * S); ImGui.TextColored(Gold, T("В плане", "In your plan")); }
+                else if (entry.Reserved > 0)
+                { ImGui.SetCursorScreenPos(start + new Vector2(48, 49) * S); ImGui.TextDisabled(T($"Сохранить {entry.Reserved}", $"Keep {entry.Reserved}")); }
+                ImGui.SetCursorScreenPos(end);
                 ImGui.PopID();
             }
         }
@@ -231,77 +243,6 @@ public sealed class BagWindow : Window, IDisposable
         if (item?.Equipment == true) return plugin.Settings.ShowEquipment;
         if (item?.Unlocked != null) return plugin.Settings.ShowCollectibles;
         return plugin.Settings.ShowMaterials;
-    }
-
-    private void DrawItem(InventorySnapshot snapshot, CharacterData data, Advice advice)
-    {
-        var item = snapshot.Items.GetValueOrDefault(advice.ItemId);
-        DrawIcon(item, 42);
-        ImGui.SameLine();
-        ImGui.TextWrapped(item?.Name ?? $"#{advice.ItemId}");
-        ImGui.TextDisabled($"{item?.Category}  ·  ID {advice.ItemId}");
-        ImGui.TextColored(Teal, L.Kind(advice.Kind));
-        ImGui.TextWrapped(L.Reason(advice.Reason));
-        ImGui.Text(T($"В наличии: {advice.Total}  ·  Резерв: {advice.Reserved}  ·  Остаток: {advice.Available}",
-            $"Owned: {advice.Total}  ·  Reserve: {advice.Reserved}  ·  Surplus: {advice.Available}"));
-        if (advice.GoalNames.Length > 0) ImGui.TextWrapped(T("Цели: ", "Goals: ") + string.Join(", ", advice.GoalNames));
-        if (snapshot.Gearsets.TryGetValue(advice.ItemId, out var sets)) ImGui.TextWrapped(T("Комплекты: ", "Gearsets: ") + string.Join(", ", sets));
-        ImGui.TextDisabled(string.Join(" · ", snapshot.Stacks.Where(s => s.ItemId == advice.ItemId).GroupBy(s => s.Container)
-            .Select(g => ContainerName(g.Key) + " ×" + g.Sum(s => s.Quantity))));
-        if (snapshot.Stacks.Any(s => s.ItemId == advice.ItemId && s.Hq))
-            ImGui.TextWrapped(T("Есть HQ. Резерв общий для HQ и NQ; качество нужных экземпляров проверь вручную.", "Includes HQ. Reservations share HQ and NQ; choose the quality to keep manually."));
-        ImGui.Separator();
-        ImGui.TextColored(Gold, T("ЗАЧЕМ ХРАНЮ", "WHY I KEEP IT"));
-        ImGui.SetNextItemWidth(-1);
-        if (InputHint("###Note", T("Причина хранения или личная заметка", "A reason to keep it or a personal note"), ref note, 1024))
-        { data.Edit(advice.ItemId).Note = note; plugin.Changed(); }
-        bool keep = data.Decision(advice.ItemId).AlwaysKeep;
-        if (ImGui.Checkbox(T("Всегда сохранять", "Always keep") + "###Keep", ref keep))
-        { data.Edit(advice.ItemId).AlwaysKeep = keep; plugin.Changed(); }
-        ImGui.SetNextItemWidth(110 * S);
-        if (Number(T("Личный запас", "Personal reserve") + "###Reserve", ref keepQuantity))
-        { keepQuantity = Math.Clamp(keepQuantity, 0, 999999); data.Edit(advice.ItemId).KeepQuantity = keepQuantity; plugin.Changed(); }
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Резерв = большее из личного запаса и суммы активных целей.", "Reserve = the larger of personal stock and all active goals combined."));
-        ImGui.Separator();
-        DrawPlanControls(snapshot, data, advice);
-        if (ImGui.SmallButton(T("Отложить на день", "Later (one day)") + "###Later"))
-        { data.Edit(advice.ItemId).DeferUntil = DateTimeOffset.UtcNow.AddDays(1); plugin.Changed(); selected = 0; }
-        ImGui.SameLine();
-        if (ImGui.SmallButton(T("Вернуть в разбор", "Review again") + "###Undefer"))
-        { data.Edit(advice.ItemId).DeferUntil = null; plugin.Changed(); }
-        if (reviewMode)
-        {
-            if (ImGui.Button(T("Следующий предмет", "Next item") + "###Next"))
-            {
-                data.Edit(advice.ItemId).DeferUntil = DateTimeOffset.UtcNow.AddHours(1);
-                plugin.Changed(); selected = 0;
-            }
-            ImGui.TextDisabled(T("«Следующий» откладывает решение на час.", "Next defers this decision for one hour."));
-        }
-        if (ImGui.CollapsingHeader(T("Привязать к цели", "Assign to a goal") + "###GoalAssignment")) DrawGoalAssignment(data, advice.ItemId);
-        if (item != null) DrawFacts(item);
-    }
-
-    private void DrawFacts(ItemFacts item)
-    {
-        if (item.BuyOffers.Length > 0 && ImGui.CollapsingHeader(T("Повторное получение в магазине", "Merchant reacquisition") + "###Shops"))
-        {
-            foreach (var offer in item.BuyOffers)
-                ImGui.TextWrapped($"• {offer.Shop} — {offer.Price} gil" + (offer.Conditional ? T(" · есть условия", " · conditional") : ""));
-            ImGui.TextWrapped(T("Это записи ассортимента. Доступ к NPC не проверен. Цена относится к обычному качеству; возможны отличия магазина.",
-                "These are shop listings. NPC access is not checked. The price is for normal quality; shop differences may apply."));
-        }
-        if (item.RecipeUses.Length > 0 && ImGui.CollapsingHeader(T("Примеры рецептов", "Example recipes") + "###Recipes"))
-            foreach (var recipe in item.RecipeUses) ImGui.TextWrapped("• " + recipe);
-        if (item.ExchangeUses.Length > 0 && ImGui.CollapsingHeader(T("Примеры обменов", "Example exchanges") + "###Exchanges"))
-        {
-            foreach (var exchange in item.ExchangeUses) ImGui.TextWrapped($"• {exchange.Shop}: {exchange.Reward} — {exchange.Cost}");
-            ImGui.TextWrapped(T("Список неполный. У обмена могут быть другие затраты, условия и требования качества.",
-                "This list is incomplete. Exchanges may have additional costs, conditions and quality requirements."));
-        }
-        if (item.Description.Length > 0 && ImGui.CollapsingHeader(T("Описание игры", "Game description") + "###Description")) ImGui.TextWrapped(item.Description);
-        if (!plugin.Demo && ImGui.SmallButton(T("Открыть Teamcraft", "Open Teamcraft") + "###Teamcraft"))
-            Process.Start(new ProcessStartInfo($"https://ffxivteamcraft.com/db/en/item/{item.Id}") { UseShellExecute = true });
     }
 
     private void DrawGoalAssignment(CharacterData data, uint itemId)
@@ -341,25 +282,33 @@ public sealed class BagWindow : Window, IDisposable
         if (ImGui.BeginCombo("###Action", L.Action(action)))
         {
             foreach (var available in actions)
-                if (ImGui.Selectable(L.Action(available), action == available)) action = available;
+                if (ImGui.Selectable(L.Action(available), action == available)) { action = available; destinationKey = ""; exchangeKey = ""; routeKey = ""; }
             ImGui.EndCombo();
         }
         ImGui.SameLine(); ImGui.SetNextItemWidth(100 * S);
-        Number("###PlanQuantity", ref planQuantity);
+        Number(T("шт.", "units") + "###PlanQuantity", ref planQuantity);
         planQuantity = Math.Clamp(planQuantity, 1, Math.Max(1, advice.Available));
         if (action == PlanAction.Use) planQuantity = 1;
         var projected = CleanupPolicy.Project(snapshot, data,
             new() { ItemId = advice.ItemId, Action = action, Quantity = planQuantity, BaselineQuantity = advice.Total }, DateTimeOffset.UtcNow);
-        ImGui.TextWrapped(T($"Потенциально: {projected.BagSlots} сл. сумки, {projected.ArmourySlots} сл. Armoury.",
-            $"Potential: {projected.BagSlots} bag slots, {projected.ArmourySlots} Armoury slots."));
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Расчёт для удаления самых маленьких стопок. Обмен и ручная проверка не обещают слоты.",
-            "Assumes smallest stacks are removed first. Exchange and review steps promise no slots."));
-        if (action == PlanAction.Vendor) ImGui.TextWrapped(T("Цена продажи указана для NQ. Проверь рецепты, HQ и личные планы перед продажей.",
-            "Vendor price is for NQ. Review recipes, HQ and your plans before selling."));
-        if (action == PlanAction.Desynthesize) ImGui.TextWrapped(T("Данные игры допускают разбор. Профессия и ограничения персонажа не проверены; результат может занять новые слоты.",
-            "Game data allows desynthesis. Job access is not checked; the resulting materials may occupy new slots."));
-        if (ImGui.Button(T("Добавить / обновить шаг", "Add / update step") + "###AddPlan"))
-        { CleanupPolicy.AddToPlan(snapshot, data, advice, action, planQuantity); plugin.Changed(); }
+        if (ImGui.GetContentRegionAvail().X > 640 * S) ImGui.SameLine();
+        if (ImGui.Button(T("Добавить в план", "Add to my plan") + "###AddPlan"))
+        {
+            CleanupPolicy.AddToPlan(snapshot, data, advice, action, planQuantity);
+            var step = data.Plan.FirstOrDefault(p => p.ItemId == advice.ItemId);
+            if (step != null)
+            {
+                step.DestinationKey = action is PlanAction.Vendor or PlanAction.ExchangeReview ? destinationKey : "";
+                step.ExchangeKey = action == PlanAction.ExchangeReview ? exchangeKey : "";
+                step.RouteKey = action == PlanAction.ExchangeReview ? routeKey : "";
+            }
+            plugin.Changed();
+        }
+        if (action is not (PlanAction.ExchangeReview or PlanAction.ManualReview))
+            ImGui.TextDisabled(T($"Можно освободить: {projected.BagSlots} сл. сумки, {projected.ArmourySlots} сл. Armoury.",
+                $"Potential space: {projected.BagSlots} bag slots, {projected.ArmourySlots} Armoury slots."));
+        if (action == PlanAction.Desynthesize) ImGui.TextWrapped(T("Проверь доступ к разбору. Полученные материалы могут занять новые слоты.",
+            "Check desynthesis access. Resulting materials may occupy new slots."));
         if (data.Plan.Any(p => p.ItemId == advice.ItemId))
         {
             ImGui.SameLine();
@@ -480,9 +429,14 @@ public sealed class BagWindow : Window, IDisposable
         {
             if (data.Plan.Count == 0) ImGui.TextWrapped(T("Добавь предметы из вкладки «Инвентарь». Здесь появятся шаги, сгруппированные по действию.",
                 "Add items from Inventory. Your steps will appear here, grouped by action."));
-            foreach (var group in data.Plan.ToArray().GroupBy(p => p.Action).OrderBy(g => g.Key))
+            foreach (var group in data.Plan.ToArray().GroupBy(p =>
+                {
+                    var fact = snapshot.Items.GetValueOrDefault(p.ItemId) ?? plugin.Catalog?.Find(p.ItemId);
+                    var location = fact == null ? null : DestinationPolicy.ForPlan(fact, p, snapshot.TerritoryId);
+                    return location == null ? L.Action(p.Action) : location.Npc + " · " + location.Zone;
+                }).OrderBy(g => g.Key))
             {
-                ImGui.TextColored(Gold, L.Action(group.Key));
+                ImGui.TextColored(Teal, group.Key);
                 foreach (var entry in group) DrawPlanEntry(snapshot, data, entry);
             }
         }
@@ -495,11 +449,13 @@ public sealed class BagWindow : Window, IDisposable
         var item = snapshot.Items.GetValueOrDefault(entry.ItemId) ?? plugin.Catalog?.Find(entry.ItemId);
         var projection = CleanupPolicy.Project(snapshot, data, entry, DateTimeOffset.UtcNow);
         ImGui.TextWrapped($"{item?.Name ?? $"#{entry.ItemId}"} ×{entry.Quantity}");
+        ImGui.TextDisabled(L.Action(entry.Action));
+        if (item != null) DrawPlanDestination(snapshot, item, entry);
         if (projection.Stale) ImGui.TextColored(Gold, T("Количество уменьшилось — проверь шаг заново.", "Quantity decreased — review this step again."));
         if (projection.Blocked) ImGui.TextWrapped(T("Шаг заблокирован: резерв, защита, изучение или доступность предмета изменились.",
             "Step blocked: reservations, protection, unlock state or item availability changed."));
-        else ImGui.TextWrapped(T($"Сейчас допустимо: {projection.Quantity} · Слоты: сумка {projection.BagSlots}, Armoury {projection.ArmourySlots}",
-            $"Currently allowed: {projection.Quantity} · Slots: bags {projection.BagSlots}, Armoury {projection.ArmourySlots}"));
+        else ImGui.TextWrapped(T($"Свободно для шага: {projection.Quantity} шт. · Исходные слоты: сумка {projection.BagSlots}, Armoury {projection.ArmourySlots}",
+            $"Available items for this step: {projection.Quantity} · Source slots: bags {projection.BagSlots}, Armoury {projection.ArmourySlots}"));
         if (projection.Quantity < entry.Quantity && !projection.Blocked) ImGui.TextColored(Gold, T("Объём шага ограничен текущим свободным запасом.", "Step quantity is limited by the current surplus."));
         if (!projection.Blocked && (projection.Stale || projection.Quantity < entry.Quantity))
         {
@@ -509,6 +465,8 @@ public sealed class BagWindow : Window, IDisposable
         }
         if (ImGui.SmallButton(T("Готово / убрать шаг", "Done / remove step") + "###RemoveStep"))
         { data.Plan.Remove(entry); plugin.Changed(); }
+        ImGui.SameLine();
+        if (ImGui.SmallButton(T("Карточка предмета", "Item details") + "###EditItem")) Select(entry.ItemId);
         ImGui.Separator();
         ImGui.PopID();
     }
@@ -524,6 +482,14 @@ public sealed class BagWindow : Window, IDisposable
                 var projection = CleanupPolicy.Project(snapshot, data, entry, DateTimeOffset.UtcNow);
                 string name = snapshot.Items.GetValueOrDefault(entry.ItemId)?.Name ?? plugin.Catalog?.Find(entry.ItemId)?.Name ?? $"#{entry.ItemId}";
                 text.AppendLine($"- {name} ×{projection.Quantity}" + (projection.Blocked ? T(" [заблокирован]", " [blocked]") : projection.Stale ? T(" [проверить заново]", " [review again]") : ""));
+                var item = snapshot.Items.GetValueOrDefault(entry.ItemId) ?? plugin.Catalog?.Find(entry.ItemId);
+                if (item != null)
+                {
+                    var location = DestinationPolicy.ForPlan(item, entry, snapshot.TerritoryId);
+                    if (location != null) text.AppendLine($"  {location.Npc} · {location.Zone} (X: {location.X:0.0}, Y: {location.Y:0.0})");
+                    var exchange = item.ExchangeUses.FirstOrDefault(e => e.Key == entry.ExchangeKey);
+                    if (exchange != null) text.AppendLine("  " + exchange.Reward + " ← " + string.Join(" + ", exchange.FullCosts.Select(c => $"{c.Count} × {c.Name}")));
+                }
             }
         }
         return text.ToString();

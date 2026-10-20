@@ -6,21 +6,43 @@ public enum AdviceKind { Protected, Reserved, Learn, Vendor, Gear, Exchange, Rev
 public enum Reason
 {
     UnknownItem, AlwaysKeep, Equipped, Gearset, GearsetsUnknown, Indisposable, SpecialInstance,
-    GoalReserve, FullReserve, Learn, AlreadyLearned, VendorSource, GearReview, ExchangeUses, RecipeUses, UnknownUse, Deferred,
+    GoalReserve, FullReserve, Learn, AlreadyLearned, VendorSource, GearReview, ExchangeUses, RecipeUses, UnknownUse, Deferred, QuestItem, GilToken,
 }
 
 public sealed record InventoryStack(uint ItemId, ContainerKind Container, int Slot, int Quantity,
     bool Hq = false, bool Collectable = false, bool ValuableInstance = false);
-public sealed record BuyOffer(string Shop, uint Price, bool Conditional);
-public sealed record ExchangeUse(string Shop, string Reward, uint Cost);
+public sealed record NpcLocation(uint NpcId, string Npc, string Zone, uint Territory, uint Map, float X, float Y)
+{
+    public string Key => FormattableString.Invariant($"{NpcId}:{Map}:{X:0.00}:{Y:0.00}");
+    public bool CanMap => NpcId != 0 && Map != 0 && Territory != 0 && float.IsFinite(X) && float.IsFinite(Y) && X >= 1 && Y >= 1 && X < 100 && Y < 100;
+}
+public sealed record RouteRequirement(string Kind, uint Id, string Name);
+public sealed record ShopRoute(uint ShopId, string Menu, NpcLocation Location, RouteRequirement[] Requirements);
+public sealed record TradeCost(uint ItemId, string Name, uint Count, ushort Collectability = 0);
+public sealed record QuestUse(uint QuestId, string Name, bool Reward, bool Repeatable, NpcLocation[] Contacts, bool IssuerContact);
+public sealed record BuyOffer(string Shop, uint Price, bool Conditional, uint ShopId = 0, ShopRoute[]? Routes = null)
+{
+    public ShopRoute[] Destinations => Routes ?? [];
+}
+public sealed record ExchangeUse(string Shop, string Reward, uint Cost, uint ShopId = 0, uint RewardId = 0,
+    uint RewardCount = 1, TradeCost[]? Costs = null, ShopRoute[]? Routes = null, RouteRequirement[]? Requirements = null)
+{
+    public TradeCost[] FullCosts => Costs ?? [];
+    public ShopRoute[] Destinations => Routes ?? [];
+    public RouteRequirement[] Conditions => Requirements ?? [];
+    public string Key => $"{ShopId}:{RewardId}:{RewardCount}:" + string.Join(',', FullCosts.Select(c => $"{c.ItemId}:{c.Count}:{c.Collectability}"))
+        + "|" + string.Join(',', Conditions.OrderBy(c => c.Kind).ThenBy(c => c.Id).Select(c => $"{c.Kind}:{c.Id}"));
+}
 public sealed record ItemFacts(uint Id, string Name, uint Icon, string Category, string Description,
     bool Equipment = false, bool Indisposable = false, bool Marketable = false, uint SellPrice = 0,
     bool Desynth = false, bool? Unlocked = null, BuyOffer[]? Offers = null, string[]? Recipes = null,
-    ExchangeUse[]? Exchanges = null)
+    ExchangeUse[]? Exchanges = null, QuestUse[]? Quests = null, NpcLocation[]? Merchants = null)
 {
     public BuyOffer[] BuyOffers => Offers ?? [];
     public string[] RecipeUses => Recipes ?? [];
     public ExchangeUse[] ExchangeUses => Exchanges ?? [];
+    public QuestUse[] QuestUses => Quests ?? [];
+    public NpcLocation[] SaleLocations => Merchants ?? [];
 }
 
 public sealed class ItemDecision
@@ -47,6 +69,9 @@ public sealed class PlanEntry
     public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.UtcNow;
     // An inventory decrease cannot prove that a sale or hand-in happened.
     public bool ObservedDecrease { get; set; }
+    public string DestinationKey { get; set; } = "";
+    public string ExchangeKey { get; set; } = "";
+    public string RouteKey { get; set; } = "";
 }
 public sealed class CharacterData
 {
@@ -62,11 +87,13 @@ public sealed class CharacterData
 }
 public sealed record InventorySnapshot(ulong CharacterId, string CharacterName, DateTimeOffset CapturedAt,
     IReadOnlyList<InventoryStack> Stacks, IReadOnlyDictionary<uint, ItemFacts> Items,
-    IReadOnlyDictionary<uint, string[]> Gearsets, bool GearsetsKnown, int BagCapacity)
+    IReadOnlyDictionary<uint, string[]> Gearsets, bool GearsetsKnown, int BagCapacity,
+    uint TerritoryId = 0, IReadOnlyDictionary<uint, bool>? CompletedQuests = null)
 {
     public int Quantity(uint id) => Stacks.Where(s => s.ItemId == id).Sum(s => s.Quantity);
     public int BagSlots => Stacks.Count(s => s.Container == ContainerKind.Bag);
     public int ArmourySlots => Stacks.Count(s => s.Container == ContainerKind.Armoury);
+    public bool? QuestCompleted(uint id) => CompletedQuests != null && CompletedQuests.TryGetValue(id, out bool complete) ? complete : null;
 }
 public sealed record Advice(uint ItemId, AdviceKind Kind, Reason Reason, int Total, int Reserved, int Available,
     bool CanPlan, PlanAction DefaultAction, string[] GoalNames);
@@ -114,6 +141,10 @@ public static class CleanupPolicy
         if (item.Equipment) return Result(AdviceKind.Gear, Reason.GearReview, true,
             item.Desynth ? PlanAction.Desynthesize : PlanAction.ManualReview);
         if (item.ExchangeUses.Length > 0) return Result(AdviceKind.Exchange, Reason.ExchangeUses, true, PlanAction.ExchangeReview);
+        if (item.QuestUses.Any(q => !q.Reward && (q.Repeatable || snapshot.QuestCompleted(q.QuestId) != true)))
+            return Result(AdviceKind.Review, Reason.QuestItem, true);
+        if (item.SellPrice > 0 && item.Description.Contains("Exchangeable for gil.", StringComparison.Ordinal))
+            return Result(AdviceKind.Vendor, Reason.GilToken, true, PlanAction.Vendor);
         // A merchant listing is evidence of a reacquisition route, not a statement that the item is useless.
         if (item.BuyOffers.Any(o => !o.Conditional) && item.SellPrice > 0)
             return Result(AdviceKind.Vendor, Reason.VendorSource, true, PlanAction.Vendor);

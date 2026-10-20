@@ -1,23 +1,21 @@
-# BagSense 0.1.0
+# BagSense 0.2.0 — item purpose and NPC destinations
 
-First public release for Dalamud API 15.
+- Opaque dark interface, compact item rows and a wider, clearer item card.
+- Item purpose is visible first; personal notes and reserve controls are in a separate expandable section.
+- Concrete NPCs, zones, coordinates and **Open map** buttons for supported exchanges and ordinary gil sales.
+- Complete simultaneous exchange prices, reward selection, quantity comparisons and known access quests.
+- Requested quest materials are distinguished from quest rewards, with completion status and contact locations.
+- Cleanup plans group by NPC and zone, keep the selected exchange/route and include map buttons and destination details in exports.
+- Existing goals, notes, reservations and plans remain compatible.
 
-- Russian and English interface; open `/bagsense`.
-- Character-specific item notes, always-keep protection and quantity reservations.
-- Personal goals with item search, quantities, allocated progress and completion.
-- Explained inventory recommendations using installed game data.
-- Manual cleanup plans, grouped by action, with physical-stack slot estimates.
-- Protection for equipped and saved-gearset items, collectables, relics and customized equipment.
-- `/bagsense demo` provides a separate sample inventory.
+Examples checked against installed game data: Aetherpool Grip → E-Una-Kotor; Aloalo Potsherd → Trisassant; Aetherspun Gold → expedition armorer in South Horn. South Horn coordinates come from the installed zone placement file.
 
-Add the shared repository in Dalamud settings:
+Update **BagSense** through `/xlplugins`, then open `/bagsense`. The repository URL is unchanged:
 
 ```text
 https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/pluginmaster.json
 ```
 
-Then install **BagSense** through `/xlplugins`. Disable any development copy first.
+Обновление 0.2.0: читаемый интерфейс, назначение предмета на первом месте, конкретные NPC и кнопки карты, полная цена обмена и связи с квестами. Выбранное место сохраняется в плане. Обновись в `/xlplugins` и открой `/bagsense`.
 
-BagSense reads main bags, Armoury Chest and equipped items. Inventory operations are manual. Retainers, saddlebags and glamour storage are not scanned. Initial checks cover builds, policy, persistence, installed game data and standalone UI rendering; behavior inside FFXIV still needs player verification.
-
-Первая публичная версия: интерфейс RU/EN, цели персонажа, заметки о предметах, резервы и план очистки. После установки открой `/bagsense`. Если использовал локальную DLL, сначала отключи её в Dev Plugins. Все действия с предметами выполняются вручную.
+Inventory actions remain manual. Unknown NPCs, currencies and conditions are labelled rather than guessed. Quest coverage is partial for special scripted chains. Builds, policies, persistence, installed data and standalone rendering are checked; map clicks still need in-game verification.

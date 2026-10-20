@@ -3,12 +3,20 @@ namespace BagSense;
 public sealed class Text(Func<bool> russian)
 {
     public string T(string ru, string en) => russian() ? ru : en;
+    public string Purpose(ItemFacts item) => item.ExchangeUses.Length > 0
+        ? T("Для обмена: ", "Exchange material: ") + (string.IsNullOrWhiteSpace(item.ExchangeUses[0].Shop) ? item.ExchangeUses[0].Reward : item.ExchangeUses[0].Shop)
+        : item.QuestUses.Any(q => !q.Reward) ? T("Материал квеста: ", "Quest material: ") + item.QuestUses.First(q => !q.Reward).Name
+        : item.Unlocked == false ? T("Коллекционный предмет — можно изучить из сумки.", "A collectible you can learn from your inventory.")
+        : item.Equipment ? T("Экипировка. Проверь комплект, гламур и будущую прокачку.", "Equipment: consider gearsets, glamour and future leveling.")
+        : item.RecipeUses.Length > 0 ? T("Материал для крафта: ", "Crafting ingredient: ") + string.Join(", ", item.RecipeUses.Take(2))
+        : item.SellPrice > 0 ? T($"Можно продать обычному торговцу: {item.SellPrice} gil за NQ.", $"Sellable to an ordinary merchant: {item.SellPrice} gil per NQ item.")
+        : T("Полное применение не определено. Посмотри описание предмета.", "Its full use is not known. Check the item description.");
     public string Action(PlanAction action) => action switch
     {
         PlanAction.Use => T("Изучить предмет", "Learn collectible"),
         PlanAction.Vendor => T("Продать торговцу", "Sell to a merchant"),
         PlanAction.Desynthesize => T("Разобрать предмет", "Desynthesize"),
-        PlanAction.ExchangeReview => T("Проверить обмен", "Review exchanges"),
+        PlanAction.ExchangeReview => T("Обменять у NPC", "Exchange with an NPC"),
         _ => T("Разобрать вручную", "Review manually"),
     };
     public string Kind(AdviceKind kind) => kind switch
@@ -16,9 +24,9 @@ public sealed class Text(Func<bool> russian)
         AdviceKind.Protected => T("Сохранить", "Protected"),
         AdviceKind.Reserved => T("Весь запас нужен", "Fully reserved"),
         AdviceKind.Learn => T("Можно изучить", "Ready to learn"),
-        AdviceKind.Vendor => T("Есть торговый источник", "Merchant source found"),
+        AdviceKind.Vendor => T("Продажа за gil", "Sell for gil"),
         AdviceKind.Gear => T("Проверить экипировку", "Review equipment"),
-        AdviceKind.Exchange => T("Есть обмены", "Exchange material"),
+        AdviceKind.Exchange => T("Обмен у NPC", "NPC exchange"),
         AdviceKind.Deferred => T("Отложено", "Deferred"),
         _ => T("Нужно решение", "Your decision"),
     };
@@ -40,6 +48,8 @@ public sealed class Text(Func<bool> russian)
         BagSense.Reason.ExchangeUses => T("В данных игры предмет используется для обмена. Посмотри награды перед решением.", "Game data lists exchanges using this item. Review the rewards before deciding."),
         BagSense.Reason.RecipeUses => T("Предмет участвует в рецептах. Отсутствие цели не означает, что он не нужен.", "This item is used in recipes. Having no goal does not make it useless."),
         BagSense.Reason.Deferred => T("Ты отложил решение. Предмет остаётся в списке всех вещей.", "You deferred this decision. The item remains in All items."),
+        BagSense.Reason.QuestItem => T("Предмет запрашивается в квесте. Сначала проверь его состояние и текущий этап.", "A quest requests this item. Check the quest status and current step first."),
+        BagSense.Reason.GilToken => T("В описании игры указано: предмет обменивается на gil у обычного торговца.", "The game description says this item can be exchanged for gil at a regular merchant."),
         _ => T("Применения могут быть неполными. Укажи причину хранения или проверь предмет вручную.", "Known uses may be incomplete. Add a reason to keep it or review it manually."),
     };
 }

@@ -6,6 +6,7 @@ using System.Runtime.Loader;
 using System.Text.Json;
 using BagSense;
 using Dalamud.Bindings.ImGui;
+using Lumina;
 
 internal static class Program
 {
@@ -24,9 +25,24 @@ internal static class Program
             foreach (int tab in new[] { 0, 1, 2 })
                 foreach (var size in new[] { (1120, 760, 1f), (860, 570, 1f), (1440, 1000, 1.35f) })
                     Render(directory, ru, tab, size.Item1, size.Item2, size.Item3);
+        if (args.Length > 1)
+        {
+            using var game = new GameData(args[1]);
+            var catalog = new ItemCatalog(game.Excel, path => game.GetFile<Lumina.Data.Files.LgbFile>(path));
+            var items = new uint[] { 47866, 41078, 23165, 5106, 5823 }.Select(id => catalog.Find(id)!).ToDictionary(i => i.Id,
+                i => i with { Icon = 0, Merchants = catalog.World.Merchants.Where(m => m.Npc is "Bango Zango" or "Roarich" or "Maisenta").Take(5).ToArray() });
+            var snapshot = new InventorySnapshot(ulong.MaxValue, "Sample character / Пример персонажа", DateTimeOffset.UtcNow,
+                [new(47866, ContainerKind.Bag, 0, 1), new(41078, ContainerKind.Bag, 1, 18), new(23165, ContainerKind.Bag, 2, 26),
+                    new(5106, ContainerKind.Bag, 3, 35), new(5823, ContainerKind.Bag, 4, 1)], items, new Dictionary<uint, string[]>(), true, 140,
+                CompletedQuests: new Dictionary<uint, bool> { [70325] = false, [66135] = false });
+            foreach (bool ru in new[] { true, false })
+                foreach (uint id in items.Keys)
+                    Render(directory, ru, 0, 1240, 860, 1, snapshot, id);
+            Render(directory, true, 2, 1240, 860, 1, snapshot, 47866);
+        }
     }
 
-    private static unsafe void Render(string directory, bool ru, int tab, int width, int height, float scale)
+    private static unsafe void Render(string directory, bool ru, int tab, int width, int height, float scale, InventorySnapshot? actual = null, uint selected = 0)
     {
         var plugin = (Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
         var settings = new Configuration { Russian = ru, Scale = scale };
@@ -34,9 +50,19 @@ internal static class Program
         Set(plugin, "Locale", new Text(() => settings.Russian));
         Set(plugin, "Demo", true);
         var demo = DemoData.Create();
+        if (actual != null)
+        {
+            demo = (actual, new CharacterData());
+            foreach (var id in new uint[] { 47866, 41078, 5823 })
+            {
+                var advice = CleanupPolicy.Evaluate(actual, demo.Data, id, DateTimeOffset.UtcNow);
+                CleanupPolicy.AddToPlan(actual, demo.Data, advice, advice.DefaultAction, Math.Max(1, advice.Available));
+            }
+        }
         typeof(Plugin).GetField("demoSnapshot", Instance)!.SetValue(plugin, demo.Snapshot);
         typeof(Plugin).GetField("demoData", Instance)!.SetValue(plugin, demo.Data);
         var window = new BagWindow(plugin, staticPreview: true);
+        if (selected != 0) window.Select(selected);
         ImGui.CreateContext();
         var io = ImGui.GetIO();
         io.IniFilename = null; io.DisplaySize = new(width, height); io.DeltaTime = 1f / 60;
@@ -49,14 +75,15 @@ internal static class Program
         {
             ImGui.NewFrame();
             ImGui.SetNextWindowPos(Vector2.Zero); ImGui.SetNextWindowSize(io.DisplaySize);
+            window.PreDraw();
             ImGui.Begin("BagSense", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse);
             typeof(BagWindow).GetField("requestedTab", Instance)!.SetValue(window, tab);
             window.Draw();
             if (frame == 3 && ImGui.GetScrollMaxY() > 1) throw new Exception($"Outer window overflows: {ru}, {tab}, {width}, {scale}: {ImGui.GetScrollMaxY()}");
-            ImGui.End(); ImGui.Render();
+            ImGui.End(); window.PostDraw(); ImGui.Render();
         }
         io.Fonts.GetTexDataAsRGBA32(0, &pixels, &tw, &th);
-        string name = $"bagsense-{(ru ? "ru" : "en")}-{tab}-{width}x{height}-{scale:0.00}";
+        string name = $"bagsense-{(ru ? "ru" : "en")}-{tab}-{width}x{height}-{scale:0.00}" + (selected == 0 ? "" : "-item" + selected);
         File.WriteAllBytes(Path.Combine(directory, "font-" + name + ".rgba"), new ReadOnlySpan<byte>(pixels, tw * th * 4).ToArray());
         var draw = ImGui.GetDrawData();
         var lists = new List<object>();

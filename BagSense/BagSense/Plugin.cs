@@ -1,5 +1,6 @@
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.ContextMenu;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.IoC;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -20,6 +21,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static ITextureProvider Textures { get; private set; } = null!;
     [PluginService] internal static IContextMenu Context { get; private set; } = null!;
+    [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
 
     internal Configuration Settings { get; }
     internal Text Locale { get; }
@@ -29,6 +31,7 @@ public sealed class Plugin : IDalamudPlugin
     internal bool Demo { get; private set; }
     internal bool ReadError { get; private set; }
     internal bool CatalogError { get; private set; }
+    internal bool MapFailed { get; private set; }
     private readonly WindowSystem windows = new("BagSense");
     private readonly BagWindow window;
     private InventorySnapshot? liveSnapshot;
@@ -65,6 +68,12 @@ public sealed class Plugin : IDalamudPlugin
     internal void Save() => Pi.SavePluginConfig(Settings);
     internal void Changed() { if (!Demo) Save(); }
     internal void Refresh() { nextScan = DateTimeOffset.MinValue; CatalogError = false; }
+    internal void OpenMap(NpcLocation location)
+    {
+        if (Demo || !location.CanMap || !Client.IsLoggedIn) return;
+        try { MapFailed = !GameGui.OpenMapWithMapLink(new MapLinkPayload(location.Territory, location.Map, location.X, location.Y)); }
+        catch (Exception ex) { MapFailed = true; Log.Warning(ex, "BagSense: could not open NPC map"); }
+    }
     internal void SetDemo(bool demo) { Demo = demo; window.ResetSelection(); Refresh(); }
     internal void ResetDemo() { (demoSnapshot, demoData) = DemoData.Create(); window.ResetSelection(); }
 
@@ -81,7 +90,7 @@ public sealed class Plugin : IDalamudPlugin
             if (!Demo) window.ResetSelection();
         }
         if (Catalog == null && catalogTask == null && !CatalogError)
-            catalogTask = Task.Run(() => new ItemCatalog(Data.Excel));
+            catalogTask = Task.Run(() => new ItemCatalog(Data.Excel, path => Data.GameData.GetFile<Lumina.Data.Files.LgbFile>(path)));
         if (catalogTask?.IsCompleted == true)
         {
             if (catalogTask.IsCompletedSuccessfully) Catalog = catalogTask.Result;

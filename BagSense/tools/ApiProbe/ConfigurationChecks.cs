@@ -14,6 +14,9 @@ internal static class ConfigurationChecks
         a.Edit(5106).KeepQuantity = 20;
         a.Goals.Add(new() { Name = "Цель", Items = new() { [5106] = 30 } });
         a.Plan.Add(new() { ItemId = 5111, Quantity = 3, BaselineQuantity = 10, Action = PlanAction.Vendor, ObservedDecrease = true });
+        a.Plan[0].DestinationKey = "npc-map-coordinates";
+        a.Plan[0].ExchangeKey = "shop-reward-full-price";
+        a.Plan[0].RouteKey = "shop-npc-access-conditions";
         Check(b.Decisions.Count == 0 && b.Goals.Count == 0 && b.Plan.Count == 0, "Characters do not share collections");
         Check(ReferenceEquals(a, config.ForCharacter(123)), "A character reuses its own decisions");
         bool zeroRejected = false;
@@ -24,6 +27,11 @@ internal static class ConfigurationChecks
         Check(restored.ForCharacter(123).Goals[0].Items[5106] == 30, "Dalamud JSON serializer preserves goals and numeric keys");
         Check(restored.ForCharacter(123).Plan[0].ObservedDecrease && restored.ForCharacter(123).Plan[0].Action == PlanAction.Vendor, "Stale plans survive restart without reactivation");
         Check(!restored.Russian && restored.Scale == 1.25f, "Language and scale survive restart");
+        Check(restored.ForCharacter(123).Plan[0].DestinationKey == a.Plan[0].DestinationKey && restored.ForCharacter(123).Plan[0].ExchangeKey == a.Plan[0].ExchangeKey
+            && restored.ForCharacter(123).Plan[0].RouteKey == a.Plan[0].RouteKey,
+            "Selected NPC and exchange survive restart");
+        var legacy = JsonConvert.DeserializeObject<PlanEntry>("{\"ItemId\":5106,\"Quantity\":3,\"Action\":1}")!;
+        Check(legacy.DestinationKey == "" && legacy.ExchangeKey == "" && legacy.RouteKey == "", "Legacy 0.1 plans load without a data migration");
         Check(restored.ForCharacter(456).Decisions.Count == 0, "Second character stays independent after restart");
         restored.ForCharacter(123).Goals[0].Completed = true;
         Check(CleanupPolicy.Reservation(restored.ForCharacter(123), 5106) == 20, "Completing a restored goal retains personal stock");

@@ -12,6 +12,23 @@ System.Runtime.Loader.AssemblyLoadContext.Default.Resolving += (context, name) =
 };
 if (args.Length == 1 && args[0] == "--configuration") { ConfigurationChecks.Run(); return; }
 if (args.Length == 2 && args[0] == "--data") { ConfigurationChecks.Run(); DataChecks.Run(args[1]); return; }
+if (args.Length == 2 && args[0] == "--inspect") { RouteDiagnostics.Run(args[1]); return; }
+if (args.Length > 1 && args[0] == "--schema")
+{
+    foreach (string name in args.Skip(1))
+    {
+        var type = typeof(Item).Assembly.GetType("Lumina.Excel.Sheets." + name) ?? typeof(Lumina.Excel.RowRef).Assembly.GetType("Lumina.Excel." + name);
+        if (type == null) { Console.WriteLine("Missing " + name); continue; }
+        Console.WriteLine("TYPE " + name);
+        foreach (var property in type.GetProperties()) Console.WriteLine(" " + property.PropertyType.Name + " " + property.Name);
+        foreach (var nested in type.GetNestedTypes())
+        {
+            Console.WriteLine(" NESTED " + nested.Name);
+            foreach (var property in nested.GetProperties()) Console.WriteLine("  " + property.PropertyType.Name + " " + property.Name);
+        }
+    }
+    return;
+}
 foreach (var t in new[] { typeof(GameInventoryType), typeof(GameInventoryItem), typeof(Item), typeof(GilShopItem), typeof(Recipe), typeof(MenuTargetInventory), typeof(RaptureGearsetModule), typeof(RaptureGearsetModule.GearsetEntry), typeof(RaptureGearsetModule.GearsetItem) })
 {
     Console.WriteLine("TYPE " + t.FullName);

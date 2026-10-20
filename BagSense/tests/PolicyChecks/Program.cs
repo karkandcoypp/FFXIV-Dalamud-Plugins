@@ -94,4 +94,44 @@ var ru = new Text(() => true); var en = new Text(() => false);
 foreach (var reason in Enum.GetValues<Reason>()) Check(ru.Reason(reason).Length > 0 && en.Reason(reason).Length > 0 && ru.Reason(reason) != en.Reason(reason), "Both languages cover " + reason);
 foreach (var kind in Enum.GetValues<AdviceKind>()) Check(ru.Kind(kind) != en.Kind(kind), "Both languages cover " + kind);
 foreach (var act in Enum.GetValues<PlanAction>()) Check(ru.Action(act) != en.Action(act), "Both languages cover " + act);
-Console.WriteLine($"PASS: {checks} policy, persistence, isolation and localization checks");
+var npcA = new NpcLocation(100, "Merchant A", "Zone A", 10, 20, 12.5f, 14.5f);
+var npcB = new NpcLocation(101, "Merchant B", "Zone B", 11, 21, 22.5f, 24.5f);
+var routes = new[] { new ShopRoute(123, "Exchange", npcA, [new("quest", 555, "First access quest")]),
+    new ShopRoute(123, "Exchange", npcB, [new("quest", 556, "Alternative access quest")]) };
+var trade = new ExchangeUse("Exchange", "Reward", 3, 123, 999, 1,
+    [new(900001, "Material A", 3), new(900002, "Material B", 6)], routes);
+var routedItem = new ItemFacts(900001, "Material", 0, "Other", "", Exchanges: [trade], Merchants: [npcA, npcB]);
+var routePlan = new PlanEntry { ItemId = 900001, Action = PlanAction.ExchangeReview, ExchangeKey = trade.Key, DestinationKey = npcB.Key };
+Check(DestinationPolicy.ForPlan(routedItem, routePlan, 10) == npcB, "Saved NPC selection overrides local-territory preference");
+Check(DestinationPolicy.Requirements(trade, routes[0]).All(r => r.Id != 556), "Alternative NPC route conditions are not merged into an AND requirement");
+routePlan.DestinationKey = "removed destination";
+Check(DestinationPolicy.ForPlan(routedItem, routePlan, 10) == null, "Missing saved route does not silently switch NPCs");
+routePlan.DestinationKey = "";
+Check(DestinationPolicy.ForPlan(routedItem, routePlan, 11) == npcB, "New plans prefer a mapped NPC in the current territory");
+routePlan.RouteKey = "removed route conditions";
+Check(DestinationPolicy.ForPlan(routedItem, routePlan, 11) == null, "Changed saved access conditions require explicit route reselection");
+routePlan.RouteKey = "";
+routePlan.ExchangeKey = "removed exchange";
+Check(DestinationPolicy.ForPlan(routedItem, routePlan, 11) == null, "Removed reward cannot silently become another exchange");
+routePlan.Action = PlanAction.Vendor;
+Check(DestinationPolicy.ForPlan(routedItem, routePlan, 10) == npcA, "Gil selling uses ordinary merchants, not exchange-only NPCs");
+var alternative = trade with { RewardId = 1000, Routes = [new ShopRoute(123, "Other reward", npcB, [])] };
+var legacy = new PlanEntry { ItemId = 900001, Action = PlanAction.ExchangeReview };
+var legacyItem = routedItem with { Exchanges = [trade with { Routes = [routes[0]] }, alternative] };
+Check(DestinationPolicy.ForPlan(legacyItem, legacy, 11) == npcA, "Legacy plans cannot combine one reward with another reward's merchant");
+snapshot = original;
+Check(DestinationPolicy.Affordable(trade, snapshot) == 2, "All simultaneous costs constrain exchange count");
+Check(DestinationPolicy.Affordable(trade with { Costs = [new(900001, "A", 20), new(900001, "A", 20)] }, snapshot) == 0, "Repeated costs of the same item are summed");
+Check(DestinationPolicy.Affordable(trade with { Costs = [new(1, "Gil", 20)] }, snapshot) == null, "Unscanned currencies do not fabricate an affordable amount");
+Check(DestinationPolicy.Affordable(trade with { Costs = [new(0, "Unknown", 20)] }, snapshot) == null, "Unresolved currency IDs remain unknown");
+Check(DestinationPolicy.Affordable(trade with { Costs = [new(900001, "A", 1, 300)] }, snapshot) == null, "Collectability-dependent prices cannot use plain item counts");
+Check(!new NpcLocation(0, "", "", 0, 0, 10, 10).CanMap && !(npcA with { X = float.NaN }).CanMap, "Unknown or non-finite locations cannot open maps");
+var culture = System.Globalization.CultureInfo.CurrentCulture;
+try
+{
+    System.Globalization.CultureInfo.CurrentCulture = new("ru-RU"); string keyRu = npcA.Key;
+    System.Globalization.CultureInfo.CurrentCulture = new("en-US");
+    Check(keyRu == npcA.Key, "Saved destination keys do not change with locale");
+}
+finally { System.Globalization.CultureInfo.CurrentCulture = culture; }
+Console.WriteLine($"PASS: {checks} policy, persistence, isolation, routing and localization checks");

@@ -44,8 +44,14 @@ public static class InventoryReader
             facts[itemId] = fact with { Unlocked = unlocked };
         }
         var (known, gearsets) = ReadGearsets(id);
+        var completed = new Dictionary<uint, bool>();
+        var quests = Plugin.Data.GetExcelSheet<Quest>();
+        var questIds = facts.Values.SelectMany(f => f.QuestUses.Select(q => q.QuestId)
+            .Concat(f.ExchangeUses.SelectMany(e => e.Conditions.Concat(e.Destinations.SelectMany(r => r.Requirements))).Where(r => r.Kind == "quest").Select(r => r.Id)));
+        foreach (uint questId in questIds.Distinct())
+            if (quests.TryGetRow(questId, out var quest)) completed[questId] = Plugin.Unlocks.IsQuestCompleted(quest);
         if (id != Plugin.Player.ContentId || !Plugin.Client.IsLoggedIn) throw new InvalidOperationException("Character changed during scan");
-        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity);
+        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity, Plugin.Client.TerritoryType, completed);
     }
 
     private static unsafe (bool Known, Dictionary<uint, string[]> Items) ReadGearsets(ulong characterId)

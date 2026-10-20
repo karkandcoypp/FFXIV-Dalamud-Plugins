@@ -1,4 +1,4 @@
-# BagSense 0.1.0
+# BagSense 0.2.0
 
 **Русский:** помощник, который сохраняет причины хранения предметов и составляет объяснимый план освобождения места. Интерфейс на русском и английском, переключается сразу. Все продажи, использование, разбор и обмены игрок выполняет вручную.
 
@@ -19,7 +19,21 @@ Requires Dalamud API 15 and .NET 10. Command: `/bagsense`. `/bagsense demo` open
 
 Если общий репозиторий уже подключён для других наших плагинов, второй раз добавлять адрес не нужно. Обнови список в `/xlplugins` и найди **BagSense**. Если ранее использовал локальную DLL, сначала отключи её в Dev Plugins. Дальнейшие версии приходят через обычное обновление Dalamud.
 
-Release: [bs-v0.1.0](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/tag/bs-v0.1.0).
+Release: [bs-v0.2.0](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/tag/bs-v0.2.0).
+
+## Item purpose and NPC destinations / Назначение и NPC
+
+The item card starts with **Purpose / Назначение**, followed by the selected reward, its complete simultaneous costs, the concrete NPC, zone, coordinates and **Open map / Открыть карту**. Notes, protection and reserves are in **Keep for myself / a goal / Оставить для себя / для цели**. The window uses an opaque dark theme, compact item rows and a wider details pane.
+
+- Select the reward before adding an exchange to the plan. All costs are displayed, including the gear being upgraded, other materials and collectability requirements.
+- Available quantities describe scanned bags/Armoury only. Currency tabs and unresolved currencies remain unknown. The count does not confirm access or quality conditions.
+- **Where to go / Куда идти** identifies the NPC and location. Choose among alternative NPCs when available. The map button places that NPC's marker; it does not teleport or move the character.
+- Ordinary gil sales use regular merchants, separate from the NPCs who sell an item or accept a special exchange.
+- Quest inputs use named `RITEM0`, `RITEM1` script parameters. Requested items and quest rewards are separate. Completion, repeatability and the quest completion contact or giver are shown. Check the current journal step manually; special scripted chains can have additional unindexed uses.
+- NPC links are traced through ENpcBase, PreHandler, TopicSelect, InclusionShop categories/series, FateShop and explicitly named CustomTalk SHOP instructions. Conditions stay attached to individual routes.
+- Coordinates come from matching Level/Map/territory records. South Horn's missing shop placements are read from its installed `planevent.lgb`. Unknown destinations never receive invented markers.
+
+The plan groups items by NPC and zone. Selected reward, complete-price identity and route survive reloads. Missing saved routes require reselection. Existing 0.1 goals, notes, reservations and plans remain compatible.
 
 ## Local developer installation / Локальная установка для разработки
 
@@ -39,7 +53,7 @@ The four main inventory pages, Armoury Chest (except soul crystals), and current
 - **All items / Все предметы** includes protected and deferred items.
 - Select an item to see its explanation, known merchant listings, example recipes and supported direct item exchanges.
 - **Review my bags / Разобрать сумку** shows one item at a time. Adding a plan step advances to another item; **Next / Следующий** defers the item for one hour.
-- **Why I keep it / Зачем храню:** local Unicode notes, always-keep protection and a minimum stock quantity.
+- **Keep for myself / a goal / Оставить для себя / для цели:** local Unicode notes, always-keep protection and a minimum stock quantity.
 - Right-click a scanned inventory item and select **BagSense: why keep this? / зачем храню?** to open its card.
 
 Russian translates the interface, advice, help and statuses. Official item, shop, recipe and category names remain English because FFXIV has no official Russian item-name sheet. Teamcraft opens only when clicked.
@@ -54,7 +68,7 @@ Decisions are per item type, per character content ID. Goals and cleanup steps p
 
 ## Cleanup plan / План очистки
 
-Choose an action and quantity in the item card, then **Add / update step**. One step per item type prevents double-counting. Steps are grouped into learning collectibles, merchant sales, desynthesis, exchange review and manual review. Copy the current plan to the clipboard.
+Choose an action and quantity, then **Add to my plan**. One step per item type prevents double-counting. Steps group by destination NPC and zone, or by action when no destination applies. The plan includes map buttons; clipboard export includes destinations and exchange costs.
 
 Reservations and protection are rechecked continuously, including for steps created earlier. A quantity decrease marks a step for review; it does not prove that a sale or unlock happened. After checking the real inventory, update or remove the step manually.
 
@@ -64,10 +78,10 @@ Potential slots are calculated from the **smallest physical stacks first**, sepa
 
 - Saved gearsets are read with the installed FFXIVClientStructs layout. Equipment stays protected when gearset state is unavailable. Equipped types and types registered in a gearset (including linked glamour item IDs stored there) stay protected, even if duplicate copies exist.
 - Non-disposable, collectable, relic, melded, dyed and glamoured instances protect their whole item type in this first version.
-- A merchant listing is evidence of a source, **not** a statement that an item is useless or that this character can reach the NPC. Known sheet conditions are marked. Recipe and exchange examples are limited to eight; exchanges can require other currencies, items, quality and unlocks.
+- A merchant listing is evidence of a source, **not** a statement that an item is useless or that this character can reach the NPC. Known sheet conditions are marked. Recipe examples are limited to eight; supported direct exchanges retain all rewards and simultaneous costs. Other currency encodings remain outside the exchange index.
 - Character collectible state uses Dalamud `IUnlockState`. Unsupported unlock types remain unknown; unsupported types are not presented as already learned.
 - Desynthesis capability comes from the item sheet. Character job access and desynthesis output are not evaluated.
-- Grand Company eligibility, individual vendor NPC map locations, market prices, complete acquisition routes and dresser ownership are outside 0.1.0. For additional item details, the card provides a Teamcraft link.
+- Grand Company eligibility, market prices, complete acquisition routes, every special quest script and dresser ownership are outside 0.2.0. Some NPCs and access conditions remain unresolved and are labelled. The card provides a Teamcraft link for additional details.
 - The plugin has no automatic inventory operations and sends no character data or telemetry.
 
 ## Build and checks

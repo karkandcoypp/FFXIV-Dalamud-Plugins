@@ -1,0 +1,256 @@
+using System.Diagnostics;
+using System.Numerics;
+using Dalamud.Bindings.ImGui;
+
+namespace BagSense;
+
+public sealed partial class BagWindow
+{
+    private string exchangeKey = "";
+    private string destinationKey = "";
+    private string routeKey = "";
+
+    private void Heading(string ru, string en)
+    {
+        ImGui.Spacing();
+        ImGui.TextColored(Teal, T(ru, en));
+    }
+
+    private void DrawItem(InventorySnapshot snapshot, CharacterData data, Advice advice)
+    {
+        var item = snapshot.Items.GetValueOrDefault(advice.ItemId);
+        if (item == null) { ImGui.TextWrapped(L.Reason(Reason.UnknownItem)); return; }
+        DrawIcon(item, 44);
+        ImGui.SameLine();
+        ImGui.BeginGroup();
+        ImGui.TextWrapped(item.Name);
+        ImGui.TextDisabled(item.Category);
+        ImGui.EndGroup();
+        Heading("Назначение", "Purpose");
+        ImGui.TextWrapped(L.Purpose(item));
+        ImGui.TextDisabled(T($"В наличии {advice.Total}   /   Сохранить {advice.Reserved}   /   Свободно {advice.Available}",
+            $"Owned {advice.Total}   /   Keep {advice.Reserved}   /   Surplus {advice.Available}"));
+        if (!advice.CanPlan) ImGui.TextWrapped(L.Reason(advice.Reason));
+        if (snapshot.Gearsets.TryGetValue(item.Id, out var gearsets)) ImGui.TextWrapped(T("В комплекте: ", "Gearsets: ") + string.Join(", ", gearsets));
+        ImGui.Separator();
+
+        if (item.ExchangeUses.Length > 0 && action == PlanAction.ExchangeReview) DrawExchange(item, snapshot);
+        else if (action == PlanAction.Vendor) DrawSale(item, snapshot);
+        else if (item.QuestUses.Any(q => !q.Reward)) DrawQuestUses(item, snapshot, rewards: false);
+        else if (action == PlanAction.Use) ImGui.TextWrapped(T("Используй предмет прямо из сумки. Идти к NPC не требуется.", "Use this item from your inventory. No NPC visit is needed."));
+        else if (action == PlanAction.Desynthesize) ImGui.TextWrapped(T("Разбор доступен в контекстном меню предмета. Перед разбором проверь, нужен ли внешний вид.",
+            "Use Desynthesis in the item's context menu. Check whether you want its appearance first."));
+
+        Heading("Следующее действие", "Next action");
+        DrawPlanControls(snapshot, data, advice);
+        if (reviewMode)
+        {
+            if (ImGui.SmallButton(T("Позже — следующий предмет", "Later — next item") + "###Next"))
+            { data.Edit(item.Id).DeferUntil = DateTimeOffset.UtcNow.AddHours(1); plugin.Changed(); selected = 0; }
+        }
+        ImGui.Separator();
+        if (ImGui.CollapsingHeader(T("Оставить для себя / для цели", "Keep for myself / a goal") + "###KeepSettings"))
+        {
+            ImGui.SetNextItemWidth(-1);
+            if (InputHint("###Note", T("Зачем я храню этот предмет", "Why I keep this item"), ref note, 1024))
+            { data.Edit(item.Id).Note = note; plugin.Changed(); }
+            bool keep = data.Decision(item.Id).AlwaysKeep;
+            if (ImGui.Checkbox(T("Всегда сохранять", "Always keep") + "###Keep", ref keep))
+            { data.Edit(item.Id).AlwaysKeep = keep; plugin.Changed(); }
+            ImGui.SetNextItemWidth(110 * S);
+            if (Number(T("Минимальный запас", "Minimum stock") + "###Reserve", ref keepQuantity))
+            { keepQuantity = Math.Clamp(keepQuantity, 0, 999999); data.Edit(item.Id).KeepQuantity = keepQuantity; plugin.Changed(); }
+            DrawGoalAssignment(data, item.Id);
+            if (ImGui.SmallButton(T("Отложить решение на день", "Defer for one day") + "###Defer"))
+            { data.Edit(item.Id).DeferUntil = DateTimeOffset.UtcNow.AddDays(1); plugin.Changed(); }
+            ImGui.SameLine();
+            if (ImGui.SmallButton(T("Вернуть в разбор", "Review again") + "###Undefer"))
+            { data.Edit(item.Id).DeferUntil = null; plugin.Changed(); }
+        }
+        if (item.ExchangeUses.Length > 0 && action != PlanAction.ExchangeReview && ImGui.CollapsingHeader(T("Другие применения: обмены", "Other uses: exchanges") + "###OtherExchanges")) DrawExchange(item, snapshot);
+        if (item.QuestUses.Any(q => !q.Reward) && action != PlanAction.ManualReview
+            && ImGui.CollapsingHeader(T("Материал для квестов", "Requested by quests") + "###QuestUses")) DrawQuestUses(item, snapshot, false);
+        if (item.QuestUses.Any(q => q.Reward) && ImGui.CollapsingHeader(T("Получение в награду за квест", "Obtained as a quest reward") + "###QuestRewards")) DrawQuestUses(item, snapshot, true);
+        if (ImGui.CollapsingHeader(T("Описание, рецепты и источники", "Description, recipes and sources") + "###More"))
+        {
+            if (item.Description.Length > 0) ImGui.TextWrapped(item.Description);
+            if (item.RecipeUses.Length > 0)
+            {
+                Heading("Используется в рецептах", "Used in recipes");
+                foreach (string recipe in item.RecipeUses) ImGui.TextWrapped("• " + recipe);
+            }
+            foreach (var offer in item.BuyOffers.Take(4))
+            {
+                ImGui.PushID($"{offer.ShopId}:{offer.Price}:{offer.Conditional}");
+                ImGui.TextWrapped(T($"Купить заново: {offer.Shop} — {offer.Price} gil", $"Buy again: {offer.Shop} — {offer.Price} gil"));
+                var location = offer.Destinations.FirstOrDefault()?.Location;
+                if (location != null) DrawNpc(location);
+                if (offer.Conditional) ImGui.TextDisabled(T("Доступ к магазину имеет условия.", "This shop has access conditions."));
+                ImGui.PopID();
+            }
+            ImGui.TextDisabled($"ID {item.Id}");
+            if (!plugin.Demo && ImGui.SmallButton(T("Подробнее в Teamcraft", "More on Teamcraft") + "###Teamcraft"))
+                Process.Start(new ProcessStartInfo($"https://ffxivteamcraft.com/db/en/item/{item.Id}") { UseShellExecute = true });
+        }
+    }
+
+    private void DrawExchange(ItemFacts item, InventorySnapshot snapshot)
+    {
+        var offers = item.ExchangeUses.OrderByDescending(e => e.Destinations.Any(r => r.Location.CanMap)).ThenBy(e => e.Cost).ToArray();
+        var offer = offers.FirstOrDefault(e => e.Key == exchangeKey) ?? offers[0];
+        exchangeKey = offer.Key;
+        Heading("Что получить за этот предмет", "What you can exchange it for");
+        if (offers.Length > 1)
+        {
+            ImGui.SetNextItemWidth(-1);
+            if (ImGui.BeginCombo("###ExchangeReward", offer.Reward))
+            {
+                foreach (var candidate in offers)
+                    if (ImGui.Selectable($"{candidate.Reward}  ·  {candidate.Cost} × {item.Name}###" + candidate.Key, candidate.Key == exchangeKey))
+                    { exchangeKey = candidate.Key; destinationKey = ""; }
+                ImGui.EndCombo();
+            }
+            offer = offers.First(e => e.Key == exchangeKey);
+        }
+        else ImGui.TextWrapped(offer.Reward);
+        ImGui.TextDisabled(T($"Получишь: {offer.RewardCount} шт.  ·  Вариантов обмена: {offers.Length}",
+            $"Receive: {offer.RewardCount}  ·  Exchange options: {offers.Length}"));
+        foreach (var cost in offer.FullCosts)
+        {
+            int held = snapshot.Quantity(cost.ItemId);
+            string quantity = cost.ItemId < 100 ? T("не проверено", "not checked") : held.ToString();
+            ImGui.TextColored(cost.ItemId >= 100 && held < cost.Count ? Gold : Muted, $"{cost.Name}: {quantity} / {cost.Count}");
+            if (cost.Collectability > 0) ImGui.TextWrapped(T($"Требуемая коллекционная ценность: {cost.Collectability}", $"Required collectability: {cost.Collectability}"));
+        }
+        var affordable = DestinationPolicy.Affordable(offer, snapshot);
+        if (affordable != null) ImGui.TextDisabled(T($"По количеству в сумках: до {affordable} обменов. Проверь качество и доступ.",
+            $"Bag quantities support up to {affordable} exchanges. Check item quality and access."));
+        Heading("Куда идти", "Where to go");
+        var routes = offer.Destinations.Where(r => r.Location.CanMap).OrderByDescending(r => r.Location.Territory == snapshot.TerritoryId).ThenBy(r => r.Requirements.Length)
+            .DistinctBy(r => r.Location.Key).ToArray();
+        if (routes.Length == 0)
+        {
+            routeKey = ""; destinationKey = "";
+            ImGui.TextWrapped(T("NPC и точка на карте для этого обмена пока не подтверждены.", "The NPC and map location for this exchange are not confirmed yet."));
+            if (offer.Shop.Length > 0) ImGui.TextDisabled(offer.Shop);
+            DrawRequirements(offer.Conditions, snapshot);
+            return;
+        }
+        var route = routes.FirstOrDefault(r => r.Location.Key == destinationKey) ?? routes[0];
+        destinationKey = route.Location.Key;
+        if (routes.Length > 1)
+        {
+            ImGui.SetNextItemWidth(-1);
+            if (ImGui.BeginCombo("###ExchangeNpc", route.Location.Npc + " · " + route.Location.Zone))
+            {
+                foreach (var candidate in routes)
+                    if (ImGui.Selectable(candidate.Location.Npc + " · " + candidate.Location.Zone + "###" + candidate.Location.Key,
+                        candidate.Location.Key == destinationKey)) destinationKey = candidate.Location.Key;
+                ImGui.EndCombo();
+            }
+            route = routes.First(r => r.Location.Key == destinationKey);
+        }
+        DrawNpc(route.Location);
+        routeKey = DestinationPolicy.Key(route);
+        string menu = string.IsNullOrWhiteSpace(route.Menu) ? offer.Shop : route.Menu;
+        if (!string.IsNullOrWhiteSpace(menu)) ImGui.TextWrapped(T("Меню NPC: ", "NPC menu: ") + menu);
+        DrawRequirements(DestinationPolicy.Requirements(offer, route), snapshot);
+    }
+
+    private void DrawSale(ItemFacts item, InventorySnapshot snapshot)
+    {
+        Heading("Кому продать", "Where to sell");
+        ImGui.TextWrapped(T($"Обычная продажа за gil. Цена NQ: {item.SellPrice} за штуку. Подойдёт обычный торговец с вкладкой продажи.",
+            $"Ordinary gil sale. NQ vendor price: {item.SellPrice} each. Use a regular merchant's selling tab."));
+        var merchants = item.SaleLocations.Where(l => l.CanMap).OrderByDescending(l => l.Territory == snapshot.TerritoryId)
+            .ThenByDescending(l => l.Npc is "Bango Zango" or "Roarich" or "Maisenta").ToArray();
+        if (merchants.Length == 0) { ImGui.TextDisabled(T("Местоположение обычного торговца не определено.", "No regular merchant location was found.")); return; }
+        var merchant = merchants.FirstOrDefault(l => l.Key == destinationKey) ?? merchants[0];
+        destinationKey = merchant.Key;
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.BeginCombo("###SaleNpc", merchant.Npc + " · " + merchant.Zone))
+        {
+            foreach (var candidate in merchants.Take(50).Prepend(merchant).DistinctBy(l => l.Key))
+                if (ImGui.Selectable(candidate.Npc + " · " + candidate.Zone + "###" + candidate.Key, candidate.Key == destinationKey)) destinationKey = candidate.Key;
+            ImGui.EndCombo();
+        }
+        DrawNpc(merchants.First(l => l.Key == destinationKey));
+    }
+
+    private void DrawNpc(NpcLocation location)
+    {
+        ImGui.TextWrapped(location.Npc);
+        ImGui.TextColored(Muted, $"{location.Zone}  ·  X: {location.X:0.0}  Y: {location.Y:0.0}");
+        ImGui.BeginDisabled(!location.CanMap || plugin.Demo || staticPreview);
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.10f, .31f, .42f, 1));
+        if (ImGui.Button(T("Открыть карту", "Open map") + "###Map" + location.Key)) plugin.OpenMap(location);
+        ImGui.PopStyleColor();
+        ImGui.EndDisabled();
+        if (plugin.MapFailed) ImGui.TextWrapped(T("Карта не открылась. Попробуй ещё раз после закрытия других окон.", "The map did not open. Close other windows and try again."));
+    }
+
+    private void DrawRequirements(IEnumerable<RouteRequirement> requirements, InventorySnapshot snapshot)
+    {
+        bool unknown = false;
+        foreach (var requirement in requirements.Distinct())
+        {
+            if (requirement.Kind == "quest")
+            {
+                var completed = snapshot.QuestCompleted(requirement.Id);
+                string status = completed == true ? T("выполнен", "completed") : completed == false ? T("не завершён", "not completed") : T("статус неизвестен", "status unknown");
+                ImGui.TextWrapped(T("Квест для доступа: ", "Access quest: ") + requirement.Name + " — " + status);
+            }
+            else if (requirement.Kind == "job") ImGui.TextWrapped(T("Профессии: ", "Jobs: ") + requirement.Name);
+            else if (requirement.Kind == "achievement") ImGui.TextWrapped(T("Требуется достижение: ", "Required achievement: ") + requirement.Name);
+            else if (requirement.Kind == "duty") ImGui.TextWrapped(T("Условие контента: ", "Duty requirement: ") + requirement.Name);
+            else unknown = true;
+        }
+        if (unknown) ImGui.TextDisabled(T("Дополнительные условия проверяются в диалоге NPC.", "Check additional conditions in the NPC dialogue."));
+    }
+
+    private void DrawQuestUses(ItemFacts item, InventorySnapshot snapshot, bool rewards)
+    {
+        foreach (var quest in item.QuestUses.Where(q => q.Reward == rewards).OrderBy(q => snapshot.QuestCompleted(q.QuestId) == true).Take(6))
+        {
+            ImGui.PushID((int)quest.QuestId);
+            ImGui.TextWrapped(quest.Name);
+            bool? completed = snapshot.QuestCompleted(quest.QuestId);
+            ImGui.TextColored(Muted, rewards ? T("Выдаётся в награду, сдавать предмет не требуется.", "A quest reward, not an item to hand in.")
+                : T("Запрашивается в ходе квеста. Проверь текущий этап в журнале.", "Requested during this quest. Check your current journal step."));
+            ImGui.TextDisabled((completed == true ? T("Квест завершён", "Quest completed") : completed == false ? T("Квест ещё не завершён", "Quest not completed")
+                : T("Статус квеста неизвестен", "Quest status unknown")) + (quest.Repeatable ? T(" · повторяемый", " · repeatable") : ""));
+            var contact = quest.Contacts.FirstOrDefault();
+            if (contact != null)
+            {
+                ImGui.TextDisabled(quest.IssuerContact ? T("Где взять квест:", "Quest giver:") : T("Контакт завершения квеста:", "Quest completion contact:"));
+                DrawNpc(contact);
+            }
+            ImGui.PopID();
+        }
+    }
+
+    private void DrawPlanDestination(InventorySnapshot snapshot, ItemFacts item, PlanEntry entry)
+    {
+        if (entry.Action is not (PlanAction.Vendor or PlanAction.ExchangeReview)) return;
+        var destination = DestinationPolicy.ForPlan(item, entry, snapshot.TerritoryId);
+        if (entry.Action == PlanAction.ExchangeReview)
+        {
+            var exchange = item.ExchangeUses.FirstOrDefault(e => e.Key == entry.ExchangeKey) ?? (entry.ExchangeKey.Length == 0 ? item.ExchangeUses.FirstOrDefault() : null);
+            if (exchange != null)
+            {
+                ImGui.TextWrapped(T("Цель обмена: ", "Exchange target: ") + exchange.Reward);
+                ImGui.TextWrapped(T("Полная цена: ", "Full cost: ") + string.Join(" + ", exchange.FullCosts.Select(c => $"{c.Count} × {c.Name}")));
+                var affordable = DestinationPolicy.Affordable(exchange, snapshot);
+                ImGui.TextColored(affordable == 0 ? Gold : Muted, affordable.HasValue
+                    ? T($"По запасам в сумках: до {affordable} обменов.", $"From bag quantities: up to {affordable} exchanges.")
+                    : T("Доступное число обменов не подтверждено — проверь все материалы у NPC.", "Exchange count is unconfirmed — check all materials at the NPC."));
+                var route = exchange.Destinations.FirstOrDefault(r => r.Location.Key == destination?.Key
+                    && (entry.RouteKey.Length == 0 || DestinationPolicy.Key(r) == entry.RouteKey));
+                DrawRequirements(route == null ? exchange.Conditions : DestinationPolicy.Requirements(exchange, route), snapshot);
+            }
+        }
+        if (destination != null) DrawNpc(destination);
+        else ImGui.TextWrapped(T("Точка назначения не подтверждена. Открой карточку предмета и выбери NPC.",
+            "Destination is not confirmed. Open the item card and choose an NPC."));
+    }
+}
