@@ -73,5 +73,25 @@
     "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.5.0/EorzeaCompass.zip",
     "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.5.0/EorzeaCompass.zip",
     "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/ec-v0.5.0/EorzeaCompass.zip"
+  },
+  {
+    "Author": "Carcosa Lyuman",
+    "Name": "BagSense",
+    "InternalName": "BagSense",
+    "AssemblyVersion": "0.1.0.0",
+    "Punchline": "Remember why you keep items. Make an explained cleanup plan.",
+    "Description": "Character-specific notes, personal goals, quantity reservations and a manual inventory cleanup plan. English / Русский. Open /bagsense; use /bagsense demo for a separate sample inventory.",
+    "ApplicableVersion": "any",
+    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
+    "DalamudApiLevel": 15,
+    "Tags": [
+      "inventory",
+      "goals",
+      "planning",
+      "qol"
+    ],
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.1.0/BagSense.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.1.0/BagSense.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.1.0/BagSense.zip"
   }
 ]
