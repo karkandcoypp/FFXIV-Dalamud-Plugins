@@ -13,6 +13,17 @@ public sealed class ItemCatalog
     private readonly Dictionary<uint, List<string>> recipes = new();
     private readonly Dictionary<uint, List<ExchangeUse>> exchanges = new();
     private readonly Dictionary<uint, ItemFacts> cache = new();
+    private Dictionary<uint, CatalogItem> remoteItems = new();
+    private Dictionary<uint, CatalogNeed[]> remoteNeeds = new();
+    public CatalogDocument? Database { get; private set; }
+    public int ItemCount => Math.Max(items.Count, remoteItems.Count);
+    public void ApplyDatabase(CatalogDocument database)
+    {
+        remoteItems = database.Items.ToDictionary(i => i.Id);
+        remoteNeeds = database.Needs.GroupBy(n => n.ItemId).ToDictionary(g => g.Key, g => g.ToArray());
+        Database = database;
+        cache.Clear();
+    }
     public WorldCatalog World { get; }
     public int MerchantItems => shops.Count;
     public int RecipeItems => recipes.Count;
@@ -94,12 +105,40 @@ public sealed class ItemCatalog
     public ItemFacts? Find(uint id)
     {
         if (cache.TryGetValue(id, out var cached)) return cached;
-        if (!items.TryGetRow(id, out var row) || row.Name.IsEmpty) return null;
+        if (!items.TryGetRow(id, out var row) || row.Name.IsEmpty)
+            return remoteItems.TryGetValue(id, out var remote) ? new(id, remote.Name, remote.Icon, remote.Category, remote.Description,
+                Quests: QuestUses(id)) : null;
         return cache[id] = new(id, row.Name.ToString(), row.Icon, row.ItemUICategory.Value.Name.ToString(), row.Description.ToString(),
             row.EquipSlotCategory.RowId != 0, row.IsIndisposable, !row.IsUntradable, row.PriceLow, row.Desynth > 0,
             Offers: shops.GetValueOrDefault(id)?.Distinct().OrderBy(o => o.Conditional).ThenBy(o => o.Price).Take(8).ToArray(),
             Recipes: recipes.GetValueOrDefault(id)?.ToArray(), Exchanges: exchanges.GetValueOrDefault(id)?.ToArray(),
-            Quests: World.QuestItems.GetValueOrDefault(id)?.ToArray(), Merchants: World.Merchants);
+            Quests: QuestUses(id), Merchants: World.Merchants);
+    }
+
+    private QuestUse[] QuestUses(uint id)
+    {
+        var local = World.QuestItems.GetValueOrDefault(id)?.ToList() ?? [];
+        foreach (var need in remoteNeeds.GetValueOrDefault(id) ?? [])
+        {
+            // Never use a quest/item association for a different installed quest name.
+            var old = local.FirstOrDefault(q => q.QuestId == need.QuestId && !q.Reward);
+            if (old != null && old.Name != need.QuestName) continue;
+            if (old != null) local.Remove(old);
+            local.Add(new(need.QuestId, need.QuestName, false, need.Repeatable,
+                need.Contacts.Length > 0 ? need.Contacts : need.Objective.Length > 0 ? [] : old?.Contacts ?? [],
+                need.Contacts.Length == 0 && (old?.IssuerContact ?? true), need.Count, need.Quality,
+                need.Objective, need.TodoIndex, need.CompleteSequence, need.Evidence, need.Source));
+        }
+        return local.ToArray();
+    }
+
+    public CatalogItem[] Browse(string query, int skip, int take)
+    {
+        var all = Database?.Items ?? items.Where(i => !i.Name.IsEmpty).Select(i => new CatalogItem(i.RowId, i.Name.ToString(), i.Icon,
+            i.ItemUICategory.Value.Name.ToString(), i.Description.ToString())).ToArray();
+        bool numeric = uint.TryParse(query, out uint id);
+        return all.Where(i => query.Length == 0 || (numeric ? i.Id == id : i.Name.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(i => i.Id).Skip(skip).Take(take).ToArray();
     }
 
     public IEnumerable<ItemFacts> Search(string query)

@@ -11,6 +11,14 @@ System.Runtime.Loader.AssemblyLoadContext.Default.Resolving += (context, name) =
     return File.Exists(path) ? context.LoadFromAssemblyPath(path) : null;
 };
 if (args.Length == 1 && args[0] == "--configuration") { ConfigurationChecks.Run(); return; }
+if (args.Length == 2 && args[0] == "--database") { DatabaseChecks.Run(args[1]); return; }
+if (args.Length == 2 && args[0] == "--online-database")
+{
+    var result = await BagSense.DatabaseCatalog.LoadAsync(args[1], CancellationToken.None);
+    if (result.Offline || result.Document == null) throw new Exception("Public database download failed: " + result.Error);
+    Console.WriteLine($"PASS: live production updater downloaded and cached {result.Document.Items.Length} items and {result.Document.Needs.Length} quest links");
+    return;
+}
 if (args.Length == 2 && args[0] == "--data") { ConfigurationChecks.Run(); DataChecks.Run(args[1]); return; }
 if (args.Length == 2 && args[0] == "--inspect") { RouteDiagnostics.Run(args[1]); return; }
 if (args.Length > 1 && args[0] == "--schema")

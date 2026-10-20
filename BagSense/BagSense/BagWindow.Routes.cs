@@ -30,6 +30,9 @@ public sealed partial class BagWindow
         ImGui.TextWrapped(L.Purpose(item));
         ImGui.TextDisabled(T($"В наличии {advice.Total}   /   Сохранить {advice.Reserved}   /   Свободно {advice.Available}",
             $"Owned {advice.Total}   /   Keep {advice.Reserved}   /   Surplus {advice.Available}"));
+        int questReserve = QuestPolicy.Required(snapshot, item.Id);
+        if (questReserve > 0) ImGui.TextColored(Gold, T($"Защита квестов: оставить {questReserve} шт. Продажа этого запаса исключена из плана.",
+            $"Quest protection: keep {questReserve} items. This stock is excluded from sale plans."));
         if (!advice.CanPlan) ImGui.TextWrapped(L.Reason(advice.Reason));
         if (snapshot.Gearsets.TryGetValue(item.Id, out var gearsets)) ImGui.TextWrapped(T("В комплекте: ", "Gearsets: ") + string.Join(", ", gearsets));
         ImGui.Separator();
@@ -210,21 +213,43 @@ public sealed partial class BagWindow
 
     private void DrawQuestUses(ItemFacts item, InventorySnapshot snapshot, bool rewards)
     {
-        foreach (var quest in item.QuestUses.Where(q => q.Reward == rewards).OrderBy(q => snapshot.QuestCompleted(q.QuestId) == true).Take(6))
+        foreach (var quest in item.QuestUses.Where(q => q.Reward == rewards).OrderByDescending(q => snapshot.ActiveQuests?.ContainsKey(q.QuestId) == true).ThenBy(q => snapshot.QuestCompleted(q.QuestId) == true))
         {
             ImGui.PushID((int)quest.QuestId);
             ImGui.TextWrapped(quest.Name);
             bool? completed = snapshot.QuestCompleted(quest.QuestId);
-            ImGui.TextColored(Muted, rewards ? T("Выдаётся в награду, сдавать предмет не требуется.", "A quest reward, not an item to hand in.")
-                : T("Запрашивается в ходе квеста. Проверь текущий этап в журнале.", "Requested during this quest. Check your current journal step."));
+            ImGui.TextWrapped(rewards ? T("Выдаётся в награду, сдавать предмет не требуется.", "A quest reward, not an item to hand in.")
+                : quest.Objective.Length > 0 ? T($"Этап {(quest.TodoIndex ?? 0) + 1}: ", $"Objective {(quest.TodoIndex ?? 0) + 1}: ") + quest.Objective
+                : T("Запрашивается в ходе квеста. Точный этап не подтверждён — проверь журнал.", "Requested during this quest. Exact objective is unconfirmed — check your journal."));
+            if (!rewards)
+            {
+                bool active = snapshot.ActiveQuests?.ContainsKey(quest.QuestId) == true;
+                if (active)
+                {
+                    bool final = snapshot.ActiveQuests![quest.QuestId] == 255 && quest.CompleteSequence == 255;
+                    ImGui.TextColored(Teal, final ? T("Квест активен · финальный этап сдачи", "Active quest · final hand-in stage")
+                        : T("Квест активен · предмет защищён до завершения", "Active quest · item protected until completion"));
+                }
+                else if (snapshot.ActiveQuests != null) ImGui.TextDisabled(T("Сейчас не активен — автоматический резерв не создаётся.", "Not active — no automatic reservation."));
+                else ImGui.TextWrapped(T("Журнал недоступен: возможный квестовый запас сохранён целиком.", "Journal unavailable: all potentially needed stock is protected."));
+                ImGui.TextWrapped(quest.RequiredCount.HasValue
+                    ? T($"Требуется: {quest.RequiredCount} шт.", $"Required: {quest.RequiredCount} items.") + (quest.Quality == "hq" ? " HQ" : "")
+                    : T("Количество не подтверждено: для активного квеста сохраняется весь запас.", "Quantity unconfirmed: all stock is kept for an active quest."));
+                if (quest.Quality == "hq") ImGui.TextWrapped(T("Нужен HQ. В целях защиты качества сохраняются все экземпляры этого предмета.", "HQ required. All copies are protected to preserve item quality."));
+                if (quest.Evidence.Length > 0 && ImGui.CollapsingHeader(T("Источник требования", "Requirement evidence") + "###Evidence"))
+                    ImGui.TextWrapped(quest.Evidence + " · ffxiv-datamining / " + quest.Source);
+            }
             ImGui.TextDisabled((completed == true ? T("Квест завершён", "Quest completed") : completed == false ? T("Квест ещё не завершён", "Quest not completed")
                 : T("Статус квеста неизвестен", "Quest status unknown")) + (quest.Repeatable ? T(" · повторяемый", " · repeatable") : ""));
             var contact = quest.Contacts.FirstOrDefault();
             if (contact != null)
             {
-                ImGui.TextDisabled(quest.IssuerContact ? T("Где взять квест:", "Quest giver:") : T("Контакт завершения квеста:", "Quest completion contact:"));
+                ImGui.TextDisabled(quest.Objective.Length > 0 && !quest.IssuerContact ? T("NPC для этого этапа:", "NPC for this objective:")
+                    : quest.IssuerContact ? T("Где взять квест (место сдачи не подтверждено):", "Quest giver (hand-in location unconfirmed):") : T("Контакт завершения квеста:", "Quest completion contact:"));
                 DrawNpc(contact);
             }
+            else if (!rewards) ImGui.TextWrapped(T("NPC для сдачи пока не подтверждён. Место не подставляется из другого этапа.",
+                "Hand-in NPC is unconfirmed. A different objective's location is not substituted."));
             ImGui.PopID();
         }
     }

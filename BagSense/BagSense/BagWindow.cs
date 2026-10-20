@@ -140,6 +140,8 @@ public sealed partial class BagWindow : Window, IDisposable
             { DrawGoals(snapshot, data); ImGui.EndTabItem(); }
             if (ImGui.BeginTabItem(T($"План очистки ({data.Plan.Count})", $"Cleanup plan ({data.Plan.Count})") + "###Plan", requestedTab == 2 ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None))
             { DrawPlan(snapshot, data); ImGui.EndTabItem(); }
+            if (ImGui.BeginTabItem(T("База предметов", "Item database") + "###Database", requestedTab == 3 ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None))
+            { DrawDatabase(); ImGui.EndTabItem(); }
             ImGui.EndTabBar();
             requestedTab = -1;
         }

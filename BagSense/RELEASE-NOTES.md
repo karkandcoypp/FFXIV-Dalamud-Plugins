@@ -1,21 +1,15 @@
-# BagSense 0.2.0 — item purpose and NPC destinations
+# BagSense 0.3.0 — quest protection and an updating item database
 
-- Opaque dark interface, compact item rows and a wider, clearer item card.
-- Item purpose is visible first; personal notes and reserve controls are in a separate expandable section.
-- Concrete NPCs, zones, coordinates and **Open map** buttons for supported exchanges and ordinary gil sales.
-- Complete simultaneous exchange prices, reward selection, quantity comparisons and known access quests.
-- Requested quest materials are distinguished from quest rewards, with completion status and contact locations.
-- Cleanup plans group by NPC and zone, keep the selected exchange/route and include map buttons and destination details in exports.
-- Existing goals, notes, reservations and plans remain compatible.
+- Complete searchable item catalog: 50,880 named items in the initial data set.
+- Daily GitHub collection from a pinned ffxiv-datamining revision; the plugin checks for updates on load and daily, with a manual refresh button.
+- SHA-256, schema, count and reference validation before applying a catalog. Verified disk cache and installed-game fallback keep the plugin usable offline.
+- Quest objective text, objective number, known quantity/quality, evidence and the specific hand-in NPC/map when resolved.
+- Active quests automatically reserve required stock and constrain existing cleanup plans. Independent personal goals add to these reservations.
+- Unknown quantities, unknown quality, unreadable journals and HQ needs keep all potentially needed copies. Inactive quests create no automatic reserve.
+- Inventory disappearance does not prove a hand-in. Reservations stay until the quest completes.
 
-Examples checked against installed game data: Aetherpool Grip → E-Una-Kotor; Aloalo Potsherd → Trisassant; Aetherspun Gold → expedition armorer in South Horn. South Horn coordinates come from the installed zone placement file.
+Initial quest coverage: 1,020 item links across 629 quests, 245 identified hand-in objectives, 118 exact quantities. Other scripts and intermediate variable flags remain partial. ToDoQty is not an item count. My First Pickaxe correctly keeps ten Copper Ore for Adalberta rather than interpreting its one NPC interaction as one ore.
 
-Update **BagSense** through `/xlplugins`, then open `/bagsense`. The repository URL is unchanged:
+Обновись через `/xlplugins`, открой `/bagsense`. Новая вкладка «База предметов» показывает полный каталог и дату обновления. Квестовые карточки объясняют, сколько оставить и куда сдавать. При неизвестном количестве активного квеста весь запас сохраняется.
 
-```text
-https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/pluginmaster.json
-```
-
-Обновление 0.2.0: читаемый интерфейс, назначение предмета на первом месте, конкретные NPC и кнопки карты, полная цена обмена и связи с квестами. Выбранное место сохраняется в плане. Обновись в `/xlplugins` и открой `/bagsense`.
-
-Inventory actions remain manual. Unknown NPCs, currencies and conditions are labelled rather than guessed. Quest coverage is partial for special scripted chains. Builds, policies, persistence, installed data and standalone rendering are checked; map clicks still need in-game verification.
+Protection applies to BagSense's cleanup plan; the plugin does not intercept manual in-game sales. All actions remain manual. Character data stays local. Quest/item names and original journal text use English; UI supports RU/EN. In-game quest transitions and map clicks still need live testing.

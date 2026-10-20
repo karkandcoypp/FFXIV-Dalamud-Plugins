@@ -51,7 +51,17 @@ public static class InventoryReader
         foreach (uint questId in questIds.Distinct())
             if (quests.TryGetRow(questId, out var quest)) completed[questId] = Plugin.Unlocks.IsQuestCompleted(quest);
         if (id != Plugin.Player.ContentId || !Plugin.Client.IsLoggedIn) throw new InvalidOperationException("Character changed during scan");
-        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity, Plugin.Client.TerritoryType, completed);
+        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity, Plugin.Client.TerritoryType, completed, ReadActiveQuests());
+    }
+
+    private static unsafe Dictionary<uint, byte>? ReadActiveQuests()
+    {
+        var manager = FFXIVClientStructs.FFXIV.Client.Game.QuestManager.Instance();
+        if (manager == null) return null;
+        var active = new Dictionary<uint, byte>();
+        foreach (ref var quest in manager->NormalQuests)
+            if (quest.QuestId != 0) active[(uint)quest.QuestId + 65536] = quest.Sequence;
+        return active;
     }
 
     private static unsafe (bool Known, Dictionary<uint, string[]> Items) ReadGearsets(ulong characterId)

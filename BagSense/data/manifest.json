@@ -1,0 +1,11 @@
+{
+  "Schema": 1,
+  "GeneratedAt": "2026-10-20T21:48:51.598297+00:00",
+  "SourceCommit": "44948e4cda5846eab0baa9872122a888fcc4f1b1",
+  "File": "catalog-4097b9e6f482cf5a.json.gz",
+  "Sha256": "4097b9e6f482cf5a315bbc9b80d020419262577858e055d9dbe0486326269cff",
+  "Bytes": 1320576,
+  "ItemCount": 50880,
+  "QuestItemCount": 1020,
+  "ExactCount": 118
+}

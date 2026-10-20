@@ -38,6 +38,12 @@ public sealed class Plugin : IDalamudPlugin
     private InventorySnapshot demoSnapshot;
     private CharacterData demoData;
     private Task<ItemCatalog>? catalogTask;
+    private Task<DatabaseResult>? databaseTask;
+    private readonly CancellationTokenSource lifetime = new();
+    private DateTimeOffset nextDatabaseCheck;
+    internal bool DatabaseBusy => databaseTask != null;
+    internal bool DatabaseOffline { get; private set; }
+    internal void RefreshDatabase() => nextDatabaseCheck = DateTimeOffset.MinValue;
     private ulong characterId;
     private DateTimeOffset nextScan;
     private DateTimeOffset nextErrorLog;
@@ -97,6 +103,23 @@ public sealed class Plugin : IDalamudPlugin
             else { CatalogError = true; Log.Error(catalogTask.Exception!, "BagSense: item catalog failed"); }
             catalogTask = null;
         }
+        if (Catalog != null && databaseTask == null && DateTimeOffset.UtcNow >= nextDatabaseCheck)
+        {
+            nextDatabaseCheck = DateTimeOffset.UtcNow.AddHours(24);
+            databaseTask = DatabaseCatalog.LoadAsync(Path.Combine(Pi.ConfigDirectory.FullName, "database"), lifetime.Token);
+        }
+        if (databaseTask?.IsCompleted == true)
+        {
+            if (databaseTask.IsCompletedSuccessfully)
+            {
+                var result = databaseTask.Result;
+                DatabaseOffline = result.Offline;
+                if (result.Document != null) { Catalog!.ApplyDatabase(result.Document); nextScan = DateTimeOffset.MinValue; }
+                if (result.Offline) Log.Warning("BagSense: online catalog unavailable ({Reason}); using cached/installed data", result.Error);
+            }
+            else if (!databaseTask.IsCanceled) Log.Warning(databaseTask.Exception!, "BagSense: catalog update failed");
+            databaseTask = null;
+        }
         if (!loaded || Catalog == null || DateTimeOffset.UtcNow < nextScan) return;
         nextScan = DateTimeOffset.UtcNow.AddSeconds(3);
         try
@@ -143,6 +166,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        lifetime.Cancel();
         Context.OnMenuOpened -= OnMenuOpened;
         Framework.Update -= Update;
         Pi.UiBuilder.Draw -= windows.Draw;

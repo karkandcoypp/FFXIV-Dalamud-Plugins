@@ -12,6 +12,10 @@ if ($Offline) { $buildArguments += '-p:NuGetAudit=false' }
 if ($LASTEXITCODE -ne 0) { throw "BagSense build failed ($LASTEXITCODE)" }
 & $dotnet run --project (Join-Path $PSScriptRoot 'tests\PolicyChecks\PolicyChecks.csproj') -c Release
 if ($LASTEXITCODE -ne 0) { throw "BagSense policy checks failed ($LASTEXITCODE)" }
+python -m unittest discover -s (Join-Path $PSScriptRoot 'tests') -p test_database.py -v
+if ($LASTEXITCODE -ne 0) { throw 'BagSense database collector checks failed' }
+& $dotnet run --project (Join-Path $PSScriptRoot 'tools\ApiProbe\ApiProbe.csproj') -c Release -- --database (Join-Path $PSScriptRoot 'data')
+if ($LASTEXITCODE -ne 0) { throw 'BagSense catalog integrity checks failed' }
 
 # A small explicit package avoids packaging machine-specific dependencies supplied by Dalamud.
 $output = Join-Path $PSScriptRoot 'BagSense\bin\Release'

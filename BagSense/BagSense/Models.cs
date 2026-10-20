@@ -19,7 +19,9 @@ public sealed record NpcLocation(uint NpcId, string Npc, string Zone, uint Terri
 public sealed record RouteRequirement(string Kind, uint Id, string Name);
 public sealed record ShopRoute(uint ShopId, string Menu, NpcLocation Location, RouteRequirement[] Requirements);
 public sealed record TradeCost(uint ItemId, string Name, uint Count, ushort Collectability = 0);
-public sealed record QuestUse(uint QuestId, string Name, bool Reward, bool Repeatable, NpcLocation[] Contacts, bool IssuerContact);
+public sealed record QuestUse(uint QuestId, string Name, bool Reward, bool Repeatable, NpcLocation[] Contacts, bool IssuerContact,
+    int? RequiredCount = null, string Quality = "unknown", string Objective = "", int? TodoIndex = null,
+    int? CompleteSequence = null, string Evidence = "", string Source = "");
 public sealed record BuyOffer(string Shop, uint Price, bool Conditional, uint ShopId = 0, ShopRoute[]? Routes = null)
 {
     public ShopRoute[] Destinations => Routes ?? [];
@@ -88,7 +90,8 @@ public sealed class CharacterData
 public sealed record InventorySnapshot(ulong CharacterId, string CharacterName, DateTimeOffset CapturedAt,
     IReadOnlyList<InventoryStack> Stacks, IReadOnlyDictionary<uint, ItemFacts> Items,
     IReadOnlyDictionary<uint, string[]> Gearsets, bool GearsetsKnown, int BagCapacity,
-    uint TerritoryId = 0, IReadOnlyDictionary<uint, bool>? CompletedQuests = null)
+    uint TerritoryId = 0, IReadOnlyDictionary<uint, bool>? CompletedQuests = null,
+    IReadOnlyDictionary<uint, byte>? ActiveQuests = null)
 {
     public int Quantity(uint id) => Stacks.Where(s => s.ItemId == id).Sum(s => s.Quantity);
     public int BagSlots => Stacks.Count(s => s.Container == ContainerKind.Bag);
@@ -104,7 +107,7 @@ public static class CleanupPolicy
     public static int Allocated(InventorySnapshot snapshot, CharacterData data, Goal goal, uint itemId)
     {
         if (goal.Completed) return 0;
-        int remaining = snapshot.Quantity(itemId);
+        int remaining = Math.Max(0, snapshot.Quantity(itemId) - QuestPolicy.Required(snapshot, itemId));
         foreach (var current in data.Goals.Where(g => !g.Completed))
         {
             int allocation = Math.Min(remaining, Math.Max(0, current.Items.GetValueOrDefault(itemId)));
@@ -122,7 +125,7 @@ public static class CleanupPolicy
 
     public static Advice Evaluate(InventorySnapshot snapshot, CharacterData data, uint id, DateTimeOffset now)
     {
-        int total = snapshot.Quantity(id), reserved = Reservation(data, id);
+        int total = snapshot.Quantity(id), reserved = QuestPolicy.Reservation(snapshot, data, id);
         var goals = data.Goals.Where(g => !g.Completed && g.Items.GetValueOrDefault(id) > 0).Select(g => g.Name).ToArray();
         var decision = data.Decision(id);
         Advice Result(AdviceKind kind, Reason reason, bool canPlan = false, PlanAction action = PlanAction.ManualReview) =>
@@ -134,7 +137,7 @@ public static class CleanupPolicy
         if (item.Equipment && !snapshot.GearsetsKnown) return Result(AdviceKind.Protected, Reason.GearsetsUnknown);
         if (item.Indisposable) return Result(AdviceKind.Protected, Reason.Indisposable);
         if (snapshot.Stacks.Any(s => s.ItemId == id && (s.Collectable || s.ValuableInstance))) return Result(AdviceKind.Protected, Reason.SpecialInstance);
-        if (total <= reserved) return Result(AdviceKind.Reserved, Reason.FullReserve);
+        if (total <= reserved) return Result(AdviceKind.Reserved, QuestPolicy.Required(snapshot, id) > 0 ? Reason.QuestItem : Reason.FullReserve);
         if (decision.DeferUntil > now) return Result(AdviceKind.Deferred, Reason.Deferred);
         if (item.Unlocked == false) return Result(AdviceKind.Learn, Reason.Learn, true, PlanAction.Use);
         if (item.Unlocked == true) return Result(AdviceKind.Review, Reason.AlreadyLearned, true);

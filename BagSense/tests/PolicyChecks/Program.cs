@@ -134,4 +134,31 @@ try
     Check(keyRu == npcA.Key, "Saved destination keys do not change with locale");
 }
 finally { System.Globalization.CultureInfo.CurrentCulture = culture; }
+var quest = new QuestUse(66135, "My First Pickaxe", false, false, [npcA], false, 10, "any", "Deliver copper ore", 0, 255);
+var questFacts = original.Items.ToDictionary(p => p.Key, p => p.Value);
+questFacts[900001] = original.Items[900001] with { Quests = [quest] };
+snapshot = original with { Items = questFacts, ActiveQuests = new Dictionary<uint, byte> { [66135] = 255 } };
+data = new();
+Check(QuestPolicy.Required(snapshot, 900001) == 10, "Active exact quest reserves its required quantity");
+Check(Advice(900001).Available == 25, "Only quest surplus can enter a sale plan");
+Check(Project(PlanAction.Vendor, 35).Quantity == 25, "Old sale plans are automatically constrained by new quest needs");
+data.Goals.Add(new() { Name = "Separate crafting", Items = new() { [900001] = 5 } });
+Check(Advice(900001).Reserved == 15, "Quest requirements add to independent personal goals");
+data.Goals[0].Items[900001] = 35;
+Check(CleanupPolicy.Allocated(snapshot, data, data.Goals[0], 900001) == 25, "Goal progress excludes stock already held for active quests");
+data = new();
+questFacts[900001] = questFacts[900001] with { Quests = [quest, quest with { QuestId = 66136 }] };
+snapshot = snapshot with { ActiveQuests = new Dictionary<uint, byte> { [66135] = 255, [66136] = 1 } };
+Check(QuestPolicy.Required(snapshot, 900001) == 20, "Separate active quests add requirements");
+questFacts[900001] = questFacts[900001] with { Quests = [quest, quest] };
+Check(QuestPolicy.Required(snapshot, 900001) == 10, "Duplicate associations do not reserve twice");
+questFacts[900001] = questFacts[900001] with { Quests = [quest with { RequiredCount = null }] };
+Check(QuestPolicy.Required(snapshot, 900001) == 35 && Advice(900001).Available == 0, "Unknown quest quantity protects all stock");
+questFacts[900001] = questFacts[900001] with { Quests = [quest with { Quality = "hq" }] };
+Check(QuestPolicy.Required(snapshot, 900001) == 35, "HQ quest cannot accidentally sell the HQ stack through aggregate projections");
+questFacts[900001] = questFacts[900001] with { Quests = [quest] };
+Check(QuestPolicy.Required(snapshot with { ActiveQuests = null }, 900001) == 35, "Unreadable journal protects possible quest needs");
+Check(QuestPolicy.Required(snapshot with { ActiveQuests = new Dictionary<uint, byte>() }, 900001) == 0, "Inactive quests do not silently reserve stock");
+questFacts[900001] = questFacts[900001] with { Quests = [quest with { Reward = true }] };
+Check(QuestPolicy.Required(snapshot, 900001) == 0, "Quest rewards never become hand-in reservations");
 Console.WriteLine($"PASS: {checks} policy, persistence, isolation, routing and localization checks");

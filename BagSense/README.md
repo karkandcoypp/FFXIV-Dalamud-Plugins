@@ -1,4 +1,4 @@
-# BagSense 0.2.0
+# BagSense 0.3.0
 
 **Русский:** помощник, который сохраняет причины хранения предметов и составляет объяснимый план освобождения места. Интерфейс на русском и английском, переключается сразу. Все продажи, использование, разбор и обмены игрок выполняет вручную.
 
@@ -19,7 +19,17 @@ Requires Dalamud API 15 and .NET 10. Command: `/bagsense`. `/bagsense demo` open
 
 Если общий репозиторий уже подключён для других наших плагинов, второй раз добавлять адрес не нужно. Обнови список в `/xlplugins` и найди **BagSense**. Если ранее использовал локальную DLL, сначала отключи её в Dev Plugins. Дальнейшие версии приходят через обычное обновление Dalamud.
 
-Release: [bs-v0.2.0](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/tag/bs-v0.2.0).
+Release: [bs-v0.3.0](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/tag/bs-v0.3.0).
+
+## Quest protection and online catalog / Квесты и обновляемая база
+
+Вкладка **База предметов** содержит весь каталог именованных предметов (50 880 в первоначальной базе), поиск по названию/ID и просмотр предметов, которых нет в сумках. Источник — публичный [ffxiv-datamining](https://github.com/xivapi/ffxiv-datamining). Наш [ежедневный сборщик](../.github/workflows/bagsense-data.yml) закрепляет ревизию исходников, публикует сжатую базу и SHA-256 в [data](data). Плагин проверяет обновления при загрузке и раз в сутки; доступна ручная проверка. Без сети используется проверенная локальная копия, затем данные установленной игры. Данные персонажа не отправляются.
+
+Для предмета показываются текст задачи, её номер, точное количество (если подтверждено), качество и NPC именно этого этапа с картой. Состояние активных квестов читается локально. Для завершающего этапа определяется состояние сдачи; произвольные промежуточные флаги скрипта не выдаются за подтверждённую готовность.
+
+Резервы активных квестов автоматически исключаются из всех количеств плана очистки и складываются с отдельными личными целями. До завершения квеста запас сохраняется: исчезновение предметов не считается доказательством сдачи. Для неизвестного количества, неизвестного качества или недоступного журнала сохраняется весь возможный запас. HQ-требования также защищают все экземпляры, поскольку план оперирует общим количеством типа предмета. Неактивные квесты не создают автоматический резерв; для будущего квеста можно создать личную цель. Защита ограничивает план BagSense и **не перехватывает ручные продажи в интерфейсе игры**.
+
+Initial coverage is 1,020 item/quest links across 629 quests, with 245 identified hand-in objectives and 118 unambiguous quantities. Full item coverage is not complete quest-script coverage. Quantities are extracted conservatively from literal journal phrases using the item's singular/plural forms; evidence is retained. `ToDoQty` is never treated as a hand-in quantity. Unknown NPCs/amounts remain explicit. Names and original objectives follow the English game data; the plugin interface is RU/EN.
 
 ## Item purpose and NPC destinations / Назначение и NPC
 
@@ -81,7 +91,7 @@ Potential slots are calculated from the **smallest physical stacks first**, sepa
 - A merchant listing is evidence of a source, **not** a statement that an item is useless or that this character can reach the NPC. Known sheet conditions are marked. Recipe examples are limited to eight; supported direct exchanges retain all rewards and simultaneous costs. Other currency encodings remain outside the exchange index.
 - Character collectible state uses Dalamud `IUnlockState`. Unsupported unlock types remain unknown; unsupported types are not presented as already learned.
 - Desynthesis capability comes from the item sheet. Character job access and desynthesis output are not evaluated.
-- Grand Company eligibility, market prices, complete acquisition routes, every special quest script and dresser ownership are outside 0.2.0. Some NPCs and access conditions remain unresolved and are labelled. The card provides a Teamcraft link for additional details.
+- Grand Company eligibility, market prices, complete acquisition routes, every special quest script and dresser ownership are outside 0.3.0. Some NPCs and access conditions remain unresolved and are labelled. The card provides a Teamcraft link for additional details.
 - The plugin has no automatic inventory operations and sends no character data or telemetry.
 
 ## Build and checks
@@ -98,7 +108,7 @@ python tests/UiChecks/render.py artifacts/ui
 
 `build.ps1` finds the workspace's local .NET 10 if available, treats compiler warnings as errors, runs policy checks, verifies manifest/assembly versions, and packages only the plugin DLL and manifest. `-Offline` disables the online NuGet vulnerability audit for that invocation; dependencies still need to be cached. The UI renderer requires numpy and Pillow.
 
-UI checks call the production ImGui window with isolated sample state: RU / EN, all three tabs, minimum/default/large windows and enlarged text. Text and number fields are inert stand-ins because Dalamud's native InputText extension requires the game host. These are standalone UI renders, not screenshots of FFXIV, and do not test typing or clicks. Game interaction, changing characters, context menus and native gearset reads must additionally be checked in-game.
+UI checks call the production ImGui window with isolated sample state: RU / EN, inventory/goals/plan tabs at minimum/default/large sizes and enlarged text, plus the database tab. Text and number fields are inert stand-ins because Dalamud's native InputText extension requires the game host. These are standalone UI renders, not screenshots of FFXIV, and do not test typing or clicks. Game interaction, changing characters, context menus and native gearset reads must additionally be checked in-game.
 
 See [VALIDATION.md](VALIDATION.md) for the evidence collected for this build.
 

@@ -19,8 +19,9 @@ jobs:
         shell: pwsh
         run: |
           Invoke-WebRequest https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile dalamud.zip
-          Expand-Archive -LiteralPath dalamud.zip -DestinationPath "$env:RUNNER_TEMP/dalamud"
-          "DALAMUD_HOME=$env:RUNNER_TEMP/dalamud" >> $env:GITHUB_ENV
+          $directory = Join-Path $env:APPDATA 'XIVLauncher/addon/Hooks/dev'
+          Expand-Archive -LiteralPath dalamud.zip -DestinationPath $directory
+          "DALAMUD_HOME=$directory" >> $env:GITHUB_ENV
       - name: Build, check and package
         shell: pwsh
         run: ./BagSense/build.ps1
