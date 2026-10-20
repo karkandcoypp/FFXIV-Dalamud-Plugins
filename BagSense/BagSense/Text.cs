@@ -5,6 +5,8 @@ public sealed class Text(Func<bool> russian)
     public string T(string ru, string en) => russian() ? ru : en;
     public string Purpose(ItemFacts item) => item.ExchangeUses.Length > 0
         ? T("Для обмена: ", "Exchange material: ") + (string.IsNullOrWhiteSpace(item.ExchangeUses[0].Shop) ? item.ExchangeUses[0].Reward : item.ExchangeUses[0].Shop)
+        : item.DeliveryUses.Length > 0 ? T("Для сдачи NPC: ", "NPC delivery material: ") + item.DeliveryUses[0].Name
+        : item.Unlocked == true ? T("Предмет открытия коллекции: уже получено персонажем.", "Collection unlock item: already obtained by this character.")
         : item.QuestUses.Any(q => !q.Reward) ? T("Материал квеста: ", "Quest material: ") + item.QuestUses.First(q => !q.Reward).Name
         : item.Unlocked == false ? T("Коллекционный предмет — можно изучить из сумки.", "A collectible you can learn from your inventory.")
         : item.Equipment ? T("Экипировка. Проверь комплект, гламур и будущую прокачку.", "Equipment: consider gearsets, glamour and future leveling.")

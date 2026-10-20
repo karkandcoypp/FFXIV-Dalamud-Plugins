@@ -10,7 +10,7 @@ public enum Reason
 }
 
 public sealed record InventoryStack(uint ItemId, ContainerKind Container, int Slot, int Quantity,
-    bool Hq = false, bool Collectable = false, bool ValuableInstance = false);
+    bool Hq = false, bool Collectable = false, bool ValuableInstance = false, uint Collectability = 0);
 public sealed record NpcLocation(uint NpcId, string Npc, string Zone, uint Territory, uint Map, float X, float Y)
 {
     public string Key => FormattableString.Invariant($"{NpcId}:{Map}:{X:0.00}:{Y:0.00}");
@@ -23,6 +23,9 @@ public sealed record QuestVariant(string Job, int Count, bool Hq, uint[]? Jobs =
 public sealed record QuestUse(uint QuestId, string Name, bool Reward, bool Repeatable, NpcLocation[] Contacts, bool IssuerContact,
     int? RequiredCount = null, string Quality = "unknown", string Objective = "", int? TodoIndex = null,
     int? CompleteSequence = null, string Evidence = "", string Source = "", string[]? Variants = null, QuestVariant[]? RequirementVariants = null);
+public sealed record DeliveryReward(uint ItemId, uint Count, bool Hq, byte Chance);
+public sealed record DeliveryUse(uint Id, string Kind, string Name, int Count, string Quality, string Reward,
+    NpcLocation[] Contacts, bool IssuerOnly = false, int Repeats = 0, ushort Collectability = 0, DeliveryReward[]? ItemRewards = null, string Requirements = "");
 public sealed record RewardDetails(string Kind, string Name, string Description, uint PreviewIcon = 0, uint CollectionId = 0, string Detail = "");
 public sealed record BuyOffer(string Shop, uint Price, bool Conditional, uint ShopId = 0, ShopRoute[]? Routes = null)
 {
@@ -40,8 +43,9 @@ public sealed record ExchangeUse(string Shop, string Reward, uint Cost, uint Sho
 public sealed record ItemFacts(uint Id, string Name, uint Icon, string Category, string Description,
     bool Equipment = false, bool Indisposable = false, bool Marketable = false, uint SellPrice = 0,
     bool Desynth = false, bool? Unlocked = null, BuyOffer[]? Offers = null, string[]? Recipes = null,
-    ExchangeUse[]? Exchanges = null, QuestUse[]? Quests = null, NpcLocation[]? Merchants = null, RewardDetails? Reward = null)
+    ExchangeUse[]? Exchanges = null, QuestUse[]? Quests = null, NpcLocation[]? Merchants = null, RewardDetails? Reward = null, DeliveryUse[]? Deliveries = null)
 {
+    public DeliveryUse[] DeliveryUses => Deliveries ?? [];
     public BuyOffer[] BuyOffers => Offers ?? [];
     public string[] RecipeUses => Recipes ?? [];
     public ExchangeUse[] ExchangeUses => Exchanges ?? [];
@@ -94,7 +98,7 @@ public sealed record InventorySnapshot(ulong CharacterId, string CharacterName, 
     IReadOnlyDictionary<uint, string[]> Gearsets, bool GearsetsKnown, int BagCapacity,
     uint TerritoryId = 0, IReadOnlyDictionary<uint, bool>? CompletedQuests = null,
     IReadOnlyDictionary<uint, byte>? ActiveQuests = null, IReadOnlyDictionary<uint, bool?>? RewardUnlocks = null,
-    IReadOnlyDictionary<uint, byte>? QuestJobs = null)
+    IReadOnlyDictionary<uint, byte>? QuestJobs = null, IReadOnlyDictionary<uint, byte>? ActiveLeves = null)
 {
     public int Quantity(uint id) => Stacks.Where(s => s.ItemId == id).Sum(s => s.Quantity);
     public int BagSlots => Stacks.Count(s => s.Container == ContainerKind.Bag);
@@ -199,4 +203,14 @@ public static class CleanupPolicy
         data.Plan.RemoveAll(p => p.ItemId == advice.ItemId);
         data.Plan.Add(new() { ItemId = advice.ItemId, Action = action, Quantity = quantity, BaselineQuantity = advice.Total });
     }
+}
+
+public static class DeliveryPolicy
+{
+    public static int EligibleQuantity(InventorySnapshot snapshot, uint itemId, DeliveryUse delivery) =>
+        snapshot.Stacks.Where(s => s.ItemId == itemId && s.Container != ContainerKind.Equipped
+            && (delivery.Quality == "collectable" || !s.Collectable)
+            && (delivery.Quality != "hq" || s.Hq)
+            && (delivery.Quality != "collectable" || s.Collectable && s.Collectability >= delivery.Collectability))
+            .Sum(s => s.Quantity);
 }

@@ -25,7 +25,7 @@ public sealed partial class BagWindow
 
     private string RewardHelp(string kind) => kind switch
     {
-        "Mount" => T("Используй полученный предмет в сумке один раз: маунт появится в Mount Guide.", "Use the received item once from your inventory to add this mount to Mount Guide."),
+        "Mount" => T("Используй предмет в сумке один раз: маунт появится в Mount Guide.", "Use the item once from your inventory to add this mount to Mount Guide."),
         "Minion" => T("Используй предмет в сумке: спутник появится в Minion Guide.", "Use this item from your inventory to add the companion to Minion Guide."),
         "Music" => T("Используй ноты в сумке, чтобы добавить композицию в оркестрион.", "Use the roll to add its music to your orchestrion collection."),
         "Emote" => T("Используй пособие в сумке, чтобы открыть новую эмоцию.", "Use the manual from your inventory to learn a new emote."),
@@ -49,7 +49,7 @@ public sealed partial class BagWindow
         return true;
     }
 
-    private void DrawRewardCard(ItemFacts reward, uint count, InventorySnapshot snapshot)
+    private void DrawRewardCard(ItemFacts reward, uint count, InventorySnapshot snapshot, bool acquisition = true)
     {
         var details = reward.Reward ?? new RewardDetails(reward.Equipment ? "Equipment" : "Item", reward.Name, reward.Description);
         ImGui.Spacing();
@@ -61,7 +61,7 @@ public sealed partial class BagWindow
         ImGui.TextColored(Teal, RewardType(details.Kind));
         ImGui.TextWrapped(details.Name);
         if (details.Name != reward.Name) ImGui.TextDisabled(T("Предмет: ", "Item: ") + reward.Name);
-        ImGui.TextWrapped(T($"Получишь: {count} шт.", $"You receive: {count}"));
+        ImGui.TextWrapped(acquisition ? T($"Получишь: {count} шт.", $"You receive: {count}") : T($"В сумках: {count} шт.", $"In bags: {count}"));
         var unlocked = RewardPolicy.Unlocked(snapshot, reward.Id);
         if (unlocked.HasValue) ImGui.TextColored(unlocked.Value ? Muted : Gold, unlocked.Value
             ? T("Уже есть в коллекции", "Already in your collection") : T("Ещё нет в коллекции", "Not yet in your collection"));

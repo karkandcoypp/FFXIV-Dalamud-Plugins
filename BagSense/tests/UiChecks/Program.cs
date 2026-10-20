@@ -34,6 +34,17 @@ internal static class Program
                 var manifest = JsonSerializer.Deserialize<CatalogManifest>(File.ReadAllText(Path.Combine(args[2], "manifest.json")))!;
                 catalog.ApplyDatabase(DatabaseCatalog.Decode(manifest, File.ReadAllBytes(Path.Combine(args[2], manifest.File))));
             }
+            var leveMaterial = game.Excel.GetSheet<Lumina.Excel.Sheets.CraftLeve>().Single(c => c.Leve.RowId == 36).Item[0].RowId;
+            var mountItem = catalog.CollectionItemIds.First(id => catalog.Find(id) is { Reward.Kind: "Mount", Indisposable: false });
+            var deliveryFacts = new[] { leveMaterial, mountItem, 17549u }.Select(id => catalog.Find(id)!).ToDictionary(i => i.Id);
+            deliveryFacts[mountItem] = deliveryFacts[mountItem] with { Unlocked = true };
+            var deliverySnapshot = new InventorySnapshot(ulong.MaxValue, "Delivery preview / Пример сдач", DateTimeOffset.UtcNow,
+                deliveryFacts.Keys.Select((id, slot) => new InventoryStack(id, ContainerKind.Bag, slot, 20)).ToArray(), deliveryFacts,
+                new Dictionary<uint, string[]>(), true, 140, ActiveQuests: new Dictionary<uint, byte>(), ActiveLeves: new Dictionary<uint, byte> { [36] = 1 });
+            foreach (bool ru in new[] { true, false })
+                foreach (uint id in deliveryFacts.Keys)
+                    Render(directory, ru, 0, 1240, 860, 1, deliverySnapshot, id, catalog, game);
+            Render(directory, true, 0, 860, 570, 1, deliverySnapshot, leveMaterial, catalog, game);
             var items = new uint[] { 47866, 41078, 41079, 23165, 5106, 5823 }.Select(id => catalog.Find(id)!).ToDictionary(i => i.Id,
                 i => i with { Merchants = catalog.World.Merchants.Where(m => m.Npc is "Bango Zango" or "Roarich" or "Maisenta").Take(5).ToArray() });
             var snapshot = new InventorySnapshot(ulong.MaxValue, "Sample character / Пример персонажа", DateTimeOffset.UtcNow,

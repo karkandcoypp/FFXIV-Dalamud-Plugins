@@ -171,4 +171,31 @@ Check(RewardPolicy.Kind(853, false, "Other", "Wind-up") == "Minion" && RewardPol
 Check(RewardPolicy.Kind(0, true, "Bracelets", "Gear") == "Equipment", "Equipment rewards are explicitly identified");
 Check(RewardPolicy.Unlocked(snapshot, 99999) == null, "Unknown collection state is not presented as missing");
 Check(RewardPolicy.Unlocked(snapshot with { RewardUnlocks = new Dictionary<uint, bool?> { [99999] = true } }, 99999) == true, "Known collection ownership survives snapshot lookup");
+var deliveryItem = new ItemFacts(900002, "Leve material", 1, "Material", "", Deliveries: [new(36, "Leve", "Test leve", 3, "any", "", [], Repeats: 2)]);
+var leveSnapshot = snapshot with { Items = new Dictionary<uint, ItemFacts> { [900002] = deliveryItem },
+    Stacks = new[] { new InventoryStack(900002, ContainerKind.Bag, 1, 20) },
+    ActiveLeves = new Dictionary<uint, byte> { [36] = 1 }, ActiveQuests = new Dictionary<uint, byte>() };
+Check(QuestPolicy.Required(leveSnapshot, 900002) == 9, "Active leve protects initial delivery plus two repeats");
+Check(CleanupPolicy.Evaluate(leveSnapshot, new(), 900002, DateTimeOffset.UtcNow).Available == 11, "Only leve surplus can enter a cleanup plan");
+Check(QuestPolicy.Required(leveSnapshot with { ActiveLeves = new Dictionary<uint, byte>() }, 900002) == 0, "Potential but unaccepted leves do not reserve stock");
+Check(QuestPolicy.Required(leveSnapshot with { ActiveLeves = null }, 900002) == 20, "Unreadable leve journal conservatively protects possible requirements");
+var second = deliveryItem.DeliveryUses[0] with { Id = 37, Count = 2, Repeats = 0 };
+leveSnapshot = leveSnapshot with { Items = new Dictionary<uint, ItemFacts> { [900002] = deliveryItem with { Deliveries = [deliveryItem.DeliveryUses[0], second] } },
+    ActiveLeves = new Dictionary<uint, byte> { [36] = 1, [37] = 1 } };
+Check(QuestPolicy.Required(leveSnapshot, 900002) == 11, "Two accepted leves add their independent requirements");
+Check(RewardPolicy.Unlocked(leveSnapshot with { Items = new Dictionary<uint, ItemFacts> { [900002] = deliveryItem with { Unlocked = true } } }, 900002) == true, "Carried mount ownership is available without an exchange reward link");
+Check(RewardPolicy.Unlocked(leveSnapshot, 900002) == null, "An unread collection is never shown as already owned");
+var ownedMount = deliveryItem with { Unlocked = true, Deliveries = [], Reward = new("Mount", "Test mount", "") };
+var mountSnapshot = leveSnapshot with { Items = new Dictionary<uint, ItemFacts> { [900002] = ownedMount } };
+var mountAdvice = CleanupPolicy.Evaluate(mountSnapshot, new(), 900002, DateTimeOffset.UtcNow);
+Check(RewardPolicy.RedundantDuplicate(mountSnapshot, mountAdvice), "Known learned mount with no other indexed use permits surplus duplicate removal");
+Check(!RewardPolicy.RedundantDuplicate(mountSnapshot, mountAdvice with { CanPlan = false }), "Protection takes priority over duplicate disposal");
+Check(!RewardPolicy.RedundantDuplicate(mountSnapshot with { Items = new Dictionary<uint, ItemFacts> { [900002] = ownedMount with { Unlocked = null } } }, mountAdvice), "Unknown collection state never permits duplicate removal");
+Check(!RewardPolicy.RedundantDuplicate(mountSnapshot with { Items = new Dictionary<uint, ItemFacts> { [900002] = ownedMount with { Deliveries = [second] } } }, mountAdvice), "A delivery use prevents an unconditional duplicate-removal recommendation");
+var qualitySnapshot = leveSnapshot with { Stacks = new[] { new InventoryStack(900002, ContainerKind.Bag, 0, 2, Collectable: true, Collectability: 100),
+    new InventoryStack(900002, ContainerKind.Bag, 1, 3, Collectable: true, Collectability: 500), new InventoryStack(900002, ContainerKind.Bag, 2, 4, Hq: true) } };
+var collectible = second with { Quality = "collectable", Collectability = 300 };
+Check(DeliveryPolicy.EligibleQuantity(qualitySnapshot, 900002, collectible) == 3, "Collectable deliveries exclude low-value and ordinary HQ copies");
+Check(DeliveryPolicy.EligibleQuantity(qualitySnapshot, 900002, second with { Quality = "hq" }) == 4, "HQ requirements exclude NQ and collectables");
+Check(DeliveryPolicy.EligibleQuantity(qualitySnapshot, 900002, second) == 4, "Normal delivery accepts HQ but excludes collectable copies");
 Console.WriteLine($"PASS: {checks} policy, persistence, isolation, routing and localization checks");

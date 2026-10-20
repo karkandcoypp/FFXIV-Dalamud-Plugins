@@ -24,7 +24,7 @@ if (args.Length == 2 && args[0] == "--data") { ConfigurationChecks.Run(); DataCh
 if (args.Length == 2 && args[0] == "--inspect") { RouteDiagnostics.Run(args[1]); return; }
 if (args.Length > 1 && args[0] == "--schema")
 {
-    foreach (string name in args.Skip(1))
+    foreach (string name in args.Skip(1).SelectMany(n => n.EndsWith("*") ? typeof(Item).Assembly.GetTypes().Where(t => t.Namespace == "Lumina.Excel.Sheets" && t.Name.StartsWith(n[..^1])).Select(t => t.Name) : new[] { n }))
     {
         var type = typeof(Item).Assembly.GetType("Lumina.Excel.Sheets." + name) ?? typeof(Lumina.Excel.RowRef).Assembly.GetType("Lumina.Excel." + name);
         if (type == null) { Console.WriteLine("Missing " + name); continue; }

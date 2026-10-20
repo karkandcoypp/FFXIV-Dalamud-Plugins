@@ -52,6 +52,7 @@ public sealed partial class BagWindow
                 if (item.Reward is { Kind: not "Item" }) DrawRewardCard(item, 1, snapshot);
                 ImGui.TextWrapped(T($"В сумках: {snapshot.Quantity(item.Id)}", $"In bags: {snapshot.Quantity(item.Id)}"));
                 if (snapshot.Quantity(item.Id) > 0 && ImGui.Button(T("Открыть в инвентаре", "Open in inventory") + "###DbInventory")) Select(item.Id);
+                DrawDeliveries(item, snapshot);
                 if (item.QuestUses.Any(q => !q.Reward)) DrawQuestUses(item, snapshot, false);
                 else ImGui.TextWrapped(T("Квестовые требования не найдены. Это не доказательство, что предмет не нужен.",
                     "No quest requirements found. This does not prove the item is unneeded."));

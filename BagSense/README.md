@@ -1,3 +1,9 @@
+## Deliveries and collection decisions (0.5.0)
+
+BagSense indexes installed tradecraft/fishing Leve requirements and actual delivery NPCs. Accepted leves reserve the first hand-in plus all possible repeats. The item view shows exact per-delivery quantity, NQ/HQ guidance, matching stock, base EXP/gil and optional item reward cards. Custom Delivery and collectable shop entries provide quality requirements, rewards and NPC maps; a possible weekly item is never labelled as a confirmed current request. Actual stack collectability is considered.
+
+Collection ownership is checked for supported unlock items, including rewards outside the inventory. The decision banner prioritizes protections and reserves, then use/owned-duplicate/review. Unknown collection status cannot authorize duplicate removal. No automatic sale, hand-in or discard is performed. Dynamic GC daily requests and live weekly selection are outside this release.
+
 # BagSense 0.4.0
 
 **Русский:** помощник, который сохраняет причины хранения предметов и составляет объяснимый план освобождения места. Интерфейс на русском и английском, переключается сразу. Все продажи, использование, разбор и обмены игрок выполняет вручную.

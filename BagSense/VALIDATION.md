@@ -1,3 +1,22 @@
+# BagSense 0.5.0 validation
+
+21 October 2026, Windows, .NET 10, installed Dalamud API 15.
+
+- 125 policy checks: accepted-leve reservations, repeats, multiple independent quests, unreadable journal fallback, learned-duplicate safeguards and actual quality eligibility, plus existing persistence/routing behavior.
+- 37 installed-data checks and 11 configuration checks: all 1,240 named CraftLeve entries have positive quantities and mapped recipients; leve 36 maps to Audrie; Zhloe delivery and collectable appraiser routes resolve; 1,610 collectable rows and 3,229 unlock items are indexed.
+- Production RU/EN UI fixtures include accepted leve hand-in, custom delivery, owned mount and minimum window size, alongside existing inventory/goals/plan/database/quest views. Character flags and quantities are fixtures, not captured live player state.
+- Existing collector, database integrity/cache/update and package/feed preservation checks remain required by the build/release workflow.
+- Live native journal transitions, current-character unlock queries, current weekly request selection and map clicks still require FFXIV testing. There is no in-game validation claim.
+
+## Sources and interpretation
+
+Installed Lumina sheets: CraftLeve, Leve, Level, LeveRewardItem/Group, SatisfactionNpc, SatisfactionSupply/Reward, CollectablesShopItem/Refine/RewardScrip. CraftLeve uses Leve.LevelLevemete for delivery NPC placement (also the delivery location in Teamcraft's leves extractor); its table name must not be interpreted as evidence that the NPC is the issuer. Actual leve 36 recipient Audrie verified against installed NPC data. LeveWork exposes LeveId/Sequence; normal and leve journal IDs remain separate. HQ bonus is not treated as mandatory HQ. Random reward group chance is not a per-item guarantee.
+
+- https://github.com/ffxiv-teamcraft/ffxiv-teamcraft/blob/staging/apps/data-extraction/src/extractors/leves.extractor.ts
+- https://github.com/aers/FFXIVClientStructs/blob/main/FFXIVClientStructs/FFXIV/Application/Network/WorkDefinitions/LeveWork.cs
+
+---
+
 # BagSense 0.4.0 validation
 
 21 October 2026, Windows, .NET 10, installed Dalamud API 15.

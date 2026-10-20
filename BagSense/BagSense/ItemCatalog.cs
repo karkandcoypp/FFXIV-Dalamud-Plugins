@@ -6,7 +6,7 @@ using Lumina.Data.Files;
 namespace BagSense;
 
 // Only game-sheet work happens off the framework thread. Character state is read by InventoryReader.
-public sealed class ItemCatalog
+public sealed partial class ItemCatalog
 {
     private readonly ExcelSheet<Item> items;
     private readonly ExcelSheet<Mount> mounts;
@@ -14,10 +14,12 @@ public sealed class ItemCatalog
     private readonly Dictionary<uint, List<BuyOffer>> shops = new();
     private readonly Dictionary<uint, List<string>> recipes = new();
     private readonly Dictionary<uint, List<ExchangeUse>> exchanges = new();
+    private readonly Dictionary<uint, List<DeliveryUse>> deliveries = new();
     private readonly Dictionary<uint, ItemFacts> cache = new();
     private Dictionary<uint, CatalogItem> remoteItems = new();
     private Dictionary<uint, CatalogNeed[]> remoteNeeds = new();
     public CatalogDocument? Database { get; private set; }
+    public uint[] CollectionItemIds { get; }
     public int ItemCount => Math.Max(items.Count, remoteItems.Count);
     public void ApplyDatabase(CatalogDocument database)
     {
@@ -36,6 +38,8 @@ public sealed class ItemCatalog
         items = excel.GetSheet<Item>(Language.English);
         mounts = excel.GetSheet<Mount>(Language.English);
         mountText = excel.GetSheet<MountTransient>(Language.English);
+        CollectionItemIds = items.Where(i => i.ItemAction.IsValid && i.ItemAction.Value.Action.RowId is
+            1322 or 853 or 25183 or 3357 or 29459 or 20086 or 1013 or 37312 or 2633 or 43141 or 19743).Select(i => i.RowId).ToArray();
         World = new WorldCatalog(excel, readLayer);
         foreach (var recipe in excel.GetSheet<Recipe>(Language.English))
         {
@@ -64,6 +68,7 @@ public sealed class ItemCatalog
                 if (!list.Any(o => o.ShopId == offer.ShopId && o.Price == offer.Price && o.Conditional == offer.Conditional)) list.Add(offer);
             }
         }
+        IndexDeliveries(excel);
         var quests = excel.GetSheet<Quest>(Language.English);
         var achievements = excel.GetSheet<Achievement>(Language.English);
         var duties = excel.GetSheet<ContentFinderCondition>(Language.English);
@@ -116,7 +121,7 @@ public sealed class ItemCatalog
             row.EquipSlotCategory.RowId != 0, row.IsIndisposable, !row.IsUntradable, row.PriceLow, row.Desynth > 0,
             Offers: shops.GetValueOrDefault(id)?.Distinct().OrderBy(o => o.Conditional).ThenBy(o => o.Price).Take(8).ToArray(),
             Recipes: recipes.GetValueOrDefault(id)?.ToArray(), Exchanges: exchanges.GetValueOrDefault(id)?.ToArray(),
-            Quests: QuestUses(id), Merchants: World.Merchants, Reward: Reward(row));
+            Quests: QuestUses(id), Merchants: World.Merchants, Reward: Reward(row), Deliveries: deliveries.GetValueOrDefault(id)?.ToArray());
     }
 
     private RewardDetails Reward(Item item)

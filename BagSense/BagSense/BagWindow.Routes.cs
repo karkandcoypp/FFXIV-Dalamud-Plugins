@@ -26,10 +26,11 @@ public sealed partial class BagWindow
         ImGui.TextWrapped(item.Name);
         ImGui.TextDisabled(item.Category);
         ImGui.EndGroup();
+        DrawDecision(item, snapshot, advice);
         Heading("Назначение", "Purpose");
         ImGui.TextWrapped(L.Purpose(item));
-        ImGui.TextDisabled(T($"В наличии {advice.Total}   /   Сохранить {advice.Reserved}   /   Свободно {advice.Available}",
-            $"Owned {advice.Total}   /   Keep {advice.Reserved}   /   Surplus {advice.Available}"));
+        ImGui.TextDisabled(T($"В наличии {advice.Total}   /   Сохранить {Math.Min(advice.Total, advice.CanPlan ? advice.Reserved : advice.Total)}   /   В план { (advice.CanPlan ? advice.Available : 0)}",
+            $"Owned {advice.Total}   /   Keep {Math.Min(advice.Total, advice.CanPlan ? advice.Reserved : advice.Total)}   /   Plannable {(advice.CanPlan ? advice.Available : 0)}"));
         int questReserve = QuestPolicy.Required(snapshot, item.Id);
         if (questReserve > 0) ImGui.TextColored(Gold, T($"Защита квестов: оставить {questReserve} шт. Продажа этого запаса исключена из плана.",
             $"Quest protection: keep {questReserve} items. This stock is excluded from sale plans."));
@@ -37,6 +38,7 @@ public sealed partial class BagWindow
         if (snapshot.Gearsets.TryGetValue(item.Id, out var gearsets)) ImGui.TextWrapped(T("В комплекте: ", "Gearsets: ") + string.Join(", ", gearsets));
         ImGui.Separator();
 
+        DrawDeliveries(item, snapshot);
         if (item.ExchangeUses.Length > 0 && action == PlanAction.ExchangeReview) DrawExchange(item, snapshot);
         else if (action == PlanAction.Vendor) DrawSale(item, snapshot);
         else if (item.QuestUses.Any(q => !q.Reward)) DrawQuestUses(item, snapshot, rewards: false);

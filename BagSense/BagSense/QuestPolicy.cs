@@ -10,11 +10,15 @@ public static class QuestPolicy
     {
         if (!snapshot.Items.TryGetValue(itemId, out var item)) return 0;
         var needs = item.QuestUses.Where(q => Relevant(snapshot, q)).ToArray();
-        if (needs.Length == 0) return 0;
+        int leveReserve = snapshot.ActiveLeves == null
+            ? (item.DeliveryUses.Any(d => d.Kind == "Leve") ? snapshot.Quantity(itemId) : 0)
+            : item.DeliveryUses.Where(d => d.Kind == "Leve" && snapshot.ActiveLeves.ContainsKey(d.Id))
+                .GroupBy(d => d.Id).Sum(g => g.Max(d => d.Count * (1 + d.Repeats)));
+        if (needs.Length == 0) return leveReserve;
         // A missing journal or an uncertain quantity/quality must never free a possibly needed stack.
         if (snapshot.ActiveQuests == null || needs.Any(q => Amount(snapshot, q) == null))
             return snapshot.Quantity(itemId);
-        return (int)Math.Min(int.MaxValue, needs.GroupBy(q => q.QuestId).Sum(g => (long)g.Max(q => Amount(snapshot, q)!.Value)));
+        return (int)Math.Min(int.MaxValue, needs.GroupBy(q => q.QuestId).Sum(g => (long)g.Max(q => Amount(snapshot, q)!.Value)) + leveReserve);
     }
 
     // Zero means a known alternative job branch, null means uncertainty/HQ protection.

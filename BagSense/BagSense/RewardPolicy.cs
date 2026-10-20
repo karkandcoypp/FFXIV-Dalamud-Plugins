@@ -18,5 +18,11 @@ public static class RewardPolicy
         _ => "Item"
     };
 
-    public static bool? Unlocked(InventorySnapshot snapshot, uint id) => snapshot.RewardUnlocks?.GetValueOrDefault(id);
+    public static bool RedundantDuplicate(InventorySnapshot snapshot, Advice advice) => advice.CanPlan && advice.Available > 0
+        && snapshot.Items.TryGetValue(advice.ItemId, out var item) && item.Unlocked == true
+        && item.Reward?.Kind is "Mount" or "Minion" or "Music" or "Hairstyle" or "Emote"
+        && item.ExchangeUses.Length == 0 && item.RecipeUses.Length == 0 && item.DeliveryUses.Length == 0
+        && !item.QuestUses.Any(q => !q.Reward && (q.Repeatable || snapshot.QuestCompleted(q.QuestId) != true));
+
+    public static bool? Unlocked(InventorySnapshot snapshot, uint id) => snapshot.Items.GetValueOrDefault(id)?.Unlocked ?? snapshot.RewardUnlocks?.GetValueOrDefault(id);
 }

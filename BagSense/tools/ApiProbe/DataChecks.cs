@@ -11,6 +11,20 @@ internal static class DataChecks
         var catalog = new ItemCatalog(game.Excel, path => game.GetFile<Lumina.Data.Files.LgbFile>(path));
         int checks = 0;
         void Check(bool value, string message) { if (!value) throw new Exception(message); checks++; Console.WriteLine("PASS: " + message); }
+        var craftRows = game.Excel.GetSheet<Lumina.Excel.Sheets.CraftLeve>().Where(c => c.Leve.IsValid && !c.Leve.Value.Name.IsEmpty && c.Item.Any(i => i.RowId != 0)).ToArray();
+        Check(craftRows.Length > 500, "Named tradecraft and fishing leves are present in installed data");
+        var sample = craftRows.Single(c => c.Leve.RowId == 36);
+        Check(catalog.Find(sample.Item[0].RowId)!.DeliveryUses.Any(d => d.Id == 36 && !d.IssuerOnly && d.Contacts.Any(n => n.NpcId == 1001218 && n.Npc == "Audrie" && n.CanMap)), "Say It with Spears maps to hand-in NPC Audrie, not the leve issuer");
+        var leveItems = craftRows.SelectMany(c => c.Item.Select(i => i.RowId)).Where(i => i != 0).Distinct().Select(i => catalog.Find(i)!).ToArray();
+        Check(leveItems.SelectMany(i => i.DeliveryUses).Where(d => d.Kind == "Leve").All(d => d.Count > 0 && d.Contacts.Any(n => n.CanMap)), "Every indexed installed CraftLeve has positive quantity and mapped recipient");
+        var customItem = catalog.Find(17549)!;
+        Check(customItem.DeliveryUses.Any(d => d.Kind == "CustomDelivery" && d.Contacts.Any(n => n.NpcId == 1019615 && n.CanMap) && d.Collectability > 0 && d.Reward.Contains("Scrips")), "Custom delivery item links to Zhloe with collectability, scrip rewards and map");
+        var collectableRows = game.Excel.GetSubrowSheet<Lumina.Excel.Sheets.CollectablesShopItem>().SelectMany(g => g).Where(r => r.Item.RowId != 0 && r.CollectablesShopRefine.IsValid).ToArray();
+        Check(collectableRows.Length > 100 && collectableRows.All(r => catalog.Find(r.Item.RowId)!.DeliveryUses.Any(d => d.Kind == "Collectable" && d.Collectability == r.CollectablesShopRefine.Value.LowCollectability)), "All collectable shop minimum quality thresholds are indexed");
+        Check(collectableRows.Any(r => catalog.Find(r.Item.RowId)!.DeliveryUses.Any(d => d.Kind == "Collectable" && d.Contacts.Any(n => n.CanMap))), "Collectable appraisers have real map positions");
+        Check(catalog.CollectionItemIds.Any(i => catalog.Find(i)?.Reward?.Kind == "Mount") && catalog.CollectionItemIds.Length > 1000, "Collection scan covers unlock items beyond the carried inventory and selected exchange");
+        Console.WriteLine($"Delivery coverage: {craftRows.Length} leves with NPC maps; {collectableRows.Length} collectable rows; {catalog.CollectionItemIds.Length} collection items");
+        Check(craftRows.All(c => c.Item.Where((i,n) => i.RowId != 0 && c.ItemCount[n] > 0).All(i => catalog.Find(i.RowId)!.DeliveryUses.Any(d => d.Kind == "Leve" && d.Id == c.Leve.RowId))), "All installed CraftLeve item requirements are indexed");
         Check(catalog.MerchantItems > 1000, "Regular merchant index loaded");
         Check(catalog.RecipeItems > 1000, "Recipe ingredient index loaded");
         Check(catalog.ExchangeItems > 100, "Direct item-exchange index loaded");

@@ -28,7 +28,7 @@ public static class InventoryReader
                 bool special = item.IsRelic || item.GlamourId != 0;
                 foreach (var materia in item.Materia) if (materia != 0) special = true;
                 foreach (var stain in item.Stains) if (stain != 0) special = true;
-                stacks.Add(new(item.BaseItemId, kind, (int)item.InventorySlot, item.Quantity, item.IsHq, item.IsCollectable, special));
+                stacks.Add(new(item.BaseItemId, kind, (int)item.InventorySlot, item.Quantity, item.IsHq, item.IsCollectable, special, item.IsCollectable ? item.SpiritbondOrCollectability : (ushort)0));
             }
         }
         if (capacity < 140) throw new InvalidOperationException("Inventory containers are not fully loaded");
@@ -51,12 +51,22 @@ public static class InventoryReader
         foreach (uint questId in questIds.Distinct())
             if (quests.TryGetRow(questId, out var quest)) completed[questId] = Plugin.Unlocks.IsQuestCompleted(quest);
         var rewards = new Dictionary<uint, bool?>();
-        foreach (uint rewardId in facts.Values.SelectMany(f => f.ExchangeUses.Select(e => e.RewardId)).Distinct())
+        foreach (uint rewardId in catalog.CollectionItemIds.Concat(facts.Values.SelectMany(f => f.ExchangeUses.Select(e => e.RewardId))).Distinct())
             if (itemSheet.TryGetRow(rewardId, out var reward) && Plugin.Unlocks.IsItemUnlockable(reward))
                 rewards[rewardId] = Plugin.Unlocks.IsItemUnlocked(reward);
         if (id != Plugin.Player.ContentId || !Plugin.Client.IsLoggedIn) throw new InvalidOperationException("Character changed during scan");
         var activeQuests = ReadActiveQuests(out var questJobs);
-        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity, Plugin.Client.TerritoryType, completed, activeQuests, rewards, questJobs);
+        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity, Plugin.Client.TerritoryType, completed, activeQuests, rewards, questJobs, ReadActiveLeves());
+    }
+
+    private static unsafe Dictionary<uint, byte>? ReadActiveLeves()
+    {
+        var manager = FFXIVClientStructs.FFXIV.Client.Game.QuestManager.Instance();
+        if (manager == null) return null;
+        var active = new Dictionary<uint, byte>();
+        foreach (ref var leve in manager->LeveQuests)
+            if (leve.LeveId != 0) active[leve.LeveId] = leve.Sequence;
+        return active;
     }
 
     private static unsafe Dictionary<uint, byte>? ReadActiveQuests(out Dictionary<uint, byte> jobs)
