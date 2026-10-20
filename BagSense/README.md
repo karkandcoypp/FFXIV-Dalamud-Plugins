@@ -1,3 +1,13 @@
+## Item knowledge and access (0.6.0)
+
+Every current catalog record is audited; see [coverage-audit.json](coverage-audit.json) for exact scope and remaining unresolved IDs. "Linked" and "explained category" are distinct evidence levels, neither a promise that every server script is decoded. Unknown use is not a discard recommendation. Reacquisition from a gil merchant no longer defaults to a sale plan.
+
+Item cards show purpose, original description, wiki lookup, uses and acquisition. The graph includes complete indexed recipe inputs/results, gathering/fishing, ordinary shops, reverse special-shop exchanges, quest rewards and Teamcraft drop/duty/FATE/container facts. Expandable lists retain all rows. Quest cards explain level/current profession and AND/OR prerequisite status, with wiki links and navigation to prerequisite chains. Additional server conditions are named and explicitly unverified.
+
+COST_ITEM quest semantics and shared-map NPC placement fix Azurite Demiatma and related progression: 3 of each for Arcane Artistry, Gerolt hand-in, the Phantom Weapon shared unlock. This known one-time stock stays protected before acceptance until completion is confirmed.
+
+Source facts: [ffxiv-datamining](https://github.com/xivapi/ffxiv-datamining), [FFXIV Teamcraft data](https://github.com/ffxiv-teamcraft/ffxiv-teamcraft/tree/staging/libs/data/src/lib/json), [Azurite Demiatma wiki](https://ffxiv.consolegameswiki.com/wiki/Azurite_Demiatma), [Arcane Artistry wiki](https://ffxiv.consolegameswiki.com/wiki/Arcane_Artistry). Both upstream revisions are pinned in the database manifest on each daily collection. No player information is uploaded.
+
 ## Deliveries and collection decisions (0.5.0)
 
 BagSense indexes installed tradecraft/fishing Leve requirements and actual delivery NPCs. Accepted leves reserve the first hand-in plus all possible repeats. The item view shows exact per-delivery quantity, NQ/HQ guidance, matching stock, base EXP/gil and optional item reward cards. Custom Delivery and collectable shop entries provide quality requirements, rewards and NPC maps; a possible weekly item is never labelled as a confirmed current request. Actual stack collectability is considered.

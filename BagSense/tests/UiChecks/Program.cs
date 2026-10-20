@@ -34,6 +34,13 @@ internal static class Program
                 var manifest = JsonSerializer.Deserialize<CatalogManifest>(File.ReadAllText(Path.Combine(args[2], "manifest.json")))!;
                 catalog.ApplyDatabase(DatabaseCatalog.Decode(manifest, File.ReadAllBytes(Path.Combine(args[2], manifest.File))));
             }
+            var demiatma = catalog.Find(47744)!;
+            var storySnapshot = new InventorySnapshot(ulong.MaxValue, "Quest access preview / Пример условий", DateTimeOffset.UtcNow,
+                [new(47744, ContainerKind.Bag, 0, 3)], new Dictionary<uint, ItemFacts> { [47744] = demiatma }, new Dictionary<uint, string[]>(), true, 140,
+                CompletedQuests: new Dictionary<uint, bool> { [70855] = false, [70847] = false }, ActiveQuests: new Dictionary<uint, byte>(),
+                ActiveLeves: new Dictionary<uint, byte>(), CurrentJob: 19, CurrentLevel: 90);
+            foreach (bool ru in new[] { true, false }) Render(directory, ru, 0, 1240, 1000, 1, storySnapshot, 47744, catalog, game);
+            Render(directory, true, 0, 860, 570, 1, storySnapshot, 47744, catalog, game);
             var leveMaterial = game.Excel.GetSheet<Lumina.Excel.Sheets.CraftLeve>().Single(c => c.Leve.RowId == 36).Item[0].RowId;
             var mountItem = catalog.CollectionItemIds.First(id => catalog.Find(id) is { Reward.Kind: "Mount", Indisposable: false });
             var deliveryFacts = new[] { leveMaterial, mountItem, 17549u }.Select(id => catalog.Find(id)!).ToDictionary(i => i.Id);

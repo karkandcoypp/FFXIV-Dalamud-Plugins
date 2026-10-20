@@ -1,8 +1,8 @@
 """Build BagSense's public read-only catalog from a pinned ffxiv-datamining commit.
 
 ToDoQty is deliberately NEVER interpreted as a hand-in item count. Exact quantities
-are extracted only from an unambiguous number + the item's literal singular/plural
-in the quest's own journal text. The evidence is retained for inspection.
+are extracted from explicit literal requests, structured supply records, or a
+reviewed named cost/count family in the quest's own script metadata. The evidence is retained for inspection.
 """
 import argparse
 import concurrent.futures
@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 
 ROOT = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/'
-COLLECTOR_VERSION = 2
+COLLECTOR_VERSION = 7
 WORDS = dict(zip('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety'.split(),
                  [*range(1, 21), 30, 40, 50, 60, 70, 80, 90]))
 
@@ -39,7 +39,7 @@ def get(url):
 def requested_instruction(instruction, item_id, ordinary, event):
     if re.fullmatch(r'ITEM\d+', instruction):
         return item_id in event
-    return bool(re.fullmatch(r'(?:RITEM\d+|RITEM_ADD_\d+|QUEST_ITEM_?\d*)', instruction)) and (item_id in ordinary or item_id in event)
+    return bool(re.fullmatch(r'(?:RITEM\d+|RITEM_ADD_\d+|QUEST_ITEM_?\d*|COST_ITEM(?:_.*)?|QST_ITEM\d+|QST_PRODUCT_ITEM|QST_GATHERING_ITEM_(?:MIN|HRV|FSH))', instruction)) and (item_id in ordinary or item_id in event)
 
 
 def number(text):
@@ -72,7 +72,7 @@ def quantity(item, journal, requests_only=False):
     return (count, quality, matches[0][0]) if 0 < count <= 9999 else (None, 'unknown', '')
 
 
-def collect(output, cache, revision=None):
+def collect(output, cache, revision=None, teamcraft_revision=None):
     cache.mkdir(parents=True, exist_ok=True)
     if revision is None:
         revision = json.loads(get('https://api.github.com/repos/xivapi/ffxiv-datamining/commits/master'))['sha']
@@ -121,14 +121,14 @@ def collect(output, cache, revision=None):
             return None
         m = maps.get(val(level, 'Map'))
         npc = val(level, 'Object')
-        if not m or not names.get(npc) or not val(m, '#') or not val(level, 'Territory') or val(m, 'TerritoryType') != val(level, 'Territory') or not val(m, 'SizeFactor'):
+        if not m or not names.get(npc) or not val(m, '#') or not val(level, 'Territory') or not val(m, 'TerritoryType') or not val(m, 'SizeFactor'):
             return None
         def coord(world, offset):
             return round(41 / (val(m, 'SizeFactor') / 100) * (((float(world) + offset) * val(m, 'SizeFactor') / 100 + 1024) / 2048) + 1, 4)
         x, y = coord(level['X'], val(m, 'OffsetX')), coord(level['Z'], val(m, 'OffsetY'))
         if not (1 <= x < 100 and 1 <= y < 100):
             return None
-        return dict(NpcId=npc, Npc=names[npc], Zone=places.get(val(m, 'PlaceName'), ''), Territory=val(level, 'Territory'), Map=val(m, '#'), X=x, Y=y)
+        return dict(NpcId=npc, Npc=names[npc], Zone=places.get(val(m, 'PlaceName'), ''), Territory=val(m, 'TerritoryType'), Map=val(m, '#'), X=x, Y=y)
     # Literal aliases let explicit hand-in objectives discover items absent from RITEM.
     aliases = {}
     for item_id, item in all_items.items():
@@ -212,6 +212,14 @@ def collect(output, cache, revision=None):
             use = dict(QuestId=quest_id, ItemId=item_id, QuestName=q['Name'], Repeatable=q.get('IsRepeatable') == 'True',
                                Count=count, Quality=quality, Objective=objective, TodoIndex=index, CompleteSequence=sequence,
                                Contacts=locations, Evidence=evidence, Source=path, EventItem=item_id in event_items, Variants=[])
+            # Reviewed family: each COST_ITEM_ATMA_n is consumed in COST_USE_ATMA quantity.
+            params = {q.get(f'QuestParams[{i}].ScriptInstruction', ''): val(q, f'QuestParams[{i}].ScriptArg') for i in range(50)}
+            if any(re.fullmatch(r'COST_ITEM_ATMA_\d+', k) and v == item_id for k,v in params.items()) and 0 < params.get('COST_USE_ATMA', 0) < 100:
+                matches = [step for step in steps if re.match(r'^Deliver\b', step['Text'], re.I) and 'demiatma' in step['Text'].lower()]
+                if len(matches) == 1:
+                    step = matches[0]
+                    use.update(Count=params['COST_USE_ATMA'], Quality='any', Objective=step['Text'], TodoIndex=step['Index'],
+                               CompleteSequence=step['CompleteSequence'], Contacts=step['Contacts'], Evidence='COST_ITEM_ATMA_n + COST_USE_ATMA; explicit demiatma delivery objective')
             structured = [s for s in supplies.get(val(q, 'QuestClassJobSupply'), []) if val(s, 'Item') == item_id]
             if structured:
                 use['Count'] = max(val(s, 'AmountRequired') for s in structured)
@@ -244,26 +252,76 @@ def collect(output, cache, revision=None):
         for records, quest in pool.map(quest_data, quests):
             needs.extend(records)
             quest_catalog.append(quest)
+    # Additional source facts from a pinned Teamcraft revision; no player data is sent.
+    tc_revision = teamcraft_revision or json.loads(get('https://api.github.com/repos/ffxiv-teamcraft/ffxiv-teamcraft/commits/staging'))['sha']
+    if not re.fullmatch('[0-9a-f]{40}', tc_revision): raise ValueError('Expected pinned Teamcraft revision')
+    tc_root = 'https://raw.githubusercontent.com/ffxiv-teamcraft/ffxiv-teamcraft/' + tc_revision + '/libs/data/src/lib/json/'
+    def tc_sheet(name):
+        target = cache / 'teamcraft' / tc_revision / (name + '.json')
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(get(tc_root + name + '.json'))
+        return json.loads(target.read_text(encoding='utf-8'))
+    tc_names = ['drop-sources','instance-sources','fate-sources','loot-sources','mobs','instances','fates','used-in-quests']
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        tc = dict(zip(tc_names, pool.map(tc_sheet, tc_names)))
+    links = []
+    def source_link(item_id, kind, ref_id, name, detail=''):
+        if item_id in items and name:
+            links.append(dict(ItemId=item_id, Kind=kind, Name=name, Id=ref_id, Detail=detail))
+    for table, kind, names_table in [('drop-sources','Drop','mobs'),('instance-sources','Duty','instances'),('fate-sources','Fate','fates')]:
+        for item_id, references in tc[table].items():
+            for ref_id in references:
+                entry = tc[names_table].get(str(ref_id), {})
+                name = entry.get('name', entry).get('en', '')
+                source_link(int(item_id),kind,ref_id,name)
+    for item_id, containers in tc['loot-sources'].items():
+        for container in containers:
+            if container in items:
+                source_link(int(item_id),'Container',container,items[container]['Name'])
+                source_link(container,'Contains',int(item_id),items.get(int(item_id),{}).get('Name',''))
+    quest_rows = {val(q,'#'):q for q,_ in quests}
+    existing = {(n['QuestId'],n['ItemId']) for n in needs}
+    for item_id, references in tc['used-in-quests'].items():
+        item_id=int(item_id)
+        if item_id not in items: continue
+        for quest_id in references:
+            if quest_id not in quest_rows or (quest_id,item_id) in existing: continue
+            q=quest_rows[quest_id]
+            needs.append(dict(QuestId=quest_id,ItemId=item_id,QuestName=q['Name'],Repeatable=q.get('IsRepeatable')=='True',
+                              Count=None,Quality='unknown',Objective='',TodoIndex=None,CompleteSequence=None,Contacts=[],
+                              Evidence='Teamcraft input association; quantity and hand-in objective unresolved',Source=tc_revision,EventItem=False,Variants=[]))
+            existing.add((quest_id,item_id))
+    for item_id in range(47744,47750):
+        if item_id in items and items[item_id]['Name'].endswith('Demiatma'):
+            source_link(item_id,'Fate',0,"Occult Crescent: South Horn",'FATE / Critical Encounter; Arcane Artistry progression')
+    source_link(47744,'Fate',0,'Urqopacha','FATE; Arcane Artistry progression')
+    for quest in quest_catalog:
+        quest['ItemIds'] = sorted(set(quest['ItemIds']) | {n['ItemId'] for n in needs if n['QuestId'] == quest['QuestId']})
     catalog_items = [dict(Id=i, Name=r['Name'], Icon=val(r, 'Icon'), Category=categories.get(val(r, 'ItemUICategory'), ''), Description=r.get('Description', '')) for i, r in sorted(items.items())]
     catalog_items.extend(dict(Id=i, Name=r['Name'], Icon=val(r, 'Icon'), Category='Key item', Description='', EventItem=True) for i,r in sorted(event_items.items()))
     if len(catalog_items) < 40000 or len(needs) < 500 or len(quest_catalog) < 5000:
         raise ValueError('Incomplete catalog; refusing publication')
+    if len(links) < 10000 or any(l['ItemId'] not in items or not l['Name'] for l in links):
+        raise ValueError('Incomplete acquisition graph; refusing publication')
     output.mkdir(parents=True, exist_ok=True)
     previous = json.loads((output / 'manifest.json').read_text(encoding='utf-8')) if (output / 'manifest.json').exists() else {}
     if previous and len(catalog_items) < previous['ItemCount'] * .99:
         raise ValueError('Unexpected item count reduction; refusing publication')
+    if previous.get('SourceCount') and len(links) < previous['SourceCount'] * .99:
+        raise ValueError('Unexpected acquisition graph shrinkage; refusing publication')
     if previous.get('QuestCount') and len(quest_catalog) < previous['QuestCount'] * .99:
         raise ValueError('Unexpected quest count reduction; refusing publication')
-    generated = previous.get('GeneratedAt') if previous.get('SourceCommit') == revision and previous.get('CollectorVersion') == COLLECTOR_VERSION else datetime.now(timezone.utc).isoformat()
+    generated = previous.get('GeneratedAt') if previous.get('SourceCommit') == revision and previous.get('CollectorVersion') == COLLECTOR_VERSION and previous.get('TeamcraftCommit') == tc_revision else datetime.now(timezone.utc).isoformat()
     document = dict(Schema=1, GeneratedAt=generated, SourceCommit=revision, Items=catalog_items, Needs=sorted(needs, key=lambda r: (r['QuestId'], r['ItemId'])),
-                    Quests=sorted(quest_catalog, key=lambda q:q['QuestId']))
+                    Quests=sorted(quest_catalog, key=lambda q:q['QuestId']), Sources=links, TeamcraftCommit=tc_revision)
     data = gzip.compress(json.dumps(document, ensure_ascii=False, separators=(',', ':')).encode(), mtime=0)
     digest = hashlib.sha256(data).hexdigest()
     # Content-addressed files prevent manifest/payload races through GitHub's CDN.
     asset = f'catalog-{digest[:16]}.json.gz'
     (output / asset).write_bytes(data)
     manifest = dict(Schema=1, CollectorVersion=COLLECTOR_VERSION, GeneratedAt=generated, SourceCommit=revision, File=asset, Sha256=digest, Bytes=len(data),
-                    ItemCount=len(catalog_items), QuestCount=len(quest_catalog), QuestItemCount=len(needs), ExactCount=sum(n['Count'] is not None for n in needs))
+                    ItemCount=len(catalog_items), QuestCount=len(quest_catalog), QuestItemCount=len(needs), ExactCount=sum(n['Count'] is not None for n in needs), SourceCount=len(links), TeamcraftCommit=tc_revision)
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     # Keep the current and immediately previous content-addressed payload for CDN readers.
     keep = {asset, previous.get('File')}
@@ -278,5 +336,6 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--cache', type=Path, required=True)
     parser.add_argument('--revision')
+    parser.add_argument('--teamcraft-revision')
     args = parser.parse_args()
-    collect(args.output, args.cache, args.revision)
+    collect(args.output, args.cache, args.revision, args.teamcraft_revision)

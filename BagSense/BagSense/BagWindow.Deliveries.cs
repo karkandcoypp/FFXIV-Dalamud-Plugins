@@ -9,6 +9,12 @@ public sealed partial class BagWindow
         Heading("РЕШЕНИЕ ПО ПРЕДМЕТУ", "ITEM DECISION");
         if (!advice.CanPlan || advice.Available == 0)
             ImGui.TextColored(Gold, T("СОХРАНИТЬ · предмет защищён", "KEEP · protected item"));
+        else if (QuestPolicy.SharedUnlockFinished(snapshot, item.Id))
+        {
+            ImGui.TextColored(Teal, T($"ОБЩИЙ ЭТАП ЗАВЕРШЁН · можно убрать до {advice.Available} шт.", $"SHARED UNLOCK COMPLETE · up to {advice.Available} can be removed"));
+            ImGui.TextWrapped(T("Этот одноразовый запас для открытия Phantom Weapons больше не требуется. Личные резервы исключены из указанного количества.",
+                "This one-time Phantom Weapon unlock stock is no longer required. Personal reserves are excluded from the shown quantity."));
+        }
         else if (learned == false)
             ImGui.TextColored(Teal, T("СНАЧАЛА ИСПОЛЬЗОВАТЬ · ещё не получено", "USE FIRST · not yet collected"));
         else if (learned == true)

@@ -1,3 +1,21 @@
+# BagSense 0.6.0 — item knowledge, quest access and catalog audit
+
+- Audited every one of 54,411 catalog records. 15,639 have linked use relationships, 36,195 have a category/description-based role, and 2,577 still need detailed research. The latter are explicitly unresolved, not declared safe to discard. Full summary and remaining IDs are in coverage-audit.json.
+- Acquisition links now include crafting (with ingredient counts), gathering, fishing/spearfishing, reverse special-shop trades, quest rewards and 20,630 Teamcraft enemy/duty/FATE/container relationships. Possible drops are not promised guaranteed rewards.
+- All recipe uses and merchant listings are retained; former silent caps are removed. Recipe results open in the item database; source lists can expand to all entries.
+- Food, medicine, materia, repair/glamour items, bait, housing, gardening, currency, event items, outfits and legacy records receive role-specific RU/EN explanations. Game descriptions and wiki lookup are visible near the top.
+- Wiki links on items, quests and prerequisite quests. Missing wiki titles fall back to wiki search. Quest access explains current level/job and AND/OR prerequisites; special reputation, GC, housing, duty, time and script conditions remain explicitly unverified when player state is not read.
+- COST_ITEM input families are indexed. Azurite and the other five demiatma link to Arcane Artistry, 3 each, the exact Gerolt hand-in objective and map. The shared one-time unlock is reserved even before accepting the quest, until completion is known.
+- Fixed NPC placement on shared maps/instance variants (including Phantom Village) using the map's canonical territory instead of rejecting a valid Level placement.
+- Buying an item again is no longer treated as automatic justification to sell it. Protections and personal reserves remain authoritative.
+- Daily collector updates pin both ffxiv-datamining and Teamcraft revisions. Provenance, hash validation, offline cache, goals and plans remain compatible.
+
+Обновись через `/xlplugins`, открой `/bagsense`. У Azurite Demiatma теперь показаны Arcane Artistry, 3 шт., Gerolt на карте, условия доступа и вики. Подробная связь применения пока не подтверждена для 2,577 специальных записей; это ограничение видно в карточке, а не скрыто советом продать.
+
+Local verification does not replace live FFXIV quest transitions, map clicks or native player-state testing. Known prerequisite checks do not claim all server-side acceptance conditions are solved.
+
+---
+
 # BagSense 0.5.0 — deliveries and collection decisions
 
 - 1,240 named tradecraft/fishing CraftLeve records from installed game data: exact quantity per delivery, optional repeat count, level/job and actual hand-in NPC with map button.

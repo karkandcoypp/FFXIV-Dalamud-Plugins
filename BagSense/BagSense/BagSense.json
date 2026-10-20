@@ -2,11 +2,16 @@
   "Author": "Carcosa Lyuman",
   "Name": "BagSense",
   "InternalName": "BagSense",
-  "AssemblyVersion": "0.5.0.0",
+  "AssemblyVersion": "0.6.0.0",
   "Punchline": "Remember why you keep items. Make an explained cleanup plan.",
-  "Description": "Understand every exchange reward with icons, collection types, descriptions and mount artwork. Complete journal-quest catalog, objective NPC maps, profession hand-in requirements and active-quest reservations. Auto-updating item database, goals and notes. English / Русский. Open /bagsense.",
+  "Description": "Understand item purposes, acquisition sources, crafting and exchange links, quest requirements and access blockers. Wiki links, NPC maps, Leve reservations, explained rewards and collection ownership. Auto-updating item database. English / Русский. Open /bagsense.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
   "DalamudApiLevel": 15,
-  "Tags": ["inventory", "goals", "planning", "qol"]
+  "Tags": [
+    "inventory",
+    "goals",
+    "planning",
+    "qol"
+  ]
 }

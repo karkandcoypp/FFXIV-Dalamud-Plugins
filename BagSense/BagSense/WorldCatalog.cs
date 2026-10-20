@@ -30,9 +30,9 @@ public sealed class WorldCatalog
         foreach (var level in excel.GetSheet<Level>().Where(l => l.Type == 8 && l.Object.RowId != 0))
         {
             if (!names.TryGetRow(level.Object.RowId, out var name) || name.Singular.IsEmpty
-                || !maps.TryGetRow(level.Map.RowId, out var map) || map.SizeFactor == 0 || map.TerritoryType.RowId != level.Territory.RowId) continue;
+                || !maps.TryGetRow(level.Map.RowId, out var map) || map.SizeFactor == 0 || map.TerritoryType.RowId == 0) continue;
             float Coordinate(float world, short offset) => (float)(41 / (map.SizeFactor / 100d) * (((world + offset) * map.SizeFactor / 100d + 1024) / 2048) + 1);
-            var location = new NpcLocation(level.Object.RowId, name.Singular.ToString(), map.PlaceName.Value.Name.ToString(), level.Territory.RowId, map.RowId,
+            var location = new NpcLocation(level.Object.RowId, name.Singular.ToString(), map.PlaceName.Value.Name.ToString(), map.TerritoryType.RowId, map.RowId,
                 Coordinate(level.X, map.OffsetX), Coordinate(level.Z, map.OffsetY));
             if (!location.CanMap) continue;
             if (!locations.TryGetValue(location.NpcId, out var list)) locations[location.NpcId] = list = new();
@@ -128,21 +128,26 @@ public sealed class WorldCatalog
 
         foreach (var quest in quests.Where(q => q.RowId != 0 && !q.Name.IsEmpty && q.JournalGenre.RowId != 0))
         {
-            void AddQuestItem(uint id, bool reward)
+            void AddQuestItem(uint id, bool reward, string instruction = "")
             {
                 if (id == 0) return;
                 bool issuer = reward || quest.TargetEnd.RowId == 0 || !Positions.ContainsKey(quest.TargetEnd.RowId);
                 uint npc = issuer ? quest.IssuerStart.RowId : quest.TargetEnd.RowId;
                 var use = new QuestUse(quest.RowId, quest.Name.ToString(), reward, quest.IsRepeatable, Positions.GetValueOrDefault(npc) ?? [], issuer);
+                if (!reward && instruction.StartsWith("COST_ITEM_ATMA_", StringComparison.Ordinal))
+                {
+                    uint count = quest.QuestParams.FirstOrDefault(p => p.ScriptInstruction.ToString() == "COST_USE_ATMA").ScriptArg;
+                    if (count is > 0 and < 100) use = use with { RequiredCount = (int)count, Quality = "any", Evidence = "COST_ITEM_ATMA_n + COST_USE_ATMA", Source = "installed Quest sheet" };
+                }
                 if (!QuestItems.TryGetValue(id, out var list)) QuestItems[id] = list = new();
                 if (!list.Any(q => q.QuestId == quest.RowId && q.Reward == reward)) list.Add(use);
             }
             // RITEM0, RITEM1... identify ordinary requested items. ITEM0 points to event items in a separate ID space.
             foreach (var parameter in quest.QuestParams)
-                if (IsRequestedItemInstruction(parameter.ScriptInstruction.ToString())) AddQuestItem(parameter.ScriptArg, false);
+                if (IsRequestedItemInstruction(parameter.ScriptInstruction.ToString())) AddQuestItem(parameter.ScriptArg, false, parameter.ScriptInstruction.ToString());
             foreach (var reward in quest.Reward.Where(r => r.RowId != 0)) AddQuestItem(reward.RowId, true);
             foreach (var reward in quest.OptionalItemReward.Where(r => r.RowId != 0)) AddQuestItem(reward.RowId, true);
         }
     }
-    public static bool IsRequestedItemInstruction(string instruction) => Regex.IsMatch(instruction, "^RITEM[0-9]+$", RegexOptions.CultureInvariant);
+    public static bool IsRequestedItemInstruction(string instruction) => Regex.IsMatch(instruction, "^(RITEM[0-9]+|RITEM_ADD_[0-9]+|QUEST_ITEM_?[0-9]*|COST_ITEM(_.*)?|QST_ITEM[0-9]+|QST_PRODUCT_ITEM|QST_GATHERING_ITEM_(MIN|HRV|FSH))$", RegexOptions.CultureInvariant);
 }

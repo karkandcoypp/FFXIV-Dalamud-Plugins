@@ -23,6 +23,10 @@ internal static class DatabaseChecks
             throw new Exception(message);
         }
         Check(document.Items.Length > 50000, "Complete catalog contains over fifty thousand named items");
+        Check(document.Sources is { Length: > 20000 }, "Source graph includes enemy, duty, FATE and container acquisition");
+        var arcane = document.Needs.Single(n => n.QuestId == 70855 && n.ItemId == 47744);
+        Check(arcane.Count == 3 && arcane.TodoIndex == 2 && arcane.Contacts.Any(c => c.Npc == "Gerolt" && c.CanMap), "Shared-map Gerolt and exact demiatma hand-in survive published catalog decoding");
+        Check(document.Quests!.Single(q => q.QuestId == 70855).ItemIds.Contains(47744u), "Quest browser retains demiatma input relationships");
         var copper = document.Needs.Single(n => n.QuestId == 66135 && n.ItemId == 5106);
         Check(copper.Count == 10 && copper.Quality == "any", "My First Pickaxe requires ten Copper Ore, not ToDoQty=1");
         Check(copper.TodoIndex == 0 && copper.CompleteSequence == 255 && copper.Objective.Contains("Deliver"), "Copper hand-in objective and final sequence retained");

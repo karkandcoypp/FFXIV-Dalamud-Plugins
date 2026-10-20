@@ -18,6 +18,7 @@ public sealed partial class ItemCatalog
     private readonly Dictionary<uint, ItemFacts> cache = new();
     private Dictionary<uint, CatalogItem> remoteItems = new();
     private Dictionary<uint, CatalogNeed[]> remoteNeeds = new();
+    private Dictionary<uint, ItemSource[]> remoteSources = new();
     public CatalogDocument? Database { get; private set; }
     public uint[] CollectionItemIds { get; }
     public int ItemCount => Math.Max(items.Count, remoteItems.Count);
@@ -25,6 +26,8 @@ public sealed partial class ItemCatalog
     {
         remoteItems = database.Items.ToDictionary(i => i.Id);
         remoteNeeds = database.Needs.GroupBy(n => n.ItemId).ToDictionary(g => g.Key, g => g.ToArray());
+        remoteSources = (database.Sources ?? []).GroupBy(s => s.ItemId).ToDictionary(g => g.Key,
+            g => g.Select(s => new ItemSource(s.Kind, s.Name, s.Id, s.Detail)).Distinct().ToArray());
         Database = database;
         cache.Clear();
     }
@@ -50,7 +53,7 @@ public sealed partial class ItemCatalog
                 uint id = recipe.Ingredient[i].RowId;
                 if (id == 0 || recipe.AmountIngredient[i] == 0) continue;
                 if (!recipes.TryGetValue(id, out var list)) recipes[id] = list = new();
-                if (list.Count < 8 && !list.Contains(result)) list.Add(result);
+                if (!list.Contains(result)) list.Add(result);
             }
         }
         var shopNames = excel.GetSheet<GilShop>(Language.English);
@@ -68,6 +71,7 @@ public sealed partial class ItemCatalog
                 if (!list.Any(o => o.ShopId == offer.ShopId && o.Price == offer.Price && o.Conditional == offer.Conditional)) list.Add(offer);
             }
         }
+        IndexKnowledge(excel);
         IndexDeliveries(excel);
         var quests = excel.GetSheet<Quest>(Language.English);
         var achievements = excel.GetSheet<Achievement>(Language.English);
@@ -76,7 +80,12 @@ public sealed partial class ItemCatalog
         foreach (var shop in excel.GetSheet<SpecialShop>(Language.English))
         {
             // Other currency encodings contain token indices, not item IDs.
-            if (shop.UseCurrencyType is not (2 or 4)) continue;
+            if (shop.UseCurrencyType is not (2 or 4))
+            {
+                foreach (var reward in shop.Item.SelectMany(e => e.ReceiveItems).Where(r => r.Item.RowId != 0 && r.ReceiveCount > 0))
+                    Source(reward.Item.RowId, new("SpecialShop", shop.Name.ToString(), shop.RowId, "Unresolved currency encoding"));
+                continue;
+            }
             foreach (var entry in shop.Item)
             {
                 var costs = entry.ItemCosts.Where(c => c.CurrencyCost > 0).Select(c =>
@@ -109,6 +118,11 @@ public sealed partial class ItemCatalog
                 }
             }
         }
+        foreach (var offer in exchanges.Values.SelectMany(e => e).DistinctBy(e => e.Key))
+        {
+            if (!acquisitionTrades.TryGetValue(offer.RewardId, out var list)) acquisitionTrades[offer.RewardId] = list = new();
+            list.Add(offer);
+        }
     }
 
     public ItemFacts? Find(uint id)
@@ -116,12 +130,13 @@ public sealed partial class ItemCatalog
         if (cache.TryGetValue(id, out var cached)) return cached;
         if (!items.TryGetRow(id, out var row) || row.Name.IsEmpty)
             return remoteItems.TryGetValue(id, out var remote) ? new(id, remote.Name, remote.Icon, remote.Category, remote.Description,
-                Quests: QuestUses(id)) : null;
+                Indisposable: remote.EventItem, Quests: QuestUses(id), Role: remote.EventItem ? "KeyItem" : "Unresolved") : null;
         return cache[id] = new(id, row.Name.ToString(), row.Icon, row.ItemUICategory.Value.Name.ToString(), row.Description.ToString(),
             row.EquipSlotCategory.RowId != 0, row.IsIndisposable, !row.IsUntradable, row.PriceLow, row.Desynth > 0,
-            Offers: shops.GetValueOrDefault(id)?.Distinct().OrderBy(o => o.Conditional).ThenBy(o => o.Price).Take(8).ToArray(),
+            Offers: shops.GetValueOrDefault(id)?.Distinct().OrderBy(o => o.Conditional).ThenBy(o => o.Price).ToArray(),
             Recipes: recipes.GetValueOrDefault(id)?.ToArray(), Exchanges: exchanges.GetValueOrDefault(id)?.ToArray(),
-            Quests: QuestUses(id), Merchants: World.Merchants, Reward: Reward(row), Deliveries: deliveries.GetValueOrDefault(id)?.ToArray());
+            Quests: QuestUses(id), Merchants: World.Merchants, Reward: Reward(row), Deliveries: deliveries.GetValueOrDefault(id)?.ToArray(), Role: Role(row), Sources: (sources.GetValueOrDefault(id) ?? []).Concat(remoteSources.GetValueOrDefault(id) ?? []).Distinct().ToArray(),
+            RecipeLinks: recipeLinks.GetValueOrDefault(id)?.ToArray(), Acquisitions: acquisitionTrades.GetValueOrDefault(id)?.ToArray());
     }
 
     private RewardDetails Reward(Item item)

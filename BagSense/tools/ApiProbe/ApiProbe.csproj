@@ -3,6 +3,7 @@
   <ItemGroup>
     <Compile Include="../../BagSense/Models.cs" Link="Models.cs" />
     <Compile Include="../../BagSense/ItemCatalog.Deliveries.cs" Link="ItemCatalog.Deliveries.cs" />
+    <Compile Include="../../BagSense/ItemCatalog.Knowledge.cs" Link="ItemCatalog.Knowledge.cs" />
     <Compile Include="../../BagSense/ItemCatalog.cs" Link="ItemCatalog.cs" />
     <Compile Include="../../BagSense/WorldCatalog.cs" Link="WorldCatalog.cs" />
     <Compile Include="../../BagSense/DestinationPolicy.cs" Link="DestinationPolicy.cs" />

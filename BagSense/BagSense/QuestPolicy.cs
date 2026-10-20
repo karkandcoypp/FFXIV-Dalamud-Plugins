@@ -3,8 +3,9 @@ namespace BagSense;
 public static class QuestPolicy
 {
     public static bool Relevant(InventorySnapshot snapshot, QuestUse quest) => !quest.Reward
-        && (snapshot.ActiveQuests == null ? quest.Repeatable || snapshot.QuestCompleted(quest.QuestId) != true
-            : snapshot.ActiveQuests.ContainsKey(quest.QuestId));
+        && ((quest.Evidence.StartsWith("COST_ITEM_ATMA_", StringComparison.Ordinal) && snapshot.QuestCompleted(quest.QuestId) != true)
+            || (snapshot.ActiveQuests == null ? quest.Repeatable || snapshot.QuestCompleted(quest.QuestId) != true
+            : snapshot.ActiveQuests.ContainsKey(quest.QuestId)));
 
     public static int Required(InventorySnapshot snapshot, uint itemId)
     {
@@ -36,6 +37,11 @@ public static class QuestPolicy
 
     public static int Reservation(InventorySnapshot snapshot, CharacterData data, uint itemId) =>
         (int)Math.Min(int.MaxValue, (long)Required(snapshot, itemId) + CleanupPolicy.Reservation(data, itemId));
+
+    public static bool SharedUnlockFinished(InventorySnapshot snapshot, uint id) => snapshot.Items.TryGetValue(id, out var item)
+        && item.QuestUses.Any(q => !q.Reward && q.Evidence.StartsWith("COST_ITEM_ATMA_", StringComparison.Ordinal))
+        && item.QuestUses.Where(q => !q.Reward).All(q => !q.Repeatable && snapshot.QuestCompleted(q.QuestId) == true)
+        && item.ExchangeUses.Length == 0 && item.RecipeUses.Length == 0 && item.DeliveryUses.Length == 0;
 
     public static int ReservableHq(InventorySnapshot snapshot, uint itemId) => snapshot.Stacks.Where(s => s.ItemId == itemId && s.Hq).Sum(s => s.Quantity);
 }

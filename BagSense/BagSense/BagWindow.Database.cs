@@ -24,6 +24,8 @@ public sealed partial class BagWindow
         ImGui.BeginDisabled(plugin.DatabaseBusy || staticPreview);
         if (ImGui.Button(T(plugin.DatabaseBusy ? "Обновляется…" : "Проверить обновления базы", plugin.DatabaseBusy ? "Updating…" : "Check database updates") + "###DatabaseRefresh")) plugin.RefreshDatabase();
         ImGui.EndDisabled();
+        if (database?.Sources is { } sources) ImGui.TextWrapped(T($"Дополнительно: {sources.Length:N0} связей получения из Teamcraft. Полнота описаний различается; отсутствие связи не разрешает удаление.",
+            $"Also: {sources.Length:N0} Teamcraft acquisition links. Coverage varies; missing links do not authorize disposal."));
         ImGui.TextDisabled(T("Автопроверка: при загрузке и раз в сутки. Данные персонажа не отправляются.", "Auto-check: on load and daily. Character data is not uploaded."));
         ImGui.SetNextItemWidth(340 * S);
         if (InputHint("###DatabaseSearch", T("Название предмета / ID", "Item name / ID"), ref databaseQuery, 128)) databasePage = 0;
@@ -46,12 +48,14 @@ public sealed partial class BagWindow
         {
             ImGui.TextColored(Teal, item.Name);
             ImGui.TextDisabled($"ID {item.Id} · {item.Category}");
-            ImGui.TextWrapped(item.Description);
+            ImGui.TextWrapped(L.Purpose(item));
+            DrawIdentity(item);
             if (plugin.Snapshot is { } snapshot)
             {
                 if (item.Reward is { Kind: not "Item" }) DrawRewardCard(item, 1, snapshot);
                 ImGui.TextWrapped(T($"В сумках: {snapshot.Quantity(item.Id)}", $"In bags: {snapshot.Quantity(item.Id)}"));
                 if (snapshot.Quantity(item.Id) > 0 && ImGui.Button(T("Открыть в инвентаре", "Open in inventory") + "###DbInventory")) Select(item.Id);
+                DrawAcquisition(item, snapshot);
                 DrawDeliveries(item, snapshot);
                 if (item.QuestUses.Any(q => !q.Reward)) DrawQuestUses(item, snapshot, false);
                 else ImGui.TextWrapped(T("Квестовые требования не найдены. Это не доказательство, что предмет не нужен.",

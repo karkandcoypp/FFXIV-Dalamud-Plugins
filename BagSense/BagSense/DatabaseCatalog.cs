@@ -12,8 +12,9 @@ public sealed record CatalogNeed(uint QuestId, uint ItemId, string QuestName, bo
     bool EventItem = false, QuestVariant[]? Variants = null);
 public sealed record CatalogQuestStep(int Index, int CompleteSequence, string Text, NpcLocation[] Contacts);
 public sealed record CatalogQuest(uint QuestId, string Name, bool Repeatable, CatalogQuestStep[] Steps, uint[] ItemIds, string Source);
+public sealed record CatalogSource(uint ItemId, string Kind, string Name, uint Id = 0, string Detail = "");
 public sealed record CatalogDocument(int Schema, DateTimeOffset GeneratedAt, string SourceCommit, CatalogItem[] Items, CatalogNeed[] Needs,
-    CatalogQuest[]? Quests = null);
+    CatalogQuest[]? Quests = null, CatalogSource[]? Sources = null, string TeamcraftCommit = "");
 public sealed record CatalogManifest(int Schema, DateTimeOffset GeneratedAt, string SourceCommit, string File, string Sha256,
     int Bytes, int ItemCount, int QuestItemCount, int ExactCount);
 public sealed record DatabaseResult(CatalogDocument? Document, bool Offline, string Error);
@@ -57,6 +58,9 @@ public static class DatabaseCatalog
             || quests.Any(q => q.QuestId < 65536 || string.IsNullOrWhiteSpace(q.Name) || q.Steps == null || q.ItemIds == null
                 || q.ItemIds.Any(i => !ids.Contains(i)) || q.Steps.Any(s => s.Index is < 0 or > 23 || s.CompleteSequence is < 0 or > 255
                     || s.Contacts == null || s.Contacts.Any(l => !l.CanMap))))) throw new InvalidDataException("Invalid quest catalog");
+        if (document.Sources is { } sources && (sources.Length > 200000 || sources.Any(s => !ids.Contains(s.ItemId)
+            || string.IsNullOrWhiteSpace(s.Name) || s.Name.Length > 512 || s.Detail.Length > 2048
+            || s.Kind is not ("Drop" or "Duty" or "Fate" or "Container" or "Contains")))) throw new InvalidDataException("Invalid source graph");
         return document;
     }
 

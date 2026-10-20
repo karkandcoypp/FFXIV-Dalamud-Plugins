@@ -46,6 +46,7 @@ public sealed partial class BagWindow
         if (quest != null)
         {
             ImGui.TextColored(Teal, quest.Name);
+            DrawQuestAccess(snapshot, quest.QuestId);
             bool active = snapshot.ActiveQuests?.ContainsKey(quest.QuestId) == true;
             ImGui.TextWrapped(active ? T("Активен · нужные предметы защищены", "Active · required items are protected")
                 : T("Сейчас не активен. Для будущего прохождения создай личную цель.", "Not active. Create a personal goal if you are preparing for this quest."));

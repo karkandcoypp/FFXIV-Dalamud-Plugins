@@ -1,3 +1,18 @@
+# BagSense 0.6.0 validation
+
+21 October 2026, Windows, .NET 10, installed Dalamud API 15.
+
+- Full pass over every one of 54,411 catalog items; complete local per-item report in artifacts/bagsense-audit-v6.json, committed scope/remaining IDs in coverage-audit.json. Exact-linked uses (15,639), category explanations (36,195) and unresolved use (2,577) are not conflated. 37,474 records have an indexed acquisition path.
+- 135 policy checks include pre-acceptance demiatma protection, completed one-time release, level/job/prerequisite explanations, OR alternatives, unknown state, accepted quests and merchant-source sale safeguards.
+- 14 Python collector checks; published catalog decoding additionally checks demiatma quantity=3, objective=2, mapped Gerolt and quest-browser relationships. Existing cache, hash, path and timeout checks remain required.
+- 37 installed-data and 11 persistence checks; complete catalog audit asserts Arcane Artistry level 100, Unfamiliar Territory, Gerolt and Urqopacha source. Production catalog construction is exercised, not mocked data-index code.
+- 47 production UI scenarios in RU/EN, with actual game icons. Added Azurite Demiatma at default/minimum size, missing prerequisite and low current-job level. Fixtures are sample character states, not captured live values.
+- Live FFXIV map clicks, native completion/job queries and quest transitions remain unverified. Additional server conditions are explicitly unverified in the interface. No claim of perfect item-use or quest-script coverage.
+
+Database: ffxiv-datamining 44948e4cda5846eab0baa9872122a888fcc4f1b1; Teamcraft f2918cca2b159d05f569e24b5828b5af38444d0a. 4,800 item/quest links, 693 confirmed quantities, 20,630 additional acquisition links. Collector pins current upstream commits on each daily run and rejects significant source shrinkage.
+
+---
+
 # BagSense 0.5.0 validation
 
 21 October 2026, Windows, .NET 10, installed Dalamud API 15.

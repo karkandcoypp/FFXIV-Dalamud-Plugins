@@ -40,11 +40,17 @@ public sealed record ExchangeUse(string Shop, string Reward, uint Cost, uint Sho
     public string Key => $"{ShopId}:{RewardId}:{RewardCount}:" + string.Join(',', FullCosts.Select(c => $"{c.ItemId}:{c.Count}:{c.Collectability}"))
         + "|" + string.Join(',', Conditions.OrderBy(c => c.Kind).ThenBy(c => c.Id).Select(c => $"{c.Kind}:{c.Id}"));
 }
+public sealed record ItemSource(string Kind, string Name, uint Id = 0, string Detail = "");
+public sealed record RecipeLink(uint RecipeId, uint ResultId, string Result, int Required, int Yield, string Job, int Level);
+public sealed record QuestGate(uint Id, string Name, int Level, uint[] Jobs, RouteRequirement[] Previous, byte Join, string[] Additional, string JobLabel = "");
 public sealed record ItemFacts(uint Id, string Name, uint Icon, string Category, string Description,
     bool Equipment = false, bool Indisposable = false, bool Marketable = false, uint SellPrice = 0,
     bool Desynth = false, bool? Unlocked = null, BuyOffer[]? Offers = null, string[]? Recipes = null,
-    ExchangeUse[]? Exchanges = null, QuestUse[]? Quests = null, NpcLocation[]? Merchants = null, RewardDetails? Reward = null, DeliveryUse[]? Deliveries = null)
+    ExchangeUse[]? Exchanges = null, QuestUse[]? Quests = null, NpcLocation[]? Merchants = null, RewardDetails? Reward = null, DeliveryUse[]? Deliveries = null, string Role = "", ItemSource[]? Sources = null, RecipeLink[]? RecipeLinks = null, ExchangeUse[]? Acquisitions = null)
 {
+    public ItemSource[] AcquisitionSources => Sources ?? [];
+    public RecipeLink[] CraftingLinks => RecipeLinks ?? [];
+    public ExchangeUse[] AcquisitionTrades => Acquisitions ?? [];
     public DeliveryUse[] DeliveryUses => Deliveries ?? [];
     public BuyOffer[] BuyOffers => Offers ?? [];
     public string[] RecipeUses => Recipes ?? [];
@@ -98,7 +104,7 @@ public sealed record InventorySnapshot(ulong CharacterId, string CharacterName, 
     IReadOnlyDictionary<uint, string[]> Gearsets, bool GearsetsKnown, int BagCapacity,
     uint TerritoryId = 0, IReadOnlyDictionary<uint, bool>? CompletedQuests = null,
     IReadOnlyDictionary<uint, byte>? ActiveQuests = null, IReadOnlyDictionary<uint, bool?>? RewardUnlocks = null,
-    IReadOnlyDictionary<uint, byte>? QuestJobs = null, IReadOnlyDictionary<uint, byte>? ActiveLeves = null)
+    IReadOnlyDictionary<uint, byte>? QuestJobs = null, IReadOnlyDictionary<uint, byte>? ActiveLeves = null, uint CurrentJob = 0, int CurrentLevel = 0)
 {
     public int Quantity(uint id) => Stacks.Where(s => s.ItemId == id).Sum(s => s.Quantity);
     public int BagSlots => Stacks.Count(s => s.Container == ContainerKind.Bag);
@@ -157,7 +163,7 @@ public static class CleanupPolicy
             return Result(AdviceKind.Vendor, Reason.GilToken, true, PlanAction.Vendor);
         // A merchant listing is evidence of a reacquisition route, not a statement that the item is useless.
         if (item.BuyOffers.Any(o => !o.Conditional) && item.SellPrice > 0)
-            return Result(AdviceKind.Vendor, Reason.VendorSource, true, PlanAction.Vendor);
+            return Result(AdviceKind.Review, Reason.VendorSource, true, PlanAction.ManualReview);
         if (reserved > 0) return Result(AdviceKind.Review, Reason.GoalReserve, true);
         return Result(AdviceKind.Review, item.RecipeUses.Length > 0 ? Reason.RecipeUses : Reason.UnknownUse, true);
     }
@@ -213,4 +219,28 @@ public static class DeliveryPolicy
             && (delivery.Quality != "hq" || s.Hq)
             && (delivery.Quality != "collectable" || s.Collectable && s.Collectability >= delivery.Collectability))
             .Sum(s => s.Quantity);
+}
+
+public sealed record AccessBlocker(string Kind, string Name = "", uint Id = 0, int Required = 0, int Actual = 0);
+public static class QuestAccessPolicy
+{
+    public static AccessBlocker[] Check(InventorySnapshot snapshot, QuestGate gate)
+    {
+        if (snapshot.QuestCompleted(gate.Id) == true || snapshot.ActiveQuests?.ContainsKey(gate.Id) == true) return [];
+        var result = new List<AccessBlocker>();
+        if (snapshot.CurrentLevel == 0 || snapshot.CurrentJob == 0) result.Add(new("characterUnknown"));
+        else
+        {
+            if (snapshot.CurrentLevel < gate.Level) result.Add(new("level", Required: gate.Level, Actual: snapshot.CurrentLevel));
+            if (gate.Jobs.Length > 0 && !gate.Jobs.Contains(snapshot.CurrentJob)) result.Add(new("job"));
+        }
+        bool oneMet = gate.Previous.Any(p => snapshot.QuestCompleted(p.Id) == true);
+        if (!(gate.Join == 2 && oneMet))
+        {
+            foreach (var previous in gate.Previous.Where(p => snapshot.QuestCompleted(p.Id) != true))
+                result.Add(new(snapshot.QuestCompleted(previous.Id) == false ? (gate.Join == 2 ? "onePrevious" : "previous") : "previousUnknown", previous.Name, previous.Id));
+        }
+        result.AddRange(gate.Additional.Select(a => new AccessBlocker("additional", a)));
+        return result.ToArray();
+    }
 }

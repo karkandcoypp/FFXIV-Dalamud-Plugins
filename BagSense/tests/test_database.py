@@ -10,6 +10,12 @@ spec.loader.exec_module(collector)
 class Quantities(unittest.TestCase):
     item = {'Singular': 'chunk of copper ore', 'Plural': 'chunks of copper ore'}
 
+    def test_cost_items_are_inputs_not_unrelated_constants(self):
+        self.assertTrue(collector.requested_instruction('COST_ITEM_ATMA_1', 47744, {47744: {}}, {}))
+        self.assertTrue(collector.requested_instruction('QST_GATHERING_ITEM_MIN', 5106, {5106: {}}, {}))
+        self.assertFalse(collector.requested_instruction('ACTION_TIMELINE_ITEM_DRINK', 5106, {5106: {}}, {}))
+        self.assertFalse(collector.requested_instruction('LOC_ITEM1', 5106, {5106: {}}, {}))
+
     def test_literal_journal_number(self):
         self.assertEqual(collector.quantity(self.item, ['Gather ten chunks of copper ore and deliver them.'])[:2], (10, 'any'))
 

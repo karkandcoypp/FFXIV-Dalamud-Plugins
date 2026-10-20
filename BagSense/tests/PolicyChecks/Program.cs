@@ -198,4 +198,21 @@ var collectible = second with { Quality = "collectable", Collectability = 300 };
 Check(DeliveryPolicy.EligibleQuantity(qualitySnapshot, 900002, collectible) == 3, "Collectable deliveries exclude low-value and ordinary HQ copies");
 Check(DeliveryPolicy.EligibleQuantity(qualitySnapshot, 900002, second with { Quality = "hq" }) == 4, "HQ requirements exclude NQ and collectables");
 Check(DeliveryPolicy.EligibleQuantity(qualitySnapshot, 900002, second) == 4, "Normal delivery accepts HQ but excludes collectable copies");
+var arcane = new QuestUse(70855, "Arcane Artistry", false, false, [], false, 3, "any", Evidence: "COST_ITEM_ATMA_n + COST_USE_ATMA");
+var arcaneSnapshot = snapshot with { Items = new Dictionary<uint, ItemFacts> { [47744] = new(47744, "Azurite Demiatma", 1, "Other", "", Quests: [arcane]) },
+    Stacks = new[] { new InventoryStack(47744, ContainerKind.Bag, 0, 3) }, ActiveQuests = new Dictionary<uint, byte>(), ActiveLeves = new Dictionary<uint, byte>(),
+    CompletedQuests = new Dictionary<uint, bool> { [70855] = false, [70847] = false }, CurrentJob = 19, CurrentLevel = 90 };
+Check(QuestPolicy.Required(arcaneSnapshot, 47744) == 3, "Shared relic unlock reserves required demiatma before accepting quest");
+Check(QuestPolicy.Required(arcaneSnapshot with { CompletedQuests = new Dictionary<uint, bool> { [70855] = true } }, 47744) == 0, "Completed one-time relic unlock releases its own reservation");
+var gate = new QuestGate(70855, "Arcane Artistry", 100, [19], [new("quest", 70847, "Unfamiliar Territory")], 1, []);
+Check(QuestAccessPolicy.Check(arcaneSnapshot, gate).Any(b => b.Kind == "level") && QuestAccessPolicy.Check(arcaneSnapshot, gate).Any(b => b.Kind == "previous"), "Missing level and prerequisite are explained independently");
+Check(QuestAccessPolicy.Check(arcaneSnapshot with { CurrentJob = 8 }, gate).Any(b => b.Kind == "job"), "Wrong current profession has an explicit blocker");
+Check(QuestAccessPolicy.Check(arcaneSnapshot with { CompletedQuests = null }, gate).Any(b => b.Kind == "previousUnknown"), "Unread prerequisite state is unknown, not a fabricated missing completion");
+Check(!QuestAccessPolicy.Check(arcaneSnapshot with { CurrentLevel = 100, CompletedQuests = new Dictionary<uint, bool> { [70847] = true } }, gate with { Join = 2, Previous = [new("quest", 70847, "A"), new("quest", 123456, "B")] }).Any(b => b.Kind.Contains("Previous") || b.Kind == "previous"), "OR prerequisite accepts one completed branch");
+Check(QuestAccessPolicy.Check(arcaneSnapshot with { ActiveQuests = new Dictionary<uint, byte> { [70855] = 1 } }, gate).Length == 0, "Already accepted quest does not show stale acceptance blockers");
+var ordinary = new ItemFacts(900003, "Ordinary item", 1, "Miscellany", "", SellPrice: 10, Offers: [new("Shop", 20, false)]);
+var ordinarySnapshot = arcaneSnapshot with { Items = new Dictionary<uint, ItemFacts> { [900003] = ordinary }, Stacks = new[] { new InventoryStack(900003, ContainerKind.Bag, 0, 2) } };
+Check(CleanupPolicy.Evaluate(ordinarySnapshot, new(), 900003, DateTimeOffset.UtcNow).DefaultAction == PlanAction.ManualReview, "Reacquisition source is not automatic permission to sell");
+Check(!QuestPolicy.SharedUnlockFinished(arcaneSnapshot, 47744), "Unfinished demiatma unlock never permits a completed-stage disposal banner");
+Check(QuestPolicy.SharedUnlockFinished(arcaneSnapshot with { CompletedQuests = new Dictionary<uint, bool> { [70855] = true } }, 47744), "Confirmed shared unlock completion explains why excess demiatma is no longer required");
 Console.WriteLine($"PASS: {checks} policy, persistence, isolation, routing and localization checks");

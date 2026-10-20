@@ -29,12 +29,13 @@ public sealed partial class BagWindow
         DrawDecision(item, snapshot, advice);
         Heading("Назначение", "Purpose");
         ImGui.TextWrapped(L.Purpose(item));
-        ImGui.TextDisabled(T($"В наличии {advice.Total}   /   Сохранить {Math.Min(advice.Total, advice.CanPlan ? advice.Reserved : advice.Total)}   /   В план { (advice.CanPlan ? advice.Available : 0)}",
+        DrawIdentity(item);
+        Hint(T($"В наличии {advice.Total}   /   Сохранить {Math.Min(advice.Total, advice.CanPlan ? advice.Reserved : advice.Total)}   /   В план { (advice.CanPlan ? advice.Available : 0)}",
             $"Owned {advice.Total}   /   Keep {Math.Min(advice.Total, advice.CanPlan ? advice.Reserved : advice.Total)}   /   Plannable {(advice.CanPlan ? advice.Available : 0)}"));
         int questReserve = QuestPolicy.Required(snapshot, item.Id);
         if (questReserve > 0) ImGui.TextColored(Gold, T($"Защита квестов: оставить {questReserve} шт. Продажа этого запаса исключена из плана.",
             $"Quest protection: keep {questReserve} items. This stock is excluded from sale plans."));
-        if (!advice.CanPlan) ImGui.TextWrapped(L.Reason(advice.Reason));
+        if (!advice.CanPlan && advice.Reason != Reason.QuestItem) ImGui.TextWrapped(L.Reason(advice.Reason));
         if (snapshot.Gearsets.TryGetValue(item.Id, out var gearsets)) ImGui.TextWrapped(T("В комплекте: ", "Gearsets: ") + string.Join(", ", gearsets));
         ImGui.Separator();
 
@@ -46,6 +47,7 @@ public sealed partial class BagWindow
         else if (action == PlanAction.Desynthesize) ImGui.TextWrapped(T("Разбор доступен в контекстном меню предмета. Перед разбором проверь, нужен ли внешний вид.",
             "Use Desynthesis in the item's context menu. Check whether you want its appearance first."));
 
+        DrawAcquisition(item, snapshot);
         Heading("Следующее действие", "Next action");
         DrawPlanControls(snapshot, data, advice);
         if (reviewMode)
@@ -236,6 +238,7 @@ public sealed partial class BagWindow
         {
             ImGui.PushID((int)quest.QuestId);
             ImGui.TextWrapped(quest.Name);
+            DrawQuestAccess(snapshot, quest.QuestId);
             bool? completed = snapshot.QuestCompleted(quest.QuestId);
             ImGui.TextWrapped(rewards ? T("Выдаётся в награду, сдавать предмет не требуется.", "A quest reward, not an item to hand in.")
                 : quest.Objective.Length > 0 ? T($"Этап {(quest.TodoIndex ?? 0) + 1}: ", $"Objective {(quest.TodoIndex ?? 0) + 1}: ") + quest.Objective
@@ -253,6 +256,7 @@ public sealed partial class BagWindow
                     ImGui.TextColored(Teal, final ? T("Квест активен · финальный этап сдачи", "Active quest · final hand-in stage")
                         : T("Квест активен · предмет защищён до завершения", "Active quest · item protected until completion"));
                 }
+                else if (QuestPolicy.Relevant(snapshot, quest)) ImGui.TextWrapped(T("Нужен для ещё не завершённого общего этапа. Запас защищён даже до принятия квеста.", "Needed for an unfinished shared unlock. Stock is protected even before accepting the quest."));
                 else if (snapshot.ActiveQuests != null) ImGui.TextDisabled(T("Сейчас не активен — автоматический резерв не создаётся.", "Not active — no automatic reservation."));
                 else ImGui.TextWrapped(T("Журнал недоступен: возможный квестовый запас сохранён целиком.", "Journal unavailable: all potentially needed stock is protected."));
                 int? amount = active && quest.RequirementVariants is { Length: > 0 } && QuestPolicy.Amount(snapshot, quest).HasValue

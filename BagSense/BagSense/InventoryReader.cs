@@ -48,7 +48,7 @@ public static class InventoryReader
         var quests = Plugin.Data.GetExcelSheet<Quest>();
         var questIds = facts.Values.SelectMany(f => f.QuestUses.Select(q => q.QuestId)
             .Concat(f.ExchangeUses.SelectMany(e => e.Conditions.Concat(e.Destinations.SelectMany(r => r.Requirements))).Where(r => r.Kind == "quest").Select(r => r.Id)));
-        foreach (uint questId in questIds.Distinct())
+        foreach (uint questId in catalog.QuestGates.Keys.Concat(catalog.QuestGates.Values.SelectMany(g => g.Previous.Select(p => p.Id))).Concat(questIds).Distinct())
             if (quests.TryGetRow(questId, out var quest)) completed[questId] = Plugin.Unlocks.IsQuestCompleted(quest);
         var rewards = new Dictionary<uint, bool?>();
         foreach (uint rewardId in catalog.CollectionItemIds.Concat(facts.Values.SelectMany(f => f.ExchangeUses.Select(e => e.RewardId))).Distinct())
@@ -56,7 +56,7 @@ public static class InventoryReader
                 rewards[rewardId] = Plugin.Unlocks.IsItemUnlocked(reward);
         if (id != Plugin.Player.ContentId || !Plugin.Client.IsLoggedIn) throw new InvalidOperationException("Character changed during scan");
         var activeQuests = ReadActiveQuests(out var questJobs);
-        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity, Plugin.Client.TerritoryType, completed, activeQuests, rewards, questJobs, ReadActiveLeves());
+        return new(id, Plugin.Player.CharacterName, DateTimeOffset.UtcNow, stacks, facts, gearsets, known, capacity, Plugin.Client.TerritoryType, completed, activeQuests, rewards, questJobs, ReadActiveLeves(), Plugin.Player.ClassJob.RowId, Plugin.Player.Level);
     }
 
     private static unsafe Dictionary<uint, byte>? ReadActiveLeves()
