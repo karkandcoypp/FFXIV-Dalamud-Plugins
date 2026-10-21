@@ -49,12 +49,13 @@ public sealed partial class BagWindow
             ImGui.TextColored(Teal, item.Name);
             ImGui.TextDisabled($"ID {item.Id} · {item.Category}");
             ImGui.TextWrapped(L.Purpose(item));
-            DrawIdentity(item);
+            DrawIdentity(item, plugin.Catalog?.Bundles(item.Id).Length > 0);
             if (plugin.Snapshot is { } snapshot)
             {
                 if (item.Reward is { Kind: not "Item" }) DrawRewardCard(item, 1, snapshot);
                 ImGui.TextWrapped(T($"В сумках: {snapshot.Quantity(item.Id)}", $"In bags: {snapshot.Quantity(item.Id)}"));
                 if (snapshot.Quantity(item.Id) > 0 && ImGui.Button(T("Открыть в инвентаре", "Open in inventory") + "###DbInventory")) Select(item.Id);
+                DrawBundles(item, snapshot);
                 DrawResearch(item, snapshot);
                 DrawAcquisition(item, snapshot);
                 DrawDeliveries(item, snapshot);

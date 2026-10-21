@@ -16,7 +16,7 @@ public sealed partial class BagWindow
         {
             foreach (var candidate in uses)
                 if (ImGui.Selectable(ResearchType(candidate.Kind) + " · " + candidate.Context + "###" + Key(candidate), Key(candidate) == Key(use)))
-                { use = candidate; selectedResearch = Key(candidate); }
+                { use = candidate; selectedResearch = Key(candidate); if (candidate.Costs is { Length: > 1 }) selectedBundle = ItemCatalog.ResearchBundleKey(candidate); }
             ImGui.EndCombo();
         }
         ImGui.PushID(Key(use));
@@ -51,7 +51,7 @@ public sealed partial class BagWindow
             "The former mechanic is marked retired by the wiki. Decide whether to keep a sentimental or collectible copy."));
         if (use.Kind == "ContentUse") ImGui.TextWrapped(T("Подтверждён связанный игровой механизм. Это контекст применения; точное количество или конкретный NPC не выводятся из одной ссылки.",
             "A related game system is identified. This is use context; an exact quantity or NPC is not inferred from a guide link alone."));
-        foreach (var cost in use.Costs ?? [])
+        foreach (var cost in (use.Costs is { Length: > 1 } ? [] : use.Costs) ?? [])
             ImGui.TextWrapped($"{cost.Count} × {cost.Name}" + (cost.Hq ? " · HQ" : "") + (cost.Collectability > 0 ? T($" · ценность ≥ {cost.Collectability}", $" · collectability ≥ {cost.Collectability}") : ""));
         foreach (var requirement in use.Requirements ?? []) ImGui.TextWrapped(T("Условие источника: ", "Source condition: ") + (requirement.StartsWith("Resistance rank ≥ ") ? T(requirement.Replace("Resistance rank", "Ранг Resistance").Replace("≥", ">="), requirement) : requirement switch {
             "Free Company workshop access and voyage permissions" => T("доступ к мастерской Free Company и права управления экспедициями", requirement),

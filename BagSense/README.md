@@ -1,3 +1,9 @@
+## Requirement sets (0.8.0)
+
+Cards now group related inputs into one compact checklist with held/required/missing counts, type progress and acquisition hints. Arcane Artistry includes all six demiatma, Dawntrail FATE zones, South Horn regions/events and its active-quest drop condition. Open missing-item details for sources and wiki links.
+
+The same mechanism indexes multi-input quest objectives, separate exchange/relic upgrade variants and recipe materials. It does not merge alternative job branches or infer simultaneous consumption from a quest association alone. HQ/collectability and overlapping costs are checked; unscanned currencies/key items stay unknown. Already submitted items and server-side readiness are not inferred from bag contents. Personal reserves and cleanup protections remain authoritative.
+
 ## Researched uses and relics (0.7.0)
 
 New RU/EN use cards retain complete relic exchange prices, possible rewards, NPCs/maps and source wiki links/revisions. Cosmic mission materials use native mission-to-item relationships. Bozja appraisal fragments and Eureka logograms show random result pools instead of promised rewards; their special storage systems are explained.

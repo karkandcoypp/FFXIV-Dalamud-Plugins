@@ -1,3 +1,17 @@
+# BagSense 0.8.0 — requirement sets and missing-item sources
+
+- One compact RU/EN requirement block in inventory, item database and quest cards: held/required/missing, progress by item type, and acquisition summary for each missing item. Full source lists remain collapsed.
+- Arcane Artistry displays all six demiatma types at three each, including absent inventory types. Multiple stacks of the same item are summed; extra Malachite cannot replace another type. Gerolt is retained as the actual recipient with a map.
+- Reviewed guides cover all six Dawntrail FATE zones and the corresponding South Horn regions/events. Arcane Artistry must be active for drops; no guaranteed drop rate is claimed. Links lead to the individual wiki sources.
+- Generalized to indexed multi-input quest objectives, simultaneous special-shop prices, researched relic exchange variants, and recipe ingredients. Full installed/catalog audit finds 17,973 distinct sets: 1,431 quest groups (530 with matched objectives), 3,661 exchange options, 557 researched exchange variants and 12,324 recipes. Coverage follows indexed data, not every server script.
+- Different recipe IDs, weapon upgrades, prices, quest objectives and accepted job branches remain separate. Custom Delivery weekly choices are not merged into mandatory bundles. A quest association without matched consumption evidence is explicitly a review checklist.
+- HQ and collectability eligibility are honored. Stricter copies are allocated first within the displayed set so one HQ item cannot satisfy two costs simultaneously. Gil/crystals/key-item storage and unknown amounts remain unknown instead of fabricated zeros or completion.
+- A collected set does not assert quest completion or server-side availability, change personal goals, or authorize discarding stock. Equipped copies, shared stock, unscanned storage and previously submitted requirements are clearly explained.
+
+Обновись через `/xlplugins`, открой `/bagsense` и выбери любой demiatma. Вверху карточки появится весь комплект Arcane Artistry с недостающими предметами и источниками. Проверки выполнены локально и в CI; переходы квестов и клики карты по-прежнему требуют проверки в FFXIV.
+
+---
+
 # BagSense 0.7.0 — researched uses, relic exchanges and mission materials
 
 - Researched 2,568 of the previous 2,577 unresolved records. Full catalog audit: 54,411 records; 17,001 with indexed relationships, 1,326 with researched context, 36,075 explained by game category/description, and 9 still unresolved. Context is not a claim that every requirement or NPC is known.

@@ -1,3 +1,14 @@
+# BagSense 0.8.0 validation
+
+- 154 pure policy/persistence/localization checks pass, including split stacks 2+3, all six demiatma, partial versus complete sets, unknown quantity/quality/storage, HQ/NQ overlap allocation, repeated same-item costs, collectability and accepted job branches.
+- 10 installed/catalog bundle checks verify Arcane Artistry six-by-three at the matched Gerolt objective/map, exact game identities, Yak T'el source, complete Atma+Zenith prices, separate Zodiac variants, recipe IDs, three-part Aetherspun Gold prices and database cache invalidation.
+- Full 54,411-record bundle scan finds 17,973 distinct sets: Recipe 12,324; Quest 1,431; Exchange 3,661; Research 557. 530 quest groups have matching objective evidence; other groups retain an explicit uncertainty label. No empty or nonpositive requirements are accepted.
+- Existing 20 collector/research, 28 database integrity/cache and package/shared-index checks remain required. Native set/guide data does not require network calls during drawing.
+- Production RU/EN fixtures add partially filled and complete six-demi-atma sets and minimum-size scrolling. Held five Malachite counts toward its three-item requirement only, and absent types remain visible.
+- Local fixtures are synthetic player state, not a live FFXIV run. Previously submitted items, all server-side access conditions, map clicks and live native journal transitions remain unverified in game.
+
+---
+
 # BagSense 0.7.0 validation
 
 - .NET 10 / Dalamud API 15 Release build passes with warnings as errors.

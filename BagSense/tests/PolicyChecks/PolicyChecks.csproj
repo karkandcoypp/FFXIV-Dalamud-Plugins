@@ -2,6 +2,7 @@
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
   <ItemGroup>
     <Compile Include="../../BagSense/Models.cs" Link="Models.cs" />
+    <Compile Include="../../BagSense/BundlePolicy.cs" Link="BundlePolicy.cs" />
     <Compile Include="../../BagSense/DemoData.cs" Link="DemoData.cs" />
     <Compile Include="../../BagSense/Text.cs" Link="Text.cs" />
     <Compile Include="../../BagSense/DestinationPolicy.cs" Link="DestinationPolicy.cs" />

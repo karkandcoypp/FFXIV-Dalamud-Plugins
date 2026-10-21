@@ -54,7 +54,9 @@ public sealed partial class BagWindow
             Heading("Что оставить для квеста", "What to keep for this quest");
             if (needs.Length == 0) ImGui.TextWrapped(T("Явные предметы для сдачи не найдены. Прочитай задачи ниже: квест может использовать особый сценарий.",
                 "No explicit hand-in items found. Check the objectives below; this quest may use a special script."));
-            foreach (var need in needs)
+            if (needs.Length > 1 && plugin.Catalog?.Find(needs[0].ItemId) is { } setItem) DrawBundles(setItem, snapshot, quest.QuestId);
+            bool showIndividualNeeds = needs.Length <= 1 || ImGui.CollapsingHeader(T("Исходные требования по предметам", "Individual source requirements") + "###RawQuestNeeds");
+            foreach (var need in showIndividualNeeds ? needs : [])
             {
                 ImGui.PushID((int)need.ItemId);
                 var item = plugin.Catalog?.Find(need.ItemId);

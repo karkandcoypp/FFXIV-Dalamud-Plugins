@@ -10,6 +10,7 @@ System.Runtime.Loader.AssemblyLoadContext.Default.Resolving += (context, name) =
     var path = Path.Combine(dev, name.Name + ".dll");
     return File.Exists(path) ? context.LoadFromAssemblyPath(path) : null;
 };
+if (args.Length == 3 && args[0] == "--bundles") { BundleChecks.Run(args[1], args[2]); return; }
 if (args.Length == 4 && args[0] == "--audit") { AuditChecks.Run(args[1], args[2], args[3]); return; }
 if (args.Length == 1 && args[0] == "--configuration") { ConfigurationChecks.Run(); return; }
 if (args.Length == 2 && args[0] == "--database") { DatabaseChecks.Run(args[1]); return; }

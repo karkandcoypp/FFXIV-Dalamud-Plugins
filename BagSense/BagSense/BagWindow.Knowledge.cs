@@ -15,10 +15,11 @@ public sealed partial class BagWindow
             Process.Start(new ProcessStartInfo("https://ffxiv.consolegameswiki.com/wiki/Special:Search?search=" + Uri.EscapeDataString(name) + "&go=Go") { UseShellExecute = true });
         ImGui.EndDisabled();
     }
-    private void DrawIdentity(ItemFacts item)
+    private void DrawIdentity(ItemFacts item, bool compact = false)
     {
         Wiki(item.Name, T("Вики предмета", "Item wiki"), "Item" + item.Id);
-        if (item.Description.Length > 0 && item.Reward?.Kind != "Mount")
+        if (item.Description.Length > 0 && item.Reward?.Kind != "Mount"
+            && (!compact || ImGui.CollapsingHeader(T("Описание игры", "Game description") + "###IdentityDescription")))
             ImGui.TextWrapped(item.Description);
         if (item.ResearchUses.Length == 0 && item.Role is "Unresolved" or "" && item.QuestUses.All(q => q.Reward) && item.ExchangeUses.Length == 0 && item.DeliveryUses.Length == 0 && item.Unlocked == null)
             ImGui.TextWrapped(T("Покрытие: особое применение ещё не подтверждено. Наличие цены продажи или отсутствие рецептов не означает, что предмет лишний.",
@@ -74,6 +75,12 @@ public sealed partial class BagWindow
     private void DrawAcquisition(ItemFacts item, InventorySnapshot snapshot)
     {
         Heading("Как получить / получить снова", "How to obtain / replace");
+        if (DemiatmaGuide.Find(item.Id) is { } guide && guide.Name == item.Name)
+        {
+            DrawDemiatmaGuide(item.Id, snapshot);
+            Wiki(item.Name, T("Источник условий выпадения", "Drop condition source"), "DemiatmaSource");
+            return;
+        }
         bool found = item.BuyOffers.Length > 0 || item.AcquisitionSources.Length > 0 || item.AcquisitionTrades.Length > 0 || item.QuestUses.Any(q => q.Reward);
         if (!found) ImGui.TextWrapped(T("Подтверждённый источник ещё не найден в подключённых таблицах. Это не значит, что предмет недоступен или лишний; открой вики предмета.",
             "No verified source was found in the indexed tables. This does not mean the item is unobtainable or surplus; open its wiki."));

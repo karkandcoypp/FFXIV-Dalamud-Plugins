@@ -42,6 +42,17 @@ internal static class Program
                     ActiveQuests: new Dictionary<uint, byte>(), ActiveLeves: new Dictionary<uint, byte>(), CurrentJob: 19, CurrentLevel: 90);
                 foreach (bool ru in new[] { true, false }) Render(directory, ru, 0, 1240, 1000, 1, researchSnapshot, id, catalog, game);
             }
+            var setFacts = DemiatmaGuide.All.Select(g => catalog.Find(g.Id)!).ToDictionary(f => f.Id);
+            var setSnapshot = new InventorySnapshot(ulong.MaxValue, "Set progress / Прогресс комплекта", DateTimeOffset.UtcNow,
+                [new(47746, ContainerKind.Bag, 0, 2), new(47746, ContainerKind.Bag, 1, 3), new(47744, ContainerKind.Bag, 2, 3), new(47745, ContainerKind.Bag, 3, 2)],
+                setFacts, new Dictionary<uint, string[]>(), true, 140, CompletedQuests: new Dictionary<uint, bool> { [70855] = false, [70847] = true },
+                ActiveQuests: new Dictionary<uint, byte> { [70855] = 255 }, ActiveLeves: new Dictionary<uint, byte>(), CurrentJob: 19, CurrentLevel: 100);
+            foreach (bool ru in new[] { true, false })
+            {
+                Render(directory, ru, 0, 1240, 1000, 1, setSnapshot, 47746, catalog, game);
+                Render(directory, ru, 0, 1120, 850, 1, setSnapshot with { Stacks = DemiatmaGuide.All.Select((g,i) => new InventoryStack(g.Id, ContainerKind.Bag, i, 3)).ToArray() }, 47746, catalog, game);
+            }
+            Render(directory, true, 0, 860, 570, 1, setSnapshot, 47746, catalog, game);
             var demiatma = catalog.Find(47744)!;
             var storySnapshot = new InventorySnapshot(ulong.MaxValue, "Quest access preview / Пример условий", DateTimeOffset.UtcNow,
                 [new(47744, ContainerKind.Bag, 0, 3)], new Dictionary<uint, ItemFacts> { [47744] = demiatma }, new Dictionary<uint, string[]>(), true, 140,

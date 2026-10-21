@@ -32,6 +32,7 @@ public sealed partial class ItemCatalog
         remoteResearch = (database.Research ?? []).Where(r => r.ItemName.Length == 0 || items.TryGetRow(r.ItemId, out var item) && item.Name.ToString() == r.ItemName).ToDictionary(r => r.ItemId, r => r.Uses);
         Database = database;
         cache.Clear();
+        bundleCache.Clear();
     }
     public WorldCatalog World { get; }
     public int MerchantItems => shops.Count;

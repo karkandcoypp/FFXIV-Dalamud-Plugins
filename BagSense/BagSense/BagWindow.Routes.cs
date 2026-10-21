@@ -29,7 +29,7 @@ public sealed partial class BagWindow
         DrawDecision(item, snapshot, advice);
         Heading("Назначение", "Purpose");
         ImGui.TextWrapped(L.Purpose(item));
-        DrawIdentity(item);
+        DrawIdentity(item, plugin.Catalog?.Bundles(item.Id).Length > 0);
         Hint(T($"В наличии {advice.Total}   /   Сохранить {Math.Min(advice.Total, advice.CanPlan ? advice.Reserved : advice.Total)}   /   В план { (advice.CanPlan ? advice.Available : 0)}",
             $"Owned {advice.Total}   /   Keep {Math.Min(advice.Total, advice.CanPlan ? advice.Reserved : advice.Total)}   /   Plannable {(advice.CanPlan ? advice.Available : 0)}"));
         int questReserve = QuestPolicy.Required(snapshot, item.Id);
@@ -39,6 +39,7 @@ public sealed partial class BagWindow
         if (snapshot.Gearsets.TryGetValue(item.Id, out var gearsets)) ImGui.TextWrapped(T("В комплекте: ", "Gearsets: ") + string.Join(", ", gearsets));
         ImGui.Separator();
 
+        DrawBundles(item, snapshot);
         DrawResearch(item, snapshot);
         DrawDeliveries(item, snapshot);
         if (item.ExchangeUses.Length > 0 && action == PlanAction.ExchangeReview) DrawExchange(item, snapshot);
@@ -128,7 +129,7 @@ public sealed partial class BagWindow
                     var reward = plugin.Catalog?.Find(candidate.RewardId);
                     if (reward != null) { DrawIcon(reward, 28); ImGui.SameLine(); }
                     if (ImGui.Selectable($"{candidate.Reward} · {RewardType(reward?.Reward?.Kind ?? "Item")}###" + candidate.Key, candidate.Key == exchangeKey))
-                    { exchangeKey = candidate.Key; destinationKey = ""; }
+                    { exchangeKey = candidate.Key; selectedBundle = "exchange:" + candidate.Key; destinationKey = ""; }
                 }
                 ImGui.EndCombo();
             }
