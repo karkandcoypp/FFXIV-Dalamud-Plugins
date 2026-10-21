@@ -19,6 +19,7 @@ public sealed partial class ItemCatalog
     private Dictionary<uint, CatalogItem> remoteItems = new();
     private Dictionary<uint, CatalogNeed[]> remoteNeeds = new();
     private Dictionary<uint, ItemSource[]> remoteSources = new();
+    private Dictionary<uint, ResearchUse[]> remoteResearch = new();
     public CatalogDocument? Database { get; private set; }
     public uint[] CollectionItemIds { get; }
     public int ItemCount => Math.Max(items.Count, remoteItems.Count);
@@ -28,6 +29,7 @@ public sealed partial class ItemCatalog
         remoteNeeds = database.Needs.GroupBy(n => n.ItemId).ToDictionary(g => g.Key, g => g.ToArray());
         remoteSources = (database.Sources ?? []).GroupBy(s => s.ItemId).ToDictionary(g => g.Key,
             g => g.Select(s => new ItemSource(s.Kind, s.Name, s.Id, s.Detail)).Distinct().ToArray());
+        remoteResearch = (database.Research ?? []).Where(r => r.ItemName.Length == 0 || items.TryGetRow(r.ItemId, out var item) && item.Name.ToString() == r.ItemName).ToDictionary(r => r.ItemId, r => r.Uses);
         Database = database;
         cache.Clear();
     }
@@ -72,6 +74,7 @@ public sealed partial class ItemCatalog
             }
         }
         IndexKnowledge(excel);
+        IndexMissionResearch(excel);
         IndexDeliveries(excel);
         var quests = excel.GetSheet<Quest>(Language.English);
         var achievements = excel.GetSheet<Achievement>(Language.English);
@@ -136,7 +139,7 @@ public sealed partial class ItemCatalog
             Offers: shops.GetValueOrDefault(id)?.Distinct().OrderBy(o => o.Conditional).ThenBy(o => o.Price).ToArray(),
             Recipes: recipes.GetValueOrDefault(id)?.ToArray(), Exchanges: exchanges.GetValueOrDefault(id)?.ToArray(),
             Quests: QuestUses(id), Merchants: World.Merchants, Reward: Reward(row), Deliveries: deliveries.GetValueOrDefault(id)?.ToArray(), Role: Role(row), Sources: (sources.GetValueOrDefault(id) ?? []).Concat(remoteSources.GetValueOrDefault(id) ?? []).Distinct().ToArray(),
-            RecipeLinks: recipeLinks.GetValueOrDefault(id)?.ToArray(), Acquisitions: acquisitionTrades.GetValueOrDefault(id)?.ToArray());
+            RecipeLinks: recipeLinks.GetValueOrDefault(id)?.ToArray(), Acquisitions: acquisitionTrades.GetValueOrDefault(id)?.ToArray(), Research: (research.GetValueOrDefault(id) ?? []).Concat(remoteResearch.GetValueOrDefault(id) ?? []).DistinctBy(r => (r.Kind, r.Context, r.RequiredCount, r.WikiTitle)).ToArray());
     }
 
     private RewardDetails Reward(Item item)

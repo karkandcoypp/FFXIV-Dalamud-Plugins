@@ -215,4 +215,7 @@ var ordinarySnapshot = arcaneSnapshot with { Items = new Dictionary<uint, ItemFa
 Check(CleanupPolicy.Evaluate(ordinarySnapshot, new(), 900003, DateTimeOffset.UtcNow).DefaultAction == PlanAction.ManualReview, "Reacquisition source is not automatic permission to sell");
 Check(!QuestPolicy.SharedUnlockFinished(arcaneSnapshot, 47744), "Unfinished demiatma unlock never permits a completed-stage disposal banner");
 Check(QuestPolicy.SharedUnlockFinished(arcaneSnapshot with { CompletedQuests = new Dictionary<uint, bool> { [70855] = true } }, 47744), "Confirmed shared unlock completion explains why excess demiatma is no longer required");
+var researchedArcane = arcaneSnapshot with { CompletedQuests = new Dictionary<uint, bool> { [70855] = true }, Items = new Dictionary<uint, ItemFacts> { [47744] = arcaneSnapshot.Items[47744] with { Research = [new("RelicExchange", "Another weapon", Repeatable: true)] } } };
+Check(!QuestPolicy.SharedUnlockFinished(researchedArcane, 47744), "An additional repeatable use prevents completed-unlock surplus claims");
+Check(CleanupPolicy.Evaluate(ordinarySnapshot with { Items = new Dictionary<uint, ItemFacts> { [900003] = ordinary with { Research = [new("Container", "Random reward")] } } }, new(), 900003, DateTimeOffset.UtcNow).DefaultAction == PlanAction.ManualReview, "Researched context does not silently authorize disposal");
 Console.WriteLine($"PASS: {checks} policy, persistence, isolation, routing and localization checks");

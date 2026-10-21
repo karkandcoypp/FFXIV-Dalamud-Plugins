@@ -2,7 +2,7 @@
   "Author": "Carcosa Lyuman",
   "Name": "BagSense",
   "InternalName": "BagSense",
-  "AssemblyVersion": "0.6.0.0",
+  "AssemblyVersion": "0.7.0.0",
   "Punchline": "Remember why you keep items. Make an explained cleanup plan.",
   "Description": "Understand item purposes, acquisition sources, crafting and exchange links, quest requirements and access blockers. Wiki links, NPC maps, Leve reservations, explained rewards and collection ownership. Auto-updating item database. English / Русский. Open /bagsense.",
   "ApplicableVersion": "any",

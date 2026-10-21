@@ -28,6 +28,11 @@ internal static class DataChecks
         Check(catalog.MerchantItems > 1000, "Regular merchant index loaded");
         Check(catalog.RecipeItems > 1000, "Recipe ingredient index loaded");
         Check(catalog.ExchangeItems > 100, "Direct item-exchange index loaded");
+        Check(game.Excel.GetSheet<Lumina.Excel.Sheets.WKSItemInfo>().GetRow(0).Item.RowId == 0, "Empty WKS item-info reference does not alias an ordinary item");
+        var missionInputs = game.Excel.GetSheet<Lumina.Excel.Sheets.WKSMissionToDo>().SelectMany(t => t.RequiredItem.Where(r => r.IsValid && r.Value.Item.RowId != 0).Select(r => r.Value.Item.RowId)).Distinct().ToArray();
+        Check(missionInputs.Length > 100 && missionInputs.All(id => catalog.Find(id)!.ResearchUses.Any(r => r.Kind == "MissionHandIn")), "Cosmic mission requirements resolve through WKSItemInfo to actual item IDs");
+        Check(catalog.Find(50004)!.ResearchUses.Any(r => r.Kind.StartsWith("Mission")), "Relic Restoration Brush is linked to cosmic missions rather than combat relic upgrades");
+        Check(catalog.ResearchMap("Gangos") is not null, "Appraisal wiki coordinates resolve to a unique installed Gangos map");
         var copper = catalog.Search("Copper Ore").First(i => i.Name == "Copper Ore");
         Check(copper.Id > 0 && copper.Icon > 0 && !copper.Equipment, "Copper Ore resolves to a real material");
         Check(copper.RecipeUses.Any(r => r.Contains("Copper Ingot")), "Copper Ore is used to make Copper Ingot");

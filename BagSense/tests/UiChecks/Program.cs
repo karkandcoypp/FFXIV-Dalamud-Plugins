@@ -34,6 +34,14 @@ internal static class Program
                 var manifest = JsonSerializer.Deserialize<CatalogManifest>(File.ReadAllText(Path.Combine(args[2], "manifest.json")))!;
                 catalog.ApplyDatabase(DatabaseCatalog.Decode(manifest, File.ReadAllBytes(Path.Combine(args[2], manifest.File))));
             }
+            foreach (uint id in new uint[] { 7851, 9509, 23309, 50004, 30884, 24007, 30925 })
+            {
+                var fact = catalog.Find(id)!;
+                var researchSnapshot = new InventorySnapshot(ulong.MaxValue, "Research preview / Пример применения", DateTimeOffset.UtcNow,
+                    [new(id, ContainerKind.Bag, 0, 20)], new Dictionary<uint, ItemFacts> { [id] = fact }, new Dictionary<uint, string[]>(), true, 140,
+                    ActiveQuests: new Dictionary<uint, byte>(), ActiveLeves: new Dictionary<uint, byte>(), CurrentJob: 19, CurrentLevel: 90);
+                foreach (bool ru in new[] { true, false }) Render(directory, ru, 0, 1240, 1000, 1, researchSnapshot, id, catalog, game);
+            }
             var demiatma = catalog.Find(47744)!;
             var storySnapshot = new InventorySnapshot(ulong.MaxValue, "Quest access preview / Пример условий", DateTimeOffset.UtcNow,
                 [new(47744, ContainerKind.Bag, 0, 3)], new Dictionary<uint, ItemFacts> { [47744] = demiatma }, new Dictionary<uint, string[]>(), true, 140,

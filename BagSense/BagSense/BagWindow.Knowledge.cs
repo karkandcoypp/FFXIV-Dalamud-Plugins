@@ -20,7 +20,7 @@ public sealed partial class BagWindow
         Wiki(item.Name, T("Вики предмета", "Item wiki"), "Item" + item.Id);
         if (item.Description.Length > 0 && item.Reward?.Kind != "Mount")
             ImGui.TextWrapped(item.Description);
-        if (item.Role is "Unresolved" or "" && item.QuestUses.All(q => q.Reward) && item.ExchangeUses.Length == 0 && item.DeliveryUses.Length == 0 && item.Unlocked == null)
+        if (item.ResearchUses.Length == 0 && item.Role is "Unresolved" or "" && item.QuestUses.All(q => q.Reward) && item.ExchangeUses.Length == 0 && item.DeliveryUses.Length == 0 && item.Unlocked == null)
             ImGui.TextWrapped(T("Покрытие: особое применение ещё не подтверждено. Наличие цены продажи или отсутствие рецептов не означает, что предмет лишний.",
                 "Coverage: a special use is not yet verified. A vendor price or missing recipe does not mean this item is surplus."));
     }
@@ -30,7 +30,7 @@ public sealed partial class BagWindow
         if (snapshot.ActiveQuests?.ContainsKey(id) == true)
             ImGui.TextColored(Teal, T("Принят: следуй текущему этапу в журнале.", "Accepted: follow the current journal objective."));
         else if (snapshot.QuestCompleted(id) == true)
-            ImGui.TextColored(Teal, T("Завершён персонажем. Для одноразового требования этот запас больше не нужен.", "Completed by this character. A one-time requirement no longer needs this stock."));
+            ImGui.TextColored(Teal, T("Квест завершён персонажем. Другие применения предмета проверь в карточке.", "Quest completed by this character. Review other item uses in the card."));
         else
         {
             var blockers = QuestAccessPolicy.Check(snapshot, gate);

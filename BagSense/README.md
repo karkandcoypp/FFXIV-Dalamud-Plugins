@@ -1,3 +1,9 @@
+## Researched uses and relics (0.7.0)
+
+New RU/EN use cards retain complete relic exchange prices, possible rewards, NPCs/maps and source wiki links/revisions. Cosmic mission materials use native mission-to-item relationships. Bozja appraisal fragments and Eureka logograms show random result pools instead of promised rewards; their special storage systems are explained.
+
+Of the previous 2,577 unresolved entries, 2,568 now have a verified relationship or system context. Nine remain unresolved. Context alone does not prove a precise recipient, current access or safe disposal. Exact quantities cover 2,025 quest associations; unknown stages, ranks and active mission state remain explicit. See [coverage-audit.json](coverage-audit.json) and [VALIDATION.md](VALIDATION.md).
+
 ## Item knowledge and access (0.6.0)
 
 Every current catalog record is audited; see [coverage-audit.json](coverage-audit.json) for exact scope and remaining unresolved IDs. "Linked" and "explained category" are distinct evidence levels, neither a promise that every server script is decoded. Unknown use is not a discard recommendation. Reacquisition from a gil merchant no longer defaults to a sale plan.

@@ -55,6 +55,7 @@ public sealed partial class BagWindow
                 if (item.Reward is { Kind: not "Item" }) DrawRewardCard(item, 1, snapshot);
                 ImGui.TextWrapped(T($"В сумках: {snapshot.Quantity(item.Id)}", $"In bags: {snapshot.Quantity(item.Id)}"));
                 if (snapshot.Quantity(item.Id) > 0 && ImGui.Button(T("Открыть в инвентаре", "Open in inventory") + "###DbInventory")) Select(item.Id);
+                DrawResearch(item, snapshot);
                 DrawAcquisition(item, snapshot);
                 DrawDeliveries(item, snapshot);
                 if (item.QuestUses.Any(q => !q.Reward)) DrawQuestUses(item, snapshot, false);

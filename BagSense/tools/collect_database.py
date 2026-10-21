@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 
 ROOT = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/'
-COLLECTOR_VERSION = 7
+COLLECTOR_VERSION = 9
 WORDS = dict(zip('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety'.split(),
                  [*range(1, 21), 30, 40, 50, 60, 70, 80, 90]))
 
@@ -296,6 +296,25 @@ def collect(output, cache, revision=None, teamcraft_revision=None):
         if item_id in items and items[item_id]['Name'].endswith('Demiatma'):
             source_link(item_id,'Fate',0,"Occult Crescent: South Horn",'FATE / Critical Encounter; Arcane Artistry progression')
     source_link(47744,'Fate',0,'Urqopacha','FATE; Arcane Artistry progression')
+    research_bytes = (Path(__file__).parents[1] / 'data' / 'researched-uses.json').read_bytes()
+    research_hash = hashlib.sha256(research_bytes).hexdigest()
+    researched = json.loads(research_bytes.decode('utf-8'))
+    research = [r for r in researched['Research'] if r['ItemId'] in items and r.get('ItemName') == items[r['ItemId']]['Name']]
+    need_lookup = {(n['QuestId'],n['ItemId']):n for n in needs}
+    for fact in researched.get('QuestRequirements', []):
+        pair = (fact['QuestId'],fact['ItemId'])
+        if pair[0] not in quest_rows or pair[1] not in items: continue
+        if fact.get('ItemName') != items[pair[1]]['Name'] or fact.get('QuestName') != quest_rows[pair[0]]['Name']: continue
+        old = need_lookup.get(pair)
+        if old is not None:
+            if old['Count'] is None and not old.get('Variants'):
+                old.update(Count=fact['Count'], Quality=fact['Quality'], Evidence='Wiki required-items record; hand-in stage is only known when separately identified. ' + old['Evidence'])
+            continue
+        q=quest_rows[pair[0]]
+        use=dict(QuestId=pair[0],ItemId=pair[1],QuestName=q['Name'],Repeatable=q.get('IsRepeatable')=='True',Count=fact['Count'],Quality=fact['Quality'],
+                 Objective='',TodoIndex=None,CompleteSequence=None,Contacts=[],Evidence='Wiki required-items record; may describe an unlock/exchange prerequisite, exact consumption objective unresolved',
+                 Source='https://ffxiv.consolegameswiki.com/wiki/' + urllib.parse.quote(fact['WikiTitle'].replace(' ','_')),EventItem=False,Variants=[])
+        needs.append(use);need_lookup[pair]=use
     for quest in quest_catalog:
         quest['ItemIds'] = sorted(set(quest['ItemIds']) | {n['ItemId'] for n in needs if n['QuestId'] == quest['QuestId']})
     catalog_items = [dict(Id=i, Name=r['Name'], Icon=val(r, 'Icon'), Category=categories.get(val(r, 'ItemUICategory'), ''), Description=r.get('Description', '')) for i, r in sorted(items.items())]
@@ -312,16 +331,16 @@ def collect(output, cache, revision=None, teamcraft_revision=None):
         raise ValueError('Unexpected acquisition graph shrinkage; refusing publication')
     if previous.get('QuestCount') and len(quest_catalog) < previous['QuestCount'] * .99:
         raise ValueError('Unexpected quest count reduction; refusing publication')
-    generated = previous.get('GeneratedAt') if previous.get('SourceCommit') == revision and previous.get('CollectorVersion') == COLLECTOR_VERSION and previous.get('TeamcraftCommit') == tc_revision else datetime.now(timezone.utc).isoformat()
+    generated = previous.get('GeneratedAt') if previous.get('SourceCommit') == revision and previous.get('CollectorVersion') == COLLECTOR_VERSION and previous.get('TeamcraftCommit') == tc_revision and previous.get('ResearchSha256') == research_hash else datetime.now(timezone.utc).isoformat()
     document = dict(Schema=1, GeneratedAt=generated, SourceCommit=revision, Items=catalog_items, Needs=sorted(needs, key=lambda r: (r['QuestId'], r['ItemId'])),
-                    Quests=sorted(quest_catalog, key=lambda q:q['QuestId']), Sources=links, TeamcraftCommit=tc_revision)
+                    Quests=sorted(quest_catalog, key=lambda q:q['QuestId']), Sources=links, TeamcraftCommit=tc_revision, Research=research)
     data = gzip.compress(json.dumps(document, ensure_ascii=False, separators=(',', ':')).encode(), mtime=0)
     digest = hashlib.sha256(data).hexdigest()
     # Content-addressed files prevent manifest/payload races through GitHub's CDN.
     asset = f'catalog-{digest[:16]}.json.gz'
     (output / asset).write_bytes(data)
     manifest = dict(Schema=1, CollectorVersion=COLLECTOR_VERSION, GeneratedAt=generated, SourceCommit=revision, File=asset, Sha256=digest, Bytes=len(data),
-                    ItemCount=len(catalog_items), QuestCount=len(quest_catalog), QuestItemCount=len(needs), ExactCount=sum(n['Count'] is not None for n in needs), SourceCount=len(links), TeamcraftCommit=tc_revision)
+                    ItemCount=len(catalog_items), QuestCount=len(quest_catalog), QuestItemCount=len(needs), ExactCount=sum(n['Count'] is not None for n in needs), SourceCount=len(links), TeamcraftCommit=tc_revision, ResearchCount=len(research), ResearchSha256=research_hash)
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     # Keep the current and immediately previous content-addressed payload for CDN readers.
     keep = {asset, previous.get('File')}

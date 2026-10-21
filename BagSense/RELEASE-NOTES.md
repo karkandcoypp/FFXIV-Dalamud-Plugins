@@ -1,3 +1,17 @@
+# BagSense 0.7.0 — researched uses, relic exchanges and mission materials
+
+- Researched 2,568 of the previous 2,577 unresolved records. Full catalog audit: 54,411 records; 17,001 with indexed relationships, 1,326 with researched context, 36,075 explained by game category/description, and 9 still unresolved. Context is not a claim that every requirement or NPC is known.
+- Relic exchange variants retain simultaneous costs, required weapon, NPC, location and possible result cards. Repeatable weapon upgrades are distinguished from shared one-time unlocks.
+- Quest evidence now contains 2,025 confirmed quantities across 4,859 item associations. Wiki requirement lists do not establish the consuming objective or recipient; unverified stages remain explicit.
+- Cosmic mission recipes, ingredients, supplied items and objectives use installed game sheets. WKSItemInfo is dereferenced to actual Item IDs. Mission activity and quality are not read automatically.
+- Bozja fragments show appraisal pools, rank requirement, Resistance Appraiser and map coordinates; Eureka logograms link to Drake and possible mnemes. Lost Actions and mnemes are explained as special-system records, not permanent collection unlocks.
+- RU/EN cards distinguish island resources, Free Company vessel components/actions, desynthesis possibilities, retired mechanics and seasonal PvP records. Unconfirmed active PvP exchanges are clearly labeled.
+- Factual wiki metadata retains article/revision provenance and game-name identity checks. No wiki article prose or player data is uploaded. Daily database collection includes the reviewed facts; hash validation and offline cache remain supported.
+
+Обновись через `/xlplugins`, затем открой `/bagsense`. Неподтверждённое назначение осталось у 9 записей; перечень — в coverage-audit.json. Для некоторых других записей известен только контекст, а точная сдача ещё не установлена. Локальные проверки не заменяют проверку переходов квестов, состояния персонажа и кнопок карты в FFXIV.
+
+---
+
 # BagSense 0.6.0 — item knowledge, quest access and catalog audit
 
 - Audited every one of 54,411 catalog records. 15,639 have linked use relationships, 36,195 have a category/description-based role, and 2,577 still need detailed research. The latter are explicitly unresolved, not declared safe to discard. Full summary and remaining IDs are in coverage-audit.json.

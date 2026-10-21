@@ -9,6 +9,7 @@ public sealed partial class ItemCatalog
     private readonly Dictionary<uint, List<RecipeLink>> recipeLinks = new();
     private readonly Dictionary<uint, List<ExchangeUse>> acquisitionTrades = new();
     public Dictionary<uint, TradeCost[]> RecipeIngredients { get; } = new();
+    public Dictionary<uint, NpcLocation[]> QuestStarts { get; } = new();
     public Dictionary<uint, QuestGate> QuestGates { get; } = new();
     private void Source(uint id, ItemSource source)
     {
@@ -105,6 +106,7 @@ public sealed partial class ItemCatalog
             if (quest.BellStart != quest.BellEnd || quest.Festival.RowId != 0 || quest.RepeatIntervalType != 0) extra.Add("time");
             if (quest.LevelMax != 0) extra.Add("levelmax");
             if (quest.Unknown7 != 0 || previous.Length > 0 && quest.PreviousQuestJoin is not (1 or 2)) extra.Add("script");
+            QuestStarts[quest.RowId] = (World.Positions.GetValueOrDefault(quest.IssuerStart.RowId) ?? []).Where(n => !quest.IssuerLocation.IsValid || quest.IssuerLocation.Value.Map.RowId == n.Map).ToArray();
             QuestGates[quest.RowId] = new(quest.RowId, quest.Name.ToString(), quest.ClassJobLevel[0], allowed, previous, quest.PreviousQuestJoin, extra.ToArray(), quest.ClassJobCategory0.IsValid ? quest.ClassJobCategory0.Value.Name.ToString() : "");
         }
     }

@@ -43,11 +43,16 @@ public sealed record ExchangeUse(string Shop, string Reward, uint Cost, uint Sho
 public sealed record ItemSource(string Kind, string Name, uint Id = 0, string Detail = "");
 public sealed record RecipeLink(uint RecipeId, uint ResultId, string Result, int Required, int Yield, string Job, int Level);
 public sealed record QuestGate(uint Id, string Name, int Level, uint[] Jobs, RouteRequirement[] Previous, byte Join, string[] Additional, string JobLabel = "");
+public sealed record ResearchCost(uint ItemId, string Name, int Count, bool Hq = false, int Collectability = 0);
+public sealed record ResearchUse(string Kind, string Context, string WikiTitle = "", long Revision = 0,
+    uint[]? Quests = null, string[]? Npcs = null, string Zone = "", ResearchCost[]? Costs = null,
+    uint[]? Results = null, string[]? Requirements = null, int? RequiredCount = null, string Quality = "unknown", bool Repeatable = false, NpcLocation[]? Contacts = null, float? MapX = null, float? MapY = null, string Evidence = "");
 public sealed record ItemFacts(uint Id, string Name, uint Icon, string Category, string Description,
     bool Equipment = false, bool Indisposable = false, bool Marketable = false, uint SellPrice = 0,
     bool Desynth = false, bool? Unlocked = null, BuyOffer[]? Offers = null, string[]? Recipes = null,
-    ExchangeUse[]? Exchanges = null, QuestUse[]? Quests = null, NpcLocation[]? Merchants = null, RewardDetails? Reward = null, DeliveryUse[]? Deliveries = null, string Role = "", ItemSource[]? Sources = null, RecipeLink[]? RecipeLinks = null, ExchangeUse[]? Acquisitions = null)
+    ExchangeUse[]? Exchanges = null, QuestUse[]? Quests = null, NpcLocation[]? Merchants = null, RewardDetails? Reward = null, DeliveryUse[]? Deliveries = null, string Role = "", ItemSource[]? Sources = null, RecipeLink[]? RecipeLinks = null, ExchangeUse[]? Acquisitions = null, ResearchUse[]? Research = null)
 {
+    public ResearchUse[] ResearchUses => Research ?? [];
     public ItemSource[] AcquisitionSources => Sources ?? [];
     public RecipeLink[] CraftingLinks => RecipeLinks ?? [];
     public ExchangeUse[] AcquisitionTrades => Acquisitions ?? [];

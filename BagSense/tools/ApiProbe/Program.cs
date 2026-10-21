@@ -30,11 +30,11 @@ if (args.Length > 1 && args[0] == "--schema")
         var type = typeof(Item).Assembly.GetType("Lumina.Excel.Sheets." + name) ?? typeof(Lumina.Excel.RowRef).Assembly.GetType("Lumina.Excel." + name);
         if (type == null) { Console.WriteLine("Missing " + name); continue; }
         Console.WriteLine("TYPE " + name);
-        foreach (var property in type.GetProperties()) Console.WriteLine(" " + property.PropertyType.Name + " " + property.Name);
+        foreach (var property in type.GetProperties()) Console.WriteLine(" " + property.PropertyType.ToString() + " " + property.Name);
         foreach (var nested in type.GetNestedTypes())
         {
             Console.WriteLine(" NESTED " + nested.Name);
-            foreach (var property in nested.GetProperties()) Console.WriteLine("  " + property.PropertyType.Name + " " + property.Name);
+            foreach (var property in nested.GetProperties()) Console.WriteLine("  " + property.PropertyType.ToString() + " " + property.Name);
         }
     }
     return;

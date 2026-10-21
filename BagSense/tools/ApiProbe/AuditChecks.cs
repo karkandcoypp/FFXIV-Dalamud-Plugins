@@ -12,9 +12,9 @@ internal static class AuditChecks
         var rows = catalog.Browse("", 0, 100000).Select(row =>
         {
             var item = catalog.Find(row.Id) ?? throw new Exception("Missing item " + row.Id);
-            bool linked = item.CraftingLinks.Length > 0 || item.ExchangeUses.Length > 0 || item.QuestUses.Any(q => !q.Reward)
+            bool linked = item.ResearchUses.Any(r => r.Kind is "MissionHandIn" or "MissionCraft" or "MissionIngredient" or "MissionGather" or "RelicExchange" or "WikiExchange" or "Container" or "FragmentAppraisal" or "LogogramAppraisal") || item.CraftingLinks.Length > 0 || item.ExchangeUses.Length > 0 || item.QuestUses.Any(q => !q.Reward)
                 || item.DeliveryUses.Length > 0 || item.Reward?.Kind is "Mount" or "Minion" or "Music" or "Card" or "Emote" or "Hairstyle";
-            string tier = linked ? "Linked" : item.Role is not ("" or "Unresolved") ? "CategoryExplained" : "NeedsResearch";
+            string tier = linked ? "Linked" : item.ResearchUses.Length > 0 ? "ResearchedContext" : item.Role is not ("" or "Unresolved") ? "CategoryExplained" : "NeedsResearch";
             return new { item.Id, item.Name, item.Category, Tier = tier, item.Role, Recipes = item.CraftingLinks.Length,
                 Exchanges = item.ExchangeUses.Length, Quests = item.QuestUses.Length, Deliveries = item.DeliveryUses.Length,
                 Sources = item.AcquisitionSources.Length + item.AcquisitionTrades.Length + item.BuyOffers.Length,

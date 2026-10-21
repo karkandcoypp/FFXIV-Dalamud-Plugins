@@ -1,3 +1,16 @@
+# BagSense 0.7.0 validation
+
+- .NET 10 / Dalamud API 15 Release build passes with warnings as errors.
+- 137 policy checks, 20 collector/research checks, 28 production catalog/cache/integrity checks, 41 installed-data checks and 11 configuration checks pass.
+- Installed mission tests verify WKSItemInfo indirection, empty sentinel behavior, actual mission inputs, Relic Restoration Brush classification and unique Gangos map resolution.
+- Research regressions retain all twelve distinct Atma costs plus the correct Zenith weapon, all four Zodiac components plus Nexus, fragment appraisal pool/rank, disambiguated logogram results and virtual Lost Action classification. Additional uses prevent completed-unlock disposal claims.
+- 61 production ImGui fixtures cover RU/EN, inventory/goals/plan/database/quests and multiple sizes. New fixtures include Atma, Flawless Alexandrite, Frosted Protean Crystal, cosmic brush, Forgotten Fragment, logogram and Lost Cure. Rendered RU fragment and EN Atma cards inspected locally.
+- 5 package verifier tests and 4 shared publisher tests pass. Temporary paths are redirected into the workspace for the restricted local environment.
+- Full 54,411-record audit: see coverage-audit.json. Nine records remain unresolved; researched system context is separate from exact exchange or hand-in evidence.
+- No live FFXIV test claim: native journal transitions, server-side conditions, current Resistance rank, cosmic mission state and map clicks still require in-game verification.
+
+---
+
 # BagSense 0.6.0 validation
 
 21 October 2026, Windows, .NET 10, installed Dalamud API 15.

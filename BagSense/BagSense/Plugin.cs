@@ -80,6 +80,13 @@ public sealed class Plugin : IDalamudPlugin
         try { MapFailed = !GameGui.OpenMapWithMapLink(new MapLinkPayload(location.Territory, location.Map, location.X, location.Y)); }
         catch (Exception ex) { MapFailed = true; Log.Warning(ex, "BagSense: could not open NPC map"); }
     }
+    internal void OpenResearchMap(string zone, float x, float y)
+    {
+        if (Demo || !Client.IsLoggedIn || !float.IsFinite(x) || !float.IsFinite(y) || x < 1 || y < 1 || x >= 100 || y >= 100
+            || Catalog?.ResearchMap(zone) is not { } map) return;
+        try { MapFailed = !GameGui.OpenMapWithMapLink(new MapLinkPayload(map.Territory, map.Map, x, y)); }
+        catch (Exception ex) { MapFailed = true; Log.Warning(ex, "BagSense: could not open researched map point"); }
+    }
     internal void SetDemo(bool demo) { Demo = demo; window.ResetSelection(); Refresh(); }
     internal void ResetDemo() { (demoSnapshot, demoData) = DemoData.Create(); window.ResetSelection(); }
 

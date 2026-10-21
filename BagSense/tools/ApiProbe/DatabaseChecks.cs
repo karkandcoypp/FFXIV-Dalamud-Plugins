@@ -24,6 +24,9 @@ internal static class DatabaseChecks
         }
         Check(document.Items.Length > 50000, "Complete catalog contains over fifty thousand named items");
         Check(document.Sources is { Length: > 20000 }, "Source graph includes enemy, duty, FATE and container acquisition");
+        Check(document.Research is { Length: > 2400 } && document.Research.All(r => r.Uses.Length > 0), "Published research contains identified nonempty item relationships");
+        Check(document.Research!.Single(r => r.ItemId == 7851).Uses.Any(u => u.Kind == "RelicExchange" && u.Costs!.Count(c => c.Name.StartsWith("Atma of ")) == 12), "Complete Atma exchange price survives production JSON decoding");
+        Check(document.Research!.Single(r => r.ItemId == 30884).Uses.Any(u => u.Kind == "FragmentAppraisal" && u.Results!.Contains(30925u)), "Fragment appraisal retains its actual Lost Cure possibility");
         var arcane = document.Needs.Single(n => n.QuestId == 70855 && n.ItemId == 47744);
         Check(arcane.Count == 3 && arcane.TodoIndex == 2 && arcane.Contacts.Any(c => c.Npc == "Gerolt" && c.CanMap), "Shared-map Gerolt and exact demiatma hand-in survive published catalog decoding");
         Check(document.Quests!.Single(q => q.QuestId == 70855).ItemIds.Contains(47744u), "Quest browser retains demiatma input relationships");

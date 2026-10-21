@@ -13,8 +13,9 @@ public sealed record CatalogNeed(uint QuestId, uint ItemId, string QuestName, bo
 public sealed record CatalogQuestStep(int Index, int CompleteSequence, string Text, NpcLocation[] Contacts);
 public sealed record CatalogQuest(uint QuestId, string Name, bool Repeatable, CatalogQuestStep[] Steps, uint[] ItemIds, string Source);
 public sealed record CatalogSource(uint ItemId, string Kind, string Name, uint Id = 0, string Detail = "");
+public sealed record CatalogResearch(uint ItemId, ResearchUse[] Uses, string ItemName = "");
 public sealed record CatalogDocument(int Schema, DateTimeOffset GeneratedAt, string SourceCommit, CatalogItem[] Items, CatalogNeed[] Needs,
-    CatalogQuest[]? Quests = null, CatalogSource[]? Sources = null, string TeamcraftCommit = "");
+    CatalogQuest[]? Quests = null, CatalogSource[]? Sources = null, string TeamcraftCommit = "", CatalogResearch[]? Research = null);
 public sealed record CatalogManifest(int Schema, DateTimeOffset GeneratedAt, string SourceCommit, string File, string Sha256,
     int Bytes, int ItemCount, int QuestItemCount, int ExactCount);
 public sealed record DatabaseResult(CatalogDocument? Document, bool Offline, string Error);
@@ -61,6 +62,12 @@ public static class DatabaseCatalog
         if (document.Sources is { } sources && (sources.Length > 200000 || sources.Any(s => !ids.Contains(s.ItemId)
             || string.IsNullOrWhiteSpace(s.Name) || s.Name.Length > 512 || s.Detail.Length > 2048
             || s.Kind is not ("Drop" or "Duty" or "Fate" or "Container" or "Contains")))) throw new InvalidDataException("Invalid source graph");
+        if (document.Research is { } research && (research.Length > 10000 || research.DistinctBy(r => r.ItemId).Count() != research.Length
+            || research.Any(r => !ids.Contains(r.ItemId) || r.Uses == null || r.Uses.Length > 500 || r.Uses.Any(u =>
+                u.MapX.HasValue != u.MapY.HasValue || u.MapX.HasValue && (!float.IsFinite(u.MapX.Value) || !float.IsFinite(u.MapY!.Value) || u.MapX.Value < 1 || u.MapX.Value >= 100 || u.MapY.Value < 1 || u.MapY.Value >= 100)
+                || u.Contacts?.Any(c => !c.CanMap) == true || string.IsNullOrWhiteSpace(u.Kind) || string.IsNullOrWhiteSpace(u.Context) || u.Context.Length > 2048 || u.WikiTitle.Length > 512
+                || u.RequiredCount is <= 0 or > 999999 || u.Costs?.Any(c => c.Count <= 0 || string.IsNullOrWhiteSpace(c.Name)) == true))))
+            throw new InvalidDataException("Invalid researched item facts");
         return document;
     }
 

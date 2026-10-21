@@ -39,6 +39,7 @@ public sealed partial class BagWindow
         if (snapshot.Gearsets.TryGetValue(item.Id, out var gearsets)) ImGui.TextWrapped(T("В комплекте: ", "Gearsets: ") + string.Join(", ", gearsets));
         ImGui.Separator();
 
+        DrawResearch(item, snapshot);
         DrawDeliveries(item, snapshot);
         if (item.ExchangeUses.Length > 0 && action == PlanAction.ExchangeReview) DrawExchange(item, snapshot);
         else if (action == PlanAction.Vendor) DrawSale(item, snapshot);
