@@ -1,11 +1,11 @@
 {
   "Schema": 1,
   "CollectorVersion": 9,
-  "GeneratedAt": "2026-10-21T00:13:27.818716+00:00",
+  "GeneratedAt": "2026-10-21T09:26:13.409492+00:00",
   "SourceCommit": "44948e4cda5846eab0baa9872122a888fcc4f1b1",
-  "File": "catalog-17f7d366f77b9196.json.gz",
-  "Sha256": "17f7d366f77b919605b5e0de8a6931a560ebb4a6378312cad8d240dfa49d97f1",
-  "Bytes": 2310316,
+  "File": "catalog-be235ad6e5d5eee1.json.gz",
+  "Sha256": "be235ad6e5d5eee1ac553db6a0617b94262c5763c826ff96a9f55525ca47ad73",
+  "Bytes": 2310317,
   "ItemCount": 54411,
   "QuestCount": 5193,
   "QuestItemCount": 4859,
@@ -13,5 +13,5 @@
   "SourceCount": 20630,
   "TeamcraftCommit": "f2918cca2b159d05f569e24b5828b5af38444d0a",
   "ResearchCount": 2568,
-  "ResearchSha256": "38eaaa60c731049eed6653d1b3db194374045a2ba052dd37141b01fce741cef5"
+  "ResearchSha256": "a4b1e6789acdae795414658ac05b0e491c8f29d0738e56b19696c7a3d704ccce"
 }
