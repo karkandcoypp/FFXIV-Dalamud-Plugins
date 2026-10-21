@@ -78,7 +78,7 @@
     "Author": "Carcosa Lyuman",
     "Name": "BagSense",
     "InternalName": "BagSense",
-    "AssemblyVersion": "0.7.0.0",
+    "AssemblyVersion": "0.8.0.0",
     "Punchline": "Remember why you keep items. Make an explained cleanup plan.",
     "Description": "Understand item purposes, acquisition sources, crafting and exchange links, quest requirements and access blockers. Wiki links, NPC maps, Leve reservations, explained rewards and collection ownership. Auto-updating item database. English / Русский. Open /bagsense.",
     "ApplicableVersion": "any",
@@ -90,8 +90,8 @@
       "planning",
       "qol"
     ],
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.7.0/BagSense.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.7.0/BagSense.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.7.0/BagSense.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.8.0/BagSense.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.8.0/BagSense.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/bs-v0.8.0/BagSense.zip"
   }
 ]
