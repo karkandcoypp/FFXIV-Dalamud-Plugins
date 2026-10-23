@@ -559,8 +559,26 @@
       "text": "Пункт назначения NPC неоднозначен или не нанесен на карту: бросок оркестра быстрого пит-стопа",
       "provider": "MyMemory",
       "machine": true
+    },
+    "4b8e4a68fb44e1d7a1462145f6dd67a7bae25cd81da0198b0e53e7dbaf5580b7": {
+      "source": "Announcing the Fan Festival Group Pose Screenshot Campaign!",
+      "text": "Объявляем кампанию по созданию позы для группы фан-фестиваля!",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "7185703e843af89bbd9f1f9ce9d8905c4539e1a24e7b7380e3086456613a59f4": {
+      "source": "No explicit reward database links found; image-only rewards need review.",
+      "text": "Не найдено явных ссылок на базу данных вознаграждений; награды только для изображений нуждаются в проверке.",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "79dc172752222f54d2593be4b518380a90c584e305f07aba9e03dbda7f9ec55e": {
+      "source": "No quest could be identified unambiguously.",
+      "text": "Ни один квест не мог быть идентифицирован однозначно.",
+      "provider": "MyMemory",
+      "machine": true
     }
   },
   "day": "2026-10-23",
-  "used": 0
+  "used": 174
 }
