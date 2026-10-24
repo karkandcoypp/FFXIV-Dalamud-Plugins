@@ -577,8 +577,32 @@
       "text": "Ни один квест не мог быть идентифицирован однозначно.",
       "provider": "MyMemory",
       "machine": true
+    },
+    "3fbc3092248581b8f133cb02e142222b1bb165201dc5ca576a9f22d0d7e62024": {
+      "source": "Price unknown or exchange is ambiguous: Hakuko Mirror",
+      "text": "Цена неизвестна или обмен неоднозначен: Hakuko Mirror",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "2956b9f94ff00d615a29f85962687194d0dd8a98598bc22fd0695b8bb023a777": {
+      "source": "Price unknown or exchange is ambiguous: Gogyo Sosei Shin",
+      "text": "Цена неизвестна или обмен неоднозначен: Gogyo Sosei Shin",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "c5ad42e8f3048102ce67b1a13c8c8953533936c8f1144cd839b66314482dfce5": {
+      "source": "NPC destination is ambiguous or not mapped: Hakuko Mirror",
+      "text": "Место назначения NPC неоднозначно или не нанесено на карту: Hakuko Mirror",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "376d236fa740847b8e5f836bab339372dfd0d9fbb4009afdc987ba3747c0954b": {
+      "source": "NPC destination is ambiguous or not mapped: Gogyo Sosei Shin",
+      "text": "Место назначения NPC неоднозначно или не нанесено на карту: Gogyo Sosei Shin",
+      "provider": "MyMemory",
+      "machine": true
     }
   },
   "day": "2026-10-24",
-  "used": 0
+  "used": 226
 }
