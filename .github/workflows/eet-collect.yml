@@ -56,6 +56,7 @@ jobs:
             # workflow_dispatch/scheduled runs can be queued at an older SHA
             # while the preceding release updates pluginmaster.json.
             for attempt in 1 2 3 4 5; do
+              echo "Publish attempt $attempt/5"
               git pull --rebase origin main || exit 1
               if git push origin HEAD:main; then exit 0; fi
               sleep 2
