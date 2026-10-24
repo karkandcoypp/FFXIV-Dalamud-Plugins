@@ -1,0 +1,12 @@
+{
+  "Author": "Carcosa Lyuman",
+  "Name": "CraftProfile",
+  "InternalName": "CraftProfile",
+  "AssemblyVersion": "0.1.0.0",
+  "Punchline": "Automatic local crafting and gathering profession profiles.",
+  "Description": "Exports profession levels, equipped and saved gearsets with materia, observed stats and buffs, specialist assignments, master books, recipe gates, action unlocks and loaded inventory to local JSON. No network or gameplay automation. English / Русский. Open /craftprofile.",
+  "ApplicableVersion": "any",
+  "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
+  "DalamudApiLevel": 15,
+  "Tags": ["crafting", "gathering", "gearsets", "export", "planning"]
+}

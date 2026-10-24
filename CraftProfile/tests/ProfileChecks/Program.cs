@@ -1,0 +1,44 @@
+using CraftProfile;
+using System.Text.Json;
+int checks=0;
+void Check(bool value,string message){checks++;if(!value)throw new Exception(message);}
+GearItem Gear(uint id=10,bool hq=false,ushort materia=1,byte grade=11)=>new(0,id,"Test",hq,740,30000,[new(0,materia,grade,123,"Test materia",70,33)],2,true);
+var gear=new List<GearItem>{Gear()};
+string fingerprint=ProfilePolicy.Fingerprint(gear);
+Check(fingerprint==ProfilePolicy.Fingerprint([Gear() with {Name="Localized",Condition=1}]),"Durability/name changed identity");
+Check(fingerprint!=ProfilePolicy.Fingerprint([Gear(11)]),"Item changed identity");
+Check(fingerprint!=ProfilePolicy.Fingerprint([Gear(hq:true)]),"HQ changed identity");
+Check(fingerprint!=ProfilePolicy.Fingerprint([Gear(materia:2)]),"Materia changed identity");
+Check(fingerprint!=ProfilePolicy.Fingerprint([Gear(grade:10)]),"Materia grade changed identity");
+Check(ProfilePolicy.IsProfession(8)&&ProfilePolicy.IsProfession(18)&&!ProfilePolicy.IsProfession(19),"Profession bounds");
+var document=new ProfileDocument{CharacterKey="test-owner"};
+var captured=DateTimeOffset.UtcNow;
+var observation=new JobObservation(11,100,captured,"observed_equipped",fingerprint,false,new(4730,4567,569,0,0,0),gear,[]);
+ProfilePolicy.MergeObservation(document,observation);
+Check(document.UnbuffedObservations[11].Stats.Cp==569,"Baseline missing");
+Check(document.Observations.Count==1,"Observed missing");
+var buffed=observation with {Statuses=[new(48,"Food",123,100)],Stats=new(4900,4600,650,0,0,0)};
+ProfilePolicy.MergeObservation(document,buffed);
+Check(document.UnbuffedObservations[11].Stats.Cp==569,"Buffed stats overwrote baseline");
+Check(document.Observations[11].Stats.Cp==650,"Current stats lost");
+ProfilePolicy.MergeObservation(document,buffed with {GearFingerprint="different"});
+Check(!document.UnbuffedObservations.ContainsKey(11),"Different gear retained baseline");
+ProfilePolicy.MergeObservation(document,observation with {LevelSynced=true});
+Check(!document.UnbuffedObservations.ContainsKey(11),"Synced stats became baseline");
+ProfilePolicy.MergeObservation(document,observation with {JobId=1});
+Check(document.Observations.Count==1,"Battle job recorded as crafter");
+string json=JsonSerializer.Serialize(document,ProfilePolicy.Json);
+Check(json.Contains("schema_version")&&json.Contains("grade_index")&&json.Contains("unbuffed_confirmed"),"JSON contract wrong");
+Check(JsonSerializer.Deserialize<ProfileDocument>(json,ProfilePolicy.Json)!.CharacterKey=="test-owner","Roundtrip identity failed");
+string root=Path.Combine(AppContext.BaseDirectory,"craftprofile-checks-"+Guid.NewGuid().ToString("N"));
+try{
+ Directory.CreateDirectory(root);string path=Path.Combine(root,"profile.json");
+ ProfilePolicy.WriteAtomic(path,document);
+ Check(ProfilePolicy.Load(path,"test-owner").Observations.Count==1,"Persistence lost observations");
+ Check(ProfilePolicy.Load(path,"other-owner").Observations.Count==0,"Cross-character contamination");
+ ProfilePolicy.WriteAtomic(path,withNotAvailable());
+ Check(Directory.GetFiles(root,"*.tmp").Length==0,"Temporary files left behind");
+ File.WriteAllText(path,"{broken");Check(ProfilePolicy.Load(path,"test-owner").Observations.Count==0,"Corrupt cache not recovered");
+}finally{Directory.Delete(root,true);}
+ProfileDocument withNotAvailable()=>new(){CharacterKey="test-owner",GeneratedAt=captured};
+Console.WriteLine($"PASS: {checks} profile policy and persistence checks");

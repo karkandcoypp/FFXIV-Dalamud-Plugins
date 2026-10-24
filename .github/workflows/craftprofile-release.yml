@@ -1,0 +1,79 @@
+name: Release CraftProfile
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag matching the current manifest; validation only, no publication"
+        required: true
+        type: string
+  push:
+    tags: ['cp-v*']
+permissions:
+  contents: write
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      RELEASE_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Test shared repository publisher
+        run: |
+          python -m unittest discover -s EorzeaEventTracker/tests -p test_repository.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Repository index tests failed' }
+          python -m unittest discover -s CraftProfile/tests -p test_release.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Package verifier tests failed' }
+      - name: Test shared publication helpers
+        run: |
+          python -m unittest discover -s tools/tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Publication helper tests failed' }
+      - name: Install Dalamud development files
+        run: |
+          $directory = Join-Path $env:APPDATA 'XIVLauncher/addon/Hooks/dev'
+          Invoke-WebRequest 'https://goatcorp.github.io/dalamud-distrib/latest.zip' -OutFile "$env:RUNNER_TEMP/dalamud.zip"
+          New-Item -ItemType Directory -Path $directory -Force | Out-Null
+          Expand-Archive "$env:RUNNER_TEMP/dalamud.zip" -DestinationPath $directory -Force
+      - name: Build, test and validate package
+        run: |
+          ./CraftProfile/build.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'CraftProfile build failed' }
+          Copy-Item CraftProfile/artifacts/CraftProfile.zip "$env:RUNNER_TEMP/CraftProfile.zip"
+          Copy-Item CraftProfile/artifacts/CraftProfile.zip.sha256 "$env:RUNNER_TEMP/CraftProfile.zip.sha256"
+          Copy-Item CraftProfile/CraftProfile/bin/Release/CraftProfile.json "$env:RUNNER_TEMP/CraftProfile.json"
+          Copy-Item pluginmaster.json "$env:RUNNER_TEMP/pluginmaster.json"
+          python tools/update_repository.py --index "$env:RUNNER_TEMP/pluginmaster.json" --manifest "$env:RUNNER_TEMP/CraftProfile.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Invalid release metadata' }
+          python CraftProfile/tools/verify_package.py --zip "$env:RUNNER_TEMP/CraftProfile.zip" --checksum "$env:RUNNER_TEMP/CraftProfile.zip.sha256" --tag $env:RELEASE_TAG --repository $env:RELEASE_REPO --index "$env:RUNNER_TEMP/pluginmaster.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Package / index verification failed' }
+      - name: Upload validation package
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: validated-craftprofile-package
+          path: |
+            ${{ runner.temp }}/CraftProfile.zip
+            ${{ runner.temp }}/CraftProfile.json
+            ${{ runner.temp }}/pluginmaster.json
+          if-no-files-found: error
+      - name: Publish release asset
+        if: github.event_name == 'push'
+        run: ./tools/publish_asset.ps1 -Archive "$env:RUNNER_TEMP/CraftProfile.zip" -Manifest "$env:RUNNER_TEMP/CraftProfile.json" -Notes "CraftProfile/RELEASE-NOTES.md" -Checksum "$env:RUNNER_TEMP/CraftProfile.zip.sha256"
+      - name: Update shared plugin repository
+        if: github.event_name == 'push'
+        run: |
+          python tools/publish_index.py --manifest "$env:RUNNER_TEMP/CraftProfile.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Index publication failed after retries' }
