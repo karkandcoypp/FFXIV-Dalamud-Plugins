@@ -1,4 +1,9 @@
 """Evidence-based enrichment. Never guesses item IDs, prices or completion objectives."""
+try:
+    from .image_policy import is_image_url
+except ImportError:
+    from image_policy import is_image_url
+
 import re
 from html import unescape
 import time
@@ -200,8 +205,7 @@ def enrich(event, soup, page, api):
         issues.append('No quest could be identified unambiguously.')
     meta = soup.find('meta', property='og:image')
     image = meta.get('content', '') if meta else ''
-    parsed = urlparse(image)
-    if parsed.scheme == 'https' and parsed.hostname in ('lds-img.finalfantasyxiv.com', 'img.finalfantasyxiv.com'):
+    if is_image_url(image):
         event['imageUrl'] = image
     event['tracking'] = dict(eventId=event['id'], quests=list(quests.values()), rewards=list(rewards.values()))
     event['rewards'] = [r['name'] for r in rewards.values()]

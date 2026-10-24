@@ -5,6 +5,7 @@ from argparse import Namespace
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from collector.collect import run
+from collector.image_policy import is_image_url
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,6 +35,6 @@ class OnlineFeedTests(unittest.TestCase):
             for target in event['tracking']['quests'] + event['tracking']['rewards']:
                 if event.get('verified') or target.get('locationId'):
                     self.assertIn(target['locationId'], locations)
-            self.assertTrue(event['imageUrl'].startswith('https://lds-img.finalfantasyxiv.com/'))
+            self.assertTrue(is_image_url(event['imageUrl']), event['imageUrl'])
             if event.get('verified') and event.get('translations', {}).get('ru'):
                 self.assertIn(event['title'], event['translations']['ru'])

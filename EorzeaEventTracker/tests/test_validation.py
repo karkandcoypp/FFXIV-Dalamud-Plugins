@@ -63,6 +63,17 @@ class ValidationChecks(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 gate.reward(self.reward, {LOCATION['id']: LOCATION})
 
+    def test_legacy_default_currency_matches_client_and_wrong_currency_still_blocks(self):
+        gate = Gate(self.api)
+        legacy = dict(self.reward, currencyItemId=41629)
+        del legacy['currency']
+        with patch.object(gate, 'point', return_value=100):
+            gate.reward(legacy, {LOCATION['id']: LOCATION})
+            with self.assertRaises(Contradiction):
+                gate.reward(dict(legacy, currency='Wrong currency'), {LOCATION['id']: LOCATION})
+            with self.assertRaises(Contradiction):
+                gate.reward(dict(legacy, currencyItemId=999), {LOCATION['id']: LOCATION})
+
     def test_wrong_item_icon_and_quest_reward_block_publication(self):
         gate = Gate(self.api)
         with self.assertRaises(Contradiction):

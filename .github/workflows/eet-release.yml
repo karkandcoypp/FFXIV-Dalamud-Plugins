@@ -1,5 +1,11 @@
 name: Release Eorzea Event Tracker
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag matching the current manifest; validation only, no publication'
+        required: true
+        type: string
   push:
     tags: ['eet-v*']
 permissions:
@@ -12,7 +18,7 @@ jobs:
     runs-on: windows-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       RELEASE_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
@@ -61,14 +67,26 @@ jobs:
           $output = 'EorzeaEventTracker/EorzeaEventTracker/bin/Release'
           Copy-Item "$output/EorzeaEventTracker/latest.zip" "$env:RUNNER_TEMP/EorzeaEventTracker.zip"
           Copy-Item "$output/EorzeaEventTracker.json" "$env:RUNNER_TEMP/EorzeaEventTracker.json"
-          python tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          Copy-Item pluginmaster.json "$env:RUNNER_TEMP/pluginmaster.json"
+          python tools/update_repository.py --index "$env:RUNNER_TEMP/pluginmaster.json" --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Invalid release metadata' }
-          git restore pluginmaster.json
+      - name: Upload validation package
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-event-tracker-package
+          path: |
+            ${{ runner.temp }}/EorzeaEventTracker.zip
+            ${{ runner.temp }}/EorzeaEventTracker.json
+            ${{ runner.temp }}/pluginmaster.json
+          if-no-files-found: error
       - name: Publish release asset
+        if: github.event_name == 'push'
         run: |
           gh release create $env:RELEASE_TAG "$env:RUNNER_TEMP/EorzeaEventTracker.zip" --repo $env:RELEASE_REPO --title "Eorzea Event Tracker $env:RELEASE_TAG" --notes-file EorzeaEventTracker/RELEASE-NOTES.md --latest=false
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
       - name: Add released plugin to custom repository
+        if: github.event_name == 'push'
         run: |
           git fetch origin main
           git checkout -B main origin/main

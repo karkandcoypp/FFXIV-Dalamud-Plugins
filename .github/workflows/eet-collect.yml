@@ -21,7 +21,11 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - run: pip install -r EorzeaEventTracker/collector/requirements.txt
-      - run: python -m unittest discover -s tests -v
+      - name: Test collector and official image URL contract
+        run: python -m unittest discover -s tests -v
+        working-directory: EorzeaEventTracker
+      - name: Test client feed and image URL contract
+        run: dotnet run --project tests/FeedChecks/FeedChecks.csproj -c Release
         working-directory: EorzeaEventTracker
       - run: cp config/events.json "$RUNNER_TEMP/previous-events.json"
         working-directory: EorzeaEventTracker

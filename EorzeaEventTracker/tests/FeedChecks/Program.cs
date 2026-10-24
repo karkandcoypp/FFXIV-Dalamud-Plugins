@@ -33,6 +33,10 @@ internal static class Program
             Console.WriteLine("PASS: generated feed validated with the client policy");
             return;
         }
+        using (var imageContract = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "image-urls.json"))))
+            foreach (var test in imageContract.RootElement.EnumerateArray())
+                Check(FeedPolicy.IsImageUrl(test.GetProperty("url").GetString()!) == test.GetProperty("allowed").GetBoolean(),
+                    "shared image URL contract: " + test.GetProperty("name").GetString());
         await OnlineFeedChecks.Run();
         await FeedHealthChecks.Run();
         DeadlineReminderChecks.Run();
