@@ -17,3 +17,20 @@ Scope: the eight existing workflows covering BagSense, Eorzea Compass, Eorzea Ev
 Eight shared publication tests exercise all four package identities, wrong tags/manifests, unsafe ZIP paths, real isolated Git repositories with a competing push, bounded failure, preserved working indexes/unrelated files, superseded releases and mocked GitHub release creation/reuse. Existing four repository merge tests pass. BagSense has 22 collector/research/retention tests and 28 actual client database integrity/cache checks.
 
 A new CI workflow lints all workflow files and runs publication contracts on main/PR changes to shared tools or workflows. Manual validation runs are used to exercise each release without changing published versions; both data workflows are dispatched against main for live publication checks. External upstream outages can still fail a run; validation gates and retained caches remain in place rather than treating incomplete data as valid.
+
+## Completed GitHub verification
+
+| Workflow | Successful run |
+|---|---|
+| BagSense build | [40083140457](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083140457) |
+| Compass preview | [40083140446](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083140446) |
+| BagSense release validation | [40083140422](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083140422) |
+| Compass release validation | [40083142233](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083142233) |
+| Ultrawide release validation | [40083144105](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083144105) |
+| Event Tracker release validation | [40083146101](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083146101) |
+| Lodestone live publication | [40083149818](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083149818) |
+| BagSense live publication | [40083147880](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083147880) |
+| BagSense unchanged repeat | [40083254543](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083254543) |
+| Workflow/publication contracts | [40083210966](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/actions/runs/40083210966) |
+
+The first new lint run found an unused retry counter under Linux shellcheck; retry attempts are now logged and the subsequent contract run passed. Independent downloads validated all four CI ZIPs and proposed indexes. The public pluginmaster.json stayed unchanged. The second BagSense collection kept the same current and PreviousFile names; the previous gzip was downloaded publicly and its content-addressed SHA-256 and item catalog were verified. No plugin version was released by these validation runs. Git push/retry races and release API mutations were exercised in isolated Git repositories and mocked gh calls, not by overwriting production releases.
