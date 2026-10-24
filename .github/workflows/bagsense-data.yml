@@ -6,31 +6,42 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: dalamud-publish
+  group: ${{ github.workflow }}
   cancel-in-progress: false
 jobs:
   collect:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.12'
+      - uses: actions/setup-dotnet@v6.0.0
+        with:
+          dotnet-version: '10.0.x'
       - name: Check collector rules
         run: python -m unittest discover -s BagSense/tests -p test_database.py -v
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6.1.0
         with:
           path: ${{ runner.temp }}/bagsense-sources
           key: bagsense-sources-${{ github.run_id }}
           restore-keys: bagsense-sources-
       - name: Collect complete catalog
         run: python BagSense/tools/collect_database.py --output BagSense/data --cache '${{ runner.temp }}/bagsense-sources'
+      - name: Validate generated database with client parser
+        run: dotnet run --project BagSense/tests/PolicyChecks/PolicyChecks.csproj -c Release -- --database BagSense/data
       - name: Publish validated data
+        if: github.ref == 'refs/heads/main'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add BagSense/data
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Update BagSense item and quest database'
-          git pull --rebase origin main
-          git push origin HEAD:main
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main || exit 1
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 2
+          done
+          exit 1

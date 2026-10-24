@@ -1,0 +1,28 @@
+name: Check workflow and publication contracts
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/**', 'tools/**']
+  pull_request:
+    paths: ['.github/workflows/**', 'tools/**']
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Check workflow syntax and expressions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v1.7.12 --repo rhysd/actionlint --pattern '*linux_amd64.tar.gz' --dir "$RUNNER_TEMP/actionlint"
+          tar -xzf "$RUNNER_TEMP"/actionlint/*.tar.gz -C "$RUNNER_TEMP/actionlint"
+          "$RUNNER_TEMP/actionlint/actionlint" -color .github/workflows/*.yml
+      - name: Test atomic publication, repeat runs and package contracts
+        run: python -m unittest discover -s tools/tests -v

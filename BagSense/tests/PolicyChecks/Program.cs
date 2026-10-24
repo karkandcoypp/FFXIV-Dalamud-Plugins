@@ -1,6 +1,8 @@
 using System.Text.Json;
 using BagSense;
 
+if (args.Length == 2 && args[0] == "--database") { DatabaseChecks.Run(args[1]); return; }
+
 int checks = 0;
 void Check(bool value, string message) { if (!value) throw new Exception(message); checks++; }
 var now = DateTimeOffset.UtcNow;

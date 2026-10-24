@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 
 ROOT = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/'
-COLLECTOR_VERSION = 9
+COLLECTOR_VERSION = 10
 WORDS = dict(zip('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety'.split(),
                  [*range(1, 21), 30, 40, 50, 60, 70, 80, 90]))
 
@@ -70,6 +70,15 @@ def quantity(item, journal, requests_only=False):
         return None, 'unknown', ''
     count, quality = next(iter(values))
     return (count, quality, matches[0][0]) if 0 < count <= 9999 else (None, 'unknown', '')
+
+
+def retained_payload(previous, asset, output):
+    candidate = previous.get('File') if previous.get('File') != asset else previous.get('PreviousFile')
+    if candidate is None:
+        legacy = [p.name for p in output.glob('catalog-*.json.gz') if p.name != asset]
+        if len(legacy) == 1:
+            candidate = legacy[0]
+    return candidate if isinstance(candidate, str) and re.fullmatch(r'catalog-[a-f0-9]{16}\.json\.gz', candidate) and (output/candidate).is_file() else None
 
 
 def collect(output, cache, revision=None, teamcraft_revision=None):
@@ -340,10 +349,10 @@ def collect(output, cache, revision=None, teamcraft_revision=None):
     asset = f'catalog-{digest[:16]}.json.gz'
     (output / asset).write_bytes(data)
     manifest = dict(Schema=1, CollectorVersion=COLLECTOR_VERSION, GeneratedAt=generated, SourceCommit=revision, File=asset, Sha256=digest, Bytes=len(data),
-                    ItemCount=len(catalog_items), QuestCount=len(quest_catalog), QuestItemCount=len(needs), ExactCount=sum(n['Count'] is not None for n in needs), SourceCount=len(links), TeamcraftCommit=tc_revision, ResearchCount=len(research), ResearchSha256=research_hash)
+                    ItemCount=len(catalog_items), QuestCount=len(quest_catalog), QuestItemCount=len(needs), ExactCount=sum(n['Count'] is not None for n in needs), SourceCount=len(links), TeamcraftCommit=tc_revision, ResearchCount=len(research), ResearchSha256=research_hash, PreviousFile=retained_payload(previous, asset, output))
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     # Keep the current and immediately previous content-addressed payload for CDN readers.
-    keep = {asset, previous.get('File')}
+    keep = {asset, manifest.get('PreviousFile')}
     for obsolete in output.glob('catalog-*.json.gz'):
         if obsolete.name not in keep and obsolete.resolve().parent == output.resolve():
             obsolete.unlink()

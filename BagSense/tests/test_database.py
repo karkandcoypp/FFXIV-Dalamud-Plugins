@@ -112,3 +112,21 @@ class ResearchedFacts(unittest.TestCase):
         use=next(u for u in self.items[30925]['Uses'] if u['Kind']=='LostAction')
         self.assertEqual(use['Evidence'],'Game FilterGroup 39')
         self.assertNotIn('Unlocked',use)
+
+
+class PayloadRetention(unittest.TestCase):
+    def test_no_change_keeps_previously_published_payload(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as directory:
+            root=Path(directory)
+            current='catalog-'+'a'*16+'.json.gz';older='catalog-'+'b'*16+'.json.gz'
+            (root/current).write_bytes(b'current');(root/older).write_bytes(b'previous')
+            self.assertEqual(collector.retained_payload({'File':current,'PreviousFile':older},current,root),older)
+            self.assertEqual(collector.retained_payload({'File':current},current,root),older)
+            self.assertEqual(collector.retained_payload({'File':current},'catalog-'+'c'*16+'.json.gz',root),current)
+
+    def test_retention_cannot_reference_missing_or_external_paths(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as directory:
+            for name in ['../other.json.gz','catalog-'+'b'*16+'.json.gz']:
+                self.assertIsNone(collector.retained_payload({'File':name},'catalog-'+'a'*16+'.json.gz',Path(directory)))

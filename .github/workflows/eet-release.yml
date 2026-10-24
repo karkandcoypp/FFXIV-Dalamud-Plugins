@@ -11,23 +11,24 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: dalamud-publish
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   release:
     runs-on: windows-latest
+    timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       RELEASE_REPO: ${{ github.repository }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: '10.0.x'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.12'
       - name: Test event collector and repository index
@@ -47,11 +48,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Contradictory feed relationships; publication blocked' }
       - name: Upload relationship audit
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: release-feed-validation
           path: EorzeaEventTracker/config/validation-report.json
           if-no-files-found: ignore
+      - name: Test shared publication helpers
+        run: |
+          python -m unittest discover -s tools/tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Publication helper tests failed' }
       - name: Install Dalamud development files
         run: |
           $directory = Join-Path $env:APPDATA 'XIVLauncher/addon/Hooks/dev'
@@ -70,9 +75,11 @@ jobs:
           Copy-Item pluginmaster.json "$env:RUNNER_TEMP/pluginmaster.json"
           python tools/update_repository.py --index "$env:RUNNER_TEMP/pluginmaster.json" --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Invalid release metadata' }
+          python tools/verify_release.py --zip "$env:RUNNER_TEMP/EorzeaEventTracker.zip" --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG --index "$env:RUNNER_TEMP/pluginmaster.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Package verification failed' }
       - name: Upload validation package
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: validated-event-tracker-package
           path: |
@@ -82,23 +89,9 @@ jobs:
           if-no-files-found: error
       - name: Publish release asset
         if: github.event_name == 'push'
-        run: |
-          gh release create $env:RELEASE_TAG "$env:RUNNER_TEMP/EorzeaEventTracker.zip" --repo $env:RELEASE_REPO --title "Eorzea Event Tracker $env:RELEASE_TAG" --notes-file EorzeaEventTracker/RELEASE-NOTES.md --latest=false
-          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
-      - name: Add released plugin to custom repository
+        run: ./tools/publish_asset.ps1 -Archive "$env:RUNNER_TEMP/EorzeaEventTracker.zip" -Manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" -Notes "EorzeaEventTracker/RELEASE-NOTES.md"
+      - name: Update shared plugin repository
         if: github.event_name == 'push'
         run: |
-          git fetch origin main
-          git checkout -B main origin/main
-          python tools/update_repository.py --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
-          if ($LASTEXITCODE -ne 0) { throw 'Index update failed' }
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add pluginmaster.json
-          git diff --cached --quiet
-          if ($LASTEXITCODE -ne 0) {
-            git commit -m "Release Eorzea Event Tracker $env:RELEASE_TAG"
-            if ($LASTEXITCODE -ne 0) { throw 'Index commit failed' }
-            git push origin main
-            if ($LASTEXITCODE -ne 0) { throw 'Index push failed' }
-          }
+          python tools/publish_index.py --manifest "$env:RUNNER_TEMP/EorzeaEventTracker.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Index publication failed after retries' }

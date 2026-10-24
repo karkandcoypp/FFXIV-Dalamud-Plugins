@@ -1,27 +1,34 @@
 name: Release BagSense
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag matching the current manifest; validation only, no publication"
+        required: true
+        type: string
   push:
     tags: ['bs-v*']
 permissions:
   contents: write
 concurrency:
-  group: dalamud-publish
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   release:
     runs-on: windows-latest
+    timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       RELEASE_REPO: ${{ github.repository }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: '10.0.x'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.12'
       - name: Test shared repository publisher
@@ -30,6 +37,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Repository index tests failed' }
           python -m unittest discover -s BagSense/tests -p test_release.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Package verifier tests failed' }
+      - name: Test shared publication helpers
+        run: |
+          python -m unittest discover -s tools/tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Publication helper tests failed' }
       - name: Install Dalamud development files
         run: |
           $directory = Join-Path $env:APPDATA 'XIVLauncher/addon/Hooks/dev'
@@ -50,34 +61,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Invalid release metadata' }
           python BagSense/tools/verify_package.py --zip "$env:RUNNER_TEMP/BagSense.zip" --checksum "$env:RUNNER_TEMP/BagSense.zip.sha256" --tag $env:RELEASE_TAG --repository $env:RELEASE_REPO --index "$env:RUNNER_TEMP/pluginmaster.json"
           if ($LASTEXITCODE -ne 0) { throw 'Package / index verification failed' }
+      - name: Upload validation package
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: validated-bagsense-package
+          path: |
+            ${{ runner.temp }}/BagSense.zip
+            ${{ runner.temp }}/BagSense.json
+            ${{ runner.temp }}/pluginmaster.json
+          if-no-files-found: error
       - name: Publish release asset
+        if: github.event_name == 'push'
+        run: ./tools/publish_asset.ps1 -Archive "$env:RUNNER_TEMP/BagSense.zip" -Manifest "$env:RUNNER_TEMP/BagSense.json" -Notes "BagSense/RELEASE-NOTES.md" -Checksum "$env:RUNNER_TEMP/BagSense.zip.sha256"
+      - name: Update shared plugin repository
+        if: github.event_name == 'push'
         run: |
-          gh release view $env:RELEASE_TAG --repo $env:RELEASE_REPO --json tagName > $null
-          if ($LASTEXITCODE -eq 0) {
-            gh release upload $env:RELEASE_TAG "$env:RUNNER_TEMP/BagSense.zip" "$env:RUNNER_TEMP/BagSense.zip.sha256" --repo $env:RELEASE_REPO --clobber
-          } else {
-            gh release create $env:RELEASE_TAG "$env:RUNNER_TEMP/BagSense.zip" "$env:RUNNER_TEMP/BagSense.zip.sha256" --verify-tag --repo $env:RELEASE_REPO --title "BagSense $env:RELEASE_TAG" --notes-file BagSense/RELEASE-NOTES.md --latest=false
-          }
-          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
-      - name: Add released plugin to custom repository
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          for ($attempt = 1; $attempt -le 3; $attempt++) {
-            git fetch origin main
-            if ($LASTEXITCODE -ne 0) { throw 'Fetch failed' }
-            git checkout -B main origin/main
-            if ($LASTEXITCODE -ne 0) { throw 'Checkout failed' }
-            python tools/update_repository.py --manifest "$env:RUNNER_TEMP/BagSense.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
-            if ($LASTEXITCODE -ne 0) { throw 'Index update failed' }
-            python BagSense/tools/verify_package.py --zip "$env:RUNNER_TEMP/BagSense.zip" --tag $env:RELEASE_TAG --repository $env:RELEASE_REPO --index pluginmaster.json
-            if ($LASTEXITCODE -ne 0) { throw 'Published index verification failed' }
-            git add pluginmaster.json
-            git diff --cached --quiet
-            if ($LASTEXITCODE -eq 0) { exit 0 }
-            git commit -m "Release BagSense $env:RELEASE_TAG"
-            if ($LASTEXITCODE -ne 0) { throw 'Index commit failed' }
-            git push origin main
-            if ($LASTEXITCODE -eq 0) { exit 0 }
-          }
-          throw 'Index push failed after three attempts'
+          python tools/publish_index.py --manifest "$env:RUNNER_TEMP/BagSense.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Index publication failed after retries' }

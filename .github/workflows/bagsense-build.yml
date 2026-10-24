@@ -2,6 +2,7 @@ name: BagSense build
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths: ['BagSense/**', '.github/workflows/bagsense-build.yml']
   pull_request:
     paths: ['BagSense/**', '.github/workflows/bagsense-build.yml']
@@ -10,11 +11,15 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
       - name: Download official Dalamud development libraries
         shell: pwsh
         run: |
@@ -25,7 +30,7 @@ jobs:
       - name: Build, check and package
         shell: pwsh
         run: ./BagSense/build.ps1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: BagSense
           path: |
