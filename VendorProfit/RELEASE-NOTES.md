@@ -1,0 +1,1 @@
+VendorProfit 0.1.0 (preview): current-world NPC resale candidates from Universalis, exact whole-stack live calculations using game buyer tax, conservative visible-row overlays and configurable minimum profit. No automated purchases or game UI writes. API 15. Game UI validation remains required.

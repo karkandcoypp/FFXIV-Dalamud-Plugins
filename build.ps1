@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('All', 'UltrawideCutscenes', 'EorzeaEventTracker', 'EorzeaCompass', 'BagSense')]
+    [ValidateSet('All', 'UltrawideCutscenes', 'EorzeaEventTracker', 'EorzeaCompass', 'BagSense', 'VendorProfit')]
     [string]$Plugin = 'All'
 )
 $ErrorActionPreference = 'Stop'
@@ -14,11 +14,12 @@ $projects = [ordered]@{
     EorzeaEventTracker = 'EorzeaEventTracker\EorzeaEventTracker\EorzeaEventTracker.csproj'
     EorzeaCompass = 'EorzeaCompass\EorzeaCompass\EorzeaCompass.csproj'
     BagSense = 'BagSense\BagSense\BagSense.csproj'
+    VendorProfit = 'VendorProfit\VendorProfit\VendorProfit.csproj'
 }
 foreach ($name in $projects.Keys) {
     if ($Plugin -ne 'All' -and $Plugin -ne $name) { continue }
-    if ($name -eq 'BagSense') {
-        & (Join-Path $PSScriptRoot 'BagSense\build.ps1')
+    if ($name -in @('BagSense', 'VendorProfit')) {
+        & (Join-Path $PSScriptRoot "$name\build.ps1")
         continue
     }
     & $dotnet build (Join-Path $PSScriptRoot $projects[$name]) -c Release --warnaserror
