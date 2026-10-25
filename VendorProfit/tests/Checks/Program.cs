@@ -29,6 +29,18 @@ Check(Policy.Match([a, a with { Id = 12, Hq = true }], ["one", "99", "3638"]) ==
 Check(Policy.Match([a], ["two", "99", "3638"]) == null, "recycled renderer not marked");
 Check(Policy.Match([a], ["one", "99", "3465"]) == null, "pre-tax displayed total not trusted");
 Check(Policy.NormalizeNumber("3,638 ") == "3638", "localized currency formatting");
+var visibleRow = Policy.ParseRow(["35 ", "99", "3,638 ", "Verre-one"]);
+Check(visibleRow is { Price: 35, Quantity: 99, Cost: 3638, Retainer: "Verre-one" }, "native row columns parsed in visual order");
+Check(Policy.FromRow(fossil, visibleRow!, [a]) is { Profit: 2203 }, "visible row uses native data without packet receipt or search request flags");
+Check(Policy.FromRow(fossil, visibleRow!, [a with { Tax = 172 }]) == null, "displayed total must equal current native tax-inclusive amount");
+Check(Policy.FromRow(fossil, visibleRow!, [a with { Item = 7 }]) == null, "old item snapshot cannot highlight new item");
+Check(Policy.FromRow(fossil, visibleRow!, [a with { Mannequin = true }]) == null, "native mannequin cannot be highlighted");
+Check(Policy.ParseRow(["35", "99", "3638", "4", "name"]) == null, "extra numeric columns fail closed");
+Check(Policy.ParseRow(["35", "99", "3464", "name"]) == null, "inconsistent rendered total fails closed");
+var hqFossil = fossil with { CanHq = true };
+Check(Policy.FromRow(hqFossil, visibleRow!, [a, a with { Hq = true }]) is { Lot.Conservative: true, Revenue: 5841 }, "indistinguishable NQ HQ rows use lower vendor value");
+var quickCatalog = Enumerable.Range(1, 250).Select(i => new VendorItem((uint)i, "item", 1, false, 99, false)).ToDictionary(i => i.Id);
+Check(Policy.QuickItems(quickCatalog, Enumerable.Range(1, 250).Select(i => (uint)i)).Length == 100, "quick search bounded to 100 learned items");
 var now = DateTimeOffset.UtcNow;
 Check(!Policy.Fresh(now.AddHours(-4), now, 180) && !Policy.Fresh(now.AddHours(4), now, 180), "old and future timestamps excluded");
 string Book(string extra = "", long? time = null) => $$"""{"itemID":8144,"lastUploadTime":{{time ?? now.ToUnixTimeMilliseconds()}},"listings":[{"pricePerUnit":4532,"quantity":3,"hq":false,"onMannequin":false{{extra}}}]}""";
@@ -60,6 +72,12 @@ using (var market = new MarketClient(new HttpClient(new PartialHandler(Book(",\"
     var result = await market.Scan(80, catalog, 180, _ => { }, CancellationToken.None);
     Check(result.Suggestions.Length == 1 && result.Failed == 1 && result.Unknown == 99, "partial batch failure preserves successful suggestions and diagnostics");
 }
+var direct = new DirectHandler();
+using (var market = new MarketClient(new HttpClient(direct)))
+{
+    var result = await market.Scan(80, quickCatalog.Values.ToArray(), 180, _ => { }, CancellationToken.None, quick: true);
+    Check(direct.Calls == 5 && direct.Aggregates == 0 && result.Checked == 100, "quick mode uses at most five books and zero aggregate requests");
+}
 if (args.Contains("--live"))
 {
     using var market = new MarketClient();
@@ -70,6 +88,10 @@ if (args.Contains("--live"))
         "live single book shape");
     using var multi = await market.Get("80/8144,8142?listings=3&entries=0", CancellationToken.None);
     Check(multi.RootElement.GetProperty("items").TryGetProperty("8144", out _), "live multi-item book shape");
+    var timer = System.Diagnostics.Stopwatch.StartNew();
+    var quick = await market.Scan(80, [demi], 180, _ => { }, CancellationToken.None, quick: true);
+    Check(quick.Checked == 1 && quick.Failed == 0, "live quick mode reads books directly");
+    Console.WriteLine($"Live quick probe: {timer.Elapsed.TotalSeconds:F2}s, unknown={quick.Unknown}, lots={quick.Suggestions.Length}");
     Console.WriteLine("LIVE HTTP schema checks passed; this does not validate in-game rendering.");
 }
 Console.WriteLine($"{checks} checks passed");
@@ -95,5 +117,15 @@ sealed class PartialHandler(string book) : HttpMessageHandler
         bool aggregate = request.RequestUri!.AbsolutePath.Contains("aggregated");
         string content = aggregate ? (++aggregates == 1 ? """{"results":[{"itemId":8144,"nq":{"minListing":{"world":{"price":4532}}}}]}""" : "{}") : book;
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(content, Encoding.UTF8, "application/json") });
+    }
+}
+
+sealed class DirectHandler : HttpMessageHandler
+{
+    public int Calls, Aggregates;
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+    {
+        Calls++; if (request.RequestUri!.AbsolutePath.Contains("aggregated")) Aggregates++;
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"items\":{}}", Encoding.UTF8, "application/json") });
     }
 }

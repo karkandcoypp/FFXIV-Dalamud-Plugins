@@ -16,7 +16,7 @@ public sealed class MarketClient : IDisposable
     public MarketClient(HttpClient client)
     {
         http = client;
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("VendorProfit/0.1.0 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("VendorProfit/0.1.1 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)");
     }
     public async Task<JsonDocument> Get(string path, CancellationToken token)
     {
@@ -92,12 +92,13 @@ public sealed class MarketClient : IDisposable
         }
         return output.ToArray();
     }
-    public async Task<ScanResult> Scan(uint world, VendorItem[] catalog, int maxAge, Action<string> progress, CancellationToken token)
+    public async Task<ScanResult> Scan(uint world, VendorItem[] catalog, int maxAge, Action<string> progress, CancellationToken token, bool quick = false)
     {
         var candidates = new List<VendorItem>();
         int failed = 0, unknown = 0, checkedItems = 0;
         int consecutiveFailures = 0;
-        foreach (var batch in catalog.Chunk(100))
+        if (quick) candidates.AddRange(catalog.Take(100));
+        foreach (var batch in (quick ? Array.Empty<VendorItem>() : catalog).Chunk(100))
         {
             token.ThrowIfCancellationRequested();
             progress($"Проверка каталога: {checkedItems}/{catalog.Length}");
@@ -126,7 +127,7 @@ public sealed class MarketClient : IDisposable
         unknown += Math.Max(0, candidates.Count - 300);
         foreach (var batch in candidates.DistinctBy(i => i.Id).Take(300).Chunk(20))
         {
-            progress($"Проверка лотов: найдено {suggestions.Count}, кандидатов {candidates.Count}");
+            progress($"{(quick ? "Быстрая проверка" : "Полный поиск")}: лотов {suggestions.Count}, предметов {checkedItems}/{candidates.Count}");
             try
             {
                 using var json = await Get($"{world}/{string.Join(',', batch.Select(i => i.Id))}?listings=100&entries=0", token).ConfigureAwait(false);
@@ -146,10 +147,11 @@ public sealed class MarketClient : IDisposable
                 }
             }
             catch (Exception e) when (e is HttpRequestException or JsonException or TaskCanceledException && !token.IsCancellationRequested) { failed += batch.Length; }
+            if (quick) checkedItems += batch.Length;
             await Task.Delay(300, token).ConfigureAwait(false);
         }
         return new(world, DateTimeOffset.UtcNow, suggestions.OrderByDescending(s => s.Quote.Profit).ToArray(), checkedItems, unknown, failed,
-            "Universalis: предварительные лоты; проверьте текущую выдачу Market Board. Поиск не гарантирует полноту.");
+            (quick ? "Быстрый список, не весь рынок. " : "Полный каталог. ") + "Universalis: предварительные лоты; проверьте выдачу Market Board.");
     }
     public void Dispose() => http.Dispose();
 }

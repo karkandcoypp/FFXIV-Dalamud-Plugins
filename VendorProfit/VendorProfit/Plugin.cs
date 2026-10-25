@@ -1,8 +1,7 @@
-using System.Collections.Concurrent;
 using System.Numerics;
+using System.Text.Json;
 using Dalamud.Configuration;
 using Dalamud.Game.Command;
-using Dalamud.Game.Network.Structures;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -17,12 +16,13 @@ namespace VendorProfit;
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
     public bool AutoOpen = true;
     public bool ScanOnOpen = true;
     public bool Highlight = true;
     public int MinimumProfit = 1000;
     public int MaximumAgeMinutes = 180;
+    public uint[] LearnedItems = [];
 }
 
 public sealed unsafe class Plugin : IDalamudPlugin
@@ -32,12 +32,10 @@ public sealed unsafe class Plugin : IDalamudPlugin
     [PluginService] internal static IDataManager Data { get; private set; } = null!;
     [PluginService] internal static IObjectTable Objects { get; private set; } = null!;
     [PluginService] internal static IClientState Client { get; private set; } = null!;
-    [PluginService] internal static IMarketBoard Board { get; private set; } = null!;
     [PluginService] internal static ICommandManager Commands { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     private readonly Configuration config;
     private readonly MarketClient market = new();
-    private readonly ConcurrentDictionary<ulong, (Lot Lot, DateTimeOffset Seen, uint World)> received = new();
     private readonly CancellationTokenSource lifetime = new();
     private CancellationTokenSource? scanCancellation;
     private Task<ScanResult>? scan;
@@ -47,6 +45,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
     private string? error;
     private uint world;
     private bool open, wasBoardOpen, manual;
+    private bool sized;
     private DateTimeOffset nextScan;
     private readonly List<Quote> live = new();
     private int highlighted;
@@ -57,24 +56,37 @@ public sealed unsafe class Plugin : IDalamudPlugin
         config = Pi.GetPluginConfig() as Configuration ?? new();
         config.MinimumProfit = Math.Clamp(config.MinimumProfit, 1, 100_000_000);
         config.MaximumAgeMinutes = Math.Clamp(config.MaximumAgeMinutes, 5, 1440);
-        Board.OfferingsReceived += OnOfferings;
-        Board.ItemPurchased += OnPurchased;
         Commands.AddHandler("/vendorprofit", new CommandInfo((_, _) => Open()) { HelpMessage = "NPC resale opportunities / перепродажа NPC" });
         Pi.UiBuilder.Draw += Draw;
         Pi.UiBuilder.OpenMainUi += Open;
         Pi.UiBuilder.OpenConfigUi += Open;
     }
     private void Open() { open = true; manual = true; }
-    private void OnPurchased(IMarketBoardPurchase purchase) => received.Clear();
-    private void OnOfferings(IMarketBoardCurrentOfferings offerings)
+    private string CachePath => Path.Combine(Pi.ConfigDirectory.FullName, $"candidates-{world}.json");
+    private void RestoreCache()
     {
-        uint capturedWorld = world;
-        var now = DateTimeOffset.UtcNow;
-        foreach (var l in offerings.ItemListings)
-            received[l.ListingId] = (new(l.ListingId, l.ItemId, l.RetainerName, l.PricePerUnit, l.ItemQuantity,
-                l.TotalTax, l.IsHq, l.OnMannequin), now, capturedWorld);
-        if (received.Count > 1000)
-            foreach (var entry in received.Where(e => e.Value.Seen < now.AddMinutes(-3)).ToArray()) received.TryRemove(entry.Key, out _);
+        try
+        {
+            var file = new FileInfo(CachePath);
+            if (!file.Exists || file.Length > 2_000_000) return;
+            var cached = JsonSerializer.Deserialize<ScanResult>(File.ReadAllText(file.FullName));
+            if (cached == null || cached.World != world || cached.Suggestions == null || !Policy.Fresh(cached.Finished, DateTimeOffset.UtcNow, 20)) return;
+            result = cached; nextScan = cached.Finished.AddMinutes(20); progress = "Показан сохранённый результат; повторного сканирования нет.";
+        }
+        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { Log.Warning(e, "VendorProfit cache ignored"); }
+    }
+    private void SaveCache(ScanResult snapshot)
+    {
+        // Keep the previous successful result if every requested item failed.
+        if (snapshot.Failed >= snapshot.Checked || snapshot.Checked == 0) return;
+        try
+        {
+            Directory.CreateDirectory(Pi.ConfigDirectory.FullName);
+            string path = CachePath;
+            File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(snapshot));
+            File.Move(path + ".tmp", path, true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Log.Warning(e, "VendorProfit cache write failed"); }
     }
     private void LoadCatalog()
     {
@@ -86,20 +98,21 @@ public sealed unsafe class Plugin : IDalamudPlugin
             catalog[item.RowId] = new(item.RowId, item.Name.ToString(), item.PriceLow, item.CanBeHq, item.StackSize, item.EquipSlotCategory.RowId != 0);
         }
     }
-    private void StartScan()
+    private void StartScan(bool full = false)
     {
         if (world == 0 || scan is { IsCompleted: false }) return;
         LoadCatalog();
         scanCancellation?.Dispose();
         scanCancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        scanCancellation.CancelAfter(TimeSpan.FromMinutes(10));
+        scanCancellation.CancelAfter(TimeSpan.FromMinutes(full ? 10 : 2));
         var token = scanCancellation.Token;
         var capturedWorld = world;
-        var items = catalog!.Values.Where(i => !i.Equipment).ToArray();
+        var items = full ? catalog!.Values.Where(i => !i.Equipment).ToArray() : Policy.QuickItems(catalog!, config.LearnedItems ?? []);
         int age = config.MaximumAgeMinutes;
         error = null;
         nextScan = DateTimeOffset.UtcNow.AddMinutes(20);
-        scan = Task.Run(() => market.Scan(capturedWorld, items, age, p => Volatile.Write(ref progress, p), token), token);
+        progress = full ? "Полный поиск по каталогу (может занять несколько минут)…" : $"Быстрая проверка: {items.Length} предметов, до 5 запросов…";
+        scan = Task.Run(() => market.Scan(capturedWorld, items, age, p => Volatile.Write(ref progress, p), token, !full), token);
     }
     private static bool Visible(AtkUnitBase* addon) => addon != null && addon->IsVisible && addon->IsReady;
     private void Draw()
@@ -117,8 +130,9 @@ public sealed unsafe class Plugin : IDalamudPlugin
         uint current = Client.IsLoggedIn ? Objects.LocalPlayer?.CurrentWorld.RowId ?? 0 : 0;
         if (current != world)
         {
-            world = current; received.Clear(); live.Clear(); result = null; scanCancellation?.Cancel();
+            world = current; live.Clear(); result = null; scanCancellation?.Cancel();
             nextScan = DateTimeOffset.MinValue;
+            if (world != 0) RestoreCache();
         }
         var search = (AtkUnitBase*)Gui.GetAddonByName("ItemSearch").Address;
         var results = (AddonItemSearchResult*)Gui.GetAddonByName("ItemSearchResult").Address;
@@ -128,23 +142,31 @@ public sealed unsafe class Plugin : IDalamudPlugin
         wasBoardOpen = boardOpen;
         if (scan is { IsCompleted: true })
         {
-            if (scan.IsCompletedSuccessfully && scan.Result.World == world) { result = scan.Result; progress = "Проверка завершена."; }
+            if (scan.IsCompletedSuccessfully && scan.Result.World == world)
+            {
+                result = scan.Result; progress = "Проверка завершена.";
+                config.LearnedItems = result.Suggestions.Select(s => s.Item.Id).Concat(config.LearnedItems ?? []).Distinct().Take(100).ToArray();
+                Pi.SavePluginConfig(config);
+                SaveCache(result);
+            }
             else if (scan.IsFaulted) { error = scan.Exception!.GetBaseException().Message; Log.Warning(scan.Exception, "VendorProfit market scan failed"); }
-            else if (scan.IsCanceled) progress = "Проверка остановлена (смена мира, отмена или лимит 10 минут).";
+            else if (scan.IsCanceled) progress = "Проверка остановлена (смена мира, отмена или лимит времени).";
             scan = null;
         }
         if (boardOpen && config.ScanOnOpen && DateTimeOffset.UtcNow >= nextScan && world != 0) StartScan();
         if (Visible((AtkUnitBase*)results)) ReadLive(results);
         else { live.Clear(); highlighted = 0; liveStatus = "Выберите предмет на Market Board."; }
         if (!open) return;
-        ImGui.SetNextWindowSize(new Vector2(840, 530), ImGuiCond.FirstUseEver);
+        if (!sized) { ImGui.SetNextWindowSize(new Vector2(790, 440), ImGuiCond.Always); sized = true; }
         if (ImGui.Begin("VendorProfit — перепродажа NPC###VendorProfit", ref open))
         {
             string worldName = Objects.LocalPlayer?.CurrentWorld.Value.Name.ToString() ?? "—";
             ImGui.TextUnformatted($"Текущий мир: {worldName}. Прибыль за весь стак, с налогом покупателя.");
+            if (ImGui.CollapsingHeader("Настройки"))
+            {
             bool changed = ImGui.Checkbox("Открывать с Market Board", ref config.AutoOpen);
             ImGui.SameLine(); changed |= ImGui.Checkbox("Подсветка лотов", ref config.Highlight);
-            changed |= ImGui.Checkbox("Проверять Universalis при открытии (кэш 20 мин)", ref config.ScanOnOpen);
+            changed |= ImGui.Checkbox("Быстрая проверка при открытии (до 100 предметов, кэш 20 мин)", ref config.ScanOnOpen);
             changed |= ImGui.InputInt("Минимум прибыли за лот", ref config.MinimumProfit);
             changed |= ImGui.InputInt("Возраст данных Universalis, минут", ref config.MaximumAgeMinutes);
             if (changed)
@@ -153,13 +175,17 @@ public sealed unsafe class Plugin : IDalamudPlugin
                 config.MaximumAgeMinutes = Math.Clamp(config.MaximumAgeMinutes, 5, 1440);
                 Pi.SavePluginConfig(config);
             }
+            }
             ImGui.Separator();
             ImGui.TextUnformatted($"Открытый предмет: {liveStatus} Подсвечено строк: {highlighted}");
             DrawLive();
+            if (ImGui.CollapsingHeader("Диагностика подсветки")) ImGui.TextWrapped(diagnostics);
             ImGui.Separator();
             if (scan == null)
             {
-                if (ImGui.Button("Обновить кандидатов") && world != 0) StartScan();
+                if (ImGui.Button("Быстро обновить") && world != 0) StartScan();
+                ImGui.SameLine();
+                if (ImGui.Button("Полный каталог (долго)") && world != 0) StartScan(true);
             }
             else if (ImGui.Button("Остановить проверку")) { scanCancellation?.Cancel(); nextScan = DateTimeOffset.UtcNow.AddMinutes(20); }
             ImGui.SameLine(); ImGui.TextUnformatted(Volatile.Read(ref progress));
@@ -167,7 +193,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
             if (result != null)
             {
                 ImGui.TextWrapped($"Последняя проверка: {result.Finished.LocalDateTime:g}; предметов: {result.Checked}; неизвестных: {result.Unknown}; ошибок: {result.Failed}. {result.Status}");
-                ImGui.TextWrapped("Экипировка проверяется только в открытой выдаче: Universalis не сообщает состояние. Нулевые и отсутствующие цены не считаются выгодой.");
+                ImGui.TextWrapped("Быстрый список ограничен кандидатами; полный каталог запускается отдельно. Живые строки проверяются без Universalis.");
                 DrawSuggestions(result);
             }
         }
@@ -176,13 +202,14 @@ public sealed unsafe class Plugin : IDalamudPlugin
     private void DrawLive()
     {
         var qualified = live.Where(q => q.Profit >= config.MinimumProfit).OrderByDescending(q => q.Profit).ToArray();
-        ImGui.TextUnformatted($"Под порог: {qualified.Length} лотов; вложить {qualified.Sum(q => q.Cost):N0}, получить {qualified.Sum(q => q.Revenue):N0}, прибыль {qualified.Sum(q => q.Profit):N0} гил.");
+        ImGui.TextUnformatted($"Видимые лоты от порога: {qualified.Length}; вложить {qualified.Sum(q => q.Cost):N0}, NPC {qualified.Sum(q => q.Revenue):N0}, прибыль {qualified.Sum(q => q.Profit):N0} гил.");
+        if (qualified.Length == 0) return;
         if (!ImGui.BeginTable("live", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, 130))) return;
         foreach (var name in new[] { "Ретейнер / качество", "Кол-во", "Покупка с налогом", "Выручка NPC", "Прибыль" }) ImGui.TableSetupColumn(name);
         ImGui.TableHeadersRow();
         foreach (var q in qualified)
         {
-            ImGui.TableNextRow(); Cell(0, q.Lot.Retainer + (q.Lot.Hq ? " HQ" : " NQ")); Cell(1, q.Lot.Quantity.ToString());
+            ImGui.TableNextRow(); Cell(0, q.Lot.Retainer + (q.Lot.Conservative ? " (NQ минимум)" : q.Lot.Hq ? " HQ" : " NQ")); Cell(1, q.Lot.Quantity.ToString());
             Cell(2, q.Cost.ToString("N0")); Cell(3, q.Revenue.ToString("N0")); Cell(4, "+" + q.Profit.ToString("N0"));
         }
         ImGui.EndTable();
@@ -190,7 +217,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
     private void DrawSuggestions(ScanResult snapshot)
     {
         var suggestions = snapshot.Suggestions.Where(s => s.Quote.Profit >= config.MinimumProfit && Policy.Fresh(s.Updated, DateTimeOffset.UtcNow, config.MaximumAgeMinutes)).ToArray();
-        if (suggestions.Length == 0) ImGui.TextWrapped("Подходящих лотов в проверенной части кэша нет. Открытые предметы всё равно проверяются по живой выдаче.");
+        if (suggestions.Length == 0) { ImGui.TextWrapped("Подходящих лотов в проверенной части кэша нет. Открытые предметы всё равно проверяются по живой выдаче."); return; }
         if (!ImGui.BeginTable("suggestions", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, 180))) return;
         foreach (var name in new[] { "Предмет (нажать: скопировать)", "Кол-во", "Покупка", "Прибыль", "Возраст / налог" }) ImGui.TableSetupColumn(name);
         ImGui.TableHeadersRow();
@@ -208,6 +235,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
     }
     private static void Cell(int column, string text) { ImGui.TableSetColumnIndex(column); ImGui.TextUnformatted(text); }
 
+    private string diagnostics = "";
     private void ReadLive(AddonItemSearchResult* addon)
     {
         live.Clear(); highlighted = 0;
@@ -215,60 +243,74 @@ public sealed unsafe class Plugin : IDalamudPlugin
         var agent = AgentItemSearch.Instance();
         var proxy = agent == null ? null : agent->InfoProxyItemSearch;
         var list = addon->Results;
-        liveStatus = "Ожидание текущих лотов / подтверждения строк.";
-        if (proxy == null || proxy->WaitingForListings || list == null || list->IsUpdatePending || list->IsScrollRefreshPending ||
-            proxy->ListingCount > 100 || agent->ResultItemId != proxy->SearchItemId ||
-            !catalog!.TryGetValue(proxy->SearchItemId, out var item)) return;
+        string title = addon->ItemName == null ? "" : ReadText(addon->ItemName);
+        var item = catalog!.Values.FirstOrDefault(i => string.Equals(i.Name, title, StringComparison.Ordinal));
+        if (item == null) { liveStatus = $"Не распознано название предмета: {title}"; return; }
+        if (list == null || proxy == null) { liveStatus = "Нет списка строк / данных рынка."; return; }
+        // SearchItemId describes the search request, not necessarily the selected result.
+        // Update/wait flags may remain set while 100 capped offers are already rendered.
+        // Validate the visible title and each rendered row against actual native prices instead.
         var lots = new List<Lot>();
-        var now = DateTimeOffset.UtcNow;
-        for (int i = 0; i < proxy->ListingCount; i++)
+        foreach (var l in proxy->Listings)
         {
-            var l = proxy->Listings[i];
-            if (l.ItemId != item.Id || !received.TryGetValue(l.ListingId, out var entry) || entry.World != world || entry.Seen < now.AddMinutes(-2)) continue;
-            var network = entry.Lot;
-            if (network.Item != l.ItemId || network.Price != l.UnitPrice || network.Quantity != l.Quantity || network.Hq != l.IsHqItem || network.Tax != l.TotalTax) continue;
-            var lot = network with { Mannequin = l.IsMannequin || l.IsSellingAsSet, Damaged = item.Equipment && l.Durability != 30000 };
-            lots.Add(lot);
-            if (Policy.Evaluate(item, lot) is { } q) live.Add(q);
+            if (l.ListingId == 0 || l.ItemId != item.Id) continue;
+            lots.Add(new(l.ListingId, l.ItemId, "", l.UnitPrice, l.Quantity, l.TotalTax, l.IsHqItem,
+                l.IsMannequin || l.IsSellingAsSet, item.Equipment && l.Durability != 30000));
         }
-        liveStatus = $"{item.Name}; подтверждено {lots.Count}/{proxy->ListingCount} лотов (не старше 2 мин).";
-        if (!config.Highlight || lots.Count == 0 || lots.Count != proxy->ListingCount || Visible((AtkUnitBase*)Gui.GetAddonByName("SelectYesno").Address)) return;
-        // Resolve each currently rendered row by its displayed retainer, quantity and tax-inclusive total.
-        // No writes to game nodes: outlines disappear naturally on close, scrolling or unloading.
-        for (int i = 0; i < Math.Min(list->ListLength, 100); i++)
+        var used = new HashSet<nint>();
+        int visible = 0, parsed = 0, matched = 0;
+        int length = Math.Clamp(list->AllocatedItemRendererListLength, 0, 200);
+        bool canHighlight = config.Highlight && addon->NumBlockingAddons == 0;
+        for (int i = 0; i < length && list->ItemRendererList != null; i++)
         {
-            if (!list->IsItemVisible(i, false)) continue;
-            var renderer = list->GetItemRenderer(i);
-            if (renderer == null || renderer->ListItemIndex != i || renderer->OwnerNode == null || !renderer->OwnerNode->IsVisible()) continue;
-            var texts = new HashSet<string>();
-            CollectText(&renderer->UldManager, texts, 0);
-            var matched = Policy.Match(lots, texts);
-            if (matched == null || Policy.Evaluate(item, matched) is not { } quote || quote.Profit < config.MinimumProfit) continue;
-            var node = renderer->OwnerNode;
-            float x, y; renderer->GetScreenPosition(&x, &y);
+            var renderer = list->ItemRendererList[i].AtkComponentListItemRenderer;
+            if (renderer == null || !used.Add((nint)renderer) || renderer->OwnerNode == null || !renderer->OwnerNode->IsVisible()) continue;
+            var fields = new List<RowField>();
+            CollectText(&renderer->UldManager, fields, 0);
+            var ordered = fields.Where(f => !string.IsNullOrWhiteSpace(f.Text)).OrderBy(f => f.X).ToArray();
+            if (ordered.Length == 0) continue;
+            visible++;
+            var row = Policy.ParseRow(ordered.Select(f => f.Text).ToArray());
+            if (row == null) continue;
+            parsed++;
+            var quote = Policy.FromRow(item, row, lots);
+            if (quote == null) continue;
+            matched++;
+            live.Add(quote);
+            if (!canHighlight || quote.Profit < config.MinimumProfit) continue;
             float scale = addon->GetScale();
-            var start = ImGui.GetMainViewport().Pos + new Vector2(x, y);
-            var end = start + new Vector2(node->Width * scale, node->Height * scale);
-            if (end.X <= start.X || end.Y <= start.Y) continue;
-            var draw = ImGui.GetForegroundDrawList();
+            var start = ImGui.GetMainViewport().Pos + new Vector2(ordered.Min(f => f.X) - 4, ordered.Min(f => f.Y) - 2);
+            var end = ImGui.GetMainViewport().Pos + new Vector2(ordered.Max(f => f.X + f.Width * scale) + 4, ordered.Max(f => f.Y + f.Height * scale) + 2);
+            var owner = list->OwnerNode;
+            if (owner == null) continue;
+            // Do not paint recycled or partially clipped rows outside the actual list viewport.
+            float left = owner->ScreenX, top = owner->ScreenY;
+            var clipStart = ImGui.GetMainViewport().Pos + new Vector2(left, top);
+            var clipEnd = clipStart + new Vector2(owner->Width * scale, owner->Height * scale);
+            start = Vector2.Max(start, clipStart); end = Vector2.Min(end, clipEnd);
+            if (end.X - start.X < 20 || end.Y - start.Y < 4) continue;
+            var draw = ImGui.GetBackgroundDrawList();
             draw.AddRectFilled(start, end, 0x2520FF60);
             draw.AddRect(start, end, 0xFF60FF80, 2, ImDrawFlags.None, 2);
             highlighted++;
         }
+        liveStatus = $"{item.Name}: проверены видимые строки {matched}/{visible}.";
+        if (visible > 0 && matched == 0) liveStatus += " Строки не совпали с ценой, количеством и итогом игры.";
+        diagnostics = $"v0.1.1 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
+            $"request={proxy->SearchItemId}; selected={agent->ResultItemId}; waiting={proxy->WaitingForListings}; update={list->IsUpdatePending}";
     }
-    private static void CollectText(AtkUldManager* uld, HashSet<string> texts, int depth)
+    private sealed record RowField(string Text, float X, float Y, ushort Width, ushort Height);
+    private static string ReadText(AtkTextNode* node) =>
+        Dalamud.Game.Text.SeStringHandling.SeString.Parse(node->NodeText.AsSpan()).TextValue.Trim();
+    private static void CollectText(AtkUldManager* uld, List<RowField> texts, int depth)
     {
-        if (depth > 2 || uld->NodeList == null || uld->NodeListCount > 256) return;
+        if (depth > 3 || uld->NodeList == null || uld->NodeListCount > 256) return;
         for (int n = 0; n < uld->NodeListCount; n++)
         {
             var node = uld->NodeList[n];
             if (node == null || !node->IsVisible()) continue;
             if (node->Type == NodeType.Text)
-            {
-                string text = ((AtkTextNode*)node)->NodeText.ToString().Trim();
-                texts.Add(text);
-                if (!text.Any(char.IsLetter)) texts.Add(Policy.NormalizeNumber(text));
-            }
+                texts.Add(new(ReadText((AtkTextNode*)node), node->ScreenX, node->ScreenY, node->Width, node->Height));
             else if ((int)node->Type >= 1000)
             {
                 var component = ((AtkComponentNode*)node)->Component;
@@ -278,8 +320,6 @@ public sealed unsafe class Plugin : IDalamudPlugin
     }
     public void Dispose()
     {
-        Board.OfferingsReceived -= OnOfferings;
-        Board.ItemPurchased -= OnPurchased;
         Pi.UiBuilder.Draw -= Draw;
         Pi.UiBuilder.OpenMainUi -= Open;
         Pi.UiBuilder.OpenConfigUi -= Open;
