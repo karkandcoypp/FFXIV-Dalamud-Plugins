@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-26T13:20:59.480317+00:00",
+  "generatedAt": "2026-10-26T22:47:27.224183+00:00",
   "events": [
     {
       "id": "e9da20a481813c2f",
@@ -269,33 +269,33 @@
           "Blunderville Square": "Площадь Blunderville",
           "Wy — entrance to Blunderville Square": "Wy — entrance to Blunderville Square",
           "To reach MGF Trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.": "Чтобы попасть к MGF Trader в Площадь Blunderville (X:3.8 Y:3.1), поговорите с Wy в Золотое блюдце (X:6.1 Y:7.4). Кнопка «Куда идти» ведёт ко входу, а не к торговцу внутри.",
-          "Pegwin": "Pegwin",
-          "Blunderville Padded Wall": "Blunderville Padded Wall",
-          "Blunderville Crown": "Blunderville Crown",
-          "Everybody Falls (Fall Guys Theme) Orchestrion Roll": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
-          "Blunderful Framer's Kit": "Blunderful Framer's Kit",
-          "Blunderville Flag": "Blunderville Flag",
           "Blunderville Hammer": "Blunderville Hammer",
-          "Matte Winner's Crown": "Matte Winner's Crown",
-          "Gentlebean Parka": "Gentlebean Parka",
-          "Pink Bean": "Pink Bean",
           "Blunderville Rainbow": "Blunderville Rainbow",
+          "Blunderful Framer's Kit": "Blunderful Framer's Kit",
+          "Lewena": "Lewena",
+          "Gentlebean Shoes": "Gentlebean Shoes",
+          "Matte Winner's Crown": "Matte Winner's Crown",
+          "Blunderville Donut Bumper": "Blunderville Donut Bumper",
           "Gold Saucer Aetheryte Ticket": "Gold Saucer Aetheryte Ticket",
-          "Standard Rationing Manual": "Standard Rationing Manual",
-          "Just Crowning Around": "Just Crowning Around",
+          "Glossy Winner's Crown": "Glossy Winner's Crown",
+          "Blunderville Padded Wall": "Blunderville Padded Wall",
           "Ballroom Etiquette - Embracing Blunders": "Ballroom Etiquette - Embracing Blunders",
           "Gentlebean Knit Cap": "Gentlebean Knit Cap",
+          "Standard Rationing Manual": "Standard Rationing Manual",
+          "Pink Bean": "Pink Bean",
+          "Just Crowning Around": "Just Crowning Around",
           "Gentlebean Bottoms": "Gentlebean Bottoms",
-          "Blunder-villed Framer's Kit": "Blunder-villed Framer's Kit",
-          "It Could Happen to You": "It Could Happen to You",
-          "Blunderville Donut Bumper": "Blunderville Donut Bumper",
           "Blunderous Framer's Kit": "Blunderous Framer's Kit",
-          "Gentlebean Shoes": "Gentlebean Shoes",
           "Wide Spectrum #1 Dye": "Wide Spectrum #1 Dye",
+          "Rhiyes Identification Key": "Rhiyes Identification Key",
+          "Gentlebean Parka": "Gentlebean Parka",
           "Well-heeled Youth": "Well-heeled Youth",
-          "Lewena": "Lewena",
-          "Glossy Winner's Crown": "Glossy Winner's Crown",
-          "Rhiyes Identification Key": "Rhiyes Identification Key"
+          "Blunderville Crown": "Blunderville Crown",
+          "Everybody Falls (Fall Guys Theme) Orchestrion Roll": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
+          "Pegwin": "Pegwin",
+          "Blunderville Flag": "Blunderville Flag",
+          "Blunder-villed Framer's Kit": "Blunder-villed Framer's Kit",
+          "It Could Happen to You": "It Could Happen to You"
         }
       },
       "locations": [
@@ -359,8 +359,8 @@
       },
       "validation": {
         "status": "passed",
-        "checkedAt": "2026-10-26T13:20:59.670476+00:00",
-        "lastVerifiedAt": "2026-10-26T13:20:59.670476+00:00",
+        "checkedAt": "2026-10-26T22:47:27.407333+00:00",
+        "lastVerifiedAt": "2026-10-26T22:47:27.407333+00:00",
         "fingerprint": "8582aba2346a4cf984f00ad37f9f928a6d65a0cbd765998dbe529687ac0c704e",
         "checks": 133,
         "issues": []
@@ -532,22 +532,22 @@
           "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
           "MGF Trader": "Торговец MGF",
           "Blunderville Square": "Площадь Blunderville",
+          "Staring Wakeshroom": "Staring Wakeshroom",
           "Grim and Grisly Games": "Grim and Grisly Games",
-          "Grisly Bear Suit": "Grisly Bear Suit",
           "All Saints' Wake MMXXV Advertisement": "All Saints' Wake MMXXV Advertisement",
-          "All Saints' Wake MMXVI Advertisement": "All Saints' Wake MMXVI Advertisement",
-          "We Scare Bears": "We Scare Bears",
           "Pattin": "Pattin",
-          "Smiling Wakeshroom": "Smiling Wakeshroom",
-          "Wakesoul Buggy": "Wakesoul Buggy",
+          "We Scare Bears": "We Scare Bears",
+          "Grisly Bear Suit": "Grisly Bear Suit",
           "Tabletop All Saints' Wake MMXXV Advertisement": "Tabletop All Saints' Wake MMXXV Advertisement",
+          "All Saints' Wake MMXVI Advertisement": "All Saints' Wake MMXVI Advertisement",
           "Grisly Bear Head": "Grisly Bear Head",
-          "Staring Wakeshroom": "Staring Wakeshroom"
+          "Smiling Wakeshroom": "Smiling Wakeshroom",
+          "Wakesoul Buggy": "Wakesoul Buggy"
         }
       },
       "validation": {
         "status": "partial",
-        "checkedAt": "2026-10-26T13:20:59.670476+00:00",
+        "checkedAt": "2026-10-26T22:47:27.407333+00:00",
         "lastVerifiedAt": null,
         "fingerprint": "d853871f65f5427c265baf25f76296d96f6a3a0c02acda17b286b81a60ca4e30",
         "checks": 56,
@@ -565,56 +565,42 @@
       "description": "",
       "requirements": [],
       "steps": [],
-      "rewards": [
-        "Purgatory Hood of Striking"
-      ],
+      "rewards": [],
       "verified": false,
       "notes": [
         "Dates extracted automatically from official site.",
         "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
-        "Price unknown or exchange is ambiguous: Purgatory Hood of Striking",
+        "No explicit reward database links found; image-only rewards need review.",
         "No quest could be identified unambiguously.",
-        "NPC destination is ambiguous or not mapped: Purgatory Hood of Striking",
         "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips."
       ],
       "imageUrl": "https://img.finalfantasyxiv.com/t/378ff35cd6769fc2d8bb0c3dd1003f7b90c9811a.png?1792775210",
       "tracking": {
         "eventId": "3e17caab8166b3f6",
         "quests": [],
-        "rewards": [
-          {
-            "id": 37886,
-            "name": "Purgatory Hood of Striking",
-            "icon": 56504,
-            "price": 0
-          }
-        ]
+        "rewards": []
       },
       "locations": [],
       "automation": {
         "status": "partial",
         "sources": [
-          "https://na.finalfantasyxiv.com/lodestone/topics/detail/378ff35cd6769fc2d8bb0c3dd1003f7b90c9811a",
-          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/544707f7fa3/"
+          "https://na.finalfantasyxiv.com/lodestone/topics/detail/378ff35cd6769fc2d8bb0c3dd1003f7b90c9811a"
         ],
         "gameVersion": "0874aee069e1e7c4",
         "schema": "exdschema@2:rev:e773c41a90aed788cf4c1c48469fa85618ef01fb",
         "issues": [
           "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
-          "Price unknown or exchange is ambiguous: Purgatory Hood of Striking",
-          "No quest could be identified unambiguously.",
-          "NPC destination is ambiguous or not mapped: Purgatory Hood of Striking"
+          "No explicit reward database links found; image-only rewards need review.",
+          "No quest could be identified unambiguously."
         ],
         "npc": {
           "mapped": 0,
           "locations": 0,
-          "issues": [
-            "NPC destination is ambiguous or not mapped: Purgatory Hood of Striking"
-          ]
+          "issues": []
         },
         "russian": {
           "status": "complete",
-          "translated": 5,
+          "translated": 4,
           "pending": 0,
           "provider": "MyMemory + reviewed glossary"
         }
@@ -622,24 +608,21 @@
       "translations": {
         "ru": {
           "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.": "Автоматически собранные сведения могут быть неполными. Основная цель не определяется автоматически; точки NPC добавляются только при точной связи в игровых данных.",
-          "Purgatory Hood of Striking": "Purgatory Hood of Striking",
           "Announcing the Fan Festival Group Pose Screenshot Campaign!": "Объявляем кампанию по созданию позы для группы фан-фестиваля!",
           "Dates extracted automatically from official site.": "Даты, автоматически извлекаемые с официального сайта.",
-          "Price unknown or exchange is ambiguous: Purgatory Hood of Striking": "Цена неизвестна или обмен неоднозначен: Purgatory Hood of Striking",
+          "No explicit reward database links found; image-only rewards need review.": "Не найдено явных ссылок на базу данных вознаграждений; награды только для изображений нуждаются в проверке.",
           "No quest could be identified unambiguously.": "Ни один квест не мог быть идентифицирован однозначно.",
-          "NPC destination is ambiguous or not mapped: Purgatory Hood of Striking": "Место назначения NPC неоднозначно или не нанесено на карту: Капюшон чистилища ударов",
           "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках."
         }
       },
       "validation": {
         "status": "partial",
-        "checkedAt": "2026-10-26T13:20:59.670476+00:00",
+        "checkedAt": "2026-10-26T22:47:27.407333+00:00",
         "lastVerifiedAt": null,
-        "fingerprint": "d765c327faac5780bdcc6be0d10db42f0e9119f14dadc3a3fdb45e7c14f15001",
-        "checks": 1,
+        "fingerprint": "6009ef9ca8a586063fad41e0cdfbcad2934ab545417c842d3fdfe35973042da5",
+        "checks": 0,
         "issues": [
-          "Quest or reward coverage is incomplete",
-          "Reward merchant is missing: Purgatory Hood of Striking"
+          "Quest or reward coverage is incomplete"
         ]
       }
     }
