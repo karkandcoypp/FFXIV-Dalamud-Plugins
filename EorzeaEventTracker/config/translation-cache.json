@@ -601,8 +601,20 @@
       "text": "Место назначения NPC неоднозначно или не нанесено на карту: Gogyo Sosei Shin",
       "provider": "MyMemory",
       "machine": true
+    },
+    "fb2c74096d9a85a37c362cdb862b1e3a57e9cfe8ab4fdb031c8e26d59b56c6bc": {
+      "source": "Price unknown or exchange is ambiguous: Purgatory Hood of Striking",
+      "text": "Цена неизвестна или обмен неоднозначен: Purgatory Hood of Striking",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "a1f462ab6e7b0c5df6919b0d99c44aef71b6b2b907d34965ebcfddcb888c0635": {
+      "source": "NPC destination is ambiguous or not mapped: Purgatory Hood of Striking",
+      "text": "Место назначения NPC неоднозначно или не нанесено на карту: Капюшон чистилища ударов",
+      "provider": "MyMemory",
+      "machine": true
     }
   },
   "day": "2026-10-26",
-  "used": 0
+  "used": 136
 }
