@@ -8,7 +8,8 @@ public sealed record Quote(Lot Lot, long Cost, long Revenue)
 {
     public long Profit => Revenue - Cost;
 }
-public sealed record Suggestion(VendorItem Item, Quote Quote, DateTimeOffset Updated, bool EstimatedTax);
+public sealed record Suggestion(VendorItem Item, Quote Quote, DateTimeOffset Updated, bool EstimatedTax,
+    uint World = 0, string WorldName = "");
 public static class Policy
 {
     // Historical opportunities are item IDs only, never historical prices. New discoveries are promoted locally.

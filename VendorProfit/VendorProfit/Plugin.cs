@@ -98,21 +98,23 @@ public sealed unsafe class Plugin : IDalamudPlugin
             catalog[item.RowId] = new(item.RowId, item.Name.ToString(), item.PriceLow, item.CanBeHq, item.StackSize, item.EquipSlotCategory.RowId != 0);
         }
     }
-    private void StartScan(bool full = false)
+    private void StartScan(bool full = false, bool chaos = false)
     {
         if (world == 0 || scan is { IsCompleted: false }) return;
         LoadCatalog();
         scanCancellation?.Dispose();
         scanCancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        scanCancellation.CancelAfter(TimeSpan.FromMinutes(full ? 10 : 2));
+        scanCancellation.CancelAfter(TimeSpan.FromMinutes(full ? 10 : chaos ? 5 : 2));
         var token = scanCancellation.Token;
         var capturedWorld = world;
         var items = full ? catalog!.Values.Where(i => !i.Equipment).ToArray() : Policy.QuickItems(catalog!, config.LearnedItems ?? []);
         int age = config.MaximumAgeMinutes;
         error = null;
         nextScan = DateTimeOffset.UtcNow.AddMinutes(20);
-        progress = full ? "Полный поиск по каталогу (может занять несколько минут)…" : $"Быстрая проверка: {items.Length} предметов, до 5 запросов…";
-        scan = Task.Run(() => market.Scan(capturedWorld, items, age, p => Volatile.Write(ref progress, p), token, !full), token);
+        progress = chaos ? $"Chaos: до {items.Length} предметов на каждом сервере…" : full ? "Полный поиск по каталогу (может занять несколько минут)…" : $"Быстрая проверка: {items.Length} предметов, до 5 запросов…";
+        scan = Task.Run(() => chaos
+            ? market.ScanChaos(capturedWorld, items, age, p => Volatile.Write(ref progress, p), token)
+            : market.Scan(capturedWorld, items, age, p => Volatile.Write(ref progress, p), token, !full), token);
     }
     private static bool Visible(AtkUnitBase* addon) => addon != null && addon->IsVisible && addon->IsReady;
     private void Draw()
@@ -169,6 +171,10 @@ public sealed unsafe class Plugin : IDalamudPlugin
             changed |= ImGui.Checkbox("Быстрая проверка при открытии (до 100 предметов, кэш 20 мин)", ref config.ScanOnOpen);
             changed |= ImGui.InputInt("Минимум прибыли за лот", ref config.MinimumProfit);
             changed |= ImGui.InputInt("Возраст данных Universalis, минут", ref config.MaximumAgeMinutes);
+            ImGui.BeginDisabled(scan != null || world == 0);
+            if (ImGui.Button("Сканировать все серверы Chaos")) StartScan(chaos: true);
+            ImGui.EndDisabled();
+            ImGui.TextWrapped("Быстрый список на всех серверах Chaos. Результаты содержат сервер и ретейнера; подсветка — только в открытом штатном окне текущего сервера.");
             if (changed)
             {
                 config.MinimumProfit = Math.Clamp(config.MinimumProfit, 1, 100_000_000);
@@ -193,6 +199,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
             if (result != null)
             {
                 ImGui.TextWrapped($"Последняя проверка: {result.Finished.LocalDateTime:g}; предметов: {result.Checked}; неизвестных: {result.Unknown}; ошибок: {result.Failed}. {result.Status}");
+                if (result.Scope == "Chaos") ImGui.TextWrapped("Область таблицы: все серверы Chaos. Суммы по серверам — потенциальная прибыль подходящих лотов; время поездки не учтено.");
                 ImGui.TextWrapped("Быстрый список ограничен кандидатами; полный каталог запускается отдельно. Живые строки проверяются без Universalis.");
                 DrawSuggestions(result);
             }
@@ -217,18 +224,30 @@ public sealed unsafe class Plugin : IDalamudPlugin
     private void DrawSuggestions(ScanResult snapshot)
     {
         var suggestions = snapshot.Suggestions.Where(s => s.Quote.Profit >= config.MinimumProfit && Policy.Fresh(s.Updated, DateTimeOffset.UtcNow, config.MaximumAgeMinutes)).ToArray();
+        if (snapshot.Servers is { Length: > 0 } servers && ImGui.CollapsingHeader("Сводка по серверам Chaos"))
+        {
+            foreach (var server in servers)
+            {
+                var lots = suggestions.Where(s => s.World == server.World).ToArray();
+                ImGui.TextWrapped($"{server.Name}: {lots.Length} лотов; вложить {lots.Sum(s => s.Quote.Cost):N0}, прибыль {lots.Sum(s => s.Quote.Profit):N0}; проверено {server.Checked}, неизвестных {server.Unknown}, ошибок {server.Failed}.");
+            }
+        }
         if (suggestions.Length == 0) { ImGui.TextWrapped("Подходящих лотов в проверенной части кэша нет. Открытые предметы всё равно проверяются по живой выдаче."); return; }
-        if (!ImGui.BeginTable("suggestions", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, 180))) return;
-        foreach (var name in new[] { "Предмет (нажать: скопировать)", "Кол-во", "Покупка", "Прибыль", "Возраст / налог" }) ImGui.TableSetupColumn(name);
+        if (suggestions.Length > 200) ImGui.TextUnformatted($"Показаны 200 самых прибыльных лотов из {suggestions.Length}; сводка учитывает все подходящие лоты.");
+        if (!ImGui.BeginTable("suggestions", 7, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable, new Vector2(0, 180))) return;
+        foreach (var name in new[] { "Сервер", "Предмет (скопировать)", "Ретейнер", "Кол-во", "Покупка с налогом", "Прибыль", "Возраст / налог" }) ImGui.TableSetupColumn(name);
         ImGui.TableHeadersRow();
         int index = 0;
         foreach (var s in suggestions.Take(200))
         {
-            ImGui.PushID(index++); ImGui.TableNextRow(); ImGui.TableSetColumnIndex(0);
+            ImGui.PushID(index++); ImGui.TableNextRow();
+            uint server = s.World != 0 ? s.World : snapshot.World;
+            string serverName = !string.IsNullOrEmpty(s.WorldName) ? s.WorldName : Data.GetExcelSheet<World>().GetRowOrDefault(server)?.Name.ToString() ?? server.ToString();
+            Cell(0, serverName); ImGui.TableSetColumnIndex(1);
             if (ImGui.Selectable(s.Item.Name + (s.Quote.Lot.Hq ? " HQ" : ""))) ImGui.SetClipboardText(s.Item.Name);
             if (ImGui.IsItemHovered()) ImGui.SetTooltip($"{s.Quote.Lot.Retainer}; NPC: {s.Quote.Revenue:N0}. Вставьте название в поиск Market Board.");
-            Cell(1, s.Quote.Lot.Quantity.ToString()); Cell(2, s.Quote.Cost.ToString("N0")); Cell(3, "+" + s.Quote.Profit.ToString("N0"));
-            Cell(4, $"{(DateTimeOffset.UtcNow - s.Updated).TotalMinutes:F0} мин / {(s.EstimatedTax ? "оценка 5%" : "API")}");
+            Cell(2, s.Quote.Lot.Retainer); Cell(3, s.Quote.Lot.Quantity.ToString()); Cell(4, s.Quote.Cost.ToString("N0")); Cell(5, "+" + s.Quote.Profit.ToString("N0"));
+            Cell(6, $"{(DateTimeOffset.UtcNow - s.Updated).TotalMinutes:F0} мин / {(s.EstimatedTax ? "оценка 5%" : "API")}");
             ImGui.PopID();
         }
         ImGui.EndTable();
@@ -296,7 +315,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
         }
         liveStatus = $"{item.Name}: проверены видимые строки {matched}/{visible}.";
         if (visible > 0 && matched == 0) liveStatus += " Строки не совпали с ценой, количеством и итогом игры.";
-        diagnostics = $"v0.1.1 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
+        diagnostics = $"v0.1.2 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
             $"request={proxy->SearchItemId}; selected={agent->ResultItemId}; waiting={proxy->WaitingForListings}; update={list->IsUpdatePending}";
     }
     private sealed record RowField(string Text, float X, float Y, ushort Width, ushort Height);

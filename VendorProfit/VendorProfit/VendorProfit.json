@@ -2,7 +2,7 @@
   "Author": "Carcosa Lyuman",
   "Name": "VendorProfit",
   "InternalName": "VendorProfit",
-  "AssemblyVersion": "0.1.1.0",
+  "AssemblyVersion": "0.1.2.0",
   "Description": "Find market-board stacks worth reselling to NPCs. Shows whole-stack profit after buyer tax, current-world Universalis candidates and native-row highlights and quick cached discovery. No automatic purchases. /vendorprofit",
   "Punchline": "Market Board → NPC: прибыль после налога и подсветка лотов.",
   "ApplicableVersion": "any",

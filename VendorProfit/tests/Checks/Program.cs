@@ -78,6 +78,42 @@ using (var market = new MarketClient(new HttpClient(direct)))
     var result = await market.Scan(80, quickCatalog.Values.ToArray(), 180, _ => { }, CancellationToken.None, quick: true);
     Check(direct.Calls == 5 && direct.Aggregates == 0 && result.Checked == 100, "quick mode uses at most five books and zero aggregate requests");
 }
+var chaosHandler = new ChaosHandler(Book(",\"tax\":679"));
+using (var market = new MarketClient(new HttpClient(chaosHandler)))
+{
+    var result = await market.ScanChaos(80, [demi], 180, _ => { }, CancellationToken.None);
+    Check(result.Scope == "Chaos" && result.Servers?.Length == 8 && result.Checked == 8, "Chaos visits all eight discovered worlds");
+    Check(result.Suggestions.Length == 7 && result.Servers!.Single(w => w.World == 83).Failed == 1, "one failed world preserves other seven worlds");
+    Check(result.Suggestions.Select(s => s.World).Distinct().Count() == 7 && result.Suggestions.All(s => s.WorldName == ChaosHandler.Names[s.World]), "identical items on different worlds retain correct world labels");
+    Check(chaosHandler.Calls == 10 && chaosHandler.Aggregates == 0, "Chaos probes use only metadata plus bounded direct books");
+    var restored = JsonSerializer.Deserialize<ScanResult>(JsonSerializer.Serialize(result))!;
+    Check(restored.Scope == "Chaos" && restored.Servers!.Length == 8 && restored.Suggestions[0].WorldName.Length > 0, "Chaos cache preserves world identities and per-world failures");
+}
+using (var market = new MarketClient(new HttpClient(new PartialHandler(Book(",\"tax\":679").Replace("\"itemID\":8144", "\"itemID\":8144,\"worldID\":39")))))
+{
+    var result = await market.Scan(80, [demi], 180, _ => { }, CancellationToken.None, quick: true);
+    Check(result.Suggestions.Length == 0 && result.Unknown == 1, "mismatched response world cannot be labelled as requested world");
+}
+var coolingChaos = new ChaosHandler(Book(",\"tax\":679"), cooldown: true);
+using (var market = new MarketClient(new HttpClient(coolingChaos)))
+{
+    var result = await market.ScanChaos(80, [demi], 180, _ => { }, CancellationToken.None);
+    Check(result.Suggestions.Length == 1 && result.Unknown == 7 && coolingChaos.Calls == 4,
+        "Chaos stops on server cooldown and preserves earlier worlds");
+}
+{
+    var legacy = JsonSerializer.Deserialize<ScanResult>("{\"World\":80,\"Finished\":\"2026-10-26T00:00:00Z\",\"Suggestions\":[],\"Checked\":1,\"Unknown\":0,\"Failed\":0,\"Status\":\"old\"}")!;
+    Check(legacy.World == 80 && legacy.Servers == null && legacy.Scope == "", "previous cache remains readable");
+}
+if (args.Contains("--chaos-live"))
+{
+    using var market = new MarketClient();
+    var timer = System.Diagnostics.Stopwatch.StartNew();
+    var result = await market.ScanChaos(80, [demi], 180, _ => { }, CancellationToken.None);
+    Check(result.Servers?.Length == 8 && result.Checked == 8 && result.Failed == 0, "live Chaos metadata and all eight world books");
+    Check(result.Suggestions.All(s => s.World != 0 && !string.IsNullOrWhiteSpace(s.WorldName)), "live Chaos lots have explicit world identities");
+    Console.WriteLine($"Chaos live probe: {timer.Elapsed.TotalSeconds:F2}s, worlds={result.Servers!.Length}, lots={result.Suggestions.Length}, unknown={result.Unknown}");
+}
 if (args.Contains("--live"))
 {
     using var market = new MarketClient();
@@ -127,5 +163,27 @@ sealed class DirectHandler : HttpMessageHandler
     {
         Calls++; if (request.RequestUri!.AbsolutePath.Contains("aggregated")) Aggregates++;
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"items\":{}}", Encoding.UTF8, "application/json") });
+    }
+}
+
+sealed class ChaosHandler(string book, bool cooldown = false) : HttpMessageHandler
+{
+    public static readonly Dictionary<uint,string> Names = new() { [80]="Cerberus", [83]="Louisoix", [71]="Moogle", [39]="Omega", [401]="Phantom", [97]="Ragnarok", [400]="Sagittarius", [85]="Spriggan" };
+    public int Calls, Aggregates;
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+    {
+        Calls++;
+        string path = request.RequestUri!.AbsolutePath;
+        if (cooldown && path.Contains("/83/"))
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+            response.Headers.RetryAfter = new(TimeSpan.FromSeconds(120));
+            return Task.FromResult(response);
+        }
+        string body;
+        if (path.EndsWith("data-centers")) body = "[{\"name\":\"Chaos\",\"worlds\":[80,83,71,39,401,97,400,85]}]";
+        else if (path.EndsWith("worlds")) body = JsonSerializer.Serialize(Names.Select(n => new { id=n.Key, name=n.Value }));
+        else { if (path.Contains("aggregated")) Aggregates++; body = path.Contains("/83/") ? "{" : book; }
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
     }
 }

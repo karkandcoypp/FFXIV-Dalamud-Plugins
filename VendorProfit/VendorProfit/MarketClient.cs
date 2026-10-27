@@ -7,7 +7,8 @@ namespace VendorProfit;
 public sealed class MarketCooldownException(string message) : Exception(message);
 
 public sealed record ScanResult(uint World, DateTimeOffset Finished, Suggestion[] Suggestions,
-    int Checked, int Unknown, int Failed, string Status);
+    int Checked, int Unknown, int Failed, string Status, string Scope = "", WorldScanStatus[]? Servers = null);
+public sealed record WorldScanStatus(uint World, string Name, int Checked, int Unknown, int Failed);
 
 public sealed class MarketClient : IDisposable
 {
@@ -16,7 +17,7 @@ public sealed class MarketClient : IDisposable
     public MarketClient(HttpClient client)
     {
         http = client;
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("VendorProfit/0.1.1 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("VendorProfit/0.1.2 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)");
     }
     public async Task<JsonDocument> Get(string path, CancellationToken token)
     {
@@ -26,6 +27,8 @@ public sealed class MarketClient : IDisposable
             try
             {
                 using var response = await http.GetAsync("https://universalis.app/api/v2/" + path, token).ConfigureAwait(false);
+                if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt >= 2)
+                    throw new MarketCooldownException("Universalis продолжает ограничивать запросы; проверка остановлена.");
                 if ((response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500) && attempt < 2)
                 {
                     var delay = response.Headers.RetryAfter?.Delta ??
@@ -140,7 +143,9 @@ public sealed class MarketClient : IDisposable
                         if (!books.TryGetProperty(item.Id.ToString(), out book)) { unknown++; continue; }
                     }
                     else book = root;
-                    if (!UInt(book, "itemID", out var id) || id != item.Id || Timestamp(book, "lastUploadTime") is not { } timestamp || !Policy.Fresh(timestamp, DateTimeOffset.UtcNow, maxAge)) { unknown++; continue; }
+                    if (!UInt(book, "itemID", out var id) || id != item.Id ||
+                        (UInt(book, "worldID", out var bookWorld) && bookWorld != world) ||
+                        Timestamp(book, "lastUploadTime") is not { } timestamp || !Policy.Fresh(timestamp, DateTimeOffset.UtcNow, maxAge)) { unknown++; continue; }
                     if (!book.TryGetProperty("listings", out var offers) || offers.ValueKind != JsonValueKind.Array) { unknown++; continue; }
                     if (offers.GetArrayLength() >= 100) unknown++; // capped: do not claim exhaustive coverage
                     suggestions.AddRange(ParseBook(book, item, maxAge, DateTimeOffset.UtcNow));
@@ -150,8 +155,44 @@ public sealed class MarketClient : IDisposable
             if (quick) checkedItems += batch.Length;
             await Task.Delay(300, token).ConfigureAwait(false);
         }
-        return new(world, DateTimeOffset.UtcNow, suggestions.OrderByDescending(s => s.Quote.Profit).ToArray(), checkedItems, unknown, failed,
+        return new(world, DateTimeOffset.UtcNow, suggestions.Select(s => s with { World = world }).OrderByDescending(s => s.Quote.Profit).ToArray(), checkedItems, unknown, failed,
             (quick ? "Быстрый список, не весь рынок. " : "Полный каталог. ") + "Universalis: предварительные лоты; проверьте выдачу Market Board.");
+    }
+    public async Task<ScanResult> ScanChaos(uint anchorWorld, VendorItem[] catalog, int maxAge, Action<string> progress, CancellationToken token)
+    {
+        // Resolve membership from the service; never infer a listing's world from the cheapest DC aggregate.
+        using var centers = await Get("data-centers", token).ConfigureAwait(false);
+        var chaos = centers.RootElement.EnumerateArray().Where(d => d.GetProperty("name").GetString() == "Chaos").ToArray();
+        if (chaos.Length != 1) throw new JsonException("Chaos отсутствует или неоднозначен в списке дата-центров.");
+        var ids = chaos[0].GetProperty("worlds").EnumerateArray().Select(w => w.GetUInt32()).Distinct().ToArray();
+        if (ids.Length == 0 || ids.Length > 32 || ids.Contains(0u)) throw new JsonException("Некорректный список серверов Chaos.");
+        using var worlds = await Get("worlds", token).ConfigureAwait(false);
+        var names = worlds.RootElement.EnumerateArray().ToDictionary(w => w.GetProperty("id").GetUInt32(), w => w.GetProperty("name").GetString() ?? "");
+        if (ids.Any(id => !names.TryGetValue(id, out var name) || string.IsNullOrWhiteSpace(name))) throw new JsonException("Не удалось определить имена всех серверов Chaos.");
+        var suggestions = new List<Suggestion>();
+        var stats = new List<WorldScanStatus>();
+        bool cooldown = false;
+        var items = catalog.Take(100).ToArray();
+        foreach (uint id in ids)
+        {
+            token.ThrowIfCancellationRequested();
+            if (cooldown) { stats.Add(new(id, names[id], 0, items.Length, 0)); continue; }
+            progress($"Chaos: {names[id]} ({stats.Count + 1}/{ids.Length})");
+            try
+            {
+                var snapshot = await Scan(id, items, maxAge, p => progress($"Chaos {names[id]} ({stats.Count + 1}/{ids.Length}): {p}"), token, quick: true).ConfigureAwait(false);
+                suggestions.AddRange(snapshot.Suggestions.Select(s => s with { World = id, WorldName = names[id] }));
+                stats.Add(new(id, names[id], snapshot.Checked, snapshot.Unknown, snapshot.Failed));
+            }
+            catch (MarketCooldownException) { cooldown = true; stats.Add(new(id, names[id], 0, items.Length, 0)); }
+            catch (Exception e) when (e is HttpRequestException or JsonException or TaskCanceledException && !token.IsCancellationRequested)
+            { stats.Add(new(id, names[id], items.Length, 0, items.Length)); }
+        }
+        return new(anchorWorld, DateTimeOffset.UtcNow, suggestions.OrderByDescending(s => s.Quote.Profit).ToArray(),
+            stats.Sum(s => s.Checked), stats.Sum(s => s.Unknown), stats.Sum(s => s.Failed),
+            $"Chaos: {ids.Length} серверов, до {items.Length} предметов на сервер. " +
+            (cooldown ? "Проверка неполная: сервис запросил длительную паузу. " : "") +
+            "Кэш Universalis: наличие и итог покупки проверьте на указанном сервере.", "Chaos", stats.ToArray());
     }
     public void Dispose() => http.Dispose();
 }
