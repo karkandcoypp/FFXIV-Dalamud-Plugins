@@ -118,33 +118,46 @@ public sealed unsafe partial class Plugin
     }
     private void DrawAutoBuy()
     {
-        if (config.AutoBuyEnabled) ImGui.TextWrapped("Авторежим: " + autoBuyer.Status);
-        if (config.UseExternalScanner) ImGui.TextWrapped("Внешний поиск: " + externalStatus);
-        if (!ImGui.CollapsingHeader("Периодический поиск и автопокупка")) return;
-        bool changed = ImGui.Checkbox("Включить периодический поиск и автопокупку", ref config.AutoBuyEnabled);
+        ImGui.TextUnformatted("Автопокупка на текущем сервере");
+        bool changed = ImGui.Checkbox("Включить автопокупку", ref config.AutoBuyEnabled);
         if (changed)
         {
             if (config.AutoBuyEnabled && ledgerValid && Player.IsLoaded)
             { config.AutoBuyCharacter = Player.ContentId; SaveBuyLedger(autoBuyer.Ledger); autoBuyer.Resume(); nextAutoPoll = DateTimeOffset.MinValue; considered = result; }
             else { config.AutoBuyEnabled = false; autoBuyer.Stop("Автопокупка выключена."); }
         }
-        changed |= ImGui.Checkbox("Пробный режим — проверять без покупок", ref config.AutoBuyDryRun);
-        DrawExternalControls(ref changed);
-        changed |= ImGui.InputInt("Авто: максимум за стак", ref config.AutoBuyLimits.MaximumLot);
-        changed |= ImGui.InputInt("Авто: общий бюджет до сброса", ref config.AutoBuyLimits.Budget);
-        changed |= ImGui.InputInt("Авто: минимум прибыли за стак", ref config.AutoBuyLimits.MinimumProfit);
-        changed |= ImGui.InputInt("Авто: минимум прибыли, % от покупки", ref config.AutoBuyLimits.MinimumRoi);
-        changed |= ImGui.InputInt("Авто: интервал проверок, секунд", ref config.AutoBuyLimits.IntervalSeconds);
-        changed |= ImGui.InputInt("Авто: максимум покупок до сброса", ref config.AutoBuyLimits.MaximumPurchases);
+        changed |= ImGui.Checkbox("Пробный режим — не тратить гили", ref config.AutoBuyDryRun);
+        ImGui.TextWrapped(config.AutoBuyDryRun ? "Покажет предполагаемые покупки без расходов." : "Подходящие стаки покупаются без отдельного подтверждения. Продажа NPC — вручную.");
+        ImGui.Spacing();ImGui.TextUnformatted("Лимиты покупок");
+        if(BeginFields("purchase-limits"))
+        {
+            changed |= NumberField("Цена стака до, гил", ref config.AutoBuyLimits.MaximumLot);
+            changed |= NumberField("Общий бюджет, гил", ref config.AutoBuyLimits.Budget);
+            changed |= NumberField("Прибыль за стак от, гил", ref config.AutoBuyLimits.MinimumProfit);
+            changed |= NumberField("Прибыль от, %", ref config.AutoBuyLimits.MinimumRoi);
+            ImGui.EndTable();
+        }
+        if(ImGui.CollapsingHeader("Дополнительные лимиты"))
+        {
+            if(BeginFields("extra-purchase-limits"))
+            {
+                changed |= NumberField("Интервал поиска, сек", ref config.AutoBuyLimits.IntervalSeconds);
+                changed |= NumberField("Максимум попыток", ref config.AutoBuyLimits.MaximumPurchases);
+                ImGui.EndTable();
+            }
+        }
         if (changed) { config.AutoBuyLimits.Normalize(); Pi.SavePluginConfig(config); }
-        ImGui.TextWrapped($"Учтено в бюджете: {autoBuyer.Ledger.Charged:N0} / {config.AutoBuyLimits.Budget:N0} гил; попыток {autoBuyer.Ledger.Entries.Count}. {autoBuyer.Status}");
-        ImGui.TextWrapped("Работает при открытом Market Board на текущем сервере и только для включившего режим персонажа. Свежая игровая выдача проверяется перед каждой покупкой. Автопоиск может закрывать список лотов. Пробный режим не тратит гили.");
-        ImGui.TextWrapped("Неоднозначный результат останавливает покупки; сумма остаётся учтённой до ручной проверки. Перезагрузка плагина расходы не сбрасывает. Продажа NPC выполняется вручную.");
+        ImGui.Spacing();ImGui.TextUnformatted($"Учтено расходов: {autoBuyer.Ledger.Charged:N0} / {config.AutoBuyLimits.Budget:N0} гил");
+        ImGui.ProgressBar(Math.Clamp((float)autoBuyer.Ledger.Charged/config.AutoBuyLimits.Budget,0,1),new System.Numerics.Vector2(-1,8*UiScale),"");
+        ImGui.TextWrapped(autoBuyer.Status);
         if (ImGui.Button("Остановить режим")) { config.AutoBuyEnabled = false; autoBuyer.Stop("Остановлено вручную."); Pi.SavePluginConfig(config); }
         ImGui.SameLine();
         ImGui.BeginDisabled(!ledgerValid || autoBuyer.HasPending);
-        if (ImGui.Button("Возобновить после проверки")) { autoBuyer.Resume(); nextAutoPoll = DateTimeOffset.MinValue; }
+        if (ImGui.Button("Продолжить")) { autoBuyer.Resume(); nextAutoPoll = DateTimeOffset.MinValue; }
         ImGui.EndDisabled();
+        if(ImGui.CollapsingHeader("Журнал и сброс"))
+        {
+        ImGui.TextWrapped("Расходы сохраняются после перезапуска. Неподтверждённая покупка остаётся в лимите до ручной проверки.");
         ImGui.BeginDisabled(config.AutoBuyEnabled || autoBuyer.HasPending || !ledgerValid);
         if (ImGui.Button("Сбросить учтённые расходы и журнал"))
         {
@@ -155,5 +168,6 @@ public sealed unsafe partial class Plugin
         foreach (var entry in autoBuyer.Ledger.Entries.TakeLast(8).Reverse())
             ImGui.TextWrapped($"{entry.At.LocalDateTime:t}: #{entry.Item} ×{entry.Quantity}, {entry.Cost:N0} гил, расчётная прибыль {entry.Profit:N0}; {entry.Status}");
         foreach (string observation in autoBuyer.Observations.TakeLast(3)) ImGui.TextWrapped(observation);
+        }
     }
 }

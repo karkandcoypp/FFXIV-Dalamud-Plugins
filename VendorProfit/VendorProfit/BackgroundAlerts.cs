@@ -37,7 +37,7 @@ public sealed unsafe partial class Plugin
                     var root=doc.RootElement;
                     string? workerState=root.GetProperty("State").GetString();
                     if (workerState is "Ready" or "Error" &&
-                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.4.0"))
+                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.5.0"))
                     {
                         File.WriteAllText(ExternalPath("external-worker.stop"),"update");
                         nextWorkerCheck=now.AddSeconds(5);externalStatus="Перезапускаю старую версию фонового сканера…";return;
@@ -92,22 +92,31 @@ public sealed unsafe partial class Plugin
     }
     private void DrawBackgroundAlerts()
     {
-        if (!ImGui.CollapsingHeader("Фоновый поиск и уведомления")) return;
-        bool changed=ImGui.Checkbox("Уведомлять о новых лотах в локальный чат",ref config.BackgroundAlerts);
-        changed|=ImGui.Checkbox("Автозапуск фонового сканера для уведомлений",ref config.AutoStartScanner);
-        changed|=ImGui.Checkbox("Фоновый поиск по всем серверам Chaos",ref config.BackgroundChaos);
-        changed|=ImGui.InputInt("Уведомления: прибыль от, гил за стак",ref config.AlertMinimumProfit);
-        changed|=ImGui.InputInt("Уведомления: стоимость стака до, гил",ref config.AlertMaximumLot);
-        changed|=ImGui.InputInt("Уведомления: прибыль от, %",ref config.AlertMinimumRoi);
-        changed|=ImGui.InputInt("Пауза между сообщениями, секунд",ref config.AlertCooldownSeconds);
+        ImGui.TextUnformatted("Сообщения только для вас");
+        bool changed=ImGui.Checkbox("Сообщать о новых лотах в чат",ref config.BackgroundAlerts);
+        Help("Локальные сообщения в игре. Отправки другим игрокам нет.");
+        changed|=ImGui.Checkbox("Запускать поиск при входе в игру",ref config.AutoStartScanner);
+        changed|=ImGui.Checkbox("Искать по всему Chaos",ref config.BackgroundChaos);
+        ImGui.Spacing();ImGui.TextUnformatted("Когда сообщать");
+        if(BeginFields("alert-settings"))
+        {
+            changed|=NumberField("Прибыль за стак от, гил",ref config.AlertMinimumProfit);
+            changed|=NumberField("Стоимость стака до, гил",ref config.AlertMaximumLot);
+            changed|=NumberField("Прибыль от, %",ref config.AlertMinimumRoi);
+            changed|=NumberField("Пауза между сообщениями, сек",ref config.AlertCooldownSeconds);
+            changed|=NumberField("Интервал поиска, сек",ref config.AutoBuyLimits.IntervalSeconds);
+            ImGui.EndTable();
+        }
         if(changed)
         {
-            NormalizeAlerts();nextExternalExport=DateTimeOffset.MinValue;nextWorkerCheck=DateTimeOffset.MinValue;
+            NormalizeAlerts();config.AutoBuyLimits.Normalize();nextExternalExport=DateTimeOffset.MinValue;nextWorkerCheck=DateTimeOffset.MinValue;
             Pi.SavePluginConfig(config);
         }
-        ImGui.TextWrapped("Поиск и сообщения работают без открытого аукциона. Это локальные сообщения только для тебя, не /tell другим игрокам. Автопокупка настраивается отдельно.");
-        ImGui.TextWrapped(alertStatus);
-        if (ImGui.Button("Проверить локальное уведомление"))
+        ImGui.Spacing();ImGui.TextDisabled("Аукцион можно закрыть. Повторные сообщения о том же лоте подавляются.");
+        if (ImGui.Button("Тестовое сообщение"))
             Chat.Print("[VendorProfit] Тестовое локальное уведомление: это сообщение видно только вам.");
+        Help("Проверяет, что локальные сообщения видны в выбранной вкладке чата.");
+        if(config.UseExternalScanner){ImGui.SameLine();DrawWorkerButtons();}
+        ImGui.Spacing();ImGui.TextWrapped(alertStatus);
     }
 }

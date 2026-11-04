@@ -82,8 +82,21 @@ public sealed unsafe partial class Plugin
             nextExternalExport = DateTimeOffset.MinValue; changed = true;
         }
         if (!config.UseExternalScanner) return;
+        DrawWorkerButtons();
+        ImGui.TextWrapped("Поиск выполняется через Universalis. Условия покупки проверяются отдельно в игре.");
+        ImGui.BeginDisabled(!ledgerValid || autoBuyer.Busy || autoBuyer.HasPending);
+        if (ImGui.Button("Разрешить повторную проверку старых предложений"))
+        {
+            autoBuyer.Ledger.CheckedExternal.Clear(); SaveBuyLedger(autoBuyer.Ledger);
+            if (config.AutoBuyEnabled) autoBuyer.Resume();
+        }
+        ImGui.EndDisabled();
+        Help("Сбрасывает историю проверенных предложений. Учтённые расходы сохраняются.");
+    }
+    private void DrawWorkerButtons()
+    {
         ImGui.BeginDisabled(world == 0);
-        if (ImGui.Button("Запустить внешний сканер"))
+        if (ImGui.Button("Запустить поиск"))
         {
             try
             {
@@ -93,17 +106,8 @@ public sealed unsafe partial class Plugin
             catch (Exception e) { externalStatus = "Ошибка запуска: " + e.Message; }
         }
         ImGui.SameLine();
-        if (ImGui.Button("Остановить внешний сканер"))
+        if (ImGui.Button("Остановить поиск"))
         { scannerStoppedManually = true; Directory.CreateDirectory(Pi.ConfigDirectory.FullName); File.WriteAllText(ExternalPath("external-worker.stop"), "stop"); }
-        ImGui.EndDisabled();
-        ImGui.TextWrapped(externalStatus);
-        ImGui.TextWrapped("Скрипт опрашивает только Universalis. К игре обращаемся только по новым найденным лотам; неизменившиеся предложения повторно не проверяются. Покупки остаются видимыми игровому серверу.");
-        ImGui.BeginDisabled(!ledgerValid || autoBuyer.Busy || autoBuyer.HasPending);
-        if (ImGui.Button("Повторно разрешить проверку внешних предложений"))
-        {
-            autoBuyer.Ledger.CheckedExternal.Clear(); SaveBuyLedger(autoBuyer.Ledger);
-            if (config.AutoBuyEnabled) autoBuyer.Resume();
-        }
         ImGui.EndDisabled();
     }
     private void StartExternalProcess()
