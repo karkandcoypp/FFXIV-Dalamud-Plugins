@@ -1,7 +1,7 @@
 namespace VendorProfit;
 
 public sealed record ScannerRequest(int Schema, uint World, string WorldName, VendorItem[] Items,
-    int IntervalSeconds, int MaximumAgeMinutes, int MaximumLot, int MinimumProfit, int MinimumRoi);
+    int IntervalSeconds, int MaximumAgeMinutes, int MaximumLot, int MinimumProfit, int MinimumRoi, bool Chaos = false);
 public static class ExternalFeed
 {
     // Upload time alone must not make an unchanged cached listing eligible for another game query.

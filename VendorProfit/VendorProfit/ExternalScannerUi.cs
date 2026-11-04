@@ -21,7 +21,9 @@ public sealed unsafe partial class Plugin
         var limits = config.AutoBuyLimits;
         var request = new ScannerRequest(1, world, Data.GetExcelSheet<World>().GetRowOrDefault(world)?.Name.ToString() ?? world.ToString(),
             Policy.QuickItems(catalog!, config.LearnedItems ?? []), limits.IntervalSeconds, config.MaximumAgeMinutes,
-            limits.MaximumLot, limits.MinimumProfit, limits.MinimumRoi);
+            config.BackgroundAlerts ? Math.Max(limits.MaximumLot,config.AlertMaximumLot) : limits.MaximumLot,
+            config.BackgroundAlerts ? Math.Min(limits.MinimumProfit,config.AlertMinimumProfit) : limits.MinimumProfit,
+            config.BackgroundAlerts ? Math.Min(limits.MinimumRoi,config.AlertMinimumRoi) : limits.MinimumRoi, config.BackgroundChaos);
         string json = JsonSerializer.Serialize(request);
         if (json == exportedRequest) return;
         Directory.CreateDirectory(Pi.ConfigDirectory.FullName);
@@ -86,20 +88,13 @@ public sealed unsafe partial class Plugin
             try
             {
                 ExportScannerRequest();
-                string script = Path.Combine(Pi.AssemblyLocation.DirectoryName!, "vendorprofit_worker.py");
-                string launcher = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "pyw.exe");
-                if (!File.Exists(launcher)) throw new FileNotFoundException("Установите Python 3 с Python Launcher (pyw.exe).");
-                if (!File.Exists(script)) throw new FileNotFoundException("Скрипт сканера отсутствует; переустановите пакет VendorProfit.");
-                var start = new ProcessStartInfo(launcher) { UseShellExecute = false, CreateNoWindow = true };
-                start.ArgumentList.Add("-3"); start.ArgumentList.Add(script); start.ArgumentList.Add("--directory"); start.ArgumentList.Add(Pi.ConfigDirectory.FullName);
-                using var process = Process.Start(start);
-                externalStatus = "Сканер запускается отдельно от игры…";
+                scannerStoppedManually = false; StartExternalProcess();
             }
             catch (Exception e) { externalStatus = "Ошибка запуска: " + e.Message; }
         }
         ImGui.SameLine();
         if (ImGui.Button("Остановить внешний сканер"))
-        { Directory.CreateDirectory(Pi.ConfigDirectory.FullName); File.WriteAllText(ExternalPath("external-worker.stop"), "stop"); }
+        { scannerStoppedManually = true; Directory.CreateDirectory(Pi.ConfigDirectory.FullName); File.WriteAllText(ExternalPath("external-worker.stop"), "stop"); }
         ImGui.EndDisabled();
         ImGui.TextWrapped(externalStatus);
         ImGui.TextWrapped("Скрипт опрашивает только Universalis. К игре обращаемся только по новым найденным лотам; неизменившиеся предложения повторно не проверяются. Покупки остаются видимыми игровому серверу.");
@@ -110,5 +105,16 @@ public sealed unsafe partial class Plugin
             if (config.AutoBuyEnabled) autoBuyer.Resume();
         }
         ImGui.EndDisabled();
+    }
+    private void StartExternalProcess()
+    {
+        string script = Path.Combine(Pi.AssemblyLocation.DirectoryName!, "vendorprofit_worker.py");
+        string launcher = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "pyw.exe");
+        if (!File.Exists(launcher)) throw new FileNotFoundException("Установите Python 3 с Python Launcher (pyw.exe).");
+        if (!File.Exists(script)) throw new FileNotFoundException("Скрипт сканера отсутствует; переустановите пакет VendorProfit.");
+        var start = new ProcessStartInfo(launcher) { UseShellExecute = false, CreateNoWindow = true };
+        start.ArgumentList.Add("-3"); start.ArgumentList.Add(script); start.ArgumentList.Add("--directory"); start.ArgumentList.Add(Pi.ConfigDirectory.FullName);
+        using var process = Process.Start(start);
+        externalStatus = "Сканер запускается отдельно от игры…";
     }
 }

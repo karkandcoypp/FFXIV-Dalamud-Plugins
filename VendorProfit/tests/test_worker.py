@@ -79,3 +79,29 @@ class WorkerTests(unittest.TestCase):
         source=path.read_text(encoding='utf8')
         for token in ('ctypes','ReadProcessMemory','SendInput','subprocess','Dalamud.dll','SendPurchaseRequest'):
             self.assertNotIn(token,source)
+
+    def test_chaos_scope_labels_and_partial_failures(self):
+        def fetch(url):
+            if url=='data-centers':return [dict(name='Chaos',worlds=[80,83])]
+            if url=='worlds':return [dict(id=80,name='Cerberus'),dict(id=83,name='Louisoix')]
+            if url.startswith('83/'):raise ValueError('failed world')
+            return self.book
+        result=worker.scan(dict(self.request,Chaos=True),fetch=fetch,pause=lambda _:None)
+        self.assertEqual(len(result['Servers']),2)
+        self.assertEqual((len(result['Suggestions']),result['Suggestions'][0]['WorldName'],result['Failed']),(1,'Cerberus',1))
+
+    def test_chaos_cooldown_stops_other_worlds(self):
+        calls=[]
+        def fetch(url):
+            calls.append(url)
+            if url=='data-centers':return [dict(name='Chaos',worlds=[80,83])]
+            if url=='worlds':return [dict(id=80,name='Cerberus'),dict(id=83,name='Louisoix')]
+            raise worker.Cooldown('stop')
+        result=worker.scan(dict(self.request,Chaos=True),fetch=fetch,pause=lambda _:None)
+        self.assertEqual(result['Unknown'],2)
+        self.assertFalse(any(url.startswith('83/') for url in calls))
+
+    def test_long_cooldown_propagated_to_background_interval(self):
+        def fetch(_):raise worker.Cooldown('wait',3600)
+        result=worker.scan(self.request,fetch=fetch,pause=lambda _:None)
+        self.assertEqual(result['RetryAfterSeconds'],3600)

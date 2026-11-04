@@ -9,9 +9,13 @@ import time
 import urllib.error
 import urllib.request
 
+VERSION = "0.4.0"
+
 
 class Cooldown(Exception):
-    pass
+    def __init__(self,message,delay=120):
+        super().__init__(message)
+        self.delay=max(0,delay)
 
 
 def utc():
@@ -37,7 +41,7 @@ def get(path):
     for attempt in range(3):
         try:
             request = urllib.request.Request("https://universalis.app/api/v2/" + path,
-                headers={"User-Agent": "VendorProfitWorker/0.3.0 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)"})
+                headers={"User-Agent": "VendorProfitWorker/0.4.0 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)"})
             with urllib.request.urlopen(request, timeout=25) as response:
                 return json.load(response)
         except urllib.error.HTTPError as error:
@@ -50,7 +54,7 @@ def get(path):
                 except ValueError:
                     delay = (email.utils.parsedate_to_datetime(retry) - utc()).total_seconds()
                 if delay > 60:
-                    raise Cooldown("Universalis requested a long cooldown") from error
+                    raise Cooldown("Universalis requested a long cooldown",delay) from error
                 time.sleep(max(0, delay))
             elif error.code >= 500 and attempt < 2:
                 time.sleep(2 ** attempt)
@@ -118,6 +122,8 @@ def parse_book(book, item, request, now):
 def validate(request):
     if request.get("Schema") != 1 or not positive(request.get("World")):
         raise ValueError("No valid scanner request/world; open plugin settings to export it")
+    if type(request.get("Chaos",False)) is not bool:
+        raise ValueError("Invalid Chaos scope")
     for key, minimum, maximum in [("IntervalSeconds", 60, 1800), ("MaximumAgeMinutes", 5, 1440),
             ("MaximumLot", 1, 10_000_000), ("MinimumProfit", 1, 10_000_000), ("MinimumRoi", 1, 10000)]:
         if type(request.get(key)) is not int or not minimum <= request[key] <= maximum:
@@ -133,10 +139,12 @@ def validate(request):
     return request
 
 
-def scan(request, fetch=get, pause=time.sleep):
+def scan_world(request, fetch=get, pause=time.sleep):
     validate(request)
     items = request["Items"]
     suggestions, failed, unknown = [], 0, 0
+    cooldown = False
+    retry_after = 0
     for offset in range(0, len(items), 20):
         batch = items[offset:offset + 20]
         try:
@@ -146,8 +154,10 @@ def scan(request, fetch=get, pause=time.sleep):
                 found, incomplete = parse_book(book, item, request, utc())
                 suggestions.extend(found)
                 unknown += int(incomplete)
-        except Cooldown:
+        except Cooldown as error:
             unknown += len(items) - offset
+            cooldown = True
+            retry_after = error.delay
             break
         except (urllib.error.URLError, OSError, ValueError, TypeError, KeyError):
             failed += len(batch)
@@ -155,7 +165,36 @@ def scan(request, fetch=get, pause=time.sleep):
     suggestions.sort(key=lambda s: s["Quote"]["Revenue"] - s["Quote"]["Cost"], reverse=True)
     return {"World": request["World"], "Finished": iso(utc()), "Suggestions": suggestions,
         "Checked": len(items), "Unknown": unknown, "Failed": failed,
-        "Status": "External Universalis worker; cached offers, not game polling.", "Scope": "External", "Servers": None}
+        "Status": "External Universalis worker; cached offers, not game polling.", "Scope": "External", "Servers": None, "Cooldown":cooldown,"RetryAfterSeconds":retry_after}
+
+
+def scan(request, fetch=get, pause=time.sleep):
+    validate(request)
+    if not request.get("Chaos",False):
+        return scan_world(request,fetch,pause)
+    centers=[c for c in fetch("data-centers") if c.get("name")=="Chaos"]
+    if len(centers)!=1:
+        raise ValueError("Cannot resolve Chaos")
+    ids=list(dict.fromkeys(centers[0]["worlds"]))
+    names={w["id"]:w["name"] for w in fetch("worlds")}
+    if not 1<=len(ids)<=32 or any(not positive(i) or not names.get(i) for i in ids):
+        raise ValueError("Invalid Chaos worlds")
+    suggestions,servers=[],[]
+    cooldown=False
+    retry_after=0
+    for world in ids:
+        if cooldown:
+            servers.append(dict(World=world,Name=names[world],Checked=0,Unknown=len(request["Items"]),Failed=0))
+            continue
+        part=scan_world(dict(request,World=world,WorldName=names[world]),fetch,pause)
+        suggestions.extend(part["Suggestions"])
+        servers.append(dict(World=world,Name=names[world],Checked=part["Checked"],Unknown=part["Unknown"],Failed=part["Failed"]))
+        cooldown=part["Cooldown"]
+        retry_after=max(retry_after,part["RetryAfterSeconds"])
+    suggestions.sort(key=lambda s:s["Quote"]["Revenue"]-s["Quote"]["Cost"],reverse=True)
+    return dict(World=request["World"],Finished=iso(utc()),Suggestions=suggestions,Scope="External",Servers=servers,
+        Checked=sum(w["Checked"] for w in servers),Unknown=sum(w["Unknown"] for w in servers),Failed=sum(w["Failed"] for w in servers),
+        Status=f"External Universalis Chaos: {len(ids)} worlds; cached offers, not game polling.",Cooldown=cooldown,RetryAfterSeconds=retry_after)
 
 
 def main():
@@ -182,10 +221,11 @@ def main():
                 request = validate(json.loads((directory / "external-request.json").read_text(encoding="utf-8-sig")))
                 interval = request["IntervalSeconds"]
                 result = scan(request)
+                interval=max(interval,result.get("RetryAfterSeconds",0))
                 atomic(directory / "external-result.json", result)
-                atomic(directory / "external-status.json", {"At": iso(utc()), "State": "Ready", "Message": f'World {request["World"]}; offers {len(result["Suggestions"])}; errors {result["Failed"]}'})
+                atomic(directory / "external-status.json", {"At": iso(utc()), "Version":VERSION, "State": "Ready", "Message": f'World {request["World"]}; offers {len(result["Suggestions"])}; errors {result["Failed"]}'})
             except Exception as error:
-                atomic(directory / "external-status.json", {"At": iso(utc()), "State": "Error", "Message": str(error)[:400]})
+                atomic(directory / "external-status.json", {"At": iso(utc()), "Version":VERSION, "State": "Error", "Message": str(error)[:400]})
                 if args.once:
                     raise
             if args.once:
@@ -194,7 +234,7 @@ def main():
             while not stop.exists() and time.monotonic() < deadline:
                 time.sleep(.5)
     finally:
-        atomic(directory / "external-status.json", {"At": iso(utc()), "State": "Stopped", "Message": "Worker stopped"})
+        atomic(directory / "external-status.json", {"At": iso(utc()), "Version":VERSION, "State": "Stopped", "Message": "Worker stopped"})
         lock.close()
     return 0
 

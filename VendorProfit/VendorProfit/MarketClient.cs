@@ -17,7 +17,7 @@ public sealed class MarketClient : IDisposable
     public MarketClient(HttpClient client)
     {
         http = client;
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("VendorProfit/0.3.0 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("VendorProfit/0.4.0 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)");
     }
     public async Task<JsonDocument> Get(string path, CancellationToken token)
     {
@@ -88,7 +88,13 @@ public sealed class MarketClient : IDisposable
                 tax = (uint)(subtotal / 20);
             }
             if (l.TryGetProperty("total", out var total) && (!total.TryGetInt64(out var t) || t != subtotal)) continue;
-            var lot = new Lot(0, id, l.TryGetProperty("retainerName", out var name) ? name.GetString() ?? "" : "", price, quantity, tax, hq.GetBoolean());
+            ulong listingId=0;
+            if(l.TryGetProperty("listingID",out var listing))
+            {
+                if(listing.ValueKind==JsonValueKind.String) ulong.TryParse(listing.GetString(),out listingId);
+                else if(listing.ValueKind==JsonValueKind.Number) listing.TryGetUInt64(out listingId);
+            }
+            var lot = new Lot(listingId, id, l.TryGetProperty("retainerName", out var name) ? name.GetString() ?? "" : "", price, quantity, tax, hq.GetBoolean());
             // Equipment condition is unavailable from Universalis; only live offers can validate it.
             if (!item.Equipment && Policy.Evaluate(item, lot) is { Profit: > 0 } quote)
                 output.Add(new(item, quote, updated, estimated));

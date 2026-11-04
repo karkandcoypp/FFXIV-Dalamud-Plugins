@@ -28,6 +28,13 @@ public sealed class Configuration : IPluginConfiguration
     public ulong AutoBuyCharacter;
     public BuyLimits AutoBuyLimits = new();
     public bool UseExternalScanner = true;
+    public bool BackgroundAlerts = true;
+    public bool AutoStartScanner = true;
+    public bool BackgroundChaos;
+    public int AlertMinimumProfit = 1000;
+    public int AlertMaximumLot = 500_000;
+    public int AlertMinimumRoi = 1;
+    public int AlertCooldownSeconds = 60;
 }
 
 public sealed unsafe partial class Plugin : IDalamudPlugin
@@ -42,6 +49,7 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
     [PluginService] internal static IMarketBoard Board { get; private set; } = null!;
     [PluginService] internal static IPlayerState Player { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    [PluginService] internal static IChatGui Chat { get; private set; } = null!;
     private readonly object automationGate = new();
     private bool disposed;
     private readonly Configuration config;
@@ -67,6 +75,7 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         config.MinimumProfit = Math.Clamp(config.MinimumProfit, 1, 100_000_000);
         config.MaximumAgeMinutes = Math.Clamp(config.MaximumAgeMinutes, 5, 1440);
         config.AutoBuyLimits ??= new(); config.AutoBuyLimits.Normalize();
+        NormalizeAlerts();
         buyGateway = new(Board, Gui, Framework);
         autoBuyer = new(buyGateway, SaveBuyLedger);
         Commands.AddHandler("/vendorprofit", new CommandInfo((_, _) => Open()) { HelpMessage = "NPC resale opportunities / перепродажа NPC" });
@@ -183,6 +192,7 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         {
             string worldName = Objects.LocalPlayer?.CurrentWorld.Value.Name.ToString() ?? "—";
             ImGui.TextUnformatted($"Текущий мир: {worldName}. Прибыль за весь стак, с налогом покупателя.");
+            DrawBackgroundAlerts();
             DrawAutoBuy();
             if (ImGui.CollapsingHeader("Настройки"))
             {
@@ -337,7 +347,7 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         }
         liveStatus = $"{item.Name}: проверены видимые строки {matched}/{visible}.";
         if (visible > 0 && matched == 0) liveStatus += " Строки не совпали с ценой, количеством и итогом игры.";
-        diagnostics = $"v0.3.0 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
+        diagnostics = $"v0.4.0 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
             $"request={proxy->SearchItemId}; selected={agent->ResultItemId}; waiting={proxy->WaitingForListings}; update={list->IsUpdatePending}";
     }
     private sealed record RowField(string Text, float X, float Y, ushort Width, ushort Height);

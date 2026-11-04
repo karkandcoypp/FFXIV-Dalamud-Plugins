@@ -23,7 +23,9 @@ public sealed unsafe partial class Plugin
             try
             {
                 bool boardOpen = Visible((AtkUnitBase*)Gui.GetAddonByName("ItemSearch").Address) || Visible((AtkUnitBase*)Gui.GetAddonByName("ItemSearchResult").Address);
-                if (config.UseExternalScanner && world != 0 && boardOpen) RefreshExternalFiles(DateTimeOffset.UtcNow);
+                if (config.UseExternalScanner && world != 0 && (boardOpen || config.BackgroundAlerts))
+                    RefreshExternalFiles(DateTimeOffset.UtcNow);
+                UpdateBackgroundAlerts(DateTimeOffset.UtcNow);
                 UpdateAutoBuy(boardOpen);
             }
             catch (Exception e)
