@@ -16,16 +16,20 @@ namespace VendorProfit;
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 2;
+    public int Version { get; set; } = 3;
     public bool AutoOpen = true;
     public bool ScanOnOpen = true;
     public bool Highlight = true;
     public int MinimumProfit = 1000;
     public int MaximumAgeMinutes = 180;
     public uint[] LearnedItems = [];
+    public bool AutoBuyEnabled;
+    public bool AutoBuyDryRun = true;
+    public ulong AutoBuyCharacter;
+    public BuyLimits AutoBuyLimits = new();
 }
 
-public sealed unsafe class Plugin : IDalamudPlugin
+public sealed unsafe partial class Plugin : IDalamudPlugin
 {
     [PluginService] internal static IDalamudPluginInterface Pi { get; private set; } = null!;
     [PluginService] internal static IGameGui Gui { get; private set; } = null!;
@@ -34,6 +38,11 @@ public sealed unsafe class Plugin : IDalamudPlugin
     [PluginService] internal static IClientState Client { get; private set; } = null!;
     [PluginService] internal static ICommandManager Commands { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IMarketBoard Board { get; private set; } = null!;
+    [PluginService] internal static IPlayerState Player { get; private set; } = null!;
+    [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    private readonly object automationGate = new();
+    private bool disposed;
     private readonly Configuration config;
     private readonly MarketClient market = new();
     private readonly CancellationTokenSource lifetime = new();
@@ -56,10 +65,14 @@ public sealed unsafe class Plugin : IDalamudPlugin
         config = Pi.GetPluginConfig() as Configuration ?? new();
         config.MinimumProfit = Math.Clamp(config.MinimumProfit, 1, 100_000_000);
         config.MaximumAgeMinutes = Math.Clamp(config.MaximumAgeMinutes, 5, 1440);
+        config.AutoBuyLimits ??= new(); config.AutoBuyLimits.Normalize();
+        buyGateway = new(Board, Gui, Framework);
+        autoBuyer = new(buyGateway, SaveBuyLedger);
         Commands.AddHandler("/vendorprofit", new CommandInfo((_, _) => Open()) { HelpMessage = "NPC resale opportunities / перепродажа NPC" });
         Pi.UiBuilder.Draw += Draw;
         Pi.UiBuilder.OpenMainUi += Open;
         Pi.UiBuilder.OpenConfigUi += Open;
+        Framework.Update += OnAutoFramework;
     }
     private void Open() { open = true; manual = true; }
     private string CachePath => Path.Combine(Pi.ConfigDirectory.FullName, $"candidates-{world}.json");
@@ -119,12 +132,17 @@ public sealed unsafe class Plugin : IDalamudPlugin
     private static bool Visible(AtkUnitBase* addon) => addon != null && addon->IsVisible && addon->IsReady;
     private void Draw()
     {
-        try { DrawCore(); }
+        try { lock (automationGate) { if (!disposed) DrawCore(); } }
         catch (Exception e)
         {
+            lock (automationGate)
+            {
+            autoBuyer.Stop("Ошибка автоматизации: " + e.Message);
+            config.AutoBuyEnabled = false;
             live.Clear(); highlighted = 0;
             if (error != e.Message) Log.Warning(e, "VendorProfit: UI read failed; highlights suppressed");
             error = e.Message;
+            }
         }
     }
     private void DrawCore()
@@ -155,7 +173,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
             else if (scan.IsCanceled) progress = "Проверка остановлена (смена мира, отмена или лимит времени).";
             scan = null;
         }
-        if (boardOpen && config.ScanOnOpen && DateTimeOffset.UtcNow >= nextScan && world != 0) StartScan();
+        if (boardOpen && config.ScanOnOpen && (!config.AutoBuyEnabled || !Player.IsLoaded || config.AutoBuyCharacter != Player.ContentId) && DateTimeOffset.UtcNow >= nextScan && world != 0) StartScan();
         if (Visible((AtkUnitBase*)results)) ReadLive(results);
         else { live.Clear(); highlighted = 0; liveStatus = "Выберите предмет на Market Board."; }
         if (!open) return;
@@ -164,6 +182,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
         {
             string worldName = Objects.LocalPlayer?.CurrentWorld.Value.Name.ToString() ?? "—";
             ImGui.TextUnformatted($"Текущий мир: {worldName}. Прибыль за весь стак, с налогом покупателя.");
+            DrawAutoBuy();
             if (ImGui.CollapsingHeader("Настройки"))
             {
             bool changed = ImGui.Checkbox("Открывать с Market Board", ref config.AutoOpen);
@@ -315,7 +334,7 @@ public sealed unsafe class Plugin : IDalamudPlugin
         }
         liveStatus = $"{item.Name}: проверены видимые строки {matched}/{visible}.";
         if (visible > 0 && matched == 0) liveStatus += " Строки не совпали с ценой, количеством и итогом игры.";
-        diagnostics = $"v0.1.2 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
+        diagnostics = $"v0.2.0 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
             $"request={proxy->SearchItemId}; selected={agent->ResultItemId}; waiting={proxy->WaitingForListings}; update={list->IsUpdatePending}";
     }
     private sealed record RowField(string Text, float X, float Y, ushort Width, ushort Height);
@@ -339,6 +358,11 @@ public sealed unsafe class Plugin : IDalamudPlugin
     }
     public void Dispose()
     {
+        Framework.Update -= OnAutoFramework;
+        lock (automationGate)
+        {
+        disposed = true;
+        autoBuyer.Stop("Плагин выключен."); buyGateway.Dispose();
         Pi.UiBuilder.Draw -= Draw;
         Pi.UiBuilder.OpenMainUi -= Open;
         Pi.UiBuilder.OpenConfigUi -= Open;
@@ -348,5 +372,6 @@ public sealed unsafe class Plugin : IDalamudPlugin
         var pending = scan;
         if (pending != null) _ = pending.ContinueWith(_ => { market.Dispose(); scanCancellation?.Dispose(); lifetime.Dispose(); }, TaskScheduler.Default);
         else { market.Dispose(); scanCancellation?.Dispose(); lifetime.Dispose(); }
+        }
     }
 }

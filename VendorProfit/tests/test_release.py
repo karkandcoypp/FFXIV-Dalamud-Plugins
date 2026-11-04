@@ -7,14 +7,18 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root=pathlib.Path(folder); index=root/'pluginmaster.json'; manifest=root/'VendorProfit.json'
             previous=[{'InternalName':'CraftProfile','AssemblyVersion':'0.1.0.0'}, {'InternalName':'BagSense','AssemblyVersion':'0.8.0.0'}]
-            index.write_text(json.dumps(previous)); manifest.write_text(json.dumps({'InternalName':'VendorProfit','AssemblyVersion':'0.1.2.0','DalamudApiLevel':15}))
-            for _ in range(2): update(index,manifest,'owner/repo','vp-v0.1.2')
+            index.write_text(json.dumps(previous)); manifest.write_text(json.dumps({'InternalName':'VendorProfit','AssemblyVersion':'0.2.0.0','DalamudApiLevel':15}))
+            for _ in range(2): update(index,manifest,'owner/repo','vp-v0.2.0')
             data=json.loads(index.read_text()); self.assertEqual(data[:2],previous); self.assertEqual(len(data),3)
-            self.assertTrue(data[2]['DownloadLinkInstall'].endswith('/vp-v0.1.2/VendorProfit.zip'))
+            self.assertTrue(data[2]['DownloadLinkInstall'].endswith('/vp-v0.2.0/VendorProfit.zip'))
             with self.assertRaises(ValueError): update(index,manifest,'owner/repo','cp-v0.1.0')
 
-    def test_no_purchase_or_node_mutation(self):
+    def test_native_purchases_isolated_and_no_raw_input_or_node_mutation(self):
         source=pathlib.Path(__file__).resolve().parents[1]/'VendorProfit'
         text='\n'.join(p.read_text(encoding='utf8') for p in source.glob('*.cs'))
-        for forbidden in ('SendPurchaseRequest', 'FireCallback(', 'SetItemHighlightedState(', 'SendInput', 'ReadProcessMemory'):
+        for forbidden in ('FireCallback(', 'SetItemHighlightedState(', 'SendInput', 'ReadProcessMemory'):
             self.assertNotIn(forbidden,text)
+        callers=[p.name for p in source.glob('*.cs') if 'SendPurchaseRequestPacket(' in p.read_text(encoding='utf8')]
+        self.assertEqual(callers,['NativeBuyGateway.cs'])
+        self.assertIn('public bool AutoBuyDryRun = true;',text)
+        self.assertIn('public bool AutoBuyEnabled;',text)
