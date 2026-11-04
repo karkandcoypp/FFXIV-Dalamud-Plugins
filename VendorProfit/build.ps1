@@ -12,12 +12,15 @@ if ($Offline) { $buildArguments += '-p:NuGetAudit=false' }
 if ($LASTEXITCODE -ne 0) { throw "VendorProfit build failed ($LASTEXITCODE)" }
 & $dotnet run --project (Join-Path $PSScriptRoot 'tests\Checks\Checks.csproj') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'VendorProfit policy checks failed' }
+python -m unittest discover -s (Join-Path $PSScriptRoot 'tests') -p test_worker.py -v
+if ($LASTEXITCODE -ne 0) { throw 'VendorProfit external worker checks failed' }
 
 # A small explicit package avoids packaging machine-specific dependencies supplied by Dalamud.
 $output = Join-Path $PSScriptRoot 'VendorProfit\bin\Release'
 $packageDirectory = Join-Path $PSScriptRoot 'artifacts'
 [System.IO.Directory]::CreateDirectory($packageDirectory) | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'VendorProfit\VendorProfit.json') -Destination (Join-Path $output 'VendorProfit.json') -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'worker\vendorprofit_worker.py') -Destination (Join-Path $output 'vendorprofit_worker.py') -Force
 $manifest = Get-Content -LiteralPath (Join-Path $output 'VendorProfit.json') -Raw | ConvertFrom-Json
 $dll = Join-Path $output 'VendorProfit.dll'
 $version = [System.Reflection.AssemblyName]::GetAssemblyName($dll).Version.ToString()
@@ -28,7 +31,7 @@ $stream = [System.IO.File]::Open($archive, [System.IO.FileMode]::Create)
 try {
     $zip = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Create, $true)
     try {
-        foreach ($name in @('VendorProfit.dll', 'VendorProfit.json')) {
+        foreach ($name in @('VendorProfit.dll', 'VendorProfit.json', 'vendorprofit_worker.py')) {
             [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, (Join-Path $output $name), $name) | Out-Null
         }
     } finally { $zip.Dispose() }

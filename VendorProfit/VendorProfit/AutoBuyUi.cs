@@ -23,6 +23,7 @@ public sealed unsafe partial class Plugin
             try
             {
                 bool boardOpen = Visible((AtkUnitBase*)Gui.GetAddonByName("ItemSearch").Address) || Visible((AtkUnitBase*)Gui.GetAddonByName("ItemSearchResult").Address);
+                if (config.UseExternalScanner && world != 0 && boardOpen) RefreshExternalFiles(DateTimeOffset.UtcNow);
                 UpdateAutoBuy(boardOpen);
             }
             catch (Exception e)
@@ -54,6 +55,7 @@ public sealed unsafe partial class Plugin
                 throw new InvalidDataException("Журнал активного режима отсутствует. Выключите режим и проверьте расходы; автоматический сброс запрещён.");
             var ledger = File.Exists(path) ? JsonSerializer.Deserialize<BuyLedger>(File.ReadAllText(path), LedgerJson) : new BuyLedger { Character = character };
             if (ledger == null || ledger.Character != character || ledger.Charged < 0 || ledger.Entries == null || ledger.Entries.Count > 1000 ||
+                ledger.CheckedExternal == null || ledger.CheckedExternal.Count > 10000 ||
                 ledger.Entries.Any(e => e.Cost <= 0) || ledger.Entries.Sum(e => e.Cost) != ledger.Charged)
                 throw new InvalidDataException("Журнал расходов повреждён; автоматический сброс запрещён.");
             autoBuyer.Attach(ledger); ledgerValid = true;
@@ -90,6 +92,11 @@ public sealed unsafe partial class Plugin
         if (autoBuyer.HasPending || authorized) autoBuyer.Tick(now, state, config.AutoBuyLimits, authorized, config.AutoBuyDryRun);
         if (wasBusy && !autoBuyer.Busy) nextAutoPoll = now.AddSeconds(config.AutoBuyLimits.IntervalSeconds);
         if (!authorized || !boardOpen || autoBuyer.Halted || autoBuyer.Busy || autoBuyer.HasPending || scan != null || state.Blocked) return;
+        if (config.UseExternalScanner)
+        {
+            RunExternalInbox(state, now);
+            return; // No internal discovery timer or game query when the external inbox has no new target.
+        }
         if (result != null && !ReferenceEquals(result, considered))
         {
             considered = result;
@@ -110,6 +117,7 @@ public sealed unsafe partial class Plugin
     private void DrawAutoBuy()
     {
         if (config.AutoBuyEnabled) ImGui.TextWrapped("Авторежим: " + autoBuyer.Status);
+        if (config.UseExternalScanner) ImGui.TextWrapped("Внешний поиск: " + externalStatus);
         if (!ImGui.CollapsingHeader("Периодический поиск и автопокупка")) return;
         bool changed = ImGui.Checkbox("Включить периодический поиск и автопокупку", ref config.AutoBuyEnabled);
         if (changed)
@@ -119,6 +127,7 @@ public sealed unsafe partial class Plugin
             else { config.AutoBuyEnabled = false; autoBuyer.Stop("Автопокупка выключена."); }
         }
         changed |= ImGui.Checkbox("Пробный режим — проверять без покупок", ref config.AutoBuyDryRun);
+        DrawExternalControls(ref changed);
         changed |= ImGui.InputInt("Авто: максимум за стак", ref config.AutoBuyLimits.MaximumLot);
         changed |= ImGui.InputInt("Авто: общий бюджет до сброса", ref config.AutoBuyLimits.Budget);
         changed |= ImGui.InputInt("Авто: минимум прибыли за стак", ref config.AutoBuyLimits.MinimumProfit);

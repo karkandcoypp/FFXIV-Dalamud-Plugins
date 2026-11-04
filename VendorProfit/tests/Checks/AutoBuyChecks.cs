@@ -111,6 +111,27 @@ static class AutoBuyChecks
         var gear = Buyer(); gear.Buyer.Stop("stop"); gear.Buyer.Resume();
         gear.Buyer.Begin([suggestion], new Dictionary<uint,VendorItem> { [item.Id] = item with { Equipment = true } }, context);
         check(!gear.Buyer.Busy && gear.Gateway.Requests == 0, "auto: equipment excluded from unattended purchase cycle");
+        var feed = new ScanResult(80,now,[suggestion],1,0,0,"external",Scope:"External");
+        var seen = new HashSet<string> { ExternalFeed.Ticket(suggestion) };
+        check(ExternalFeed.Select(feed,80,now,seen).Length==0, "external: unchanged cached offer cannot trigger another game query");
+        check(ExternalFeed.Select(feed with { Suggestions=[suggestion with { Updated=now.AddMinutes(1) }] },80,now,seen).Length==0,
+            "external: new upload timestamp alone does not rearm unchanged listing");
+        check(ExternalFeed.Select(feed with { Suggestions=[suggestion with { Quote=quote with { Lot=lot with { Price=99 } } }] },80,now,seen).Length==1,
+            "external: changed listing price creates a new target");
+        check(ExternalFeed.Select(feed,83,now,new HashSet<string>()).Length==0 &&
+            ExternalFeed.Select(feed with { Finished=now.AddMinutes(-3) },80,now,new HashSet<string>()).Length==0,
+            "external: wrong-world and stale external files never authorize querying");
+        var exact = Buyer(); exact.Buyer.Stop("stop");exact.Buyer.Resume();
+        exact.Buyer.Begin([suggestion],catalog,context,exactExternal:true);
+        exact.Gateway.CurrentLot=lot with { Id=999 };
+        exact.Buyer.Tick(now,context,limits,true,false);exact.Buyer.Tick(now.AddSeconds(1),context,limits,true,false);
+        check(exact.Gateway.Submits==0,"external: other profitable native listings cannot replace the found listing ID");
+        exact.Gateway.CurrentLot=lot;
+        exact.Buyer.Tick(now.AddSeconds(2),context,limits,true,false);exact.Gateway.Count=1;
+        exact.Buyer.Tick(now.AddSeconds(3),context with { Gil=context.Gil-105 },limits,true,false);
+        exact.Buyer.Tick(now.AddSeconds(9),context with { Gil=context.Gil-105 },limits,true,false);
+        check(exact.Gateway.Submits==1 && exact.Gateway.Requests==1 && !exact.Buyer.Busy,
+            "external: completed target does not cause general follow-up item polling");
     }
 }
 sealed class FakeBuyGateway(Lot lot, List<string> calls) : IBuyGateway

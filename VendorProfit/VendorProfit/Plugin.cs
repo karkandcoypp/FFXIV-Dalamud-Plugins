@@ -27,6 +27,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutoBuyDryRun = true;
     public ulong AutoBuyCharacter;
     public BuyLimits AutoBuyLimits = new();
+    public bool UseExternalScanner = true;
 }
 
 public sealed unsafe partial class Plugin : IDalamudPlugin
@@ -173,7 +174,7 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
             else if (scan.IsCanceled) progress = "Проверка остановлена (смена мира, отмена или лимит времени).";
             scan = null;
         }
-        if (boardOpen && config.ScanOnOpen && (!config.AutoBuyEnabled || !Player.IsLoaded || config.AutoBuyCharacter != Player.ContentId) && DateTimeOffset.UtcNow >= nextScan && world != 0) StartScan();
+        if (boardOpen && config.ScanOnOpen && !config.UseExternalScanner && (!config.AutoBuyEnabled || !Player.IsLoaded || config.AutoBuyCharacter != Player.ContentId) && DateTimeOffset.UtcNow >= nextScan && world != 0) StartScan();
         if (Visible((AtkUnitBase*)results)) ReadLive(results);
         else { live.Clear(); highlighted = 0; liveStatus = "Выберите предмет на Market Board."; }
         if (!open) return;
@@ -187,7 +188,9 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
             {
             bool changed = ImGui.Checkbox("Открывать с Market Board", ref config.AutoOpen);
             ImGui.SameLine(); changed |= ImGui.Checkbox("Подсветка лотов", ref config.Highlight);
-            changed |= ImGui.Checkbox("Быстрая проверка при открытии (до 100 предметов, кэш 20 мин)", ref config.ScanOnOpen);
+            ImGui.BeginDisabled(config.UseExternalScanner);
+            changed |= ImGui.Checkbox("Встроенный HTTP-поиск при открытии (кэш 20 мин)", ref config.ScanOnOpen);
+            ImGui.EndDisabled();
             changed |= ImGui.InputInt("Минимум прибыли за лот", ref config.MinimumProfit);
             changed |= ImGui.InputInt("Возраст данных Universalis, минут", ref config.MaximumAgeMinutes);
             ImGui.BeginDisabled(scan != null || world == 0);
@@ -334,7 +337,7 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         }
         liveStatus = $"{item.Name}: проверены видимые строки {matched}/{visible}.";
         if (visible > 0 && matched == 0) liveStatus += " Строки не совпали с ценой, количеством и итогом игры.";
-        diagnostics = $"v0.2.0 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
+        diagnostics = $"v0.3.0 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
             $"request={proxy->SearchItemId}; selected={agent->ResultItemId}; waiting={proxy->WaitingForListings}; update={list->IsUpdatePending}";
     }
     private sealed record RowField(string Text, float X, float Y, ushort Width, ushort Height);

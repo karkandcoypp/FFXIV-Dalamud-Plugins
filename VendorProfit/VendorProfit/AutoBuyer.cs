@@ -24,6 +24,7 @@ public sealed class BuyLedger
     public ulong Character { get; set; }
     public long Charged { get; set; }
     public List<BuyEntry> Entries { get; set; } = [];
+    public List<string> CheckedExternal { get; set; } = [];
 }
 public sealed record BuyContext(ulong Character, uint World, bool BoardOpen, bool Blocked, long Gil, uint FreeSlots);
 public interface IBuyGateway
@@ -59,6 +60,7 @@ public sealed class AutoBuyer(IBuyGateway gateway, Action<BuyLedger> save)
     private DateTimeOffset deadline, nextStep;
     private long gilBefore;
     private int countBefore;
+    private Dictionary<ulong,uint>? externalTargets;
     private bool pausedForBoard;
     public bool Busy { get; private set; }
     public bool Halted { get; private set; }
@@ -66,6 +68,7 @@ public sealed class AutoBuyer(IBuyGateway gateway, Action<BuyLedger> save)
     public string Status { get; private set; } = "Автопокупка выключена.";
     public BuyLedger Ledger { get; private set; } = new();
     public List<string> Observations { get; } = [];
+    public uint[] QueuedItems => queue.Select(i => i.Id).Distinct().ToArray();
     public void Attach(BuyLedger ledger)
     {
         if (HasPending) throw new InvalidOperationException("Покупка ещё ожидает подтверждения.");
@@ -78,16 +81,19 @@ public sealed class AutoBuyer(IBuyGateway gateway, Action<BuyLedger> save)
         // Never clear an unresolved purchase or refund its reserved budget automatically.
     }
     public void AbandonPending(string reason) { pending = null; Stop(reason); }
-    public void Begin(IEnumerable<Suggestion> candidates, IReadOnlyDictionary<uint, VendorItem> catalog, BuyContext context, BuyLimits? limits = null)
+    public void Begin(IEnumerable<Suggestion> candidates, IReadOnlyDictionary<uint, VendorItem> catalog, BuyContext context, BuyLimits? limits = null, bool exactExternal = false)
     {
         if (Busy || Halted || HasPending || !context.BoardOpen || context.Character != Ledger.Character) return;
         limits ??= new();
         queue.Clear();
-        foreach (uint id in candidates.Where(s => s.World == context.World && s.Quote.Cost > 0 && s.Quote.Cost <= limits.MaximumLot &&
+        var filtered = candidates.Where(s => s.World == context.World && (!exactExternal || s.Quote.Lot.Id != 0) && s.Quote.Cost > 0 && s.Quote.Cost <= limits.MaximumLot &&
                 s.Quote.Cost <= limits.Budget - Ledger.Charged && s.Quote.Profit >= limits.MinimumProfit &&
                 (decimal)s.Quote.Profit * 100 >= (decimal)s.Quote.Cost * limits.MinimumRoi)
-            .OrderByDescending(s => s.Quote.Profit).Select(s => s.Item.Id).Distinct().Take(20))
+            .OrderByDescending(s => s.Quote.Profit).ToArray();
+        foreach (uint id in filtered.Select(s => s.Item.Id).Distinct().Take(20))
             if (catalog.TryGetValue(id, out var item) && !item.Equipment) queue.Enqueue(item);
+        externalTargets = exactExternal ? filtered.Where(s => QueuedItems.Contains(s.Item.Id)).GroupBy(s => s.Quote.Lot.Id)
+            .ToDictionary(g => g.Key, g => g.First().Item.Id) : null;
         cycleWorld = context.World; cycleCharacter = context.Character; Busy = queue.Count > 0;
         Status = Busy ? $"Свежая проверка кандидатов: {queue.Count}." : "Подходящих кандидатов нет; жду следующую проверку.";
         nextStep = DateTimeOffset.MinValue;
@@ -107,7 +113,8 @@ public sealed class AutoBuyer(IBuyGateway gateway, Action<BuyLedger> save)
                 try { save(Ledger); }
                 catch { pending = null; Stop("Подтверждение не сохранено в журнал; покупки остановлены."); throw; }
                 Status = $"Куплено {pending.Lot.Quantity} шт. за {pending.Cost:N0}; расчётная прибыль {pending.Profit:N0}.";
-                if (requested != null && Busy && !Halted) queue.Enqueue(requested);
+                externalTargets?.Remove(pending.Lot.Id);
+                if (requested != null && Busy && !Halted && (externalTargets == null || externalTargets.Values.Contains(requested.Id))) queue.Enqueue(requested);
                 pending = null; requested = null; gateway.Clear(); nextStep = now.AddSeconds(5);
                 return;
             }
@@ -139,6 +146,7 @@ public sealed class AutoBuyer(IBuyGateway gateway, Action<BuyLedger> save)
             return;
         }
         var quote = gateway.FreshLots(requested.Id).Select(l => Policy.Evaluate(requested, l)).OfType<Quote>()
+            .Where(q => externalTargets == null || externalTargets.ContainsKey(q.Lot.Id))
             .Where(q => BuyPolicy.Allowed(q, limits, Ledger, context)).OrderByDescending(q => q.Profit).FirstOrDefault();
         if (quote == null)
         {
