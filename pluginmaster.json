@@ -119,8 +119,8 @@
     "Author": "Carcosa Lyuman",
     "Name": "VendorProfit",
     "InternalName": "VendorProfit",
-    "AssemblyVersion": "0.1.2.0",
-    "Description": "Find market-board stacks worth reselling to NPCs. Shows whole-stack profit after buyer tax, current-world Universalis candidates and native-row highlights and quick cached discovery. No automatic purchases. /vendorprofit",
+    "AssemblyVersion": "0.2.0.0",
+    "Description": "Find stacks worth reselling to NPCs. Current-world and Chaos candidates, native-row highlights, optional periodic discovery and budget-limited auto-purchasing with fresh game listings. Auto-buy off and dry run on by default. /vendorprofit",
     "Punchline": "Market Board → NPC: прибыль после налога и подсветка лотов.",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
@@ -131,8 +131,8 @@
       "economy"
     ],
     "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/vp-v0.1.2/VendorProfit.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/vp-v0.1.2/VendorProfit.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/vp-v0.1.2/VendorProfit.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/vp-v0.2.0/VendorProfit.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/vp-v0.2.0/VendorProfit.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/vp-v0.2.0/VendorProfit.zip"
   }
 ]
