@@ -85,6 +85,8 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         Pi.UiBuilder.OpenMainUi += Open;
         Pi.UiBuilder.OpenConfigUi += OpenSettings;
         Framework.Update += OnAutoFramework;
+        Board.PurchaseRequested += OnPurchaseRequested;
+        Board.ItemPurchased += OnItemPurchased;
     }
     private void Open() { open = true; manual = true; }
     private string CachePath => Path.Combine(Pi.ConfigDirectory.FullName, $"candidates-{world}.json");
@@ -252,7 +254,7 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         }
         liveStatus = $"{item.Name}: проверены видимые строки {matched}/{visible}.";
         if (visible > 0 && matched == 0) liveStatus += " Строки не совпали с ценой, количеством и итогом игры.";
-        diagnostics = $"v0.6.0 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
+        diagnostics = $"v0.7.0 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
             $"request={proxy->SearchItemId}; selected={agent->ResultItemId}; waiting={proxy->WaitingForListings}; update={list->IsUpdatePending}";
     }
     private sealed record RowField(string Text, float X, float Y, ushort Width, ushort Height);
@@ -280,6 +282,11 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         lock (automationGate)
         {
         disposed = true;
+        statisticsSession = null;
+        Board.PurchaseRequested -= OnPurchaseRequested;
+        Board.ItemPurchased -= OnItemPurchased;
+        if (statisticsDirty && statisticsValid)
+        { try { SaveStatistics(); } catch(Exception e) { Log.Warning(e,"VendorProfit statistics save on shutdown failed"); } }
         autoBuyer.Stop("Плагин выключен."); buyGateway.Dispose();
         Pi.UiBuilder.Draw -= Draw;
         Pi.UiBuilder.OpenMainUi -= Open;

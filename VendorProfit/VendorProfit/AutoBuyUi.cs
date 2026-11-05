@@ -20,6 +20,7 @@ public sealed unsafe partial class Plugin
         lock (automationGate)
         {
             if (disposed) return;
+            UpdateStatisticsSafely();
             try
             {
                 bool boardOpen = Visible((AtkUnitBase*)Gui.GetAddonByName("ItemSearch").Address) || Visible((AtkUnitBase*)Gui.GetAddonByName("ItemSearchResult").Address);
@@ -44,6 +45,7 @@ public sealed unsafe partial class Plugin
         Directory.CreateDirectory(Pi.ConfigDirectory.FullName);
         File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(ledger, LedgerJson));
         File.Move(path + ".tmp", path, true);
+        ImportPurchaseStatistics(ledger);
     }
     private void LoadBuyLedger(ulong character)
     {
@@ -61,6 +63,7 @@ public sealed unsafe partial class Plugin
                 ledger.Entries.Any(e => e.Cost <= 0) || ledger.Entries.Sum(e => e.Cost) != ledger.Charged)
                 throw new InvalidDataException("Журнал расходов повреждён; автоматический сброс запрещён.");
             autoBuyer.Attach(ledger); ledgerValid = true;
+            ImportPurchaseStatistics(ledger);
             if (ledger.Entries.Any(e => e.Status != "Подтверждено"))
                 autoBuyer.Stop("В журнале есть неподтверждённая покупка. Проверьте инвентарь и расходы перед ручным сбросом.");
             else if (config.AutoBuyEnabled && config.AutoBuyCharacter == character) autoBuyer.Resume();

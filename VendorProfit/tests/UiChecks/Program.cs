@@ -17,12 +17,14 @@ internal static class Program
         AssemblyLoadContext.Default.Resolving += (_,name)=>File.Exists(Path.Combine(home,name.Name+".dll")) ? AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(home,name.Name+".dll")) : null;
         NativeLibrary.SetDllImportResolver(typeof(ImGui).Assembly,(name,_,_)=>NativeLibrary.Load(Path.Combine(home,name+".dll")));
         string directory=Path.GetFullPath(args[0]);Directory.CreateDirectory(directory);
-        foreach(int tab in new[]{0,1,2,3})
+        foreach(int tab in new[]{0,1,2,3,4})
             foreach(var size in new[]{(980,650,1f),(850,520,1f),(1100,720,1.35f)})
                 Render(directory,tab,size.Item1,size.Item2,size.Item3);
         Render(directory,1,850,520,1,"active");
         Render(directory,0,850,520,1,"empty");
         Render(directory,0,850,520,1,"error");
+        Render(directory,4,850,520,1,"stats-empty");
+        Render(directory,4,980,650,1,"stats-selected");
     }
     private static unsafe void Render(string directory,int tab,int width,int height,float scale,string scenario="normal")
     {
@@ -39,6 +41,10 @@ internal static class Program
             new Quote(new Lot((ulong)(i+1),(uint)(8144+i),"Sample retainer",4000,30,6000,false),126000,150000),
             DateTimeOffset.UtcNow,false,(uint)(80+i),i==0?"Cerberus":i==1?"Spriggan":"Omega")).ToArray();
         Set(plugin,"result",new ScanResult(80,DateTimeOffset.UtcNow,suggestions,100,0,0,"Preview"));
+        var trades=names.Select((name,i)=>new TradePurchase((ulong)(700+i),DateTimeOffset.UtcNow,80,(uint)(8144+i),name,false,30,126000,150000,(uint)(i==0?30:i==1?10:0))).ToList();
+        Set(plugin,"statistics",new TradeBook{Character=123,Purchases=scenario=="stats-empty"?[]:trades});
+        Set(plugin,"statisticsValid",true);Set(plugin,"statisticsStatus","Пример истории покупок. Продажи отмечаются вручную.");
+        if(scenario=="stats-selected")Set(plugin,"selectedPurchase",701ul);
         if(scenario=="empty")Set(plugin,"result",new ScanResult(80,DateTimeOffset.UtcNow,[],100,70,0,"Preview"));
         if(scenario=="error")Set(plugin,"error","Пример ошибки соединения");
         ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(width,height);io.DeltaTime=1f/60;

@@ -55,13 +55,13 @@ public sealed unsafe partial class Plugin
                 LargeText("VendorProfit",MarketTheme.Accent,1.12f);
                 ImGui.TextDisabled("РЫНОК  /  NPC");
                 ImGui.Dummy(new Vector2(0,18*UiScale));
-                string[] pages=["Лоты","Уведомления","Автопокупка","Настройки"];
+                string[] pages=["Лоты","Уведомления","Автопокупка","Настройки","Статистика"];
                 for(int i=0;i<pages.Length;i++)
                 {
                     bool active=selectedPage==i;
                     ImGui.PushStyleColor(ImGuiCol.Button,active?new Vector4(.11f,.25f,.26f,1):new Vector4(0,0,0,0));
                     ImGui.PushStyleColor(ImGuiCol.Text,active?MarketTheme.Accent:MarketTheme.Muted);
-                    if(ImGui.Button(pages[i],new Vector2(-1,40*UiScale)))selectedPage=i;
+                    if(ImGui.Button(pages[i],new Vector2(-1,36*UiScale)))selectedPage=i;
                     ImGui.PopStyleColor(2);
                 }
                 if(config.AutoBuyEnabled)
@@ -74,7 +74,7 @@ public sealed unsafe partial class Plugin
                 ImGui.TextUnformatted(worldName);ImGui.TextDisabled("Налог учтён");
                 ImGui.EndChild();ImGui.SameLine();
                 ImGui.BeginChild("workspace",Vector2.Zero,true);
-                string[] subtitles=["Выгодные покупки для продажи NPC","Новые возможности — даже с закрытым окном","Покупки под контролем бюджета","Окно, подсветка и параметры поиска"];
+                string[] subtitles=["Выгодные покупки для продажи NPC","Новые возможности — даже с закрытым окном","Покупки под контролем бюджета","Окно, подсветка и параметры поиска","История покупок и результат перепродажи NPC"];
                 LargeText(pages[selectedPage],MarketTheme.Text,1.4f);
                 ImGui.TextWrapped(subtitles[selectedPage]);ImGui.Spacing();
                 switch(selectedPage)
@@ -83,6 +83,7 @@ public sealed unsafe partial class Plugin
                     case 1:DrawBackgroundAlerts();break;
                     case 2:DrawAutoBuy();break;
                     case 3:DrawGeneralSettings();break;
+                    case 4:DrawStatistics();break;
                 }
                 ImGui.EndChild();
             }
