@@ -39,7 +39,7 @@ public sealed unsafe partial class Plugin
                     var root=doc.RootElement;
                     string? workerState=root.GetProperty("State").GetString();
                     if (workerState is "Ready" or "Error" &&
-                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.5.2"))
+                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.5.3"))
                     {
                         File.WriteAllText(ExternalPath("external-worker.stop"),"update");
                         nextWorkerCheck=now.AddSeconds(5);externalStatus="Перезапускаю старую версию фонового сканера…";return;
@@ -70,12 +70,15 @@ public sealed unsafe partial class Plugin
             var found=AlertPolicy.NewLots(snapshot,world,config.BackgroundChaos,now,config.MaximumAgeMinutes,
                 config.AlertMinimumProfit,config.AlertMaximumLot,config.AlertMinimumRoi,alerted.Keys.ToHashSet());
             if (found.Length==0) return;
-            var message=new SeStringBuilder().AddText($"[VendorProfit] Потенциальных лотов: {found.Length}. ");
+            var message=AlertMessage().AddUiForeground($"Потенциальных лотов: {found.Length}. ",31);
             foreach (var lot in found.Take(3))
             {
                 string server=string.IsNullOrEmpty(lot.WorldName) ? Data.GetExcelSheet<World>().GetRowOrDefault(lot.World)?.Name.ToString() ?? lot.World.ToString() : lot.WorldName;
                 message.AddText(server+": ").AddItemLink(lot.Item.Id,lot.Quote.Lot.Hq)
-                    .AddText($" ×{lot.Quote.Lot.Quantity}, купить за {lot.Quote.Cost:N0}, прибыль +{lot.Quote.Profit:N0} гил, кэш {(now-lot.Updated).TotalMinutes:F0} мин; ");
+                    .AddText($" ×{lot.Quote.Lot.Quantity}, купить за ")
+                    .AddUiForeground($"{lot.Quote.Cost:N0}",31).AddText(", ")
+                    .AddUiForeground($"прибыль +{lot.Quote.Profit:N0} гил",45)
+                    .AddText($", кэш {(now-lot.Updated).TotalMinutes:F0} мин; ");
             }
             message.AddText("Подробнее: /vendorprofit. Наличие не подтверждено в игре.");
             Chat.Print(message.Build()); // Local echo only: no /tell, chat network messages or game search requests.
@@ -93,6 +96,8 @@ public sealed unsafe partial class Plugin
             Log.Warning(e,"VendorProfit background alerts failed");
         }
     }
+    // Each colored fragment restores the default, preserving item links and subsequent chat lines.
+    private static SeStringBuilder AlertMessage()=>new SeStringBuilder().AddUiForeground("[VendorProfit] ",31);
     private void PlayAlertEffects(bool test = false)
     {
         if(config.AlertSound)
@@ -136,7 +141,8 @@ public sealed unsafe partial class Plugin
         ImGui.Spacing();ImGui.TextDisabled("Аукцион можно закрыть. Повторные сообщения о том же лоте подавляются.");
         if (ImGui.Button("Тестовое сообщение"))
         {
-            Chat.Print("[VendorProfit] Тестовое локальное уведомление: это сообщение видно только вам.");
+            Chat.Print(AlertMessage().AddUiForeground("Тестовое уведомление",31)
+                .AddText(": ").AddUiForeground("сообщение видно только вам.",45).Build());
             PlayAlertEffects(test: true);
         }
         Help("Проверяет сообщение, звук и мигание, если они включены. Для теста мигание запрашивается даже в активной игре.");
