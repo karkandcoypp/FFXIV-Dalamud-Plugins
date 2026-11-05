@@ -2,6 +2,7 @@ using System.Text.Json;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Text.SeStringHandling;
 using Lumina.Excel.Sheets;
+using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace VendorProfit;
 
@@ -37,7 +38,7 @@ public sealed unsafe partial class Plugin
                     var root=doc.RootElement;
                     string? workerState=root.GetProperty("State").GetString();
                     if (workerState is "Ready" or "Error" &&
-                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.5.0"))
+                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.5.1"))
                     {
                         File.WriteAllText(ExternalPath("external-worker.stop"),"update");
                         nextWorkerCheck=now.AddSeconds(5);externalStatus="Перезапускаю старую версию фонового сканера…";return;
@@ -83,6 +84,7 @@ public sealed unsafe partial class Plugin
             Directory.CreateDirectory(Pi.ConfigDirectory.FullName);
             File.WriteAllText(file+".tmp",JsonSerializer.Serialize(alerted));File.Move(file+".tmp",file,true);
             nextAlert=now.AddSeconds(config.AlertCooldownSeconds);alertStatus=$"Сообщено о {found.Length} новых лотах ({now.LocalDateTime:t}).";
+            PlayAlertSound();
         }
         catch (Exception e)
         {
@@ -90,11 +92,19 @@ public sealed unsafe partial class Plugin
             Log.Warning(e,"VendorProfit background alerts failed");
         }
     }
+    private void PlayAlertSound()
+    {
+        if(!config.AlertSound)return;
+        try { UIGlobals.PlayChatSoundEffect(3); }
+        catch(Exception e) { Log.Warning(e,"VendorProfit notification sound failed"); }
+    }
     private void DrawBackgroundAlerts()
     {
         ImGui.TextUnformatted("Сообщения только для вас");
         bool changed=ImGui.Checkbox("Сообщать о новых лотах в чат",ref config.BackgroundAlerts);
         Help("Локальные сообщения в игре. Отправки другим игрокам нет.");
+        changed|=ImGui.Checkbox("Звук при новом уведомлении",ref config.AlertSound);
+        Help("Один звук на сообщение о новых лотах. Громкость зависит от настроек звука игры.");
         changed|=ImGui.Checkbox("Запускать поиск при входе в игру",ref config.AutoStartScanner);
         changed|=ImGui.Checkbox("Искать по всему Chaos",ref config.BackgroundChaos);
         ImGui.Spacing();ImGui.TextUnformatted("Когда сообщать");
@@ -114,8 +124,11 @@ public sealed unsafe partial class Plugin
         }
         ImGui.Spacing();ImGui.TextDisabled("Аукцион можно закрыть. Повторные сообщения о том же лоте подавляются.");
         if (ImGui.Button("Тестовое сообщение"))
+        {
             Chat.Print("[VendorProfit] Тестовое локальное уведомление: это сообщение видно только вам.");
-        Help("Проверяет, что локальные сообщения видны в выбранной вкладке чата.");
+            PlayAlertSound();
+        }
+        Help("Проверяет сообщение в чате и звук, если он включён.");
         if(config.UseExternalScanner){ImGui.SameLine();DrawWorkerButtons();}
         ImGui.Spacing();ImGui.TextWrapped(alertStatus);
     }

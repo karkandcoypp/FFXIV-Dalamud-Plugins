@@ -17,7 +17,7 @@ public sealed class MarketClient : IDisposable
     public MarketClient(HttpClient client)
     {
         http = client;
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("VendorProfit/0.5.0 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("VendorProfit/0.5.1 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)");
     }
     public async Task<JsonDocument> Get(string path, CancellationToken token)
     {
