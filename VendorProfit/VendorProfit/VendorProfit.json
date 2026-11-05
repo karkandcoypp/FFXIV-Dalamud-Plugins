@@ -2,7 +2,7 @@
   "Author": "Carcosa Lyuman",
   "Name": "VendorProfit",
   "InternalName": "VendorProfit",
-  "AssemblyVersion": "0.5.4.0",
+  "AssemblyVersion": "0.6.0.0",
   "Description": "Background Universalis discovery and private local chat alerts, without opening Market Board. Current-world or Chaos scope, persistent alert deduplication, item links, stack cost and potential profit. External Python watcher with automatic startup; optional budget-limited purchases configured separately. /vendorprofit",
   "Punchline": "Market Board → NPC: прибыль после налога и подсветка лотов.",
   "ApplicableVersion": "any",

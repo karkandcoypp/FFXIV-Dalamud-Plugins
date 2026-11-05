@@ -7,6 +7,7 @@ namespace VendorProfit;
 public sealed unsafe partial class Plugin
 {
     private int requestedTab = -1;
+    private int selectedPage;
     private string itemFilter = "";
     // Standalone visual checks cannot use Dalamud's hosted native text-input extension.
     private bool staticPreview = false;
@@ -24,7 +25,7 @@ public sealed unsafe partial class Plugin
     {
         if(!ImGui.BeginTable(id,2,ImGuiTableFlags.SizingStretchProp))return false;
         ImGui.TableSetupColumn("Параметр",ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("Значение",ImGuiTableColumnFlags.WidthFixed,155*UiScale);
+        ImGui.TableSetupColumn("Значение",ImGuiTableColumnFlags.WidthFixed,145*UiScale);
         return true;
     }
     private bool NumberField(string label,ref int value,string hint="")
@@ -33,37 +34,75 @@ public sealed unsafe partial class Plugin
         ImGui.TableSetColumnIndex(1);ImGui.SetNextItemWidth(-1);
         bool changed=Number("##"+label,ref value);Help(hint);return changed;
     }
+    private bool StackedNumber(string label,ref int value)
+    {
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,new Vector2(10,4)*UiScale);
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding,new Vector2(10,5)*UiScale);
+        ImGui.TextDisabled(label);ImGui.SetNextItemWidth(-1);
+        bool changed=Number("##"+label,ref value);ImGui.PopStyleVar(2);return changed;
+    }
     private void DrawWindow(string worldName,bool resultsOpen)
     {
-        ImGui.SetNextWindowSizeConstraints(new Vector2(740,360)*UiScale,new Vector2(float.MaxValue));
-        if(!sized){ImGui.SetNextWindowSize(new Vector2(850,520)*UiScale,ImGuiCond.Always);sized=true;}
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,new Vector2(14,12)*UiScale);
-        if(ImGui.Begin("VendorProfit###VendorProfit",ref open))
+        ImGui.SetNextWindowSizeConstraints(new Vector2(800,480)*UiScale,new Vector2(float.MaxValue));
+        if(!sized){ImGui.SetNextWindowSize(new Vector2(980,650)*UiScale,ImGuiCond.Always);sized=true;}
+        MarketTheme.Push(UiScale);
+        try
         {
-            ImGui.TextUnformatted(worldName);ImGui.SameLine();ImGui.TextDisabled(" • прибыль после налога за целый стак");
-            if(config.AutoBuyEnabled)
+            if(ImGui.Begin("VendorProfit###VendorProfit",ref open))
             {
-                ImGui.TextColored(new Vector4(1,.75f,.3f,1),config.AutoBuyDryRun ? "Пробная автопокупка включена" : "Автопокупка включена");
-                ImGui.SameLine();if(ImGui.SmallButton("Остановить покупки")){config.AutoBuyEnabled=false;autoBuyer.Stop("Остановлено вручную.");Pi.SavePluginConfig(config);}
+                if(requestedTab>=0){selectedPage=requestedTab;requestedTab=-1;}
+                ImGui.BeginChild("navigation",new Vector2(154*UiScale,0),false);
+                LargeText("VendorProfit",MarketTheme.Accent,1.12f);
+                ImGui.TextDisabled("РЫНОК  /  NPC");
+                ImGui.Dummy(new Vector2(0,18*UiScale));
+                string[] pages=["Лоты","Уведомления","Автопокупка","Настройки"];
+                for(int i=0;i<pages.Length;i++)
+                {
+                    bool active=selectedPage==i;
+                    ImGui.PushStyleColor(ImGuiCol.Button,active?new Vector4(.11f,.25f,.26f,1):new Vector4(0,0,0,0));
+                    ImGui.PushStyleColor(ImGuiCol.Text,active?MarketTheme.Accent:MarketTheme.Muted);
+                    if(ImGui.Button(pages[i],new Vector2(-1,40*UiScale)))selectedPage=i;
+                    ImGui.PopStyleColor(2);
+                }
+                if(config.AutoBuyEnabled)
+                {
+                    ImGui.Spacing();ImGui.TextColored(MarketTheme.Gold,config.AutoBuyDryRun?"Пробные покупки":"Покупки включены");
+                    if(ImGui.Button("Стоп покупки",new Vector2(-1,0))){config.AutoBuyEnabled=false;autoBuyer.Stop("Остановлено вручную.");Pi.SavePluginConfig(config);}
+                }
+                ImGui.SetCursorPosY(Math.Max(ImGui.GetCursorPosY(),ImGui.GetWindowHeight()-92*UiScale));
+                ImGui.Separator();SectionLabel("ТЕКУЩИЙ СЕРВЕР");
+                ImGui.TextUnformatted(worldName);ImGui.TextDisabled("Налог учтён");
+                ImGui.EndChild();ImGui.SameLine();
+                ImGui.BeginChild("workspace",Vector2.Zero,true);
+                string[] subtitles=["Выгодные покупки для продажи NPC","Новые возможности — даже с закрытым окном","Покупки под контролем бюджета","Окно, подсветка и параметры поиска"];
+                LargeText(pages[selectedPage],MarketTheme.Text,1.4f);
+                ImGui.TextWrapped(subtitles[selectedPage]);ImGui.Spacing();
+                switch(selectedPage)
+                {
+                    case 0:DrawOpportunities(worldName,resultsOpen);break;
+                    case 1:DrawBackgroundAlerts();break;
+                    case 2:DrawAutoBuy();break;
+                    case 3:DrawGeneralSettings();break;
+                }
+                ImGui.EndChild();
             }
-            ImGui.Separator();
-            if(ImGui.BeginTabBar("navigation"))
-            {
-                WindowTab("Лоты",0,()=>DrawOpportunities(worldName,resultsOpen));
-                WindowTab("Уведомления",1,DrawBackgroundAlerts);
-                WindowTab("Автопокупка",2,DrawAutoBuy);
-                WindowTab("Настройки",3,DrawGeneralSettings);
-                ImGui.EndTabBar();
-            }
-            requestedTab=-1;
+            ImGui.End();
         }
-        ImGui.End();ImGui.PopStyleVar();
+        finally{MarketTheme.Pop();}
     }
-    private void WindowTab(string title,int index,Action draw)
+    private static void LargeText(string text,Vector4 color,float multiplier=1.4f)
     {
-        if(!ImGui.BeginTabItem(title,requestedTab==index ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None))return;
-        ImGui.BeginChild("body",Vector2.Zero,false);
-        ImGui.Spacing();draw();ImGui.EndChild();ImGui.EndTabItem();
+        float fit=Math.Min(multiplier,ImGui.GetContentRegionAvail().X/Math.Max(1,ImGui.CalcTextSize(text).X));
+        ImGui.GetWindowDrawList().AddText(ImGui.GetFont(),ImGui.GetFontSize()*fit,ImGui.GetCursorScreenPos(),ImGui.ColorConvertFloat4ToU32(color),text);
+        ImGui.Dummy(new Vector2(1,ImGui.GetFontSize()*fit));
+    }
+    private static void SectionLabel(string text){ImGui.Spacing();ImGui.TextColored(MarketTheme.Muted,text);}
+    private static void Metric(string id,string label,string value,Vector4 color)
+    {
+        ImGui.PushStyleColor(ImGuiCol.ChildBg,MarketTheme.Raised);
+        ImGui.BeginChild(id,new Vector2(0,76*UiScale),true,ImGuiWindowFlags.NoScrollbar|ImGuiWindowFlags.NoScrollWithMouse);
+        ImGui.TextDisabled(label);LargeText(value,color,1.35f);
+        ImGui.EndChild();ImGui.PopStyleColor();
     }
     private string SearchStatus()
     {
@@ -81,9 +120,9 @@ public sealed unsafe partial class Plugin
     }
     private void DrawOpportunities(string worldName,bool resultsOpen)
     {
-        ImGui.TextColored(error==null ? new Vector4(.5f,.85f,.65f,1) : new Vector4(1,.55f,.45f,1),SearchStatus());
+        ImGui.TextColored(error==null ? MarketTheme.Accent : new Vector4(1,.55f,.45f,1),SearchStatus());
         Help(error ?? externalStatus);
-        ImGui.SameLine();ImGui.TextDisabled(result==null ? "" : $"  обновлено {result.Finished.LocalDateTime:t}");
+        ImGui.SameLine();ImGui.TextDisabled(result==null ? "" : $" · {result.Finished.LocalDateTime:t}");
         ImGui.BeginDisabled(world==0 || scan!=null);
         if(ImGui.Button("Обновить"))StartScan(chaos:config.BackgroundChaos);
         ImGui.EndDisabled();
@@ -94,10 +133,10 @@ public sealed unsafe partial class Plugin
         Help("Выключено — текущий сервер. Включено — все серверы Chaos.");
         if(scan!=null){ImGui.SameLine();if(ImGui.Button("Отменить"))scanCancellation?.Cancel();}
         ImGui.Spacing();
-        ImGui.SetNextItemWidth(245*UiScale);
+        ImGui.SetNextItemWidth(Math.Max(170*UiScale,ImGui.GetContentRegionAvail().X-255*UiScale));
         if(staticPreview){ImGui.BeginDisabled();ImGui.Button("Предмет или сервер…##find",new(ImGui.CalcItemWidth(),0));ImGui.EndDisabled();}
         else ImGui.InputTextWithHint("##find","Предмет или сервер…",ref itemFilter,128);
-        ImGui.SameLine();ImGui.SetNextItemWidth(130*UiScale);
+        ImGui.SameLine();ImGui.SetNextItemWidth(120*UiScale);
         if(Number("Прибыль от",ref config.MinimumProfit))
         {config.MinimumProfit=Math.Clamp(config.MinimumProfit,1,100_000_000);Pi.SavePluginConfig(config);}
         Help("Минимальная прибыль за целый стак. Фильтр таблицы; лимиты уведомлений и покупок задаются отдельно.");
@@ -116,9 +155,16 @@ public sealed unsafe partial class Plugin
         ImGui.Spacing();
         if(suggestions.Length==0)
         {ImGui.TextUnformatted("Подходящих лотов пока нет.");ImGui.TextWrapped("Можно снизить порог прибыли или дождаться следующего обновления.");return;}
-        ImGui.TextUnformatted($"Лотов: {suggestions.Length}   ·   Покупка: {suggestions.Sum(s=>s.Quote.Cost):N0} гил   ·   Возможная прибыль: +{suggestions.Sum(s=>s.Quote.Profit):N0} гил");
-        ImGui.TextDisabled("Нажмите на предмет, чтобы скопировать название. Детали — при наведении.");
-        float height=Math.Max(110*UiScale,ImGui.GetContentRegionAvail().Y-(snapshot.Servers==null?8:36)*UiScale);
+        if(ImGui.BeginTable("summary",3,ImGuiTableFlags.SizingStretchSame))
+        {
+            ImGui.TableNextColumn();Metric("count","ЛОТОВ",suggestions.Length.ToString(),MarketTheme.Text);
+            ImGui.TableNextColumn();Metric("cash","ВЛОЖЕНИЯ",suggestions.Sum(s=>s.Quote.Cost).ToString("N0"),MarketTheme.Text);
+            ImGui.TableNextColumn();Metric("profit","ПРИБЫЛЬ NPC","+"+suggestions.Sum(s=>s.Quote.Profit).ToString("N0"),MarketTheme.Gold);
+            ImGui.EndTable();
+        }
+        ImGui.TextDisabled("Кэш рынка · наличие проверьте в игре");
+        Help("Суммы в гилях, за целые стаки, с налогом. Нажмите предмет, чтобы скопировать название; наведите для подробностей.");
+        float height=Math.Max(70*UiScale,ImGui.GetContentRegionAvail().Y-(snapshot.Servers==null?8:36)*UiScale);
         if(!ImGui.BeginTable("opportunities",5,ImGuiTableFlags.RowBg|ImGuiTableFlags.BordersInnerH|ImGuiTableFlags.ScrollY|ImGuiTableFlags.Resizable,new Vector2(0,height)))return;
         ImGui.TableSetupColumn("Предмет",ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("Сервер",ImGuiTableColumnFlags.WidthFixed,95*UiScale);
@@ -133,7 +179,7 @@ public sealed unsafe partial class Plugin
             if(ImGui.Selectable(s.Item.Name+(s.Quote.Lot.Hq?" HQ":"")))ImGui.SetClipboardText(s.Item.Name);
             Help($"{s.Item.Name}\nРетейнер: {s.Quote.Lot.Retainer}\nЦена: {s.Quote.Lot.Price:N0} × {s.Quote.Lot.Quantity}\nНалог: {s.Quote.Lot.Tax:N0}{(s.EstimatedTax?" (оценка)":"")}\nПродажа NPC: {s.Quote.Revenue:N0}\nКэш: {(DateTimeOffset.UtcNow-s.Updated).TotalMinutes:F0} мин. Наличие требует проверки.");
             Cell(1,Server(s));Cell(2,s.Quote.Lot.Quantity.ToString());Cell(3,s.Quote.Cost.ToString("N0"));
-            ImGui.TableSetColumnIndex(4);ImGui.TextColored(new Vector4(.45f,.9f,.6f,1),"+"+s.Quote.Profit.ToString("N0"));
+            ImGui.TableSetColumnIndex(4);ImGui.TextColored(MarketTheme.Gold,"+"+s.Quote.Profit.ToString("N0"));
             ImGui.PopID();
         }
         ImGui.EndTable();

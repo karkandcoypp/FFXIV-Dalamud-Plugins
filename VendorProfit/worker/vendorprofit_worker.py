@@ -9,7 +9,7 @@ import time
 import urllib.error
 import urllib.request
 
-VERSION = "0.5.4"
+VERSION = "0.6.0"
 
 
 class Cooldown(Exception):
@@ -41,7 +41,7 @@ def get(path):
     for attempt in range(3):
         try:
             request = urllib.request.Request("https://universalis.app/api/v2/" + path,
-                headers={"User-Agent": "VendorProfitWorker/0.5.4 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)"})
+                headers={"User-Agent": "VendorProfitWorker/0.6.0 (+https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins)"})
             with urllib.request.urlopen(request, timeout=25) as response:
                 return json.load(response)
         except urllib.error.HTTPError as error:

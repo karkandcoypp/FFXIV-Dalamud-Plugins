@@ -118,7 +118,6 @@ public sealed unsafe partial class Plugin
     }
     private void DrawAutoBuy()
     {
-        ImGui.TextUnformatted("Автопокупка на текущем сервере");
         bool changed = ImGui.Checkbox("Включить автопокупку", ref config.AutoBuyEnabled);
         if (changed)
         {
@@ -128,13 +127,13 @@ public sealed unsafe partial class Plugin
         }
         changed |= ImGui.Checkbox("Пробный режим — не тратить гили", ref config.AutoBuyDryRun);
         ImGui.TextWrapped(config.AutoBuyDryRun ? "Покажет предполагаемые покупки без расходов." : "Подходящие стаки покупаются без отдельного подтверждения. Продажа NPC — вручную.");
-        ImGui.Spacing();ImGui.TextUnformatted("Лимиты покупок");
-        if(BeginFields("purchase-limits"))
+        SectionLabel("ЛИМИТЫ ПОКУПОК");
+        if(ImGui.BeginTable("purchase-limits",2,ImGuiTableFlags.SizingStretchSame))
         {
-            changed |= NumberField("Цена стака до, гил", ref config.AutoBuyLimits.MaximumLot);
-            changed |= NumberField("Общий бюджет, гил", ref config.AutoBuyLimits.Budget);
-            changed |= NumberField("Прибыль за стак от, гил", ref config.AutoBuyLimits.MinimumProfit);
-            changed |= NumberField("Прибыль от, %", ref config.AutoBuyLimits.MinimumRoi);
+            ImGui.TableNextColumn();changed |= StackedNumber("Цена стака до, гил", ref config.AutoBuyLimits.MaximumLot);
+            ImGui.TableNextColumn();changed |= StackedNumber("Общий бюджет, гил", ref config.AutoBuyLimits.Budget);
+            ImGui.TableNextColumn();changed |= StackedNumber("Прибыль за стак от, гил", ref config.AutoBuyLimits.MinimumProfit);
+            ImGui.TableNextColumn();changed |= StackedNumber("Прибыль от, %", ref config.AutoBuyLimits.MinimumRoi);
             ImGui.EndTable();
         }
         if(ImGui.CollapsingHeader("Дополнительные лимиты"))
