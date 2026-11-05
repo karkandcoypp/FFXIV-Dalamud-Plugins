@@ -30,6 +30,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool UseExternalScanner = true;
     public bool BackgroundAlerts = true;
     public bool AlertSound = true;
+    public bool AlertFlashTaskbar = true;
     public bool AutoStartScanner = true;
     public bool BackgroundChaos;
     public int AlertMinimumProfit = 1000;
@@ -251,7 +252,7 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         }
         liveStatus = $"{item.Name}: проверены видимые строки {matched}/{visible}.";
         if (visible > 0 && matched == 0) liveStatus += " Строки не совпали с ценой, количеством и итогом игры.";
-        diagnostics = $"v0.5.1 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
+        diagnostics = $"v0.5.2 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
             $"request={proxy->SearchItemId}; selected={agent->ResultItemId}; waiting={proxy->WaitingForListings}; update={list->IsUpdatePending}";
     }
     private sealed record RowField(string Text, float X, float Y, ushort Width, ushort Height);

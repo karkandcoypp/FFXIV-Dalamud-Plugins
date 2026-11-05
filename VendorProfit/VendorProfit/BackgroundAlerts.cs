@@ -3,6 +3,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Text.SeStringHandling;
 using Lumina.Excel.Sheets;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using Dalamud.Utility;
 
 namespace VendorProfit;
 
@@ -38,7 +39,7 @@ public sealed unsafe partial class Plugin
                     var root=doc.RootElement;
                     string? workerState=root.GetProperty("State").GetString();
                     if (workerState is "Ready" or "Error" &&
-                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.5.1"))
+                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.5.2"))
                     {
                         File.WriteAllText(ExternalPath("external-worker.stop"),"update");
                         nextWorkerCheck=now.AddSeconds(5);externalStatus="Перезапускаю старую версию фонового сканера…";return;
@@ -84,7 +85,7 @@ public sealed unsafe partial class Plugin
             Directory.CreateDirectory(Pi.ConfigDirectory.FullName);
             File.WriteAllText(file+".tmp",JsonSerializer.Serialize(alerted));File.Move(file+".tmp",file,true);
             nextAlert=now.AddSeconds(config.AlertCooldownSeconds);alertStatus=$"Сообщено о {found.Length} новых лотах ({now.LocalDateTime:t}).";
-            PlayAlertSound();
+            PlayAlertEffects();
         }
         catch (Exception e)
         {
@@ -92,11 +93,19 @@ public sealed unsafe partial class Plugin
             Log.Warning(e,"VendorProfit background alerts failed");
         }
     }
-    private void PlayAlertSound()
+    private void PlayAlertEffects(bool test = false)
     {
-        if(!config.AlertSound)return;
-        try { UIGlobals.PlayChatSoundEffect(3); }
-        catch(Exception e) { Log.Warning(e,"VendorProfit notification sound failed"); }
+        if(config.AlertSound)
+        {
+            try { UIGlobals.PlayChatSoundEffect(3); }
+            catch(Exception e) { Log.Warning(e,"VendorProfit notification sound failed"); }
+        }
+        if(config.AlertFlashTaskbar)
+        {
+            // Dalamud handles inactive/minimized windows and stops flashing on return to the game.
+            try { Util.FlashWindow(flashIfOpen: test); }
+            catch(Exception e) { Log.Warning(e,"VendorProfit taskbar notification failed"); }
+        }
     }
     private void DrawBackgroundAlerts()
     {
@@ -105,6 +114,8 @@ public sealed unsafe partial class Plugin
         Help("Локальные сообщения в игре. Отправки другим игрокам нет.");
         changed|=ImGui.Checkbox("Звук при новом уведомлении",ref config.AlertSound);
         Help("Один звук на сообщение о новых лотах. Громкость зависит от настроек звука игры.");
+        changed|=ImGui.Checkbox("Мигать значком игры на панели задач",ref config.AlertFlashTaskbar);
+        Help("Если игра свёрнута или вы в другом окне. Мигание прекращается при возвращении в игру.");
         changed|=ImGui.Checkbox("Запускать поиск при входе в игру",ref config.AutoStartScanner);
         changed|=ImGui.Checkbox("Искать по всему Chaos",ref config.BackgroundChaos);
         ImGui.Spacing();ImGui.TextUnformatted("Когда сообщать");
@@ -126,9 +137,9 @@ public sealed unsafe partial class Plugin
         if (ImGui.Button("Тестовое сообщение"))
         {
             Chat.Print("[VendorProfit] Тестовое локальное уведомление: это сообщение видно только вам.");
-            PlayAlertSound();
+            PlayAlertEffects(test: true);
         }
-        Help("Проверяет сообщение в чате и звук, если он включён.");
+        Help("Проверяет сообщение, звук и мигание, если они включены. Для теста мигание запрашивается даже в активной игре.");
         if(config.UseExternalScanner){ImGui.SameLine();DrawWorkerButtons();}
         ImGui.Spacing();ImGui.TextWrapped(alertStatus);
     }
