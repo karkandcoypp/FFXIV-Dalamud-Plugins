@@ -8,6 +8,7 @@ public sealed class BuyLimits
     public int MinimumRoi = 10;
     public int IntervalSeconds = 120;
     public int MaximumPurchases = 100;
+    public int PurchaseDelaySeconds = 5;
     public void Normalize()
     {
         MaximumLot = Math.Clamp(MaximumLot, 1, 10_000_000);
@@ -16,6 +17,7 @@ public sealed class BuyLimits
         MinimumRoi = Math.Clamp(MinimumRoi, 1, 10000);
         IntervalSeconds = Math.Clamp(IntervalSeconds, 60, 1800);
         MaximumPurchases = Math.Clamp(MaximumPurchases, 1, 1000);
+        PurchaseDelaySeconds = Math.Clamp(PurchaseDelaySeconds, 1, 15);
     }
 }
 public sealed record BuyEntry(DateTimeOffset At, ulong Listing, uint Item, uint Quantity, long Cost, long Profit, string Status);
@@ -75,6 +77,7 @@ public sealed class AutoBuyer(IBuyGateway gateway, Action<BuyLedger> save)
         Stop("Готово к настройке."); Ledger = ledger;
     }
     public void Resume() { if (!HasPending) { Halted = false; pausedForBoard = false; Status = "Ожидание периодической проверки."; } }
+    public void Wait(string reason) { if (!Busy && !HasPending && !Halted) Status = reason; }
     public void Stop(string reason)
     {
         Busy = false; Halted = true; pausedForBoard = false; queue.Clear(); requested = null; gateway.Clear(); Status = reason;
@@ -135,14 +138,21 @@ public sealed class AutoBuyer(IBuyGateway gateway, Action<BuyLedger> save)
         if (Ledger.Charged >= limits.Budget || Ledger.Entries.Count >= limits.MaximumPurchases)
         { Stop("Достигнут лимит расходов или количества покупок."); return; }
         if (context.FreeSlots == 0) { Stop("Нет свободных мест в сумках."); return; }
-        if (!Busy || Halted || context.Blocked || now < nextStep) return;
+        if (!Busy || Halted) return;
+        if (context.Blocked) { Status = "Закройте контекстное меню или диалог подтверждения в игре."; return; }
+        if (now < nextStep)
+        {
+            if (requested != null) Status = $"Пауза перед покупкой: ещё {Math.Ceiling((nextStep-now).TotalSeconds):F0} сек. Затем повторная проверка цены и лимитов.";
+            return;
+        }
         if (requested == null)
         {
             if (queue.Count == 0) { Busy = false; Status = "Цикл завершён; жду следующую проверку."; return; }
             requested = queue.Dequeue();
             if (!gateway.Request(requested.Id)) { Stop("Игра не приняла запрос свежих лотов. Автопокупка остановлена."); return; }
             Status = "Запрашиваю свежие лоты: " + requested.Name;
-            nextStep = now.AddMilliseconds(750); deadline = now.AddSeconds(15);
+            int delay = Math.Clamp(limits.PurchaseDelaySeconds, 1, 15);
+            nextStep = now.AddSeconds(delay); deadline = nextStep.AddSeconds(15);
             return;
         }
         var quote = gateway.FreshLots(requested.Id).Select(l => Policy.Evaluate(requested, l)).OfType<Quote>()

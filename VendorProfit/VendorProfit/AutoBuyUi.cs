@@ -97,7 +97,10 @@ public sealed unsafe partial class Plugin
         bool wasBusy = autoBuyer.Busy;
         if (autoBuyer.HasPending || authorized) autoBuyer.Tick(now, state, config.AutoBuyLimits, authorized, config.AutoBuyDryRun);
         if (wasBusy && !autoBuyer.Busy) nextAutoPoll = now.AddSeconds(config.AutoBuyLimits.IntervalSeconds);
-        if (!authorized || !boardOpen || autoBuyer.Halted || autoBuyer.Busy || autoBuyer.HasPending || scan != null || state.Blocked) return;
+        if (!authorized || autoBuyer.Halted || autoBuyer.Busy || autoBuyer.HasPending) return;
+        if (!boardOpen) { autoBuyer.Wait("Откройте Market Board: покупки работают только при открытом аукционе."); return; }
+        if (state.Blocked) { autoBuyer.Wait("Закройте контекстное меню или диалог подтверждения в игре."); return; }
+        if (scan != null) { autoBuyer.Wait("Ожидаю завершения текущего поиска лотов."); return; }
         if (config.UseExternalScanner)
         {
             RunExternalInbox(state, now);
@@ -146,6 +149,8 @@ public sealed unsafe partial class Plugin
             {
                 changed |= NumberField("Интервал поиска, сек", ref config.AutoBuyLimits.IntervalSeconds);
                 changed |= NumberField("Максимум попыток", ref config.AutoBuyLimits.MaximumPurchases);
+                changed |= NumberField("Пауза перед покупкой, сек", ref config.AutoBuyLimits.PurchaseDelaySeconds);
+                Help("От 1 до 15 секунд после запроса выдачи. По умолчанию 5; затем цена и лимиты проверяются заново.");
                 ImGui.EndTable();
             }
         }

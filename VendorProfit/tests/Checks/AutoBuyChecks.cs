@@ -7,7 +7,7 @@ static class AutoBuyChecks
         var item = new VendorItem(8144, "Clear Demimateria III", 5000, false, 99, false);
         var lot = new Lot(77, 8144, "test", 100, 1, 5, false);
         var quote = Policy.Evaluate(item, lot)!;
-        var limits = new BuyLimits();
+        var limits = new BuyLimits { PurchaseDelaySeconds = 1 };
         var context = new BuyContext(123, 80, true, false, 1_000_000, 40);
         BuyLedger Ledger() => new() { Character = 123 };
         check(BuyPolicy.Allowed(quote, limits, Ledger(), context), "auto: eligible fresh stack within all limits");
@@ -36,6 +36,22 @@ static class AutoBuyChecks
             return (buyer,gateway,calls);
         }
         var dry = Buyer();
+        var normalLimits = new BuyLimits();
+        var delayed = Buyer(); delayed.Buyer.Tick(now,context,normalLimits,true,false);
+        delayed.Buyer.Tick(now.AddMilliseconds(4999),context,normalLimits,true,false);
+        check(delayed.Gateway.Submits==0 && delayed.Buyer.Ledger.Charged==0,"auto delay: default five-second pause sends no purchase and reserves no money");
+        delayed.Buyer.Tick(now.AddSeconds(5),context,normalLimits,true,false);
+        check(delayed.Gateway.Submits==1,"auto delay: purchase allowed only after the configured pause");
+        var repriced=Buyer();repriced.Buyer.Tick(now,context,normalLimits,true,false);repriced.Gateway.CurrentLot=lot with {Price=6000};
+        repriced.Buyer.Tick(now.AddSeconds(5),context,normalLimits,true,false);
+        check(repriced.Gateway.Submits==0,"auto delay: price and profitability revalidated after waiting");
+        var cancelled=Buyer();cancelled.Buyer.Tick(now,context,normalLimits,true,false);cancelled.Buyer.Stop("user");
+        cancelled.Buyer.Tick(now.AddSeconds(5),context,normalLimits,true,false);
+        check(cancelled.Gateway.Submits==0 && cancelled.Buyer.Ledger.Charged==0,"auto delay: stop during the pause prevents spending");
+        var normalized=new BuyLimits{PurchaseDelaySeconds=0};normalized.Normalize();
+        check(normalized.PurchaseDelaySeconds==1,"auto delay: invalid zero delay normalized to the minimum");
+        var waiting=Buyer();waiting.Buyer.Stop("stop");waiting.Buyer.Wait("new reason");
+        check(waiting.Buyer.Status=="stop","auto status: waiting reason cannot hide a halted state");
         dry.Buyer.Tick(now, context, limits, true, true);
         dry.Buyer.Tick(now.AddSeconds(1), context, limits, true, true);
         check(dry.Gateway.Submits == 0 && dry.Buyer.Ledger.Charged == 0 && dry.Buyer.Observations.Count == 1,

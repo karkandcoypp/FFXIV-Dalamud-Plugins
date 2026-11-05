@@ -60,11 +60,22 @@ public sealed unsafe partial class Plugin
     private void RunExternalInbox(BuyContext context, DateTimeOffset now)
     {
         RefreshExternalFiles(now);
-        if (now < nextExternalDecision || externalSnapshot == null) return;
+        if (externalSnapshot == null) { autoBuyer.Wait("Ожидаю первый результат фонового сканера Universalis."); return; }
+        if (now < nextExternalDecision) return;
         nextExternalDecision = now.AddSeconds(2);
+        if(externalSnapshot.World != context.World)
+        {autoBuyer.Wait("Ожидаю фоновый результат для текущего сервера.");return;}
+        if(!Policy.Fresh(externalSnapshot.Finished,now,2))
+        {autoBuyer.Wait("Результат сканера устарел; ожидаю обновления Universalis.");return;}
         var seen = autoBuyer.Ledger.CheckedExternal.ToHashSet(StringComparer.Ordinal);
         var candidates = ExternalFeed.Select(externalSnapshot, context.World, now, seen);
-        if (candidates.Length == 0) return;
+        if (candidates.Length == 0)
+        {
+            int current=externalSnapshot.Suggestions.Count(s=>s.World==context.World);
+            autoBuyer.Wait(current==0?"В последнем фоновом результате нет лотов текущего сервера.":
+                $"Новых непроверенных лотов нет: {current} предложений уже проверены. Ожидаю новые.");
+            return;
+        }
         LoadCatalog(); autoBuyer.Begin(candidates, catalog!, context, config.AutoBuyLimits, exactExternal: true);
         if (!autoBuyer.Busy) return;
         var queued = autoBuyer.QueuedItems.ToHashSet();

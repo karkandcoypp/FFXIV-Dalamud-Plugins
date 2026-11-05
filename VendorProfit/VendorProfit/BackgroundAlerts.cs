@@ -39,7 +39,7 @@ public sealed unsafe partial class Plugin
                     var root=doc.RootElement;
                     string? workerState=root.GetProperty("State").GetString();
                     if (workerState is "Ready" or "Error" &&
-                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.8.0"))
+                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.8.1"))
                     {
                         File.WriteAllText(ExternalPath("external-worker.stop"),"update");
                         nextWorkerCheck=now.AddSeconds(5);externalStatus="Перезапускаю старую версию фонового сканера…";return;
