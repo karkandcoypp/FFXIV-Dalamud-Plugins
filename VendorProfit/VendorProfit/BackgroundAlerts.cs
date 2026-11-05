@@ -39,7 +39,7 @@ public sealed unsafe partial class Plugin
                     var root=doc.RootElement;
                     string? workerState=root.GetProperty("State").GetString();
                     if (workerState is "Ready" or "Error" &&
-                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.5.3"))
+                        (!root.TryGetProperty("Version",out var version) || version.GetString()!="0.5.4"))
                     {
                         File.WriteAllText(ExternalPath("external-worker.stop"),"update");
                         nextWorkerCheck=now.AddSeconds(5);externalStatus="Перезапускаю старую версию фонового сканера…";return;
@@ -98,7 +98,7 @@ public sealed unsafe partial class Plugin
     }
     // Each colored fragment restores the default, preserving item links and subsequent chat lines.
     private static SeStringBuilder AlertMessage()=>new SeStringBuilder().AddUiForeground("[VendorProfit] ",31);
-    private void PlayAlertEffects(bool test = false)
+    private void PlayAlertEffects()
     {
         if(config.AlertSound)
         {
@@ -107,8 +107,9 @@ public sealed unsafe partial class Plugin
         }
         if(config.AlertFlashTaskbar)
         {
-            // Dalamud handles inactive/minimized windows and stops flashing on return to the game.
-            try { Util.FlashWindow(flashIfOpen: test); }
+            // Never flash an active game, including from the test button. Unknown focus fails closed.
+            try { WindowAttention.FlashIfInactive((uint)Environment.ProcessId, WindowAttention.ForegroundProcess,
+                () => Util.FlashWindow(flashIfOpen: false)); }
             catch(Exception e) { Log.Warning(e,"VendorProfit taskbar notification failed"); }
         }
     }
@@ -143,9 +144,9 @@ public sealed unsafe partial class Plugin
         {
             Chat.Print(AlertMessage().AddUiForeground("Тестовое уведомление",31)
                 .AddText(": ").AddUiForeground("сообщение видно только вам.",45).Build());
-            PlayAlertEffects(test: true);
+            PlayAlertEffects();
         }
-        Help("Проверяет сообщение, звук и мигание, если они включены. Для теста мигание запрашивается даже в активной игре.");
+        Help("Проверяет сообщение и звук. Мигание срабатывает только при неактивной игре, в том числе для теста.");
         if(config.UseExternalScanner){ImGui.SameLine();DrawWorkerButtons();}
         ImGui.Spacing();ImGui.TextWrapped(alertStatus);
     }
