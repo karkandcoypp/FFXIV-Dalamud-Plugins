@@ -9,6 +9,7 @@ AutoBuyChecks.Run(Check);
 AlertChecks.Run(Check);
 WindowAttentionChecks.Run(Check);
 StatisticsChecks.Run(Check);
+NpcSaleChecks.Run(Check);
 var demi = new VendorItem(8144, "Clear Demimateria III", 5000, false, 99, false);
 var fossil = new VendorItem(1, "Dinosaur Fossil", 59, false, 99, false);
 Check(Policy.Evaluate(demi, new(1, 8144, "Bagirka", 4532, 3, 679, false)) is { Cost: 14275, Revenue: 15000, Profit: 725 }, "screenshot: tax once on whole stack");

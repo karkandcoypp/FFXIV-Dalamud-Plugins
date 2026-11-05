@@ -164,9 +164,14 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         uint current = Client.IsLoggedIn ? Objects.LocalPlayer?.CurrentWorld.RowId ?? 0 : 0;
         if (current != world)
         {
+            var previousResult = result;
             world = current; live.Clear(); result = null; scanCancellation?.Cancel();
             nextScan = DateTimeOffset.MinValue;
-            if (world != 0) RestoreCache();
+            if (world != 0)
+            {
+                if(previousResult?.Servers?.Any(s=>s.World==world)==true)result=previousResult;
+                else RestoreCache();
+            }
         }
         var search = (AtkUnitBase*)Gui.GetAddonByName("ItemSearch").Address;
         var results = (AddonItemSearchResult*)Gui.GetAddonByName("ItemSearchResult").Address;
@@ -254,7 +259,7 @@ public sealed unsafe partial class Plugin : IDalamudPlugin
         }
         liveStatus = $"{item.Name}: проверены видимые строки {matched}/{visible}.";
         if (visible > 0 && matched == 0) liveStatus += " Строки не совпали с ценой, количеством и итогом игры.";
-        diagnostics = $"v0.7.0 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
+        diagnostics = $"v0.8.0 item={item.Id}; native={lots.Count}; renderers={length}; visible={visible}; parsed={parsed}; matched={matched}; " +
             $"request={proxy->SearchItemId}; selected={agent->ResultItemId}; waiting={proxy->WaitingForListings}; update={list->IsUpdatePending}";
     }
     private sealed record RowField(string Text, float X, float Y, ushort Width, ushort Height);

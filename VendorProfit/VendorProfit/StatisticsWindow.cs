@@ -15,7 +15,7 @@ public sealed unsafe partial class Plugin
         { ImGui.TextWrapped(statisticsStatus); return; }
         ImGui.SetNextItemWidth(195 * UiScale);
         ImGui.Combo("Покупки за период", ref statisticsPeriod, new[] { "Всё время", "Сегодня", "Последние 7 дней", "Последние 30 дней" }, 4);
-        Help("Период относится к дате покупки. Продажи учитываются только после вашей ручной отметки.");
+        Help("Период относится к дате покупки. Продажи NPC подтверждаются по операции магазина, инвентарю и полученным гилям.");
         var now = DateTimeOffset.Now;
         var since = statisticsPeriod switch { 1 => new DateTimeOffset(now.Date, now.Offset), 2 => now.AddDays(-7), 3 => now.AddDays(-30), _ => DateTimeOffset.MinValue };
         var rows = statistics.Purchases.Where(p => p.At >= since).OrderByDescending(p => p.At).ToArray();
@@ -27,7 +27,8 @@ public sealed unsafe partial class Plugin
             ImGui.EndTable();
         }
         ImGui.TextWrapped($"Не продано: {rows.Sum(p => (long)p.Quantity - p.SoldQuantity):N0} шт. · вложено {rows.Sum(p => p.RemainingCost):N0} гил · возможная прибыль +{rows.Sum(p => p.RemainingProfit):N0} гил");
-        ImGui.TextDisabled("* Продажи подтверждаются вручную. Все суммы — в гилях.");
+        ImGui.TextDisabled("* Автоучёт NPC и ручные корректировки. Суммы — в гилях.");
+        ImGui.TextWrapped(npcSaleStatus);
         Help("Прибыль считается по проданным единицам с их долей полной закупочной стоимости, включая налог. Остаток — потенциальная прибыль, не выручка.");
         long soldCost=rows.Sum(p=>p.SoldCost);
         if(soldCost>0)ImGui.TextDisabled($"Доходность проданного: {100m*rows.Sum(p=>p.RealizedProfit)/soldCost:F1}%");
@@ -55,7 +56,7 @@ public sealed unsafe partial class Plugin
             if(ImGui.Button("Подтвердить продажу NPC"))ChangeSold(selected,TradeStatistics.MarkSold(selected,(uint)saleQuantity));
             ImGui.EndDisabled();ImGui.SameLine();
             ImGui.BeginDisabled(selected.SoldQuantity==0);
-            if(ImGui.Button("Снять отметки продажи"))ChangeSold(selected,selected with {SoldQuantity=0});
+            if(ImGui.Button("Снять отметки продажи"))ChangeSold(selected,selected with {SoldQuantity=0,AutoSoldQuantity=0});
             ImGui.EndDisabled();
             Help("Только исправляет статистику. Не продаёт предмет и не возвращает гили в игре.");
             ImGui.TextDisabled("Отмечайте продажу только после получения гилей от NPC.");
@@ -79,7 +80,7 @@ public sealed unsafe partial class Plugin
             ImGui.PushID(p.Listing.ToString());ImGui.TableNextRow();ImGui.TableSetColumnIndex(0);
             if(ImGui.Selectable(p.Name+(p.Hq==true?" HQ":""),selectedPurchase==p.Listing))
             {selectedPurchase=p.Listing;saleQuantity=(int)Math.Min(int.MaxValue,Math.Max(1,p.Quantity-p.SoldQuantity));}
-            Help($"{p.Name}\n{p.At.LocalDateTime:g} · сервер {(p.World==0?"неизвестен":p.World.ToString())}\nИсточник: {p.Source}\nПродажа всего стака NPC: {p.ExpectedRevenue:N0} гил\nНажмите, чтобы отметить фактическую продажу.");
+            Help($"{p.Name}\n{p.At.LocalDateTime:g} · сервер {(p.World==0?"неизвестен":p.World.ToString())}\nИсточник: {p.Source}\nПродажа всего стака NPC: {p.ExpectedRevenue:N0} гил\nАвтоматически учтено: {p.AutoSoldQuantity} шт.\nНажмите для ручной корректировки.");
             Cell(1,p.Quantity.ToString());Cell(2,p.Cost.ToString("N0"));
             ImGui.TableSetColumnIndex(3);ImGui.TextColored(MarketTheme.Gold,"+"+(p.ExpectedRevenue-p.Cost).ToString("N0"));
             Cell(4,$"{p.SoldQuantity}/{p.Quantity}");Cell(5,"+"+p.RealizedProfit.ToString("N0"));ImGui.PopID();

@@ -12,6 +12,9 @@ public sealed record Suggestion(VendorItem Item, Quote Quote, DateTimeOffset Upd
     uint World = 0, string WorldName = "");
 public static class Policy
 {
+    public static Suggestion[] CurrentWorldFirst(IEnumerable<Suggestion> suggestions,uint currentWorld,uint anchorWorld) => suggestions
+        .OrderByDescending(s=>currentWorld!=0 && (s.World==currentWorld || s.World==0 && anchorWorld==currentWorld))
+        .ThenByDescending(s=>s.Quote.Profit).ToArray();
     // Historical opportunities are item IDs only, never historical prices. New discoveries are promoted locally.
     private static readonly uint[] SeedIds = [8144, 8143, 8142, 14934, 5711, 33929, 20696, 25189, 9615, 5678,
         48156, 26735, 5700, 6362, 20695, 6380, 6355, 35034, 33918, 6454, 18502, 41768, 45005, 6363,

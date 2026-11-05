@@ -21,6 +21,7 @@ public sealed unsafe partial class Plugin
         {
             if (disposed) return;
             UpdateStatisticsSafely();
+            UpdateNpcSalesSafely();
             try
             {
                 bool boardOpen = Visible((AtkUnitBase*)Gui.GetAddonByName("ItemSearch").Address) || Visible((AtkUnitBase*)Gui.GetAddonByName("ItemSearchResult").Address);

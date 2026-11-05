@@ -25,6 +25,7 @@ internal static class Program
         Render(directory,0,850,520,1,"error");
         Render(directory,4,850,520,1,"stats-empty");
         Render(directory,4,980,650,1,"stats-selected");
+        Render(directory,0,980,650,1,"world-priority");
     }
     private static unsafe void Render(string directory,int tab,int width,int height,float scale,string scenario="normal")
     {
@@ -43,7 +44,13 @@ internal static class Program
         Set(plugin,"result",new ScanResult(80,DateTimeOffset.UtcNow,suggestions,100,0,0,"Preview"));
         var trades=names.Select((name,i)=>new TradePurchase((ulong)(700+i),DateTimeOffset.UtcNow,80,(uint)(8144+i),name,false,30,126000,150000,(uint)(i==0?30:i==1?10:0))).ToList();
         Set(plugin,"statistics",new TradeBook{Character=123,Purchases=scenario=="stats-empty"?[]:trades});
-        Set(plugin,"statisticsValid",true);Set(plugin,"statisticsStatus","Пример истории покупок. Продажи отмечаются вручную.");
+        Set(plugin,"statisticsValid",true);Set(plugin,"statisticsStatus","Пример истории покупок.");
+        Set(plugin,"npcSaleStatus","Автоматический учёт продаж NPC включён.");
+        if(scenario=="world-priority")
+        {
+            Set(plugin,"world",81u);
+            Set(plugin,"result",new ScanResult(80,DateTimeOffset.UtcNow,suggestions,100,0,0,"Preview",Servers:[new(80,"Cerberus",100,0,0),new(81,"Spriggan",100,0,0),new(82,"Omega",100,0,0)]));
+        }
         if(scenario=="stats-selected")Set(plugin,"selectedPurchase",701ul);
         if(scenario=="empty")Set(plugin,"result",new ScanResult(80,DateTimeOffset.UtcNow,[],100,70,0,"Preview"));
         if(scenario=="error")Set(plugin,"error","Пример ошибки соединения");
@@ -57,7 +64,7 @@ internal static class Program
             Set(plugin,"requestedTab",tab);
             var colorBefore=ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
             var paddingBefore=ImGui.GetStyle().FramePadding;
-            typeof(Plugin).GetMethod("DrawWindow",Instance)!.Invoke(plugin,["Cerberus",false]);
+            typeof(Plugin).GetMethod("DrawWindow",Instance)!.Invoke(plugin,[scenario=="world-priority"?"Spriggan":"Cerberus",false]);
             if(ImGui.GetStyle().Colors[(int)ImGuiCol.Text]!=colorBefore || ImGui.GetStyle().FramePadding!=paddingBefore)
                 throw new Exception("Window theme leaked into other Dalamud windows");
             ImGui.Render();

@@ -30,7 +30,7 @@ public sealed class PurchaseReceiptTracker
 }
 
 public sealed record TradePurchase(ulong Listing, DateTimeOffset At, uint World, uint Item, string Name,
-    bool? Hq, uint Quantity, long Cost, long ExpectedRevenue, uint SoldQuantity = 0, string Source = "Market Board")
+    bool? Hq, uint Quantity, long Cost, long ExpectedRevenue, uint SoldQuantity = 0, string Source = "Market Board", uint AutoSoldQuantity = 0)
 {
     [JsonIgnore] public long SoldRevenue => checked(ExpectedRevenue / Quantity * SoldQuantity);
     [JsonIgnore] public long SoldCost => (long)((decimal)Cost * SoldQuantity / Quantity);
@@ -57,7 +57,7 @@ public static class TradeStatistics
             request.Hq, request.Quantity, quote.Cost, quote.Revenue) : null;
     }
     public static bool Valid(TradePurchase? p) => p != null && p.Listing != 0 && p.Item != 0 && !string.IsNullOrWhiteSpace(p.Name) &&
-        p.Quantity > 0 && p.SoldQuantity <= p.Quantity && p.Cost > 0 && p.ExpectedRevenue > p.Cost &&
+        p.Quantity > 0 && p.SoldQuantity <= p.Quantity && p.AutoSoldQuantity <= p.SoldQuantity && p.Cost > 0 && p.ExpectedRevenue > p.Cost &&
         p.ExpectedRevenue <= 100_000_000_000_000 &&
         p.ExpectedRevenue % p.Quantity == 0 && p.At != default;
     public static bool Valid(TradeBook book, ulong character) => character != 0 && book.Schema == 1 && book.Character == character &&
@@ -72,7 +72,7 @@ public static class TradeStatistics
             var old = book.Purchases[existing];
             if (old.Source != "Старый журнал" || purchase.Source != "Market Board" ||
                 old.Item != purchase.Item || old.Quantity != purchase.Quantity || old.Cost != purchase.Cost || old.ExpectedRevenue != purchase.ExpectedRevenue) return false;
-            book.Purchases[existing] = purchase with { SoldQuantity = old.SoldQuantity };
+            book.Purchases[existing] = purchase with { SoldQuantity = old.SoldQuantity, AutoSoldQuantity = old.AutoSoldQuantity };
             return true;
         }
         if (book.Purchases.Count >= 50_000) throw new InvalidDataException("Достигнут предел истории; сохраните CSV перед продолжением учёта.");
@@ -98,12 +98,13 @@ public static class TradeStatistics
             if (text.Length > 0 && "=+-@\t\r".Contains(text[0])) text = "'" + text;
             return "\"" + text.Replace("\"", "\"\"") + "\"";
         }
-        var csv = new StringBuilder("Listing,PurchaseTime,World,Item,Name,HQ,Quantity,CostWithTax,ExpectedNpcRevenue,SoldQuantity,ManuallyConfirmedRevenue,RealizedProfit,RemainingCost,RemainingProfit,Source\r\n");
+        var csv = new StringBuilder("Listing,PurchaseTime,World,Item,Name,HQ,Quantity,CostWithTax,ExpectedNpcRevenue,SoldQuantity,ConfirmedNpcRevenue,RealizedProfit,RemainingCost,RemainingProfit,Source,AutomaticSoldQuantity,ManuallyConfirmedRevenue\r\n");
         foreach (var p in purchases)
             csv.AppendLine(string.Join(',', new[] { p.Listing.ToString(), p.At.ToString("o", CultureInfo.InvariantCulture),
                 p.World.ToString(), p.Item.ToString(), p.Name, p.Hq?.ToString() ?? "unknown", p.Quantity.ToString(),
                 p.Cost.ToString(), p.ExpectedRevenue.ToString(), p.SoldQuantity.ToString(), p.SoldRevenue.ToString(),
-                p.RealizedProfit.ToString(), p.RemainingCost.ToString(), p.RemainingProfit.ToString(), p.Source }.Select(Field)));
+                p.RealizedProfit.ToString(), p.RemainingCost.ToString(), p.RemainingProfit.ToString(), p.Source,
+                p.AutoSoldQuantity.ToString(),(p.ExpectedRevenue/p.Quantity*(p.SoldQuantity-p.AutoSoldQuantity)).ToString() }.Select(Field)));
         return csv.ToString();
     }
 }

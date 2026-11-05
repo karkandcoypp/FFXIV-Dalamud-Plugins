@@ -150,9 +150,14 @@ public sealed unsafe partial class Plugin
     }
     private void DrawSuggestions(ScanResult snapshot,string currentWorld)
     {
-        string Server(Suggestion s)=>!string.IsNullOrEmpty(s.WorldName)?s.WorldName:(s.World==world||s.World==0?currentWorld:Data.GetExcelSheet<World>().GetRowOrDefault(s.World)?.Name.ToString()??s.World.ToString());
+        string Server(Suggestion s)
+        {
+            uint server=s.World==0?snapshot.World:s.World;
+            return !string.IsNullOrEmpty(s.WorldName)?s.WorldName:server==world?currentWorld:Data.GetExcelSheet<World>().GetRowOrDefault(server)?.Name.ToString()??server.ToString();
+        }
         var suggestions=snapshot.Suggestions.Where(s=>s.Quote.Profit>=config.MinimumProfit && Policy.Fresh(s.Updated,DateTimeOffset.UtcNow,config.MaximumAgeMinutes))
             .Where(s=>string.IsNullOrWhiteSpace(itemFilter)||s.Item.Name.Contains(itemFilter,StringComparison.OrdinalIgnoreCase)||Server(s).Contains(itemFilter,StringComparison.OrdinalIgnoreCase)).ToArray();
+        suggestions=Policy.CurrentWorldFirst(suggestions,world,snapshot.World);
         ImGui.Spacing();
         if(suggestions.Length==0)
         {ImGui.TextUnformatted("Подходящих лотов пока нет.");ImGui.TextWrapped("Можно снизить порог прибыли или дождаться следующего обновления.");return;}
@@ -179,12 +184,14 @@ public sealed unsafe partial class Plugin
             ImGui.PushID(index++);ImGui.TableNextRow();ImGui.TableSetColumnIndex(0);
             if(ImGui.Selectable(s.Item.Name+(s.Quote.Lot.Hq?" HQ":"")))ImGui.SetClipboardText(s.Item.Name);
             Help($"{s.Item.Name}\nРетейнер: {s.Quote.Lot.Retainer}\nЦена: {s.Quote.Lot.Price:N0} × {s.Quote.Lot.Quantity}\nНалог: {s.Quote.Lot.Tax:N0}{(s.EstimatedTax?" (оценка)":"")}\nПродажа NPC: {s.Quote.Revenue:N0}\nКэш: {(DateTimeOffset.UtcNow-s.Updated).TotalMinutes:F0} мин. Наличие требует проверки.");
-            Cell(1,Server(s));Cell(2,s.Quote.Lot.Quantity.ToString());Cell(3,s.Quote.Cost.ToString("N0"));
+            ImGui.TableSetColumnIndex(1);
+            if(s.World==world || s.World==0 && snapshot.World==world)ImGui.TextColored(MarketTheme.Accent,Server(s));else ImGui.TextUnformatted(Server(s));
+            Cell(2,s.Quote.Lot.Quantity.ToString());Cell(3,s.Quote.Cost.ToString("N0"));
             ImGui.TableSetColumnIndex(4);ImGui.TextColored(MarketTheme.Gold,"+"+s.Quote.Profit.ToString("N0"));
             ImGui.PopID();
         }
         ImGui.EndTable();
-        if(suggestions.Length>200)ImGui.TextDisabled("Показаны 200 самых прибыльных лотов.");
+        if(suggestions.Length>200)ImGui.TextDisabled("Показаны первые 200 лотов: текущий сервер, затем остальные.");
         if(snapshot.Servers is {Length:>0} servers && ImGui.CollapsingHeader("Сводка по серверам"))
             foreach(var server in servers)
             {var lots=suggestions.Where(s=>s.World==server.World).ToArray();ImGui.TextUnformatted($"{server.Name}: {lots.Length} лотов, прибыль +{lots.Sum(s=>s.Quote.Profit):N0} гил");}
