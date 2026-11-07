@@ -18,12 +18,16 @@ class Program {
   var mobs=new List<MobHuntEntry>{new(){Name="Archaeornis",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=0,MobHuntId=3481,NeededKills=3,TerritoryType=397},new(){Name="Wooly Yak",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=1,MobHuntId=3479,NeededKills=2,TerritoryType=397},new(){Name="Alteci",TerritoryName="Coerthas Western Highlands",BillNumber=5,MobIndex=0,MobHuntId=4350,NeededKills=1,IsEliteMark=true,TerritoryType=397}};
   Set(plugin,"Mobs",mobs); Set(plugin,"Routes",new List<ZoneRoute>{new("Coerthas Western Highlands",mobs,new(71,"Falcon's Nest",new(32,36))),new("The Sea of Clouds",mobs,new(73,"Camp Cloudtop",new(16,37))),new("The Dravanian Forelands",mobs,new(76,"Tailfeather",new(31,23)))});
   string directory=Path.GetFullPath(args[0]);Directory.CreateDirectory(directory);
-  foreach(var sample in new[]{(520,430,17f,"normal"),(620,500,17f,"following"),(620,500,17f,"next"),(800,620,17f,"normal"),(1180,800,20f,"normal"),(520,430,17f,"completed"),(800,620,17f,"completed")}) {
+  foreach(var sample in new[]{(520,430,17f,"normal"),(620,500,17f,"following"),(620,500,17f,"next"),(800,620,17f,"normal"),(1180,800,20f,"normal"),(520,430,17f,"completed"),(800,620,17f,"completed"),(520,430,20f,"completed-large"),(520,430,20f,"normal-large")}) {
    var session=new RouteSession();Set(plugin,"Session",session);Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>());
    var other=new MobHuntEntry{Name="Gaelicat",BillNumber=1,MobIndex=2,MobHuntId=3494,NeededKills=1,TerritoryType=401,TerritoryName="The Sea of Clouds"};
    bool here=sample.Item4 is "following" or "next";
-   bool completed=sample.Item4=="completed";
+   bool completed=sample.Item4.StartsWith("completed");
    Set(plugin,"BillStates",Enumerable.Range(0,22).Select(i=>(byte)i).ToDictionary(i=>i,i=>new BillState(true,!completed && i is 1 or 2 or 3 or 5,1,1,completed && i is 1 or 2 or 3)));
+   var history=new CompletionHistory();
+   var snapshots=(Dictionary<byte,BillState>)typeof(Plugin).GetField("BillStates",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!;
+   foreach(var pair in snapshots) history.Observe(111,pair.Key,new byte[]{4,5,9,13,17,21}.Contains(pair.Key),DateTimeOffset.UtcNow,pair.Value);
+   Set(plugin,"completionHistory",history);Set(plugin,"character",111UL);
    Set(plugin,"Routes",new List<ZoneRoute>{new("Coerthas Western Highlands",mobs,new(71,"Falcon's Nest",new(32,36)),here),new("The Sea of Clouds",new(){other},new(72,"Camp Cloudtop",new(10,33)))});
    if(here) {
     session.Start(mobs[0],new byte[]{1,2,3});
@@ -35,7 +39,8 @@ class Program {
    io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",sample.Item3,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
    byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
    var window=new HuntWindow(plugin);
-   for(int frame=0;frame<3;frame++) { ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);window.PreDraw();ImGui.Begin(sample.Item4=="offer"?"Продолжить охоту?":"Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove);window.Draw();if(ImGui.GetScrollMaxX()>0)throw new Exception("Horizontal overflow");ImGui.End();window.PostDraw();ImGui.Render(); }
+   float overflow=0;
+   for(int frame=0;frame<3;frame++) { ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);window.PreDraw();ImGui.Begin(sample.Item4=="offer"?"Продолжить охоту?":"Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove);window.Draw();overflow=Math.Max(overflow,ImGui.GetScrollMaxX());ImGui.End();window.PostDraw();ImGui.Render(); }
    File.WriteAllBytes(Path.Combine(directory,$"font-{sample.Item3}.rgba"),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
    var draw=ImGui.GetDrawData();var lists=new List<object>();
    for(int i=0;i<draw.CmdListsCount;i++) { var list=new ImDrawListPtr(draw.CmdLists[i]);var vertices=new List<double[]>();var indices=new List<ushort>();var commands=new List<object>();
@@ -45,7 +50,9 @@ class Program {
     lists.Add(new{Vertices=vertices,Indices=indices,Commands=commands});
    }
    File.WriteAllText(Path.Combine(directory,$"huntroute-{sample.Item1}x{sample.Item2}-{sample.Item4}.json"),JsonSerializer.Serialize(new{Width=sample.Item1,Height=sample.Item2,Font=sample.Item3,TextureWidth=tw,TextureHeight=th,Lists=lists}));
-   Console.WriteLine($"PASS production UI {sample}: {draw.TotalVtxCount} vertices");ImGui.DestroyContext();
+   ImGui.DestroyContext();
+   if(overflow>0)throw new Exception($"Horizontal overflow {overflow}px in {sample}");
+   Console.WriteLine($"PASS production UI {sample}: exported vertices");
   }
  }
 }

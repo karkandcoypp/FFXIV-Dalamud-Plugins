@@ -35,6 +35,10 @@ public sealed class Plugin : IDalamudPlugin {
     internal readonly NextZoneWindow NextZone;
     internal readonly ShortcutWindow Shortcut;
     internal readonly NativeDialogService NativeDialogs;
+    private CompletionHistory? completionHistory;
+    private CompletionHistory History => completionHistory ??= new();
+    private string? completionFile;
+    private long nextHistorySave;
     private bool wasLoading;
     private ShortcutTiming? shortcutTiming;
     private ShortcutTiming Timing => shortcutTiming ??= new();
@@ -49,6 +53,9 @@ public sealed class Plugin : IDalamudPlugin {
     internal readonly RouteSession Session = new();
     public Plugin(IDalamudPluginInterface pi) {
         pi.Create<Service>();
+        completionFile=System.IO.Path.Combine(pi.GetPluginConfigDirectory(),"completion-history.json");
+        try { completionHistory=CompletionHistory.Load(completionFile); }
+        catch(Exception e) { completionHistory=new();Service.PluginLog.Error(e,"Не удалось загрузить историю выполнения охоты"); }
         NativeDialogs=new(pi);
         window = new(this); windows.AddWindow(window);
         Elite = new(this); windows.AddWindow(Elite);
@@ -63,6 +70,7 @@ public sealed class Plugin : IDalamudPlugin {
     private void Open() => window.IsOpen = true;
     internal void Refresh() { nextScan = 0; signature = ""; }
     private void OnLogout(int type,int code) {
+        SaveHistory(true);
         Ready=false; character=0; signature=""; routeSignature=""; nextScan=0; nextTeleportAllowed=0;
         wasLoading=false; Timing.Reset(); CurrentTerritory=0; CurrentMap=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear();
         Elite.Selected=null; Session.Stop(); NextZone.Sync(); Shortcut.Sync();
@@ -104,6 +112,9 @@ public sealed class Plugin : IDalamudPlugin {
                 }
                 snapshots[bill]=BillState.FromGame(hunt->IsMarkBillUnlocked(bill),obtained,hunt->ObtainedMarkId[bill],hunt->AvailableMarkId[bill],complete,type.OrderAmount);
             }
+            var observedAt=DateTimeOffset.UtcNow;
+            foreach(var pair in snapshots) History.Observe(character,pair.Key,Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(pair.Key).Type==2,observedAt,pair.Value);
+            SaveHistory();
             BillStates=snapshots;
             Timing.Ready(Environment.TickCount64); Ready = true; Error = null; AdvanceRoute(); NativeDialogs.Pump();
         } catch (Exception e) { Ready = false; Error = e.Message; nextScan=Environment.TickCount64+10000; Service.PluginLog.Error(e, "Reading hunt bills"); }
@@ -227,9 +238,22 @@ public sealed class Plugin : IDalamudPlugin {
         Session.ZoneTransition();nextScan=0;routeSignature="";
         return true;
     }
-    internal ContractProgress CollectionProgress(Board b,bool weekly) =>
-        Ready ? ContractProgress.Summarize(weekly?new[]{b.Weekly}:b.Daily,BillStates) : default;
+    internal ContractProgress CollectionProgress(Board b,bool weekly) {
+        if(!Ready) return default;
+        var now=DateTimeOffset.UtcNow;var indices=weekly?new[]{b.Weekly}:b.Daily;
+        var states=indices.ToDictionary(i=>i,i=> {
+            var state=BillStates.GetValueOrDefault(i);
+            return state with {PeriodCompleted=History.IsComplete(character,i,weekly,now,state.AvailableId)};
+        });
+        return ContractProgress.Summarize(indices,states);
+    }
+    private void SaveHistory(bool force=false) {
+        if(!History.Dirty || completionFile==null || (!force && Environment.TickCount64<nextHistorySave)) return;
+        try { History.Save(completionFile); }
+        catch(Exception e) { nextHistorySave=Environment.TickCount64+10000;Service.PluginLog.Error(e,"Не удалось сохранить историю выполнения охоты"); }
+    }
     public void Dispose() {
+        SaveHistory(true);
         Service.ClientState.Logout -= OnLogout;
         Service.ClientState.TerritoryChanged -= OnTerritoryChanged;
         Service.Framework.Update -= Update; Service.PluginInterface.UiBuilder.Draw -= Elite.DrawWorld; Service.PluginInterface.UiBuilder.Draw -= windows.Draw;

@@ -1,9 +1,9 @@
-# Hunt Route 0.3.4
+# Hunt Route 0.3.5
 
-- Replace zone-wide weekly search points with target-specific sets: 77 B-ranks, 47 territories and 922 point entries. Validate target ID, map and territory; never show another mob's zone fallback.
-- Review all 476 daily anchors against current XIVDaily data and individual FFXIVHunt observation maps. Alternative valid packs are preserved; no confirmed daily coordinate error remained. Source revisions and review evidence are documented in COORDINATE-AUDIT.md.
-- Fix completed daily bills displaying as not taken after they disappear: validate retained order IDs and all kill requirements against the current available set.
-- Show a green check, `Выполнено сегодня · 3/3` and a clear daily-completion message. Weekly completion remains separate. Partial/discarded bills do not count; new available sets clear completion.
-- Add offline coordinate-source verification, per-target weekly map checks and compact completed-state UI regression cases.
+- Persist completion in completion-history.json, keyed by the character ContentId and bill tier. Each expansion and character keeps independent daily/weekly progress across plugin/game restarts.
+- Expire daily completion at 15:00 UTC and weekly completion Tuesday at 08:00 UTC, including while the client still retains old kill counters. Stale completed sets cannot re-award expired checks; observed fresh pickup permits legitimate repeated order IDs.
+- Save atomically on changes, retry failed writes and attempt a final save on logout/unload. Invalid history is logged without breaking hunt routing.
+- Refresh the compact UI with slate/lavender colors, mint completion checks, segmented daily/weekly progress, completed expansion labels and responsive expansion selection for narrow windows/large fonts.
+- Retain route, map, aetheryte and teleport algorithms. Expand tests for real file reloads, independent characters/expansions, exact UTC boundaries, stale snapshots, failed saves and compact UI layouts.
 
-Public package/feed and local tests are verified separately from live-game behavior. Positions are community observations, not guaranteed current sightings.
+Offline persistence/data/UI checks and release package verification do not replace live-game validation of restart and teleport behavior.

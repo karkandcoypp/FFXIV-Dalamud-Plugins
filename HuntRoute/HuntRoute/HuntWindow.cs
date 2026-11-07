@@ -18,20 +18,46 @@ public sealed class HuntWindow : Window {
     public override void PostDraw() => HuntTheme.Pop();
     public override void Draw() {
         float line=ImGui.GetTextLineHeight();
-        ImGui.TextColored(HuntTheme.Accent,"Hunt Route"); ImGui.SameLine(); ImGui.TextDisabled("/  Охота по контрактам");
+        bool compact=ImGui.GetContentRegionAvail().X<640;
+        var header=ImGui.GetCursorScreenPos();
+        ImGui.GetWindowDrawList().AddRectFilled(header,header+new Vector2(3,compact?line:line*2+2),ImGui.GetColorU32(HuntTheme.Brand),2);
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX()+12);ImGui.TextColored(HuntTheme.Brand,"HUNT ROUTE");
+        if(compact) { ImGui.SameLine();ImGui.TextDisabled("/  Охота по контрактам"); }
+        else { ImGui.SetCursorPosX(ImGui.GetCursorPosX()+12);ImGui.TextDisabled("Контракты охоты и маршруты"); }
         if(!plugin.Ready) { ImGui.TextWrapped(plugin.Error ?? (plugin.Session.Phase!=RoutePhase.Idle?"Загрузка зоны. Сопровождение продолжится автоматически.":"Войдите в игру, чтобы увидеть контракты.")); return; }
-        if(ImGui.BeginTabBar("expansions",ImGuiTabBarFlags.FittingPolicyScroll)) {
-            for(int i=0;i<Plugin.Boards.Length;i++) if(ImGui.BeginTabItem(Plugin.Boards[i].Name)) {
-                if(expansion!=i) { expansion=i; selectedZone=""; } ImGui.EndTabItem();
+        float tabsWidth=Plugin.Boards.Sum(b=>ImGui.CalcTextSize(b.Name).X+ImGui.GetStyle().FramePadding.X*2)+ImGui.GetStyle().ItemInnerSpacing.X*(Plugin.Boards.Length-1);
+        if(tabsWidth>ImGui.GetContentRegionAvail().X) {
+            ImGui.SetNextItemWidth(-1);
+            string preview=Plugin.Boards[expansion].Name+(plugin.CollectionProgress(Plugin.Boards[expansion],false).AllCompleted?" · готово":"");
+            if(ImGui.BeginCombo("##expansion-choice",preview)) {
+                for(int i=0;i<Plugin.Boards.Length;i++) {
+                    bool done=plugin.CollectionProgress(Plugin.Boards[i],false).AllCompleted;
+                    if(done) ImGui.PushStyleColor(ImGuiCol.Text,HuntTheme.Accent);
+                    bool chosen=ImGui.Selectable(Plugin.Boards[i].Name+(done?" · готово":""),expansion==i);
+                    if(done) ImGui.PopStyleColor();
+                    if(chosen && expansion!=i) { expansion=i;selectedZone=""; }
+                }
+                ImGui.EndCombo();
+            }
+        } else if(ImGui.BeginTabBar("expansions",ImGuiTabBarFlags.FittingPolicyScroll)) {
+            for(int i=0;i<Plugin.Boards.Length;i++) {
+                bool done=plugin.CollectionProgress(Plugin.Boards[i],false).AllCompleted;
+                if(done) ImGui.PushStyleColor(ImGuiCol.Text,HuntTheme.Accent);
+                bool open=ImGui.BeginTabItem(Plugin.Boards[i].Name);
+                if(done) ImGui.PopStyleColor();
+                if(open) { if(expansion!=i) { expansion=i;selectedZone=""; } ImGui.EndTabItem(); }
             }
             ImGui.EndTabBar();
         }
         var board=Plugin.Boards[expansion]; var now=DateTimeOffset.UtcNow;
         if(ImGui.BeginTable("reset-cards",2,ImGuiTableFlags.SizingStretchSame)) {
-            ImGui.TableNextRow(); ImGui.TableNextColumn(); ResetCard(board,false,now,line*3+32);
-            ImGui.TableNextColumn(); ResetCard(board,true,now,line*3+32); ImGui.EndTable();
+            ImGui.TableNextRow(); ImGui.TableNextColumn(); ResetCard(board,false,now,line*3+40);
+            ImGui.TableNextColumn(); ResetCard(board,true,now,line*3+40); ImGui.EndTable();
         }
-        if(ImGui.Button("К доске охоты") && plugin.Teleport(board.Aetheryte)) {
+        ImGui.PushStyleColor(ImGuiCol.Button,new Vector4(.24f,.30f,.49f,1));
+        bool boardClicked=ImGui.Button("К доске охоты");
+        ImGui.PopStyleColor();
+        if(boardClicked && plugin.Teleport(board.Aetheryte)) {
             plugin.Session.Stop();
             var map=Service.DataManager.GetExcelSheet<TerritoryType>().GetRow(board.Territory).Map.Value;
             Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(board.Territory,map,board.Position));
@@ -45,7 +71,9 @@ public sealed class HuntWindow : Window {
         if(zones.Count==0) {
             ImGui.BeginChild("empty",Vector2.Zero,true);
             bool dailyDone=plugin.CollectionProgress(board,false).AllCompleted;
+            ImGui.PushTextWrapPos(0);
             ImGui.TextColored(HuntTheme.Accent,dailyDone?"Все ежедневные контракты на сегодня выполнены":"Нет незавершённых целей");
+            ImGui.PopTextWrapPos();
             ImGui.TextWrapped(dailyDone?"Можно вернуться после ежедневного сброса. Недельный контракт отмечается отдельно.":"Возьмите контракты на доске или отключите скрытие выполненных."); ImGui.EndChild(); return;
         }
         if(!zones.Any(z=>z.Name==selectedZone)) selectedZone=zones[0].Name;
@@ -75,7 +103,7 @@ public sealed class HuntWindow : Window {
     private void DrawSession() {
         var session=plugin.Session;
         if(session.Phase==RoutePhase.Idle) return;
-        ImGui.PushStyleColor(ImGuiCol.ChildBg,new Vector4(.10f,.18f,.19f,1));
+        ImGui.PushStyleColor(ImGuiCol.ChildBg,new Vector4(.105f,.145f,.205f,1));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,new Vector2(8,6)); ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,new Vector2(6,4));
         ImGui.BeginChild("route-follow",new Vector2(0,ImGui.GetTextLineHeight()*2+30),true);
         string text=session.Phase switch {
@@ -86,7 +114,7 @@ public sealed class HuntWindow : Window {
             _=>"Контракт изменился. Начните маршрут заново."
         };
         float stopWidth=ImGui.CalcTextSize("Стоп").X+ImGui.GetStyle().FramePadding.X*2;
-        ImGui.TextColored(HuntTheme.Accent,Fit(text,ImGui.GetContentRegionAvail().X-stopWidth-12));
+        ImGui.TextColored(HuntTheme.Brand,Fit(text,ImGui.GetContentRegionAvail().X-stopWidth-12));
         HuntTheme.Hint(text);
         ImGui.SameLine(ImGui.GetWindowContentRegionMax().X-stopWidth);
         if(ImGui.SmallButton("Стоп")) session.Stop();
@@ -99,26 +127,39 @@ public sealed class HuntWindow : Window {
         ImGui.EndChild(); ImGui.PopStyleVar(2); ImGui.PopStyleColor();
     }
     private void ResetCard(Board board,bool weekly,DateTimeOffset now,float height) {
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,new Vector2(8,6)); ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,new Vector2(6,4));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,new Vector2(11,9));ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,new Vector2(6,5));
         ImGui.BeginChild(weekly?"weekly":"daily",new Vector2(0,height),true);
-        ImGui.TextDisabled(weekly?"Еженедельные":"Ежедневные");
         var progress=plugin.CollectionProgress(board,weekly);
-        bool all=progress.Total>0 && progress.Taken==progress.Total && progress.NewSets==0;
+        Vector4 color=progress.AllCompleted?HuntTheme.Accent:progress.Taken>0?HuntTheme.Brand:HuntTheme.Gold;
+        var origin=ImGui.GetWindowPos();var draw=ImGui.GetWindowDrawList();
+        draw.AddRectFilled(origin+new Vector2(12,0),origin+new Vector2(ImGui.GetWindowSize().X-12,2),ImGui.GetColorU32(color),1);
+        ImGui.TextDisabled(weekly?"ЕЖЕНЕДЕЛЬНО":"ЕЖЕДНЕВНО");
+        if(progress.Total>0) {
+            string count=$"{progress.Completed}/{progress.Total}";
+            ImGui.SameLine(ImGui.GetWindowContentRegionMax().X-ImGui.CalcTextSize(count).X);
+            ImGui.TextColored(color,count);
+        }
         if(progress.AllCompleted) {
-            var at=ImGui.GetCursorScreenPos();float h=ImGui.GetTextLineHeight();var draw=ImGui.GetWindowDrawList();uint color=ImGui.GetColorU32(HuntTheme.Accent);
-            draw.AddLine(at+new Vector2(1,h*.5f),at+new Vector2(5,h*.75f),color,2);
-            draw.AddLine(at+new Vector2(5,h*.75f),at+new Vector2(13,h*.2f),color,2);
+            var at=ImGui.GetCursorScreenPos();float h=ImGui.GetTextLineHeight();uint packed=ImGui.GetColorU32(color);
+            draw.AddLine(at+new Vector2(1,h*.5f),at+new Vector2(5,h*.75f),packed,2);
+            draw.AddLine(at+new Vector2(5,h*.75f),at+new Vector2(13,h*.2f),packed,2);
             ImGui.Dummy(new Vector2(15,h));ImGui.SameLine();
         }
-        string label=progress.AllCompleted?(weekly?"Выполнено за неделю":"Выполнено сегодня")+$" · {progress.Completed}/{progress.Total}":progress.Label;
-        ImGui.TextColored(progress.Total==0?HuntTheme.Muted:all||progress.AllCompleted?HuntTheme.Accent:HuntTheme.Gold,Fit(label,ImGui.GetContentRegionAvail().X));
-        HuntTheme.Hint(progress.Total==0?"Сначала откройте охоту этого дополнения.":$"Взято {progress.Taken}/{progress.Total}, выполнено {progress.Completed}. Обновлённых наборов на доске: {progress.NewSets}. Статус берётся из игры; таймер показывает расписание сброса.");
+        string label=progress.AllCompleted?(weekly?"Неделя завершена":"Выполнено сегодня"):$"{progress.Label}";
+        ImGui.TextColored(progress.Total==0?HuntTheme.Muted:color,Fit(label,ImGui.GetContentRegionAvail().X));
+        HuntTheme.Hint($"{progress.Label}. Взято {progress.Taken}/{progress.Total}, выполнено {progress.Completed}/{progress.Total}. Отметка сохраняется отдельно для этого персонажа до следующего сброса.");
+        float width=ImGui.GetContentRegionAvail().X;var bars=ImGui.GetCursorScreenPos();int total=Math.Max(1,progress.Total);
+        for(int i=0;i<total;i++) {
+            float segment=(width-(total-1)*4)/total;var left=bars+new Vector2(i*(segment+4),0);
+            draw.AddRectFilled(left,left+new Vector2(segment,3),ImGui.GetColorU32(i<progress.Completed?HuntTheme.Accent:new Vector4(.17f,.20f,.28f,1)),2);
+        }
+        ImGui.Dummy(new Vector2(width,3));
         ImGui.TextDisabled("Сброс через "+Countdown(ResetClock.Next(now,weekly)-now));
-        ImGui.EndChild(); ImGui.PopStyleVar(2);
+        ImGui.EndChild();ImGui.PopStyleVar(2);
     }
     private void DrawZone(ZoneRoute zone) {
         int done=zone.Mobs.Count(plugin.Done);
-        ImGui.TextColored(HuntTheme.Accent,zone.Name); ImGui.SameLine(); ImGui.TextDisabled($"{done}/{zone.Mobs.Count}");
+        ImGui.TextColored(HuntTheme.Brand,zone.Name); ImGui.SameLine(); ImGui.TextDisabled($"{done}/{zone.Mobs.Count}");
         ImGui.ProgressBar((float)done/zone.Mobs.Count,new Vector2(-1,3),"");
         var first=zone.Mobs.FirstOrDefault(m=>!m.IsEliteMark && !plugin.Done(m) && Location.Database.ContainsKey(m.MobHuntId));
         if(first!=null) {

@@ -234,6 +234,24 @@ class Program {
   if(queuedShortcut?.Owner!="shortcut")throw new Exception("Busy frame consumed useful shortcut forever");checks++;
   if(confirmationQueue.Resolve(queuedShortcut.Key,false)!=null)throw new Exception("No approved a shortcut");checks++;
   sync.Invoke(controller,null);if(confirmationQueue.Activate(true)!=null)throw new Exception("Declined shortcut repeated");checks++;
+  // The real presentation adapter must use persisted periods, not stale native completion alone.
+  var progressMethod=typeof(Plugin).GetMethod("CollectionProgress",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  var completionData=new CompletionHistory();var completionNow=DateTimeOffset.UtcNow;
+  var completedState=BillState.FromGame(true,false,7,7,true,10);
+  foreach(byte tier in new byte[]{14,15,16})completionData.Observe(123,tier,false,completionNow,completedState);
+  typeof(Plugin).GetField("completionHistory",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,completionData);
+  typeof(Plugin).GetField("character",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,123UL);
+  var viewStates=new byte[]{10,11,12,14,15,16}.ToDictionary(i=>i,_=>new BillState(true,false,0,0,false));
+  typeof(Plugin).GetField("BillStates",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,viewStates);
+  if(!((ContractProgress)progressMethod.Invoke(plugin,new object[]{Plugin.Boards[3],false})!).AllCompleted)throw new Exception("Persisted expansion check disappeared with empty post-login game counters");checks++;
+  if(((ContractProgress)progressMethod.Invoke(plugin,new object[]{Plugin.Boards[2],false})!).AllCompleted)throw new Exception("History leaked across expansions");checks++;
+  typeof(Plugin).GetField("character",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,124UL);
+  if(((ContractProgress)progressMethod.Invoke(plugin,new object[]{Plugin.Boards[3],false})!).AllCompleted)throw new Exception("History leaked across characters");checks++;
+  typeof(Plugin).GetField("character",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,123UL);
+  var yesterdayData=new CompletionHistory();foreach(byte tier in new byte[]{14,15,16})yesterdayData.Observe(123,tier,false,completionNow.AddDays(-1),completedState);
+  typeof(Plugin).GetField("completionHistory",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,yesterdayData);
+  typeof(Plugin).GetField("BillStates",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new byte[]{14,15,16}.ToDictionary(i=>i,_=>completedState));
+  if(((ContractProgress)progressMethod.Invoke(plugin,new object[]{Plugin.Boards[3],false})!).AllCompleted)throw new Exception("Raw retained counts resurrected an expired UI check");checks++;
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
  }
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> handler) where T:class {

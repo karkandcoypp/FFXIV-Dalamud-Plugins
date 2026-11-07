@@ -254,3 +254,68 @@ Check(!ElitePoints(hecatomb).Intersect(ElitePoints(worm)).Any(),"Changing weekly
 Check(EliteSpawns.For(new(){MobHuntId=hecatomb.Key,MapId=hecatomb.Value.Map,TerritoryType=hecatomb.Value.Territory}).Length==0,"Daily mob cannot request elite points");
 Check(EliteSpawns.For(new(){MobHuntId=uint.MaxValue,MapId=hecatomb.Value.Map,TerritoryType=hecatomb.Value.Territory,IsEliteMark=true}).Length==0,"Unknown elite never falls back to unrelated zone points");
 Console.WriteLine($"PASS final audit: {checks} checks");
+
+// Persistence and exact reset boundaries use a controlled clock, never the host timezone.
+var beforeReset=DateTimeOffset.Parse("2026-11-07T14:59:59Z");var afterReset=beforeReset.AddSeconds(1);
+var history=new CompletionHistory();const ulong characterA=1234567890123456789UL,characterB=1234567890123456790UL;
+var doneBill=BillState.FromGame(true,false,7,7,true,10);
+foreach(byte tier in new byte[]{14,15,16})history.Observe(characterA,tier,false,beforeReset,doneBill);
+history.Observe(characterA,17,true,beforeReset,doneBill);
+Check(new byte[]{14,15,16}.All(i=>history.IsComplete(characterA,i,false,beforeReset)),"Endwalker completion captured per daily tier");
+Check(!history.IsComplete(characterB,14,false,beforeReset),"Another character cannot inherit completion");
+Check(!history.IsComplete(characterA,10,false,beforeReset),"Another expansion cannot inherit completion");
+Check(!history.IsComplete(0,14,false,beforeReset),"Missing character ID cannot read history");
+Check(!history.IsComplete(characterA,14,false,afterReset),"Daily check clears exactly at 15:00 UTC");
+Check(history.IsComplete(characterA,17,true,afterReset),"Daily reset does not clear weekly completion");
+for(int i=0;i<10;i++)history.Observe(characterA,14,false,afterReset.AddSeconds(i),doneBill);
+Check(!history.IsComplete(characterA,14,false,afterReset.AddSeconds(10)),"Stale retained counters cannot re-award today's check after reset");
+var activeNew=BillState.FromGame(true,true,8,8,false,10);
+history.Observe(characterA,14,false,afterReset.AddSeconds(11),activeNew);
+history.Observe(characterA,14,false,afterReset.AddSeconds(12),activeNew with {Obtained=false,Completed=true});
+Check(history.IsComplete(characterA,14,false,afterReset.AddSeconds(13)),"Newly picked current-day bill can complete after reset");
+Check(!history.IsComplete(characterA,15,false,afterReset.AddSeconds(13)),"Completing one tier does not finish remaining tiers");
+var tuesday=DateTimeOffset.Parse("2026-11-10T08:00:00Z");
+Check(history.IsComplete(characterA,17,true,tuesday.AddSeconds(-1)) && !history.IsComplete(characterA,17,true,tuesday),"Weekly boundary is Tuesday 08:00 UTC");
+history.Observe(characterA,17,true,tuesday,doneBill);Check(!history.IsComplete(characterA,17,true,tuesday),"Stale weekly counters cannot re-award after weekly reset");
+var localMidnight=DateTimeOffset.Parse("2026-11-08T00:00:00+03:00");
+Check(history.IsComplete(characterA,14,false,localMidnight),"Local midnight does not clear daily progress");
+Check(!history.IsComplete(characterA,14,false,localMidnight,9),"Different current set suppresses cached completion");
+var heldHistory=new CompletionHistory();heldHistory.Observe(characterA,14,false,beforeReset,activeNew);
+heldHistory.Observe(characterA,14,false,afterReset,activeNew);
+heldHistory.Observe(characterA,14,false,afterReset.AddSeconds(1),activeNew with {Completed=true,Obtained=false});
+Check(!heldHistory.IsComplete(characterA,14,false,afterReset.AddSeconds(2)),"Carried unfinished old bill cannot re-arm itself at reset");
+var repeatedHistory=new CompletionHistory();repeatedHistory.Observe(characterA,14,false,beforeReset,doneBill);
+repeatedHistory.Observe(characterA,14,false,afterReset,doneBill with {Obtained=true,Completed=false});
+repeatedHistory.Observe(characterA,14,false,afterReset.AddSeconds(1),doneBill);
+Check(repeatedHistory.IsComplete(characterA,14,false,afterReset.AddSeconds(2)),"Observed fresh pickup permits a legitimately repeated order ID");
+string historyFolder=Path.Combine(AppContext.BaseDirectory,"history-check-"+Guid.NewGuid().ToString("N"));string historyPath=Path.Combine(historyFolder,"completion-history.json");
+try {
+ var fullExpansion=new CompletionHistory();foreach(byte tier in new byte[]{14,15,16})fullExpansion.Observe(characterA,tier,false,beforeReset,doneBill);
+ fullExpansion.Save(historyPath);var allRestart=CompletionHistory.Load(historyPath);
+ Check(new byte[]{14,15,16}.All(i=>allRestart.IsComplete(characterA,i,false,beforeReset)),"Full expansion 3/3 survives actual save and fresh load");
+ history.Save(historyPath);var restarted=CompletionHistory.Load(historyPath);
+ Check(!restarted.Dirty && restarted.IsComplete(characterA,14,false,localMidnight),"Atomic file round-trip preserves completion across process restart");
+ Check(restarted.IsComplete(characterA,14,false,localMidnight,0),"Saved completion survives temporarily empty game data on login");
+ Check(!restarted.IsComplete(characterB,14,false,localMidnight),"Serialization preserves 64-bit character isolation");
+ Check(!restarted.IsComplete(characterA,14,false,afterReset.AddDays(1)),"Restart after daily reset cannot restore expired check");
+ restarted.Observe(characterA,14,false,afterReset.AddDays(1),activeNew with {Completed=true,Obtained=false});
+ Check(!restarted.IsComplete(characterA,14,false,afterReset.AddDays(1)),"Stale same-order counters after next restart do not resurrect check");
+ restarted.Observe(characterB,10,false,localMidnight,doneBill);restarted.Save(historyPath);
+ var anotherRestart=CompletionHistory.Load(historyPath);
+ Check(anotherRestart.IsComplete(characterB,10,false,localMidnight) && !anotherRestart.IsComplete(characterB,14,false,localMidnight),"Each character and expansion survives independent restart");
+ anotherRestart.Observe(characterB,10,false,localMidnight,doneBill);
+ Check(!anotherRestart.Dirty,"Unchanged snapshots do not rewrite history every scan");
+ var previous=File.ReadAllText(historyPath);anotherRestart.Observe(characterB,11,false,localMidnight,doneBill);
+ using(var locked=new FileStream(historyPath,FileMode.Open,FileAccess.Read,FileShare.None)) {
+  try { anotherRestart.Save(historyPath);throw new Exception("Locked target unexpectedly overwritten"); } catch(Exception e) when(e is IOException or UnauthorizedAccessException) { }
+ }
+ Check(anotherRestart.Dirty && File.ReadAllText(historyPath)==previous,"Failed atomic save preserves previous history for retry");
+ anotherRestart.Save(historyPath);Check(!anotherRestart.Dirty,"Retry commits unsaved completion");
+ File.WriteAllText(historyPath,"{\"Version\":1,\"Characters\":null}");
+ try { CompletionHistory.Load(historyPath);throw new Exception("Invalid history accepted"); } catch(InvalidDataException) { checks++; }
+} finally {
+ if(File.Exists(historyPath))File.Delete(historyPath);
+ if(File.Exists(historyPath+".tmp"))File.Delete(historyPath+".tmp");
+ if(Directory.Exists(historyFolder))Directory.Delete(historyFolder);
+}
+Console.WriteLine($"PASS persisted completion audit: {checks} checks");
