@@ -134,5 +134,29 @@
     "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/vp-v0.8.1/VendorProfit.zip",
     "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/vp-v0.8.1/VendorProfit.zip",
     "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/vp-v0.8.1/VendorProfit.zip"
+  },
+  {
+    "Author": "Carcosa Lyuman",
+    "Name": "Hunt Route",
+    "InternalName": "HuntRoute",
+    "AssemblyVersion": "0.1.0.0",
+    "Description": "Hunt bills ordered into short routes from unlocked aetherytes, one-click teleport and daily/weekly board status. Based on HuntBuddy.",
+    "ApplicableVersion": "any",
+    "Tags": [
+      "hunt",
+      "daily",
+      "route"
+    ],
+    "DalamudApiLevel": 15,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "CanUnloadAsync": false,
+    "LoadPriority": 0,
+    "Punchline": "Efficient hunt bill routes and reset dashboard.",
+    "AcceptsFeedback": true,
+    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.1.0/HuntRoute.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.1.0/HuntRoute.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.1.0/HuntRoute.zip"
   }
 ]
