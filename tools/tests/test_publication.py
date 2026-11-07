@@ -80,7 +80,7 @@ class PublicationTests(unittest.TestCase):
             with self.assertRaises(ValueError):update(index,manifest,'owner/plugins','bs-v0.8.0')
 
     def test_all_four_package_identities_and_wrong_manifest_or_tag(self):
-        for name,tag in [('BagSense','bs-v1.2.3'),('EorzeaEventTracker','eet-v1.2.3'),('EorzeaCompass','ec-v1.2.3'),('Dalamud.FullscreenCutscenes.Community','uc-v1.2.3')]:
+        for name,tag in [('HuntRoute','hr-v1.2.3'),('BagSense','bs-v1.2.3'),('EorzeaEventTracker','eet-v1.2.3'),('EorzeaCompass','ec-v1.2.3'),('Dalamud.FullscreenCutscenes.Community','uc-v1.2.3')]:
             with self.subTest(plugin=name),TemporaryDirectory() as directory:
                 root=Path(directory);manifest=root/'plugin.json';archive=root/'plugin.zip';index=root/'pluginmaster.json'
                 doc={'InternalName':name,'AssemblyVersion':'1.2.3.0','DalamudApiLevel':15};manifest.write_text(json.dumps(doc),encoding='utf8');index.write_text('[]',encoding='utf8')

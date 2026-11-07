@@ -13,7 +13,7 @@ def update(index_path, manifest_path, repository, tag):
     if len({item['InternalName'] for item in index}) != len(index):
         raise ValueError('Duplicate plugin entries')
     prefixes = {'EorzeaEventTracker': 'eet-v', 'Dalamud.FullscreenCutscenes.Community': 'uc-v',
-                'EorzeaCompass': 'ec-v', 'BagSense': 'bs-v', 'CraftProfile': 'cp-v', 'VendorProfit': 'vp-v'}
+                'EorzeaCompass': 'ec-v', 'BagSense': 'bs-v', 'CraftProfile': 'cp-v', 'VendorProfit': 'vp-v', 'HuntRoute': 'hr-v'}
     name = manifest.get('InternalName')
     if name not in prefixes:
         raise ValueError('Unexpected plugin manifest')
@@ -26,7 +26,7 @@ def update(index_path, manifest_path, repository, tag):
     asset = {'EorzeaEventTracker': 'EorzeaEventTracker.zip',
              'Dalamud.FullscreenCutscenes.Community': 'UltrawideCutscenes.zip',
              'EorzeaCompass': 'EorzeaCompass.zip', 'BagSense': 'BagSense.zip', 'CraftProfile': 'CraftProfile.zip',
-             'VendorProfit': 'VendorProfit.zip'}[name]
+             'VendorProfit': 'VendorProfit.zip', 'HuntRoute': 'HuntRoute.zip'}[name]
     link = f'https://github.com/{repository}/releases/download/{tag}/{asset}'
     manifest.update(RepoUrl=f'https://github.com/{repository}',
                     DownloadLinkInstall=link, DownloadLinkUpdate=link, DownloadLinkTesting=link)

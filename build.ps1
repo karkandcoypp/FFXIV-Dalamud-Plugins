@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('All', 'UltrawideCutscenes', 'EorzeaEventTracker', 'EorzeaCompass', 'BagSense', 'VendorProfit')]
+    [ValidateSet('All', 'UltrawideCutscenes', 'EorzeaEventTracker', 'EorzeaCompass', 'BagSense', 'VendorProfit', 'HuntRoute')]
     [string]$Plugin = 'All'
 )
 $ErrorActionPreference = 'Stop'
@@ -10,6 +10,7 @@ $candidates = @(
 $dotnet = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if (-not $dotnet) { $dotnet = 'dotnet' }
 $projects = [ordered]@{
+    HuntRoute = 'HuntRoute\HuntRoute\HuntRoute.csproj'
     UltrawideCutscenes = 'UltrawideCutscenes\Dalamud.FullscreenCutscenes.sln'
     EorzeaEventTracker = 'EorzeaEventTracker\EorzeaEventTracker\EorzeaEventTracker.csproj'
     EorzeaCompass = 'EorzeaCompass\EorzeaCompass\EorzeaCompass.csproj'

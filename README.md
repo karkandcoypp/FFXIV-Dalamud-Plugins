@@ -63,3 +63,7 @@ build.ps1                  сборка одного или всех проек�
 This repository contains independent Dalamud plugins. Add the shared custom repository URL above and install either plugin through `/xlplugins`. Plugin identities and saved settings remain unchanged by the repository rename.
 
 Final Fantasy XIV belongs to Square Enix. This project is not affiliated with Square Enix or the Dalamud project.
+
+## Hunt Route
+
+Hunt bill routes, daily/weekly board resets, one-click teleports and weekly B-rank search maps. Install **Hunt Route** from this custom repository and open `/huntroute`. [Details](HuntRoute/README.md).
