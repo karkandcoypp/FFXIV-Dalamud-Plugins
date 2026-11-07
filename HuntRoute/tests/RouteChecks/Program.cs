@@ -30,6 +30,26 @@ Check(ResetClock.Next(weekly,true)==weekly.AddDays(7),"After weekly reset");
 Check(ResetClock.Period(daily.ToOffset(TimeSpan.FromHours(3)),false)==daily,"Timezone conversion");
 var p15=Enumerable.Range(0,15).Select(i=>new Vector2(i%4,i/4)).ToArray();
 Check(RouteSolver.Solve(p15,[Vector2.Zero]).Order.Length==15,"Full daily bill set");
+// Acquisition state must be recoverable from a fresh game snapshot, without an observed pickup.
+var ids=new byte[]{18,19,20};
+ContractProgress Summary(params BillState[] bills) => ContractProgress.Summarize(ids,ids.Zip(bills).ToDictionary(p=>p.First,p=>p.Second));
+var taken=new BillState(true,true,4,4,false);
+var absent=new BillState(true,false,0,4,false);
+Check(Summary(taken,taken,taken).Label=="Контракты взяты","Already-held bills after plugin startup");
+Check(Summary(taken,taken,taken).Taken==3,"No local pickup history required");
+Check(Summary(taken,taken,absent).Label=="Взято 2 из 3","Partial daily acquisition");
+Check(Summary(absent,absent,absent).Label=="Контракты не взяты","No held bills");
+Check(Summary(taken with {Completed=true},taken with {Completed=true},taken with {Completed=true}).Label=="Контракты выполнены","Completed current bills");
+Check(Summary(taken with {AvailableId=8},taken,taken).NewSets==1,"Old active bill versus new board set");
+Check(Summary(taken with {AvailableId=8},taken,taken).Label.Contains("есть новые"),"Old bills must not hide a new set");
+Check(Summary(taken with {AvailableId=0},taken,taken).Taken==3,"Unknown available IDs do not hide actual held bills");
+Check(Summary(taken with {Obtained=false},absent,absent).Taken==0,"Retained ID alone is not an active contract");
+Check(Summary(taken with {ObtainedId=0},absent,absent).Taken==0,"Empty obtained ID cannot count as held");
+Check(Summary(default,default,default).Total==0,"Locked contracts");
+Check(Summary(taken,taken,default).Label=="Контракты взяты","Only unlocked tiers count");
+Check(ContractProgress.Summarize(new byte[]{21},new Dictionary<byte,BillState>{{21,taken}}).Taken==1,"Weekly acquisition");
+Check(ContractProgress.Summarize(new byte[]{21},new Dictionary<byte,BillState>{{21,absent}}).Taken==0,"Character switch with no bills");
+Check(Summary(taken with {Completed=true,AvailableId=8},taken,taken).Label.Contains("есть новые"),"Retained completion cannot suppress a new board set");
 if(args.Length>0) {
  using var game=new GameData(args[0]);
  foreach(uint id in new uint[]{70,111,133,183,216,75}) { var a=game.Excel.GetSheet<Aetheryte>().GetRow(id); Console.WriteLine($"Aetheryte {id}: {a.PlaceName.Value.Name}, territory={a.Territory.RowId}, map={a.Territory.Value.Map.RowId}"); }

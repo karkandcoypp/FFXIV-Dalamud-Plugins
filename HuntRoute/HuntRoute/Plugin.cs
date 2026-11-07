@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using Dalamud.Configuration;
 using Dalamud.Game.Command;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Interface.Windowing;
@@ -12,10 +11,6 @@ using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel.Sheets;
 namespace HuntRoute;
 
-[Serializable] public class Settings : IPluginConfiguration {
-    public int Version { get; set; } = 1;
-    public Dictionary<string, DateTimeOffset> Collected { get; set; } = new();
-}
 public record Board(string Name, byte[] Daily, byte Weekly, uint Aetheryte, uint Territory, uint Map, Vector2 Position);
 public record EntryPoint(uint Id, string Name, Vector2 Position);
 public record ZoneRoute(string Name, List<MobHuntEntry> Mobs, EntryPoint? Start);
@@ -28,23 +23,21 @@ public sealed class Plugin : IDalamudPlugin {
         new("Endwalker", [14,15,16], 17, 183, 963, 694, new(11.8f,13.2f)),
         new("Dawntrail", [18,19,20], 21, 216, 1185, 855, new(13.8f,13.6f))
     ];
-    internal Settings Config;
     internal List<MobHuntEntry> Mobs = [];
     internal List<ZoneRoute> Routes = [];
     internal string? Error;
     internal bool Ready;
     internal Dictionary<(byte Bill, byte Mob), int> KillCounts = new();
-    internal HashSet<byte> UnlockedBills = new();
+    internal Dictionary<byte,BillState> BillStates = new();
     private readonly WindowSystem windows = new("HuntRoute");
     private readonly HuntWindow window;
     internal readonly EliteWindow Elite;
     private long nextScan;
     private string signature = "";
     private ulong character;
-    private readonly Dictionary<byte, (byte Id, bool Held)> observed = new();
     internal bool HideDone = true;
     public Plugin(IDalamudPluginInterface pi) {
-        pi.Create<Service>(); Config = pi.GetPluginConfig() as Settings ?? new();
+        pi.Create<Service>();
         window = new(this); windows.AddWindow(window);
         Elite = new(this); windows.AddWindow(Elite);
         Service.Commands.AddHandler("/huntroute", new CommandInfo((_, _) => window.Toggle()) { HelpMessage = "Hunt Route: маршруты охоты и сброс контрактов" });
@@ -55,30 +48,23 @@ public sealed class Plugin : IDalamudPlugin {
     internal void Refresh() { nextScan = 0; signature = ""; }
     private unsafe void Update(IFramework _) {
         if (!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId == 0) {
-            Ready = false; character = 0; observed.Clear(); signature = ""; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); UnlockedBills.Clear(); Elite.Selected=null; return;
+            Ready = false; character = 0; signature = ""; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear(); Elite.Selected=null; return;
         }
         if (Environment.TickCount64 < nextScan) return; nextScan = Environment.TickCount64 + 1000;
         try {
-            if (character != Service.Player.ContentId) { character = Service.Player.ContentId; observed.Clear(); signature = ""; }
+            if (character != Service.Player.ContentId) { character = Service.Player.ContentId; signature = ""; }
             var hunt = MobHunt.Instance(); if (hunt == null) { Ready=false; return; }
-            UnlockedBills = Enumerable.Range(0,22).Select(i=>(byte)i).Where(i=>hunt->IsMarkBillUnlocked(i)).ToHashSet();
             for(byte bill=0;bill<22;bill++) for(byte mob=0;mob<5;mob++) KillCounts[(bill,mob)]=hunt->GetKillCount(bill,mob);
             string current = hunt->ObtainedFlags + ":" + string.Join(",", Enumerable.Range(0,22).Select(i => hunt->ObtainedMarkId[i])) + ":" + string.Join(",", Service.Aetherytes.Select(a=>a.AetheryteId).Order());
             if (current != signature) { ReadBills(); BuildRoutes(); signature = current; }
-            // Obtained IDs remain after completion. Record collection only when the game's available ID agrees.
-            bool changed = false;
-            foreach (var board in Boards) foreach (byte bill in board.Daily.Append(board.Weekly)) {
-                if (!hunt->IsMarkBillUnlocked(bill)) continue;
-                byte id = hunt->ObtainedMarkId[bill];
-                bool held = (hunt->ObtainedFlags & (1 << bill)) != 0;
-                bool pickup = observed.TryGetValue(bill, out var old) && held && (!old.Held || old.Id != id);
-                observed[bill] = (id, held);
-                if (!pickup || id == 0 || id != hunt->AvailableMarkId[bill]) continue;
-                var period = ResetClock.Period(DateTimeOffset.UtcNow, bill == board.Weekly);
-                string key = $"{character}:{bill}";
-                if (Config.Collected.GetValueOrDefault(key) != period) { Config.Collected[key] = period; changed = true; }
+            var entries=Mobs.ToLookup(m=>m.BillNumber);
+            var snapshots=new Dictionary<byte,BillState>();
+            for(byte bill=0;bill<22;bill++) {
+                bool obtained=(hunt->ObtainedFlags & (1<<bill))!=0;
+                bool complete=entries[bill].Any() && entries[bill].All(Done);
+                snapshots[bill]=new(hunt->IsMarkBillUnlocked(bill),obtained,hunt->ObtainedMarkId[bill],hunt->AvailableMarkId[bill],complete);
             }
-            if (changed) Service.PluginInterface.SavePluginConfig(Config);
+            BillStates=snapshots;
             Ready = true; Error = null;
         } catch (Exception e) { Ready = false; Error = e.Message; nextScan=Environment.TickCount64+10000; Service.PluginLog.Error(e, "Reading hunt bills"); }
     }
@@ -137,13 +123,8 @@ public sealed class Plugin : IDalamudPlugin {
         else Service.Chat.PrintError("Нет открытого эфирита на этой карте.");
         Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
     }
-    internal (int Collected,int Total) CollectionProgress(Board b,bool weekly) {
-        if(!Ready) return (0,0);
-        var indices=weekly?new[]{b.Weekly}:b.Daily;
-        var unlocked=indices.Where(i=>UnlockedBills.Contains(i)).ToArray();
-        var period=ResetClock.Period(DateTimeOffset.UtcNow,weekly);
-        return (unlocked.Count(i=>Config.Collected.GetValueOrDefault($"{character}:{i}")>=period),unlocked.Length);
-    }
+    internal ContractProgress CollectionProgress(Board b,bool weekly) =>
+        Ready ? ContractProgress.Summarize(weekly?new[]{b.Weekly}:b.Daily,BillStates) : default;
     public void Dispose() {
         Service.Framework.Update -= Update; Service.PluginInterface.UiBuilder.Draw -= Elite.DrawWorld; Service.PluginInterface.UiBuilder.Draw -= windows.Draw;
         Service.PluginInterface.UiBuilder.OpenMainUi -= Open; Service.PluginInterface.UiBuilder.OpenConfigUi -= Open;

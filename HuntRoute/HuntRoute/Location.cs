@@ -17,13 +17,8 @@ public static class Location {
     }
     public static void CreateMapMarker(uint territory, uint map, uint mob, string? name) {
         if(!Database.TryGetValue(mob,out var p)) return;
-        Service.GameGui.OpenMapWithMapLink(new MapLinkPayload(territory,map,(int)(p.X*1000),(int)(p.Y*1000)));
+        Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(territory,Service.DataManager.GetExcelSheet<Map>().GetRow(map),p.Coordinate));
     }
-    public static Vector2 ToWorld(Vector2 position, Map map) {
-        // Use the forward transform to include the sheet's offsets and scale.
-        var zero=MapUtil.WorldToMap(Vector2.Zero,map);
-        var unit=MapUtil.WorldToMap(new Vector2(100,100),map)-zero;
-        return (position-zero)/unit*100;
-    }
+    public static Vector2 ToWorld(Vector2 position,Map map) => MapCoordinates.ToWorld(position,map);
     public static Vector2 ConvertPixelPositionToMapCoordinate(int x, int y, float scale) => new(1+x*2f/100f/(scale/100f),1+y*2f/100f/(scale/100f));
 }

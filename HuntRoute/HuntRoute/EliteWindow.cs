@@ -58,7 +58,7 @@ public sealed class EliteWindow : Window {
             draw.AddCircleFilled(center,5,0xff45cfff); draw.AddCircle(center,6,0xff202020);
             if(Vector2.Distance(ImGui.GetMousePos(),center)<9 && ImGui.IsItemHovered()) {
                 ImGui.SetTooltip($"Место {i+1}: X {points[i].X:F1}, Y {points[i].Y:F1}");
-                if(ImGui.IsMouseClicked(ImGuiMouseButton.Left)) Service.GameGui.OpenMapWithMapLink(new MapLinkPayload(mob.TerritoryType,mob.MapId,(int)(points[i].X*1000),(int)(points[i].Y*1000)));
+                if(ImGui.IsMouseClicked(ImGuiMouseButton.Left)) Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(mob.TerritoryType,map,points[i]));
             }
         }
         if(Service.ClientState.TerritoryType==mob.TerritoryType && Service.ObjectTable.LocalPlayer is {} player) {

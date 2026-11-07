@@ -42,7 +42,7 @@ public sealed class HuntWindow : Window {
         if(ImGui.Button("К доске охоты",new Vector2(180,0))) {
             plugin.Teleport(board.Aetheryte);
             var mapId=Service.DataManager.GetExcelSheet<TerritoryType>().GetRow(board.Territory).Map.RowId;
-            Service.GameGui.OpenMapWithMapLink(new MapLinkPayload(board.Territory,mapId,(int)(board.Position.X*1000),(int)(board.Position.Y*1000)));
+            Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(board.Territory,Service.DataManager.GetExcelSheet<Map>().GetRow(mapId),board.Position));
         }
         HuntTheme.Hint("Телепорт в город и отметка доски на карте. Обычная стоимость телепорта в гилах.");
         ImGui.SameLine();
@@ -84,11 +84,13 @@ public sealed class HuntWindow : Window {
     private void ResetCard(Board board,bool weekly,DateTimeOffset now,float height) {
         ImGui.BeginChild(weekly?"weekly":"daily",new Vector2(0,height),true);
         ImGui.TextDisabled(weekly?"ЕЖЕНЕДЕЛЬНЫЕ":"ЕЖЕДНЕВНЫЕ");
-        var (collected,total)=plugin.CollectionProgress(board,weekly);
-        bool all=total>0 && collected==total;
-        string status=total==0?"Охота не открыта":all?"Контракты взяты":"Проверьте доску";
-        ImGui.TextColored(total==0?HuntTheme.Muted:all?HuntTheme.Accent:HuntTheme.Gold,status);
-        HuntTheme.Hint(total==0?"Сначала откройте охоту этого дополнения.":all?"Получение контрактов за текущий период подтверждено.":$"Сброс по расписанию уже прошёл. Подтверждено взятых контрактов: {collected} из {total}. Если вы брали их при выключенном плагине, статус получения может быть неизвестен.");
+        var progress=plugin.CollectionProgress(board,weekly);
+        bool all=progress.Total>0 && progress.Taken==progress.Total && progress.NewSets==0;
+        ImGui.TextColored(progress.Total==0?HuntTheme.Muted:all?HuntTheme.Accent:HuntTheme.Gold,progress.Label);
+        HuntTheme.Hint(progress.Total==0?"Сначала откройте охоту этого дополнения."
+            : $"Взято контрактов: {progress.Taken} из {progress.Total}. Выполнено: {progress.Completed}."
+              + (progress.NewSets>0?$" На доске есть {progress.NewSets} обновлённых наборов вместо прежних взятых.":"")
+              + "\nСтатус взятых контрактов и прогресс определяются по данным игры. Таймер показывает расписание следующего сброса.");
         ImGui.TextDisabled("Следующий сброс через "+Countdown(ResetClock.Next(now,weekly)-now));
         ImGui.EndChild();
     }

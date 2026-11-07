@@ -11,7 +11,7 @@ Command: `/huntroute`.
 - Exact shortest open path through known daily targets in a territory, choosing the entry aetheryte from the character's unlocked list. Route order stays stable as targets are completed.
 - Clicking a target teleports to the closest unlocked aetheryte for that target, using the game's normal gil cost, and opens a map flag. Hinterlands uses Idyllshire. Flight, inaccessible subregions and terrain are not modeled.
 - Daily reset: 15:00 UTC (18:00 Moscow); weekly: Tuesday 08:00 UTC (11:00 Moscow). Countdown uses the computer's UTC clock.
-- Collection state is persisted per content ID and bill. Only observed acquisition transitions are recorded; stale retained IDs do not imply current-period collection. At first use or after taking bills while the plugin was inactive, check the board to resolve uncertain status. The dashboard distinguishes the schedule from an observed pickup.
+- Contract status is reconstructed automatically from the game's obtained flags, obtained/available bill IDs and kill progress every second. Bills already held before plugin startup count immediately. Cards distinguish not taken, partially taken, taken, completed, and held bills with a newer set available on the board. Retained IDs without the obtained flag do not count as held bills. Reset countdowns are separate from the actual held-contract state; a repeated available ID alone is not proof that a held bill was acquired in the current reset period.
 - Weekly search map displays possible **zone-level B-rank** locations from HuntHelper, with yellow candidate points and the player's blue point. These are community observations, not guaranteed, exhaustive or target-specific spawn predictions.
 - Click a candidate to flag it on the native map. Native temporary marks are paged in groups of 12, matching the client limit. Only an explicit button writes these temporary map markers.
 - World overlay labels only living, unfinished weekly targets present in the local object table, default range 300 m (adjustable 50-500 m). It cannot see mobs outside the client's loaded range. The overlay hides during cutscenes/loading.
@@ -24,6 +24,12 @@ Command: `/huntroute`.
 For installed-game validation, run the same executable with the game's `game/sqpack` path while the working directory is the repository's parent. The optional check validates every weekly target's territory, spawn coordinates and map texture paths.
 
 `dotnet build HuntRoute/HuntRoute/HuntRoute.csproj -c Release --warnaserror`
+
+Optional coordinate regression checks against installed game data:
+
+`dotnet run --project HuntRoute/tests/MapChecks -c Release -- "<game/sqpack>" HuntRoute/data/elite-spawns.json`
+
+Map flags convert displayed map coordinates into raw world coordinates before constructing map links. The local round-trip checks cover daily targets, all five hunt boards and all candidate B-rank spawn points.
 
 Local checks do not verify actual game teleport, overlay, board interaction or map-marker rendering.
 
