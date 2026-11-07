@@ -7,9 +7,11 @@ Command: `/huntroute`.
 ## Behavior
 
 - Heavensward through Dawntrail expansion tabs, compact reset cards and contract/zone progress.
-- Opaque dark layout: choose a zone in the left pane and follow its route in the right pane. Daily target rows have explicit teleport/map buttons; weekly B-rank search is shown separately.
-- Exact shortest open path through known daily targets in a territory, choosing the entry aetheryte from the character's unlocked list. Route order stays stable as targets are completed.
-- Clicking a target teleports to the closest unlocked aetheryte for that target, using the game's normal gil cost, and opens a map flag. Hinterlands uses Idyllshire. Flight, inaccessible subregions and terrain are not modeled.
+- Opaque compact layout down to 520x430. A zone dropdown replaces the sidebar at narrow widths. Contract cards and active-route controls remain above the scrolling target pane.
+- The route joins remaining known daily target positions, grouping coincident locations and placing completed entries after them. Up to 18 distinct positions use an exact shortest open path; larger sets use bounded nearest-neighbor fallback. Outside the zone the entry is chosen from unlocked aetherytes; inside it the route starts at the character's position. Recalculation happens on contract, completion, territory/map or unlock changes, not continuously while moving.
+- Clicking an unfinished daily target starts route following. Teleport occurs only if the destination territory differs from the current territory, uses the closest unlocked aetheryte and the normal gil cost. No same-zone teleport is requested for target, start or board actions. Busy/loading/casting/pending/locked cases are rejected before the native call, with a short repeat-request guard. Hinterlands uses Idyllshire. Flight, inaccessible subregions and terrain are not modeled.
+- Following waits for arrival, then sets a map flag without opening the map. Each completed target automatically flags the next remaining daily target in that zone. After the zone's daily goals it offers the next zone; teleport requires clicking the suggestion. Weekly B-ranks and unknown-position targets are excluded. Use Stop to pause; logout, character changes and replaced/discarded tracked contracts stop the session. Following is not resumed after plugin reload.
+- Hover daily or weekly target names for the game's own hunt portrait, progress and coordinates. Portrait aspect ratio is preserved; asynchronous high-resolution loading falls back to normal-resolution assets.
 - Daily reset: 15:00 UTC (18:00 Moscow); weekly: Tuesday 08:00 UTC (11:00 Moscow). Countdown uses the computer's UTC clock.
 - Contract status is reconstructed automatically from the game's obtained flags, obtained/available bill IDs and kill progress every second. Bills already held before plugin startup count immediately. Cards distinguish not taken, partially taken, taken, completed, and held bills with a newer set available on the board. Retained IDs without the obtained flag do not count as held bills. Reset countdowns are separate from the actual held-contract state; a repeated available ID alone is not proof that a held bill was acquired in the current reset period.
 - Weekly search map displays possible **zone-level B-rank** locations from HuntHelper, with yellow candidate points and the player's blue point. These are community observations, not guaranteed, exhaustive or target-specific spawn predictions.
@@ -29,7 +31,7 @@ Optional coordinate regression checks against installed game data:
 
 `dotnet run --project HuntRoute/tests/MapChecks -c Release -- "<game/sqpack>" HuntRoute/data/elite-spawns.json`
 
-Map flags convert displayed map coordinates into raw world coordinates before constructing map links. The local round-trip checks cover daily targets, all five hunt boards and all candidate B-rank spawn points.
+Map flags, aetheryte positions and the elite-map overlay share the same scale/offset conversion. MapChecks validates raw links, texture projections, board destinations, available game portraits, bill ranges and actual teleport/map wrappers on substituted services. It does not call the native teleport. See [audit findings](AUDIT-0.2.0.md).
 
 Local checks do not verify actual game teleport, overlay, board interaction or map-marker rendering.
 

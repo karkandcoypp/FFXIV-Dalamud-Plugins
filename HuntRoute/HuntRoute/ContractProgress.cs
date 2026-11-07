@@ -3,6 +3,8 @@ using System.Linq;
 namespace HuntRoute;
 
 public readonly record struct BillState(bool Unlocked,bool Obtained,byte ObtainedId,byte AvailableId,bool Completed) {
+    public static BillState FromGame(bool unlocked,bool obtained,byte id,byte available,bool completed,uint count) =>
+        new(unlocked,obtained && id>0 && id<=count,id<=count?id:(byte)0,available<=count?available:(byte)0,completed);
     public bool Taken => Obtained && ObtainedId!=0;
     public bool HasNewSet => Taken && AvailableId!=0 && AvailableId!=ObtainedId;
 }

@@ -33,6 +33,9 @@ public sealed class EliteWindow : Window {
     public override void Draw() {
         if(!plugin.Ready || Selected==null) { ImGui.Text("Войдите в игру и выберите недельную цель."); return; }
         var mob=Selected;
+        if(!plugin.Mobs.Any(m=>m.BillNumber==mob.BillNumber && m.MobIndex==mob.MobIndex && m.MobHuntId==mob.MobHuntId)) {
+            Selected=null; ImGui.TextWrapped("Этот контракт больше не активен. Выберите текущую недельную цель."); return;
+        }
         ImGui.TextColored(new Vector4(.4f,.85f,.78f,1),mob.Name+" / "+mob.TerritoryName);
         ImGui.TextWrapped("Жёлтые точки — предполагаемые места B-рангов в зоне. Они не подтверждают присутствие цели; точный набор мест может отличаться для конкретного моба.");
         ImGui.Checkbox("Метки обнаруженной цели в игровом мире",ref WorldMarkers);
@@ -52,16 +55,17 @@ public sealed class EliteWindow : Window {
         var draw=ImGui.GetWindowDrawList();
         if(texture!=null) draw.AddImage(texture.Handle,origin,origin+new Vector2(size));
         else draw.AddRectFilled(origin,origin+new Vector2(size),0xff30302a);
-        Vector2 Pixel(Vector2 p) => origin+(p-Vector2.One)*(map.SizeFactor/100f*50f/2048f)*size;
+        Vector2 Pixel(Vector2 p) => origin+MapCoordinates.ToTexturePixel(p,map)/2048f*size;
         for(int i=0;i<points.Length;i++) {
             var center=Pixel(points[i]);
+            if(center.X<origin.X || center.Y<origin.Y || center.X>origin.X+size || center.Y>origin.Y+size) continue;
             draw.AddCircleFilled(center,5,0xff45cfff); draw.AddCircle(center,6,0xff202020);
             if(Vector2.Distance(ImGui.GetMousePos(),center)<9 && ImGui.IsItemHovered()) {
                 ImGui.SetTooltip($"Место {i+1}: X {points[i].X:F1}, Y {points[i].Y:F1}");
                 if(ImGui.IsMouseClicked(ImGuiMouseButton.Left)) Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(mob.TerritoryType,map,points[i]));
             }
         }
-        if(Service.ClientState.TerritoryType==mob.TerritoryType && Service.ObjectTable.LocalPlayer is {} player) {
+        if(Service.ClientState.TerritoryType==mob.TerritoryType && Service.ClientState.MapId==mob.MapId && Service.ObjectTable.LocalPlayer is {} player) {
             var p=MapUtil.WorldToMap(new Vector2(player.Position.X,player.Position.Z),map);
             draw.AddCircleFilled(Pixel(p),6,0xffffff40);
         }

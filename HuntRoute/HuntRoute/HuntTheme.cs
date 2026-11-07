@@ -26,13 +26,13 @@ internal static class HuntTheme {
         ImGui.PushStyleColor(ImGuiCol.CheckMark,Accent);
         ImGui.PushStyleColor(ImGuiCol.PlotHistogram,Accent);
         ImGui.PushStyleColor(ImGuiCol.Separator,new Vector4(.18f,.22f,.27f,1));
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,new Vector2(18,16));
-        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding,new Vector2(12,7));
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,new Vector2(10,10));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,new Vector2(12,10));
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding,new Vector2(8,4));
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,new Vector2(8,6));
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding,10);
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding,6);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding,10);
-        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding,new Vector2(9,7));
+        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding,new Vector2(6,5));
     }
     internal static void Pop() { ImGui.PopStyleVar(7); ImGui.PopStyleColor(18); }
     internal static void Hint(string text) { if(ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip(text); }

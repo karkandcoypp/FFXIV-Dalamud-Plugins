@@ -1,8 +1,10 @@
-# Hunt Route 0.1.2
+# Hunt Route 0.2.0
 
-- Fix map flags clustering near the map centre: displayed map coordinates are now converted to world coordinates before creating raw map links. Applies to daily targets, hunt boards and individual B-rank spawn points.
-- Determine contract status directly from game snapshots, including bills acquired before plugin startup. Remove the dependency on locally observed pickup events.
-- Show not taken, partially taken, taken, completed and held bills with a newer available set. A retained bill ID without its obtained flag is not treated as an active contract.
-- Add regression checks for startup/partial/completed/older contracts and raw coordinate round trips using installed game sheets.
+- Follow daily hunts: click a target, arrive, then automatically flag the next target after meeting its kill count. The next zone is suggested when the current zone's daily goals finish; every zone teleport requires a click.
+- Suppress all same-territory teleports, including target, route start and board actions. Add busy/loading/casting/pending checks, a repeat-request guard and locked-destination validation.
+- Recalculate remaining routes after completion, starting from the character's position when already in the zone. Group coincident target positions and handle oversized routes without blocking the plugin.
+- Show game-provided hunt portraits when hovering daily or weekly names.
+- Compact adaptive window, minimum 520x430; narrow windows use a zone dropdown. Highlight the tracked target and keep route controls visible.
+- Audit fixes: unified map/texture/aetheryte projections, validated contract ID ranges, ignored transient zone-loading snapshots, handled missing map markers, and invalidated replaced weekly selections.
 
-Open `/huntroute`. Local validation covered 1404 raw map-link round trips; actual game map flags and acquisition transitions still need an in-game check.
+Local validation: 119 logic checks, 2806 installed-data/wrapper checks (including 1495 map-link round trips, 47 map projections and 794 portrait assets), and five rendered UI scenarios. Actual in-game native teleport, automatic flags and hover texture rendering remain to be checked.

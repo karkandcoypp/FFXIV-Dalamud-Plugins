@@ -48,9 +48,13 @@ jobs:
       - name: Test and build plugin
         run: |
           dotnet run --project HuntRoute/tests/RouteChecks/RouteChecks.csproj -c Release
-          if ($LASTEXITCODE -ne 0) { throw 'Compass checks failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'Hunt Route logic checks failed' }
           dotnet build HuntRoute/HuntRoute/HuntRoute.csproj -c Release --warnaserror
           if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+          dotnet build HuntRoute/tests/MapChecks/MapChecks.csproj -c Release --warnaserror
+          if ($LASTEXITCODE -ne 0) { throw 'Map-check harness build failed' }
+          dotnet run --project HuntRoute/tests/UiChecks/UiChecks.csproj -c Release -- "$env:RUNNER_TEMP/HuntRoute-ui"
+          if ($LASTEXITCODE -ne 0) { throw 'UI layout checks failed' }
           $output = 'HuntRoute/HuntRoute/bin/Release'
           Copy-Item "$output/HuntRoute/latest.zip" "$env:RUNNER_TEMP/HuntRoute.zip"
           Copy-Item "$output/HuntRoute.json" "$env:RUNNER_TEMP/HuntRoute.json"

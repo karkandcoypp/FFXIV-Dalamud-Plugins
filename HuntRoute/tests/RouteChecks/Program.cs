@@ -50,6 +50,44 @@ Check(Summary(taken,taken,default).Label=="Контракты взяты","Only 
 Check(ContractProgress.Summarize(new byte[]{21},new Dictionary<byte,BillState>{{21,taken}}).Taken==1,"Weekly acquisition");
 Check(ContractProgress.Summarize(new byte[]{21},new Dictionary<byte,BillState>{{21,absent}}).Taken==0,"Character switch with no bills");
 Check(Summary(taken with {Completed=true,AvailableId=8},taken,taken).Label.Contains("есть новые"),"Retained completion cannot suppress a new board set");
+// Travel policy: same-zone requests never cast, even when busy or the entry is locked.
+Check(TravelPolicy.Decide(397,397,true,true,false)==TravelDecision.AlreadyThere,"Same-zone teleport suppressed");
+Check(TravelPolicy.Decide(397,397,true,false,true)==TravelDecision.AlreadyThere,"Same-zone marker needs no unlocked teleport");
+Check(TravelPolicy.Decide(397,401,true,true,false)==TravelDecision.Teleport,"Different-zone unlocked teleport");
+Check(TravelPolicy.Decide(397,401,true,false,false)==TravelDecision.Locked,"Locked teleport denied");
+Check(TravelPolicy.Decide(397,401,true,true,true)==TravelDecision.Busy,"Busy or pending teleport denied");
+Check(TravelPolicy.Decide(397,401,false,true,false)==TravelDecision.NotReady,"Logged-out state denied");
+Check(TravelPolicy.Decide(397,0,true,true,false)==TravelDecision.NotReady,"Missing destination denied");
+Check(!BillState.FromGame(true,true,255,255,false,18).Taken,"Invalid bill IDs cannot leak into another tier");
+Check(!BillState.FromGame(true,true,2,255,false,18).HasNewSet,"Invalid available ID is unknown, not a new bill");
+var routePoints=new[]{new Vector2(1,0),new Vector2(30,0),new Vector2(2,0),new Vector2(2,0)};
+var filtered=RoutePlanner.Order(new[]{0,1,2,3},i=>i==0,i=>(Vector2?)routePoints[i],new[]{new Vector2(29,0)});
+Check(filtered.Order.SequenceEqual(new[]{1,2,3,0}),"Route begins at player anchor and moves completed target to end");
+var unknown=RoutePlanner.Order(new[]{0,1,2},_=>false,i=>i==1?null:(Vector2?)routePoints[i],new[]{Vector2.Zero});
+Check(unknown.Order.SequenceEqual(new[]{0,2,1}),"Unknown positions do not distort known route");
+Check(RouteSolver.Solve(Enumerable.Range(0,25).Select(i=>new Vector2(i,0)).ToArray(),new[]{Vector2.Zero}).Order.Distinct().Count()==25,"Large route remains bounded and usable");
+try { RouteSolver.Solve(new[]{new Vector2(float.NaN,1)},new[]{Vector2.Zero}); Check(false,"Non-finite route accepted"); } catch(ArgumentException) { Check(true,"Non-finite route rejected"); }
+// Follow a daily route across zones without requesting any automatic teleport.
+MobHuntEntry Target(byte index,uint id,uint zone)=>new(){BillNumber=1,MobIndex=index,MobHuntId=id,TerritoryType=zone,NeededKills=1};
+var targetA=Target(0,3481,397);var targetB=Target(1,3479,397);var targetC=Target(2,3494,401);
+var ordered=new[]{targetA,targetB,targetC};var finished=new HashSet<uint>();var follow=new RouteSession();
+follow.Start(targetA,new byte[]{1});
+Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,418)==null && follow.Phase==RoutePhase.WaitingForZone,"No map flag in an unrelated zone before arrival");
+Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,397)==targetA,"First marker after arrival");
+Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,397)==null,"Do not rewrite map flag every tick");
+follow.RetryMarker();Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,397)==targetA,"Retry marker after map agent is temporarily unavailable");
+finished.Add(targetA.MobHuntId);
+Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,397)==targetB,"Advance automatically after required kills");
+finished.Add(targetB.MobHuntId);
+Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,397)==null && follow.Phase==RoutePhase.NextZone && follow.Suggested==targetC,"Offer next zone without automatic travel or out-of-zone marker");
+follow.Start(targetC,new byte[]{1});
+Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,397)==null,"Next-zone marker waits for arrival");
+Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,401)==targetC,"Continue marking after user-approved zone change");
+finished.Add(targetC.MobHuntId);follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,401);
+Check(follow.Phase==RoutePhase.Finished,"Route completion");
+follow.Start(targetA,new byte[]{1});follow.Tick(new[]{targetB,targetC},_=>false,_=>true,397);
+Check(follow.Phase==RoutePhase.Changed,"Stop on replaced or discarded contract");
+follow.Stop();Check(follow.Tick(ordered,_=>false,_=>true,397)==null,"Stopped route never sets a marker");
 if(args.Length>0) {
  using var game=new GameData(args[0]);
  foreach(uint id in new uint[]{70,111,133,183,216,75}) { var a=game.Excel.GetSheet<Aetheryte>().GetRow(id); Console.WriteLine($"Aetheryte {id}: {a.PlaceName.Value.Name}, territory={a.Territory.RowId}, map={a.Territory.Value.Map.RowId}"); }

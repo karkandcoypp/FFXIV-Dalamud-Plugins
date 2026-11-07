@@ -9,7 +9,15 @@ public static class RouteSolver {
     public static (int[] Order, int Entry) Solve(Vector2[] points, Vector2[] entries) {
         int n = points.Length;
         if (n == 0) return ([], -1);
-        if (n > 18) throw new ArgumentOutOfRangeException(nameof(points));
+        if(points.Concat(entries).Any(p=>!float.IsFinite(p.X)||!float.IsFinite(p.Y))) throw new ArgumentException("Non-finite route coordinates");
+        if(n>18) {
+            var pending=Enumerable.Range(0,n).ToList();
+            int first=entries.Length==0?0:pending.MinBy(i=>entries.Min(e=>Vector2.Distance(e,points[i])));
+            int entry=entries.Length==0?-1:Enumerable.Range(0,entries.Length).MinBy(i=>Vector2.Distance(entries[i],points[first]));
+            var route=new List<int>{first}; pending.Remove(first);
+            while(pending.Count>0) { int next=pending.MinBy(i=>Vector2.Distance(points[route[^1]],points[i])); route.Add(next); pending.Remove(next); }
+            return (route.ToArray(),entry);
+        }
         int states = 1 << n;
         var costs = new float[states * n]; Array.Fill(costs, float.PositiveInfinity);
         var previous = new int[costs.Length]; Array.Fill(previous, -1);

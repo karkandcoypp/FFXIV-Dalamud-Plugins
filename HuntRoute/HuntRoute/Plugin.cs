@@ -13,7 +13,7 @@ namespace HuntRoute;
 
 public record Board(string Name, byte[] Daily, byte Weekly, uint Aetheryte, uint Territory, uint Map, Vector2 Position);
 public record EntryPoint(uint Id, string Name, Vector2 Position);
-public record ZoneRoute(string Name, List<MobHuntEntry> Mobs, EntryPoint? Start);
+public record ZoneRoute(string Name, List<MobHuntEntry> Mobs, EntryPoint? Start, bool StartsHere=false);
 
 public sealed class Plugin : IDalamudPlugin {
     public static readonly Board[] Boards = [
@@ -35,7 +35,12 @@ public sealed class Plugin : IDalamudPlugin {
     private long nextScan;
     private string signature = "";
     private ulong character;
+    private string routeSignature="";
+    private long nextTeleportAllowed;
+    internal uint CurrentTerritory;
+    internal uint CurrentMap;
     internal bool HideDone = true;
+    internal readonly RouteSession Session = new();
     public Plugin(IDalamudPluginInterface pi) {
         pi.Create<Service>();
         window = new(this); windows.AddWindow(window);
@@ -48,24 +53,32 @@ public sealed class Plugin : IDalamudPlugin {
     internal void Refresh() { nextScan = 0; signature = ""; }
     private unsafe void Update(IFramework _) {
         if (!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId == 0) {
-            Ready = false; character = 0; signature = ""; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear(); Elite.Selected=null; return;
+            Ready = false; character = 0; signature = ""; routeSignature=""; CurrentTerritory=0; CurrentMap=0; nextTeleportAllowed=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear(); Elite.Selected=null; Session.Stop(); return;
         }
+        if(Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51)) return;
         if (Environment.TickCount64 < nextScan) return; nextScan = Environment.TickCount64 + 1000;
         try {
-            if (character != Service.Player.ContentId) { character = Service.Player.ContentId; signature = ""; }
+            if (character != Service.Player.ContentId) { character = Service.Player.ContentId; signature = ""; routeSignature=""; nextTeleportAllowed=0; Elite.Selected=null; Session.Stop(); }
             var hunt = MobHunt.Instance(); if (hunt == null) { Ready=false; return; }
             for(byte bill=0;bill<22;bill++) for(byte mob=0;mob<5;mob++) KillCounts[(bill,mob)]=hunt->GetKillCount(bill,mob);
             string current = hunt->ObtainedFlags + ":" + string.Join(",", Enumerable.Range(0,22).Select(i => hunt->ObtainedMarkId[i])) + ":" + string.Join(",", Service.Aetherytes.Select(a=>a.AetheryteId).Order());
-            if (current != signature) { ReadBills(); BuildRoutes(); signature = current; }
+            if (current != signature) {
+                ReadBills(); signature = current; routeSignature="";
+                if(Elite.Selected is {} old) Elite.Selected=Mobs.FirstOrDefault(m=>m.BillNumber==old.BillNumber && m.MobIndex==old.MobIndex && m.MobHuntId==old.MobHuntId);
+            }
+            CurrentTerritory=Service.ClientState.TerritoryType; CurrentMap=Service.ClientState.MapId;
+            string routeKey=current+":"+CurrentTerritory+":"+CurrentMap+":"+string.Join(",",Mobs.Where(Done).Select(m=>$"{m.BillNumber}-{m.MobIndex}"));
+            if(routeSignature!=routeKey) { BuildRoutes(); routeSignature=routeKey; }
             var entries=Mobs.ToLookup(m=>m.BillNumber);
             var snapshots=new Dictionary<byte,BillState>();
             for(byte bill=0;bill<22;bill++) {
                 bool obtained=(hunt->ObtainedFlags & (1<<bill))!=0;
                 bool complete=entries[bill].Any() && entries[bill].All(Done);
-                snapshots[bill]=new(hunt->IsMarkBillUnlocked(bill),obtained,hunt->ObtainedMarkId[bill],hunt->AvailableMarkId[bill],complete);
+                var type=Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(bill);
+                snapshots[bill]=BillState.FromGame(hunt->IsMarkBillUnlocked(bill),obtained,hunt->ObtainedMarkId[bill],hunt->AvailableMarkId[bill],complete,type.OrderAmount);
             }
             BillStates=snapshots;
-            Ready = true; Error = null;
+            Ready = true; Error = null; AdvanceRoute();
         } catch (Exception e) { Ready = false; Error = e.Message; nextScan=Environment.TickCount64+10000; Service.PluginLog.Error(e, "Reading hunt bills"); }
     }
     private unsafe void ReadBills() {
@@ -74,8 +87,11 @@ public sealed class Plugin : IDalamudPlugin {
         for (byte bill = 0; bill < 22; bill++) {
             if ((hunt->ObtainedFlags & (1 << bill)) == 0 || hunt->ObtainedMarkId[bill] == 0) continue;
             var type = Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(bill);
+            if(hunt->ObtainedMarkId[bill]>type.OrderAmount) continue;
             uint row = type.OrderStart.RowId + hunt->ObtainedMarkId[bill] - 1u;
-            foreach (var order in orders[row]) {
+            if(!orders.TryGetRow(row,out var orderRows)) continue;
+            foreach (var order in orderRows) {
+                if(order.Target.RowId==0 || order.NeededKills==0 || order.SubrowId>=5) continue;
                 var target = order.Target.Value; var map = target.Map.Value;
                 result.Add(new MobHuntEntry { Name = target.Name.Value.Singular.ToString(), TerritoryName = map.PlaceName.Value.Name.ToString(),
                     ExpansionName = map.TerritoryType.Value.ExVersion.Value.Name.ToString(), ExpansionId = map.TerritoryType.Value.ExVersion.RowId,
@@ -89,10 +105,11 @@ public sealed class Plugin : IDalamudPlugin {
         var map = Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(mapId);
         var unlocked = Service.Aetherytes.Select(a => a.AetheryteId).ToHashSet();
         var result = new List<EntryPoint>();
-        foreach (var marker in Service.DataManager.GetSubrowExcelSheet<MapMarker>()[map.MapMarkerRange]) {
+        if(!Service.DataManager.GetSubrowExcelSheet<MapMarker>().TryGetRow(map.MapMarkerRange,out var markers)) return result;
+        foreach (var marker in markers) {
             if (marker.DataType != 3 || !unlocked.Contains(marker.DataKey.RowId)) continue;
-            var a = Service.DataManager.GetExcelSheet<Aetheryte>().GetRow(marker.DataKey.RowId);
-            if (a.IsAetheryte && a.Territory.RowId == territory) result.Add(new(a.RowId, a.PlaceName.Value.Name.ToString(), Location.ConvertPixelPositionToMapCoordinate(marker.X, marker.Y, map.SizeFactor)));
+            if(!Service.DataManager.GetExcelSheet<Aetheryte>().TryGetRow(marker.DataKey.RowId,out var a)) continue;
+            if (a.IsAetheryte && a.Territory.RowId == territory) result.Add(new(a.RowId, a.PlaceName.Value.Name.ToString(), MapCoordinates.FromTexturePixel(new Vector2(marker.X,marker.Y),map)));
         }
         // Hinterlands can only be entered via Idyllshire; do not fabricate an in-zone distance.
         return result;
@@ -100,28 +117,61 @@ public sealed class Plugin : IDalamudPlugin {
     private void BuildRoutes() {
         var result = new List<ZoneRoute>();
         foreach (var group in Mobs.GroupBy(m => (m.TerritoryType, m.MapId)).OrderBy(g=>g.Key.TerritoryType)) {
-            var known = group.Where(m => !m.IsEliteMark && Location.Database.ContainsKey(m.MobHuntId)).OrderBy(m=>m.MobHuntId).ThenBy(m=>m.BillNumber).ToList();
-            var entries = Entries(group.Key.MapId, group.Key.TerritoryType);
-            var (order, start) = RouteSolver.Solve(known.Select(m=>Location.Database[m.MobHuntId].Coordinate).ToArray(), entries.Select(e=>e.Position).ToArray());
-            result.Add(new(group.First().TerritoryName ?? "Unknown", order.Select(i=>known[i]).Concat(group.Except(known)).ToList(), start < 0 ? null : entries[start]));
+            var targets=group.OrderBy(m=>m.MobHuntId).ThenBy(m=>m.BillNumber).ToList();
+            var entries=Entries(group.Key.MapId,group.Key.TerritoryType);
+            bool here=CurrentTerritory==group.Key.TerritoryType;
+            Vector2[] origins=entries.Select(e=>e.Position).ToArray();
+            if(here && CurrentMap==group.Key.MapId && Service.ObjectTable.LocalPlayer is {} player) {
+                var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(group.Key.MapId);
+                origins=[Dalamud.Utility.MapUtil.WorldToMap(new Vector2(player.Position.X,player.Position.Z),map)];
+            }
+            var (order,start)=RoutePlanner.Order(targets,Done,m=>!m.IsEliteMark && Location.Database.TryGetValue(m.MobHuntId,out var p)?p.Coordinate:null,origins);
+            EntryPoint? entry=!here && start>=0?entries[start]:null;
+            if(!here && entry==null && group.Key.TerritoryType==399 && Service.Aetherytes.Any(a=>a.AetheryteId==75))
+                entry=new(75,"Idyllshire (переход в зону)",Vector2.Zero);
+            result.Add(new(group.First().TerritoryName ?? "Unknown",order.ToList(),entry,here));
         }
         Routes = result;
     }
-    internal int Kills(MobHuntEntry m) => KillCounts.GetValueOrDefault((m.BillNumber,m.MobIndex));
+    internal int Kills(MobHuntEntry m) => Math.Clamp(KillCounts.GetValueOrDefault((m.BillNumber,m.MobIndex)),0,(int)Math.Min(m.NeededKills,(uint)int.MaxValue));
     internal bool Done(MobHuntEntry m) => Kills(m) >= m.NeededKills;
-    internal unsafe void Teleport(uint id) {
-        if (!Ready || !Service.Aetherytes.Any(a=>a.AetheryteId==id)) { Service.Chat.PrintError("Эфирит не открыт."); return; }
-        if (Service.Condition[ConditionFlag.InCombat] || Service.Condition[ConditionFlag.BetweenAreas] || Service.Condition[ConditionFlag.BetweenAreas51] || Service.ObjectTable.LocalPlayer?.IsCasting == true) { Service.Chat.PrintError("Телепорт сейчас недоступен."); return; }
-        var telepo = Telepo.Instance();
-        if (telepo == null || !telepo->Teleport(id, 0)) Service.Chat.PrintError("Игра отклонила телепорт.");
+    internal unsafe bool Teleport(uint id) {
+        if(!Service.DataManager.GetExcelSheet<Aetheryte>().TryGetRow(id,out var destination) || !destination.IsAetheryte) {
+            Service.Chat.PrintError("Неизвестный эфирит."); return false;
+        }
+        bool busy=Service.Condition.Any(ConditionFlag.InCombat,ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,
+            ConditionFlag.Unconscious,ConditionFlag.Occupied,ConditionFlag.OccupiedInEvent,ConditionFlag.OccupiedInQuestEvent,
+            ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.WatchingCutscene,ConditionFlag.Casting)
+            || Service.ObjectTable.LocalPlayer?.IsCasting==true || Environment.TickCount64<nextTeleportAllowed;
+        var decision=TravelPolicy.Decide(Service.ClientState.TerritoryType,destination.Territory.RowId,
+            Ready && Service.ClientState.IsLoggedIn,Service.Aetherytes.Any(a=>a.AetheryteId==id),busy);
+        if(decision==TravelDecision.AlreadyThere) return true;
+        if(decision!=TravelDecision.Teleport) {
+            Service.Chat.PrintError(decision==TravelDecision.Locked?"Эфирит не открыт.":decision==TravelDecision.NotReady?"Данные персонажа ещё не готовы.":"Телепорт сейчас недоступен или уже запрошен.");
+            return false;
+        }
+        var telepo=Telepo.Instance();
+        if(telepo==null || telepo->ActiveTeleportRequest || !telepo->Teleport(id,0)) { Service.Chat.PrintError("Игра отклонила телепорт или уже выполняет его."); return false; }
+        nextTeleportAllowed=Environment.TickCount64+3000;
+        return true;
     }
     internal void Travel(MobHuntEntry m) {
-        if (m.IsEliteMark || !Location.Database.TryGetValue(m.MobHuntId, out var pos)) return;
-        var entry = Entries(m.MapId,m.TerritoryType).MinBy(a=>Vector2.DistanceSquared(a.Position,pos.Coordinate));
-        if (entry != null) Teleport(entry.Id);
-        else if (m.TerritoryType == 399) Teleport(75);
-        else Service.Chat.PrintError("Нет открытого эфирита на этой карте.");
-        Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
+        if(!Ready || !Service.ClientState.IsLoggedIn || m.IsEliteMark || !Location.Database.TryGetValue(m.MobHuntId,out var pos)) return;
+        if(Done(m)) { Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name); return; }
+        if(Service.ClientState.TerritoryType!=m.TerritoryType) {
+            var entry=Entries(m.MapId,m.TerritoryType).MinBy(a=>Vector2.DistanceSquared(a.Position,pos.Coordinate));
+            if(entry!=null) { if(!Teleport(entry.Id)) return; }
+            else if(m.TerritoryType==399) { if(!Teleport(75)) return; }
+            else { Service.Chat.PrintError("Нет открытого эфирита на этой карте."); return; }
+        }
+        var board=Boards.FirstOrDefault(b=>b.Daily.Contains(m.BillNumber));
+        if(board!=null) { Session.Start(m,board.Daily); AdvanceRoute(); }
+        else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
+    }
+    internal void AdvanceRoute() {
+        if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent)) return;
+        var mark=Session.Tick(Routes.SelectMany(r=>r.Mobs).ToArray(),Done,m=>Location.Database.ContainsKey(m.MobHuntId),Service.ClientState.TerritoryType);
+        if(mark!=null && !Location.SetMapFlag(mark.TerritoryType,mark.MapId,mark.MobHuntId)) Session.RetryMarker();
     }
     internal ContractProgress CollectionProgress(Board b,bool weekly) =>
         Ready ? ContractProgress.Summarize(weekly?new[]{b.Weekly}:b.Daily,BillStates) : default;
