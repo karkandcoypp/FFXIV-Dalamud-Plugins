@@ -8,22 +8,32 @@ public sealed class RouteSession {
     public MobHuntEntry? Target { get; private set; }
     public MobHuntEntry? Suggested { get; private set; }
     public uint RunId { get; private set; }
+    private int missingArrivalSnapshots;
     private List<uint> zoneOrder=[];
     private HashSet<byte> tiers=[];
     private (byte Bill,byte Mob,uint Id)? marked;
     private static (byte,byte,uint) Key(MobHuntEntry m) => (m.BillNumber,m.MobIndex,m.MobHuntId);
     public void Start(MobHuntEntry target,IEnumerable<byte> dailyTiers) {
-        RunId++; zoneOrder.Clear(); tiers=dailyTiers.ToHashSet(); Target=target; Suggested=null; marked=null; Phase=RoutePhase.WaitingForZone;
+        RunId++; missingArrivalSnapshots=0; zoneOrder.Clear(); tiers=dailyTiers.ToHashSet(); Target=target; Suggested=null; marked=null; Phase=RoutePhase.WaitingForZone;
+    }
+    public void ZoneTransition() {
+        if(Phase is RoutePhase.Following or RoutePhase.WaitingForZone) {
+            Phase=RoutePhase.WaitingForZone; missingArrivalSnapshots=0; marked=null;
+        }
     }
     public void RetryMarker() => marked=null;
-    public void Stop() { Phase=RoutePhase.Idle; Target=null; Suggested=null; marked=null; tiers.Clear(); zoneOrder.Clear(); }
+    public void Stop() { Phase=RoutePhase.Idle; Target=null; Suggested=null; marked=null; missingArrivalSnapshots=0; tiers.Clear(); zoneOrder.Clear(); }
     public MobHuntEntry? Tick(IReadOnlyList<MobHuntEntry> ordered,System.Func<MobHuntEntry,bool> done,System.Func<MobHuntEntry,bool> hasPosition,uint territory) {
         if(Phase is RoutePhase.Idle or RoutePhase.Finished or RoutePhase.Changed || Target==null) return null;
+        // Do not interpret transient pre-arrival bill data as a discarded contract.
+        if(territory!=Target.TerritoryType) { Phase=RoutePhase.WaitingForZone; missingArrivalSnapshots=0; return null; }
         var active=ordered.FirstOrDefault(m=>Key(m)==Key(Target));
-        // Completed bill flags can disappear while the retained kill counts still prove completion.
-        if(active==null && !done(Target)) { Phase=RoutePhase.Changed; Suggested=null; return null; }
+        if(active==null && !done(Target)) {
+            if(Phase==RoutePhase.WaitingForZone && ++missingArrivalSnapshots<=3) return null;
+            Phase=RoutePhase.Changed; Suggested=null; return null;
+        }
+        missingArrivalSnapshots=0;
         if(active!=null) Target=active;
-        if(territory!=Target.TerritoryType) { Phase=RoutePhase.WaitingForZone; return null; }
         var candidates=ordered.Where(m=>!m.IsEliteMark && tiers.Contains(m.BillNumber) && hasPosition(m)).ToList();
         foreach(uint zone in candidates.Select(m=>m.TerritoryType).Distinct()) if(!zoneOrder.Contains(zone)) zoneOrder.Add(zone);
         if(!zoneOrder.Contains(Target.TerritoryType)) {

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Action=System.Action;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Dalamud.Plugin.Services;
@@ -89,20 +90,54 @@ class Program {
   Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?Enumerable.Empty<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>().GetEnumerator():throw new Exception(m.Name));
   Service.Chat=Proxy<IChatGui>((_,_)=>{ errors++; return null; });
   var teleport=typeof(Plugin).GetMethod("Teleport",BindingFlags.Instance|BindingFlags.NonPublic)!;
-  if(!(bool)teleport.Invoke(plugin,new object[]{71u})! || errors!=0) throw new Exception("Actual same-zone teleport wrapper did not bypass the native teleport"); checks++;
+  if(!(bool)teleport.Invoke(plugin,new object[]{71u,false})! || errors!=0) throw new Exception("Actual same-zone teleport wrapper did not bypass the native teleport"); checks++;
   busy=true;
-  if(!(bool)teleport.Invoke(plugin,new object[]{71u})! || errors!=0) throw new Exception("Same-zone request failed while busy"); checks++;
+  if(!(bool)teleport.Invoke(plugin,new object[]{71u,false})! || errors!=0) throw new Exception("Same-zone request failed while busy"); checks++;
   currentTerritory=401;
-  if((bool)teleport.Invoke(plugin,new object[]{71u})! || errors!=1) throw new Exception("Locked out-of-zone teleport was not rejected"); checks++;
+  if((bool)teleport.Invoke(plugin,new object[]{71u,false})! || errors!=1) throw new Exception("Locked out-of-zone teleport was not rejected"); checks++;
   var unlocked=Proxy<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>((m,_)=>m.Name=="get_AetheryteId"?71u:throw new Exception(m.Name));
   Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?new[]{unlocked}.AsEnumerable().GetEnumerator():throw new Exception(m.Name));
-  if((bool)teleport.Invoke(plugin,new object[]{71u})! || errors!=2) throw new Exception("Busy unlocked teleport was not rejected before native call"); checks++;
+  if((bool)teleport.Invoke(plugin,new object[]{71u,false})! || errors!=2) throw new Exception("Busy unlocked teleport was not rejected before native call"); checks++;
   typeof(Plugin).GetField("Ready",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,false);
-  if((bool)teleport.Invoke(plugin,new object[]{71u})! || errors!=3) throw new Exception("Unready teleport was not rejected"); checks++;
+  if((bool)teleport.Invoke(plugin,new object[]{71u,false})! || errors!=3) throw new Exception("Unready teleport was not rejected"); checks++;
   Service.GameGui=Proxy<IGameGui>((m,a)=> { if(m.Name!="OpenMapWithMapLink") throw new Exception(m.Name); captured=(MapLinkPayload)a![0]!; return m.ReturnType==typeof(bool)?true:null; });
   var highland=game.Excel.GetSheet<TerritoryType>().GetRow(397).Map.Value;
   Location.CreateMapMarker(397,highland.RowId,3481,"Archaeornis");
   if(captured==null || Vector2.Distance(MapUtil.WorldToMap(new(captured.RawX/1000f,captured.RawY/1000f),highland),Location.Database[3481].Coordinate)>.002f) throw new Exception("Actual map marker wrapper uses wrong coordinates"); checks++;
+  // The real update path must retain a pending next-zone target while the local actor is unavailable.
+  var session=new RouteSession();var arrivalTarget=new MobHuntEntry{BillNumber=1,MobIndex=0,MobHuntId=3481,TerritoryType=397,NeededKills=1};
+  session.Start(arrivalTarget,new byte[]{1});
+  typeof(Plugin).GetField("Session",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,session);
+  Service.Condition=Proxy<ICondition>((_,_)=>true);
+  Service.ClientState=Proxy<IClientState>((m,_)=>m.Name=="get_IsLoggedIn"?false:throw new Exception(m.Name));
+  var update=typeof(Plugin).GetMethod("Update",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  update.Invoke(plugin,new object?[]{null});
+  if(session.Target!=arrivalTarget || session.Phase!=RoutePhase.WaitingForZone) throw new Exception("Route lost on active loading frame");checks++;
+  Service.Condition=Proxy<ICondition>((_,_)=>false);
+  update.Invoke(plugin,new object?[]{null});
+  if(session.Target!=arrivalTarget || session.Phase!=RoutePhase.WaitingForZone) throw new Exception("Route lost when actor/logged-in state temporarily disappeared");checks++;
+  Service.ClientState=Proxy<IClientState>((m,_)=>m.Name=="get_IsLoggedIn"?true:throw new Exception(m.Name));
+  Service.Player=Proxy<IPlayerState>((m,_)=>m.Name=="get_IsLoaded"?false:throw new Exception(m.Name));
+  update.Invoke(plugin,new object?[]{null});
+  if(session.Target!=arrivalTarget) throw new Exception("Route lost when PlayerState was not loaded");checks++;
+  var addon=game.Excel.GetSheet<Addon>();
+  if(addon.GetRow(576).Text.ToString()!="Yes" || addon.GetRow(577).Text.ToString()!="No") throw new Exception("Native button label IDs are incorrect");checks++;
+  // Exercise the real native-dialog response bridge without allocating an addon or casting a teleport.
+  bool validAnswer=true;int nativeAccepted=0,scheduled=0;Action? deferred=null;
+  Service.Framework=Proxy<IFramework>((m,args)=> { if(m.Name!="RunOnTick") throw new Exception(m.Name);scheduled++;deferred=(Action)args![0]!;return Task.CompletedTask; });
+  var dialogType=typeof(Plugin).Assembly.GetType("HuntRoute.NativeDialogService")!;
+  var bridge=RuntimeHelpers.GetUninitializedObject(dialogType);var confirmationQueue=new ConfirmationQueue();
+  dialogType.GetField("queue",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(bridge,confirmationQueue);
+  var nativeRequest=new ConfirmationRequest("next","bridge-stale","Continue?",()=>validAnswer,()=>true,()=>{nativeAccepted++;return true;});
+  confirmationQueue.Offer(nativeRequest);confirmationQueue.Activate(true);
+  var answer=dialogType.GetMethod("Answered",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  answer.Invoke(bridge,new object[]{nativeRequest.Key,true});
+  if(scheduled!=1||nativeAccepted!=0||deferred==null) throw new Exception("Native Yes must defer until after the UI callback unwinds");checks++;
+  validAnswer=false;deferred();if(nativeAccepted!=0) throw new Exception("Changed route executed stale Yes");checks++;
+  validAnswer=true;nativeRequest=nativeRequest with {Key="bridge-current"};confirmationQueue.Offer(nativeRequest);confirmationQueue.Activate(true);
+  answer.Invoke(bridge,new object[]{nativeRequest.Key,true});answer.Invoke(bridge,new object[]{nativeRequest.Key,true});
+  if(scheduled!=2) throw new Exception("Duplicate native response queued duplicate teleport");
+  deferred!();if(nativeAccepted!=1) throw new Exception("Native Yes did not execute exactly once");checks++;
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
  }
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> handler) where T:class {

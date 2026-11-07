@@ -17,7 +17,7 @@ public static class RoutePlanner {
 }
 public enum TravelDecision { Teleport,AlreadyThere,NotReady,Locked,Busy }
 public static class TravelPolicy {
-    public static TravelDecision Decide(uint current,uint destination,bool ready,bool unlocked,bool busy) =>
-        !ready || destination==0 ? TravelDecision.NotReady : current==destination ? TravelDecision.AlreadyThere
+    public static TravelDecision Decide(uint current,uint destination,bool ready,bool unlocked,bool busy,bool allowSameZone=false) =>
+        !ready || destination==0 ? TravelDecision.NotReady : current==destination && !allowSameZone ? TravelDecision.AlreadyThere
         : !unlocked ? TravelDecision.Locked : busy ? TravelDecision.Busy : TravelDecision.Teleport;
 }

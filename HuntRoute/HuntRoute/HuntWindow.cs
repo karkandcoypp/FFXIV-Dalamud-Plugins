@@ -19,7 +19,7 @@ public sealed class HuntWindow : Window {
     public override void Draw() {
         float line=ImGui.GetTextLineHeight();
         ImGui.TextColored(HuntTheme.Accent,"Hunt Route"); ImGui.SameLine(); ImGui.TextDisabled("/  Охота по контрактам");
-        if(!plugin.Ready) { ImGui.TextWrapped(plugin.Error ?? "Войдите в игру, чтобы увидеть контракты."); return; }
+        if(!plugin.Ready) { ImGui.TextWrapped(plugin.Error ?? (plugin.Session.Phase!=RoutePhase.Idle?"Загрузка зоны. Сопровождение продолжится автоматически.":"Войдите в игру, чтобы увидеть контракты.")); return; }
         if(ImGui.BeginTabBar("expansions",ImGuiTabBarFlags.FittingPolicyScroll)) {
             for(int i=0;i<Plugin.Boards.Length;i++) if(ImGui.BeginTabItem(Plugin.Boards[i].Name)) {
                 if(expansion!=i) { expansion=i; selectedZone=""; } ImGui.EndTabItem();

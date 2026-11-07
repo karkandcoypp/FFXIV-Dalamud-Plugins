@@ -85,7 +85,7 @@ Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,397)==null,"
 Check(follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,401)==targetC,"Continue marking after user-approved zone change");
 finished.Add(targetC.MobHuntId);follow.Tick(ordered,m=>finished.Contains(m.MobHuntId),_=>true,401);
 Check(follow.Phase==RoutePhase.Finished,"Route completion");
-follow.Start(targetA,new byte[]{1});follow.Tick(new[]{targetB,targetC},_=>false,_=>true,397);
+follow.Start(targetA,new byte[]{1});follow.Tick(ordered,_=>false,_=>true,397);follow.Tick(new[]{targetB,targetC},_=>false,_=>true,397);
 Check(follow.Phase==RoutePhase.Changed,"Stop on replaced or discarded contract");
 follow.Stop();Check(follow.Tick(ordered,_=>false,_=>true,397)==null,"Stopped route never sets a marker");
 // Completion must still propose the next zone if the game removed the completed bill from the target list.
@@ -101,6 +101,56 @@ Check(!notice.ShouldOpen(completion),"Unchanged next-zone state does not repeat 
 completion.Start(targetA,new byte[]{1});completion.Tick(ordered,m=>m.TerritoryType==397,_=>true,397);
 Check(notice.ShouldOpen(completion),"A new route run can offer the same zone again");
 completion.Stop();Check(!notice.ShouldOpen(completion),"Do not offer a teleport after route stop");
+// A single Start (the next-zone button) must survive loading and resume the whole route on arrival.
+var transit=new RouteSession();transit.Start(targetC,new byte[]{1});uint transitRun=transit.RunId;
+transit.ZoneTransition();
+Check(transit.Tick(System.Array.Empty<MobHuntEntry>(),_=>false,_=>true,397)==null && transit.Phase==RoutePhase.WaitingForZone,"No cancellation or flag from empty source-zone snapshot during teleport");
+Check(transit.Tick(System.Array.Empty<MobHuntEntry>(),_=>false,_=>true,401)==null && transit.Phase==RoutePhase.WaitingForZone,"Wait for bill data immediately after arrival");
+Check(transit.Tick(ordered,_=>false,_=>true,401)==targetC && transit.Phase==RoutePhase.Following,"First correct target is flagged without a second Start");
+Check(transit.RunId==transitRun,"Arrival must not require restarting the route");
+transit.RetryMarker();Check(transit.Tick(ordered,_=>false,_=>true,401)==targetC,"Retry first marker when map agent was not ready");
+Check(transit.Tick(ordered,_=>false,_=>true,401)==null,"Do not repeat first marker after success");
+var targetD=Target(3,3495,401);
+Check(transit.Tick(ordered.Append(targetD).ToArray(),m=>m==targetC,_=>true,401)==targetD,"Continue to the second target of the new zone automatically");
+transit.Start(targetC,new byte[]{1});
+for(int i=0;i<4;i++) transit.Tick(System.Array.Empty<MobHuntEntry>(),_=>false,_=>true,401);
+Check(transit.Phase==RoutePhase.Changed,"Arrival grace period cannot conceal a permanently discarded contract");
+transit.Stop();Check(transit.Phase==RoutePhase.Idle && transit.Target==null,"Real logout or stop clears the route");
+// Long-flight shortcuts are rare suggestions, never automatic same-zone casts.
+Check(TravelPolicy.Decide(397,397,true,true,false,true)==TravelDecision.Teleport,"Explicit same-zone acceptance permits exactly the requested teleport");
+Check(TravelPolicy.Decide(397,397,true,true,true,true)==TravelDecision.Busy,"Explicit same-zone acceptance still respects busy state");
+Check(TravelPolicy.Decide(397,397,true,false,false,true)==TravelDecision.Locked,"Explicit same-zone acceptance cannot bypass unlocks");
+var cheap=new ShortcutCandidate(71,"Nearby aetheryte",new Vector2(1900,0),100);
+ShortcutOffer? Shortcut(Vector2 player,params ShortcutCandidate[] entries)=>ShortcutAdvisor.Evaluate(1,targetA,player,new Vector2(2000,0),entries);
+Check(Shortcut(Vector2.Zero,cheap) is {GilCost:100,FinalDistance:100},"Far target with nearby cheap aetheryte is offered");
+Check(Shortcut(new Vector2(1000,0),cheap)==null,"Do not offer short flights");
+Check(Shortcut(Vector2.Zero,cheap with {GilCost=201})==null,"Do not suggest expensive intra-zone teleports");
+Check(Shortcut(Vector2.Zero,cheap with {Position=new Vector2(1500,0)})==null,"Aetheryte must actually be close to the goal");
+Check(Shortcut(new Vector2(800,0),cheap with {Position=new Vector2(1700,0)})!=null,"Threshold requires 1200m direct flight and 900m saving");
+Check(Shortcut(Vector2.Zero)==null,"No unlocked candidate means no offer");
+Check(Shortcut(new Vector2(float.NaN,0),cheap)==null,"No shortcut during invalid-position frames");
+var shortcutNotice=new ShortcutNotice();var suggestedShortcut=Shortcut(Vector2.Zero,cheap)!;
+Check(shortcutNotice.ShouldOpen(suggestedShortcut)&&!shortcutNotice.ShouldOpen(suggestedShortcut),"Do not repeat shortcut offer after decline");
+Check(shortcutNotice.ShouldOpen(suggestedShortcut with {RunId=2}),"A new route can offer a shortcut anew");
+// Native UI requests serialize with other dialogs and execute an affirmative response once.
+var confirmations=new ConfirmationQueue();bool requestValid=true,requestReady=false;int accepted=0;
+var question=new ConfirmationRequest("next","next-1","Continue?",()=>requestValid,()=>requestReady,()=>{accepted++;return true;});
+confirmations.Offer(question);
+Check(confirmations.Activate(true)==null,"Busy character defers native confirmation");
+requestReady=true;Check(confirmations.Activate(false)==null,"An existing game dialog defers our dialog");
+Check(confirmations.Activate(true)==question,"Open native request once UI and character are ready");
+Check(confirmations.Resolve("unrelated-game-dialog",true)==null && confirmations.Active==question,"Never consume another dialog response");
+var approved=confirmations.Resolve(question.Key,true);Check(approved!=null && approved.Accept() && accepted==1,"Yes executes exactly one approved action");
+Check(confirmations.Resolve(question.Key,true)==null && accepted==1,"Duplicate native response cannot teleport twice");
+confirmations.Offer(question);Check(confirmations.Activate(true)==null,"Do not repeatedly reopen answered request");
+var declined=question with {Key="declined"};confirmations.Offer(declined);confirmations.Activate(true);
+Check(confirmations.Resolve(declined.Key,false)==null && accepted==1,"No/close does not teleport");
+var stale=question with {Key="stale"};confirmations.Offer(stale);confirmations.Activate(true);requestValid=false;
+Check(confirmations.Resolve(stale.Key,true)==null && accepted==1,"Changed route invalidates a previously displayed Yes");
+requestValid=true;confirmations.Offer(question with {Owner="shortcut",Key="shortcut-1"});confirmations.Offer(question with {Key="next-2"});
+Check(confirmations.Activate(true)?.Owner=="next","Next-zone transition has priority over shortcut");
+confirmations.Cancel("next");Check(confirmations.Activate(true)?.Owner=="shortcut","Cancelling one request does not remove another owner");
+confirmations.Clear();Check(confirmations.Active==null && confirmations.Activate(true)==null,"Plugin unload clears confirmation queue");
 if(args.Length>0) {
  using var game=new GameData(args[0]);
  foreach(uint id in new uint[]{70,111,133,183,216,75}) { var a=game.Excel.GetSheet<Aetheryte>().GetRow(id); Console.WriteLine($"Aetheryte {id}: {a.PlaceName.Value.Name}, territory={a.Territory.RowId}, map={a.Territory.Value.Map.RowId}"); }

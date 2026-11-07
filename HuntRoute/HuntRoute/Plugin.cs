@@ -33,6 +33,9 @@ public sealed class Plugin : IDalamudPlugin {
     private readonly HuntWindow window;
     internal readonly EliteWindow Elite;
     internal readonly NextZoneWindow NextZone;
+    internal readonly ShortcutWindow Shortcut;
+    internal readonly NativeDialogService NativeDialogs;
+    private bool wasLoading;
     private long nextScan;
     private string signature = "";
     private ulong character;
@@ -44,23 +47,38 @@ public sealed class Plugin : IDalamudPlugin {
     internal readonly RouteSession Session = new();
     public Plugin(IDalamudPluginInterface pi) {
         pi.Create<Service>();
+        NativeDialogs=new(pi);
         window = new(this); windows.AddWindow(window);
         Elite = new(this); windows.AddWindow(Elite);
-        NextZone=new(this); windows.AddWindow(NextZone);
+        NextZone=new(this);
+        Shortcut=new(this);
         Service.Commands.AddHandler("/huntroute", new CommandInfo((_, _) => window.Toggle()) { HelpMessage = "Hunt Route: маршруты охоты и сброс контрактов" });
         pi.UiBuilder.Draw += windows.Draw; pi.UiBuilder.Draw += Elite.DrawWorld; pi.UiBuilder.OpenMainUi += Open; pi.UiBuilder.OpenConfigUi += Open;
         Service.Framework.Update += Update;
+        Service.ClientState.Logout += OnLogout;
+        Service.ClientState.TerritoryChanged += OnTerritoryChanged;
     }
     private void Open() => window.IsOpen = true;
     internal void Refresh() { nextScan = 0; signature = ""; }
+    private void OnLogout(int type,int code) {
+        Ready=false; character=0; signature=""; routeSignature=""; nextScan=0; nextTeleportAllowed=0;
+        wasLoading=false; CurrentTerritory=0; CurrentMap=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear();
+        Elite.Selected=null; Session.Stop(); NextZone.Sync(); Shortcut.Sync();
+    }
+    private void OnTerritoryChanged(uint territory) {
+        nextScan=0; routeSignature=""; Session.ZoneTransition();
+    }
     private unsafe void Update(IFramework _) {
-        if (!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId == 0) {
-            Ready = false; character = 0; signature = ""; routeSignature=""; CurrentTerritory=0; CurrentMap=0; nextTeleportAllowed=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear(); Elite.Selected=null; Session.Stop(); NextZone.Sync(); return;
+        // Loading can temporarily clear LocalPlayer/ContentId. Only the logout event clears the route.
+        bool loading=Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51);
+        if(loading) { if(!wasLoading) Session.ZoneTransition(); wasLoading=true; return; }
+        if(wasLoading) { wasLoading=false;nextScan=0;routeSignature="";Session.ZoneTransition(); }
+        if(!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId==0) {
+            Ready=false; return;
         }
-        if(Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51)) return;
         if (Environment.TickCount64 < nextScan) return; nextScan = Environment.TickCount64 + 1000;
         try {
-            if (character != Service.Player.ContentId) { character = Service.Player.ContentId; signature = ""; routeSignature=""; nextTeleportAllowed=0; Elite.Selected=null; Session.Stop(); NextZone.Sync(); }
+            if (character != Service.Player.ContentId) { character = Service.Player.ContentId; signature = ""; routeSignature=""; nextTeleportAllowed=0; Elite.Selected=null; Session.Stop(); NextZone.Sync(); Shortcut.Sync(); }
             var hunt = MobHunt.Instance(); if (hunt == null) { Ready=false; return; }
             for(byte bill=0;bill<22;bill++) for(byte mob=0;mob<5;mob++) KillCounts[(bill,mob)]=hunt->GetKillCount(bill,mob);
             string current = hunt->ObtainedFlags + ":" + string.Join(",", Enumerable.Range(0,22).Select(i => hunt->ObtainedMarkId[i])) + ":" + string.Join(",", Service.Aetherytes.Select(a=>a.AetheryteId).Order());
@@ -80,7 +98,7 @@ public sealed class Plugin : IDalamudPlugin {
                 snapshots[bill]=BillState.FromGame(hunt->IsMarkBillUnlocked(bill),obtained,hunt->ObtainedMarkId[bill],hunt->AvailableMarkId[bill],complete,type.OrderAmount);
             }
             BillStates=snapshots;
-            Ready = true; Error = null; AdvanceRoute();
+            Ready = true; Error = null; AdvanceRoute(); NativeDialogs.Pump();
         } catch (Exception e) { Ready = false; Error = e.Message; nextScan=Environment.TickCount64+10000; Service.PluginLog.Error(e, "Reading hunt bills"); }
     }
     private unsafe void ReadBills() {
@@ -137,16 +155,16 @@ public sealed class Plugin : IDalamudPlugin {
     }
     internal int Kills(MobHuntEntry m) => Math.Clamp(KillCounts.GetValueOrDefault((m.BillNumber,m.MobIndex)),0,(int)Math.Min(m.NeededKills,(uint)int.MaxValue));
     internal bool Done(MobHuntEntry m) => Kills(m) >= m.NeededKills;
-    internal unsafe bool Teleport(uint id) {
-        if(!Service.DataManager.GetExcelSheet<Aetheryte>().TryGetRow(id,out var destination) || !destination.IsAetheryte) {
-            Service.Chat.PrintError("Неизвестный эфирит."); return false;
-        }
-        bool busy=Service.Condition.Any(ConditionFlag.InCombat,ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,
+    internal bool TravelBusy => Service.Condition.Any(ConditionFlag.InCombat,ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,
             ConditionFlag.Unconscious,ConditionFlag.Occupied,ConditionFlag.OccupiedInEvent,ConditionFlag.OccupiedInQuestEvent,
             ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.WatchingCutscene,ConditionFlag.Casting)
             || Service.ObjectTable.LocalPlayer?.IsCasting==true || Environment.TickCount64<nextTeleportAllowed;
+    internal unsafe bool Teleport(uint id,bool allowSameZone=false) {
+        if(!Service.DataManager.GetExcelSheet<Aetheryte>().TryGetRow(id,out var destination) || !destination.IsAetheryte) {
+            Service.Chat.PrintError("Неизвестный эфирит."); return false;
+        }
         var decision=TravelPolicy.Decide(Service.ClientState.TerritoryType,destination.Territory.RowId,
-            Ready && Service.ClientState.IsLoggedIn,Service.Aetherytes.Any(a=>a.AetheryteId==id),busy);
+            Ready && Service.ClientState.IsLoggedIn,Service.Aetherytes.Any(a=>a.AetheryteId==id),TravelBusy,allowSameZone);
         if(decision==TravelDecision.AlreadyThere) return true;
         if(decision!=TravelDecision.Teleport) {
             Service.Chat.PrintError(decision==TravelDecision.Locked?"Эфирит не открыт.":decision==TravelDecision.NotReady?"Данные персонажа ещё не готовы.":"Телепорт сейчас недоступен или уже запрошен.");
@@ -171,17 +189,43 @@ public sealed class Plugin : IDalamudPlugin {
         else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
     }
     internal void AdvanceRoute() {
-        if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent)) return;
+        if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.Casting) || Environment.TickCount64<nextTeleportAllowed) return;
         var mark=Session.Tick(Routes.SelectMany(r=>r.Mobs).ToArray(),Done,m=>Location.Database.ContainsKey(m.MobHuntId),Service.ClientState.TerritoryType);
         if(mark!=null && !Location.SetMapFlag(mark.TerritoryType,mark.MapId,mark.MobHuntId)) Session.RetryMarker();
-        NextZone.Sync();
+        NextZone.Sync(); Shortcut.Sync();
+    }
+    internal ShortcutOffer? FindShortcut() {
+        if(!Ready || Session.Phase!=RoutePhase.Following || Session.Target is not {} target || TravelBusy
+            || Service.ClientState.TerritoryType!=target.TerritoryType || Service.ClientState.MapId!=target.MapId
+            || Service.ObjectTable.LocalPlayer is not {} player || Done(target)
+            || !Location.Database.TryGetValue(target.MobHuntId,out var position)) return null;
+        var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(target.MapId);
+        var destination=MapCoordinates.ToWorld(position.Coordinate,map);
+        var here=new Vector2(player.Position.X,player.Position.Z);
+        if(Vector2.Distance(here,destination)<ShortcutAdvisor.MinimumDistance) return null;
+        var prices=Service.Aetherytes.GroupBy(a=>a.AetheryteId).ToDictionary(g=>g.Key,g=>g.Min(a=>a.GilCost));
+        var candidates=Entries(target.MapId,target.TerritoryType).Where(e=>prices.ContainsKey(e.Id))
+            .Select(e=>new ShortcutCandidate(e.Id,e.Name,MapCoordinates.ToWorld(e.Position,map),prices[e.Id]));
+        return ShortcutAdvisor.Evaluate(Session.RunId,target,here,destination,candidates);
+    }
+    internal bool AcceptShortcut(ShortcutOffer offered) {
+        var current=FindShortcut();
+        if(current==null || current.RunId!=offered.RunId || current.Bill!=offered.Bill || current.Mob!=offered.Mob
+            || current.TargetId!=offered.TargetId || current.Aetheryte!=offered.Aetheryte || current.GilCost>offered.GilCost) {
+            Service.Chat.PrintError("Предложение изменилось или больше не сокращает путь. Проверьте обновлённые данные."); return false;
+        }
+        if(!Teleport(current.Aetheryte,true)) return false;
+        Session.ZoneTransition();nextScan=0;routeSignature="";
+        return true;
     }
     internal ContractProgress CollectionProgress(Board b,bool weekly) =>
         Ready ? ContractProgress.Summarize(weekly?new[]{b.Weekly}:b.Daily,BillStates) : default;
     public void Dispose() {
+        Service.ClientState.Logout -= OnLogout;
+        Service.ClientState.TerritoryChanged -= OnTerritoryChanged;
         Service.Framework.Update -= Update; Service.PluginInterface.UiBuilder.Draw -= Elite.DrawWorld; Service.PluginInterface.UiBuilder.Draw -= windows.Draw;
         Service.PluginInterface.UiBuilder.OpenMainUi -= Open; Service.PluginInterface.UiBuilder.OpenConfigUi -= Open;
-        Service.Commands.RemoveHandler("/huntroute"); windows.RemoveAllWindows();
+        Service.Commands.RemoveHandler("/huntroute"); windows.RemoveAllWindows();NativeDialogs.Dispose();
     }
 }
 
