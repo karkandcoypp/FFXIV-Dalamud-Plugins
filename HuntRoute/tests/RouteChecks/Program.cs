@@ -116,6 +116,35 @@ transit.Start(targetC,new byte[]{1});
 for(int i=0;i<4;i++) transit.Tick(System.Array.Empty<MobHuntEntry>(),_=>false,_=>true,401);
 Check(transit.Phase==RoutePhase.Changed,"Arrival grace period cannot conceal a permanently discarded contract");
 transit.Stop();Check(transit.Phase==RoutePhase.Idle && transit.Target==null,"Real logout or stop clears the route");
+// Same-zone teleport preserves the active (not first) goal and continues through the whole zone.
+var intra=new RouteSession();var intraA=new MobHuntEntry{BillNumber=1,MobIndex=0,MobHuntId=10001,TerritoryType=397,NeededKills=2};
+var intraB=new MobHuntEntry{BillNumber=1,MobIndex=1,MobHuntId=10002,TerritoryType=397,NeededKills=3};var intraC=Target(2,10003,397);
+var intraNext=Target(3,10004,401);var intraOrdered=new[]{intraA,intraB,intraC,intraNext};
+var counts=new Dictionary<uint,int>();bool Killed(MobHuntEntry m)=>counts.GetValueOrDefault(m.MobHuntId)>=m.NeededKills;
+intra.Start(intraA,new byte[]{1});uint intraRun=intra.RunId;
+Check(intra.Tick(intraOrdered,Killed,_=>true,397)==intraA,"Initial zone target flagged");
+counts[intraA.MobHuntId]=1;
+Check(intra.Tick(intraOrdered,Killed,_=>true,397)==null && intra.Target==intraA,"Partial kills do not advance marker");
+counts[intraA.MobHuntId]=2;
+Check(intra.Tick(intraOrdered,Killed,_=>true,397)==intraB,"Full first pack advances to second mob");
+intra.ZoneTransition();
+Check(intra.Target==intraB && intra.RunId==intraRun && intra.Phase==RoutePhase.WaitingForZone,"Intra-zone teleport keeps second mob and route identity");
+Check(intra.Tick(Array.Empty<MobHuntEntry>(),Killed,_=>true,397)==null,"Wait for same-zone arrival snapshot");
+// Arrival changes distance order; the selected goal must still win.
+var arrivalOrder=new[]{intraC,intraB,intraA,intraNext};
+Check(intra.Tick(arrivalOrder,Killed,_=>true,397)==intraB && intra.Phase==RoutePhase.Following,"Same-zone arrival immediately reflags selected second mob without Start");
+intra.RetryMarker();
+Check(intra.Tick(arrivalOrder,Killed,_=>true,397)==intraB,"Unavailable map agent retries same target");
+Check(intra.Tick(arrivalOrder,Killed,_=>true,397)==null,"Successful arrival flag is not spammed");
+counts[intraB.MobHuntId]=2;
+Check(intra.Tick(arrivalOrder,Killed,_=>true,397)==null && intra.Target==intraB,"Second pack remains until all three kills");
+counts[intraB.MobHuntId]=3;
+Check(intra.Tick(new[]{intraC,intraNext},Killed,_=>true,397)==intraC,"Completed disappearing pack advances to remaining zone mob");
+intra.ZoneTransition();counts[intraC.MobHuntId]=1;
+Check(intra.Tick(new[]{intraNext},Killed,_=>true,397)==null && intra.Phase==RoutePhase.NextZone && intra.Suggested==intraNext,"Completion during arrival offers next zone without stale local flag");
+Check(intra.RunId==intraRun,"Whole same-zone sequence uses a single Start");
+var allLocal=new RouteSession();allLocal.Start(intraA,new byte[]{1});
+Check(allLocal.Tick(intraOrdered.Take(3).ToArray(),Killed,_=>true,397)==null && allLocal.Phase==RoutePhase.Finished,"All local packs done ends route without revisiting completed mobs");
 // Long-flight shortcuts are rare suggestions, never automatic same-zone casts.
 Check(TravelPolicy.Decide(397,397,true,true,false,true)==TravelDecision.Teleport,"Explicit same-zone acceptance permits exactly the requested teleport");
 Check(TravelPolicy.Decide(397,397,true,true,true,true)==TravelDecision.Busy,"Explicit same-zone acceptance still respects busy state");

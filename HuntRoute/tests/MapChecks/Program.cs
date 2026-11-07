@@ -107,6 +107,8 @@ class Program {
   // The real update path must retain a pending next-zone target while the local actor is unavailable.
   var session=new RouteSession();var arrivalTarget=new MobHuntEntry{BillNumber=1,MobIndex=0,MobHuntId=3481,TerritoryType=397,NeededKills=1};
   session.Start(arrivalTarget,new byte[]{1});
+  session.Tick(new[]{arrivalTarget},_=>false,_=>true,397);uint loadingRun=session.RunId;
+  if(session.Phase!=RoutePhase.Following) throw new Exception("Expected active following before intra-zone loading");checks++;
   typeof(Plugin).GetField("Session",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,session);
   Service.Condition=Proxy<ICondition>((_,_)=>true);
   Service.ClientState=Proxy<IClientState>((m,_)=>m.Name=="get_IsLoggedIn"?false:throw new Exception(m.Name));
@@ -120,6 +122,7 @@ class Program {
   Service.Player=Proxy<IPlayerState>((m,_)=>m.Name=="get_IsLoaded"?false:throw new Exception(m.Name));
   update.Invoke(plugin,new object?[]{null});
   if(session.Target!=arrivalTarget) throw new Exception("Route lost when PlayerState was not loaded");checks++;
+  if(session.RunId!=loadingRun || session.Tick(new[]{arrivalTarget},_=>false,_=>true,397)!=arrivalTarget || session.Phase!=RoutePhase.Following) throw new Exception("Actual update loading cycle did not reflag target without Start");checks++;
   var addon=game.Excel.GetSheet<Addon>();
   if(addon.GetRow(576).Text.ToString()!="Yes" || addon.GetRow(577).Text.ToString()!="No") throw new Exception("Native button label IDs are incorrect");checks++;
   // Exercise the real native-dialog response bridge without allocating an addon or casting a teleport.
