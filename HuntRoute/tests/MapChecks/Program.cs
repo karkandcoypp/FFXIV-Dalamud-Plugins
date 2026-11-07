@@ -51,6 +51,9 @@ class Program {
    if(!a.IsAetheryte || a.Territory.RowId!=board.Territory || map.RowId!=board.Map) throw new Exception($"Board destination mismatch {board.Name}");
    checks++;
   }
+  var endwalker=Plugin.Boards.Single(b=>b.Name=="Endwalker");
+  var sharlayan=game.Excel.GetSheet<Aetheryte>().Single(a=>a.IsAetheryte && a.PlaceName.Value.Name.ToString()=="Old Sharlayan");
+  if(endwalker.Aetheryte!=sharlayan.RowId || endwalker.Territory!=sharlayan.Territory.RowId || endwalker.Map!=sharlayan.Territory.Value.Map.RowId || Vector2.Distance(endwalker.Position,new(11.8f,13.2f))>.01f) throw new Exception("Endwalker board must route to Old Sharlayan");checks++;
   foreach(uint mapId in maps) {
    var map=game.Excel.GetSheet<Map>().GetRow(mapId);
    foreach(var pixel in new[]{Vector2.Zero,new Vector2(512,1548),new Vector2(1024,1024),new Vector2(2048,2048)}) {

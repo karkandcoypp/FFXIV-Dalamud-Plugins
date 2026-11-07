@@ -20,7 +20,7 @@ public sealed class Plugin : IDalamudPlugin {
         new("Heavensward", [1,2,3], 5, 70, 418, 218, new(12.7f,11.8f)),
         new("Stormblood", [6,7,8], 9, 111, 628, 370, new(10.4f,10.2f)),
         new("Shadowbringers", [10,11,12], 13, 133, 819, 497, new(9.5f,9.4f)),
-        new("Endwalker", [14,15,16], 17, 183, 963, 694, new(11.8f,13.2f)),
+        new("Endwalker", [14,15,16], 17, 182, 962, 693, new(11.8f,13.2f)),
         new("Dawntrail", [18,19,20], 21, 216, 1185, 855, new(13.8f,13.6f))
     ];
     internal List<MobHuntEntry> Mobs = [];

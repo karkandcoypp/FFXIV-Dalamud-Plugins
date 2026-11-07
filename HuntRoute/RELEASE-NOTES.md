@@ -1,9 +1,6 @@
-# Hunt Route 0.3.1
+# Hunt Route 0.3.2
 
-- Replace rigid 1200/900/300 m limits with estimated time savings including cast/loading and the final flight.
-- Require a direct flight of at least 30 s, saving at least 10 s and 20%, and price no higher than 200 gil.
-- Initial teleport allowance is 18 s. Completed plugin teleports update the session estimate to observed request-to-ready duration plus 3 s for remounting.
-- Show estimated flight time, time with teleport and saved seconds. Revalidate profitability and price on Yes.
-- Cover the Amh Araeng gnome case: 1094 m direct and 440 m from Mord Souq qualifies with the default allowance.
+- Fix the Endwalker hunt-board button: teleport to Old Sharlayan (aetheryte 182, territory 962, map 693), and mark the board at X:11.8 Y:13.2. Previously it combined Radz-at-Han IDs with Sharlayan coordinates.
+- Add a game-data regression check for the intended city, aetheryte, map and board coordinates.
 
-Estimates use horizontal distance and assumed 20 m/s flight speed; terrain, altitude and future loading delays can differ. Native dialog and actual teleport behavior require an in-game check.
+Build, data and route checks are local validation; actual in-game teleport requires verification after updating.
