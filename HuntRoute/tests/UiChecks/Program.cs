@@ -15,14 +15,14 @@ class Program {
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
   Set(plugin,"Config",new Settings()); Set(plugin,"Ready",true); Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>()); Set(plugin,"UnlockedBills",Enumerable.Range(0,22).Select(i=>(byte)i).ToHashSet());
   var mobs=new List<MobHuntEntry>{new(){Name="Archaeornis",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=0,MobHuntId=3481,NeededKills=3},new(){Name="Wooly Yak",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=1,MobHuntId=3479,NeededKills=2},new(){Name="Alteci",TerritoryName="Coerthas Western Highlands",BillNumber=5,MobIndex=0,MobHuntId=4350,NeededKills=1,IsEliteMark=true}};
-  Set(plugin,"Mobs",mobs); Set(plugin,"Routes",new List<ZoneRoute>{new("Coerthas Western Highlands",mobs,new(71,"Falcon's Nest",new(32,36)))});
+  Set(plugin,"Mobs",mobs); Set(plugin,"Routes",new List<ZoneRoute>{new("Coerthas Western Highlands",mobs,new(71,"Falcon's Nest",new(32,36))),new("The Sea of Clouds",mobs,new(73,"Camp Cloudtop",new(16,37))),new("The Dravanian Forelands",mobs,new(76,"Tailfeather",new(31,23)))});
   string directory=Path.GetFullPath(args[0]);Directory.CreateDirectory(directory);
-  foreach(var sample in new[]{(880,700,17f),(1180,800,20f)}) {
+  foreach(var sample in new[]{(780,600,17f),(880,740,17f),(1180,800,20f)}) {
    ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(sample.Item1,sample.Item2);io.DeltaTime=1f/60;
    io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",sample.Item3,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
    byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
    var window=new HuntWindow(plugin);
-   for(int frame=0;frame<3;frame++) { ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);ImGui.Begin("Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove);window.Draw();if(ImGui.GetScrollMaxX()>0)throw new Exception("Horizontal overflow");ImGui.End();ImGui.Render(); }
+   for(int frame=0;frame<3;frame++) { ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);window.PreDraw();ImGui.Begin("Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove);window.Draw();if(ImGui.GetScrollMaxX()>0)throw new Exception("Horizontal overflow");ImGui.End();window.PostDraw();ImGui.Render(); }
    File.WriteAllBytes(Path.Combine(directory,$"font-{sample.Item3}.rgba"),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
    var draw=ImGui.GetDrawData();var lists=new List<object>();
    for(int i=0;i<draw.CmdListsCount;i++) { var list=new ImDrawListPtr(draw.CmdLists[i]);var vertices=new List<double[]>();var indices=new List<ushort>();var commands=new List<object>();

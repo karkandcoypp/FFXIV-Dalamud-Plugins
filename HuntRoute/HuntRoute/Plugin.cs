@@ -137,14 +137,12 @@ public sealed class Plugin : IDalamudPlugin {
         else Service.Chat.PrintError("Нет открытого эфирита на этой карте.");
         Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
     }
-    internal string Status(Board b, bool weekly) {
-        if (!Ready) return "Нет данных";
-        var indices = weekly ? new[]{ b.Weekly } : b.Daily;
-        var unlocked = indices.Where(i=>UnlockedBills.Contains(i)).ToArray();
-        if (unlocked.Length == 0) return "Не открыто";
-        var period = ResetClock.Period(DateTimeOffset.UtcNow,weekly);
-        int collected = unlocked.Count(i=>Config.Collected.GetValueOrDefault($"{character}:{i}") >= period);
-        return collected == unlocked.Length ? "Контракты взяты" : $"Сброс состоялся · проверьте доску ({collected}/{unlocked.Length} взято)";
+    internal (int Collected,int Total) CollectionProgress(Board b,bool weekly) {
+        if(!Ready) return (0,0);
+        var indices=weekly?new[]{b.Weekly}:b.Daily;
+        var unlocked=indices.Where(i=>UnlockedBills.Contains(i)).ToArray();
+        var period=ResetClock.Period(DateTimeOffset.UtcNow,weekly);
+        return (unlocked.Count(i=>Config.Collected.GetValueOrDefault($"{character}:{i}")>=period),unlocked.Length);
     }
     public void Dispose() {
         Service.Framework.Update -= Update; Service.PluginInterface.UiBuilder.Draw -= Elite.DrawWorld; Service.PluginInterface.UiBuilder.Draw -= windows.Draw;

@@ -1,10 +1,9 @@
-# Hunt Route 0.1.0
+# Hunt Route 0.1.1
 
-- Daily hunt targets follow a shortest open route within each zone, starting at an unlocked aetheryte.
-- Click a daily target to teleport to its nearest unlocked aetheryte and open its map flag. No Teleporter dependency.
-- Expansion tabs, zone progress and completed-target filtering.
-- Daily and weekly reset countdowns, character-specific observed collection state and hunt-board teleport.
-- Weekly B-rank search map with 923 possible spawn points across 47 territories, map flags and native map batches.
-- World labels with distance for unfinished weekly targets that are actually loaded by the client.
+- Opaque dark window background and consistent colors, spacing and rounded panels.
+- Daily and weekly contract status cards with readable reset countdowns; details move to tooltips.
+- Zone navigation on the left, a single selected route on the right, replacing the long scrolling list.
+- Explicit target teleport/map buttons and a separate weekly B-rank search section.
+- The weekly search window uses the same opaque theme.
 
-Open with `/huntroute`. Routes use straight-line distance and do not model terrain or flight unlocks. Spawn points are possible locations, not proof that the target is present. In-game validation is still required.
+Open `/huntroute`. Acquisition status still reflects only pickups observed by the plugin. Routes, teleport behavior and spawn data remain unchanged. Layout validated through production ImGui rendering at three window sizes; actual FFXIV rendering remains to be checked.

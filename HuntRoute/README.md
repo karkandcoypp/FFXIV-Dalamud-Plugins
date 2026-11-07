@@ -6,7 +6,8 @@ Command: `/huntroute`.
 
 ## Behavior
 
-- Heavensward through Dawntrail expansion tabs and contract/zone progress.
+- Heavensward through Dawntrail expansion tabs, compact reset cards and contract/zone progress.
+- Opaque dark layout: choose a zone in the left pane and follow its route in the right pane. Daily target rows have explicit teleport/map buttons; weekly B-rank search is shown separately.
 - Exact shortest open path through known daily targets in a territory, choosing the entry aetheryte from the character's unlocked list. Route order stays stable as targets are completed.
 - Clicking a target teleports to the closest unlocked aetheryte for that target, using the game's normal gil cost, and opens a map flag. Hinterlands uses Idyllshire. Flight, inaccessible subregions and terrain are not modeled.
 - Daily reset: 15:00 UTC (18:00 Moscow); weekly: Tuesday 08:00 UTC (11:00 Moscow). Countdown uses the computer's UTC clock.

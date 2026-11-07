@@ -6,82 +6,140 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Lumina.Excel.Sheets;
 namespace HuntRoute;
+
 public sealed class HuntWindow : Window {
     private readonly Plugin plugin;
+    private int expansion;
+    private string selectedZone = "";
     public HuntWindow(Plugin plugin) : base("Hunt Route###HuntRoute") {
-        this.plugin=plugin; Size=new(930,740); SizeCondition=ImGuiCond.FirstUseEver;
+        this.plugin=plugin; Size=new(980,760); SizeCondition=ImGuiCond.FirstUseEver;
+        SizeConstraints=new WindowSizeConstraints { MinimumSize=new(780,600), MaximumSize=new(float.MaxValue,float.MaxValue) };
     }
-    private int expansion = 2;
-    private readonly Vector4 accent = new(.35f,.85f,.78f,1);
+    public override void PreDraw() => HuntTheme.Push();
+    public override void PostDraw() => HuntTheme.Pop();
     public override void Draw() {
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.12f,.22f,.25f,1));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(.17f,.35f,.38f,1));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(.22f,.45f,.46f,1));
-        ImGui.PushStyleColor(ImGuiCol.Tab, new Vector4(.11f,.16f,.20f,1));
-        ImGui.PushStyleColor(ImGuiCol.TabActive, new Vector4(.16f,.32f,.34f,1));
-        ImGui.PushStyleColor(ImGuiCol.TabHovered, new Vector4(.18f,.4f,.42f,1));
-        ImGui.PushStyleColor(ImGuiCol.PlotHistogram, accent);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 6);
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(10,8));
-        try {
-            ImGui.TextColored(accent,"HUNT ROUTE  /  ОХОТНИЧЬИ КОНТРАКТЫ");
-            var now = DateTimeOffset.UtcNow;
-            ImGui.TextDisabled($"Ежедневный сброс через {Countdown(ResetClock.Next(now,false)-now)}  ·  Еженедельный через {Countdown(ResetClock.Next(now,true)-now)}");
-            if (!plugin.Ready) { ImGui.TextWrapped(plugin.Error ?? "Войдите в игру — данные появятся автоматически."); return; }
-            if (ImGui.Button("Обновить")) plugin.Refresh();
-            ImGui.SameLine(); ImGui.Checkbox("Скрыть выполненные",ref plugin.HideDone);
-            ImGui.Separator();
-            if(ImGui.BeginTabBar("expansions")) {
-                for (int i=0;i<Plugin.Boards.Length;i++) {
-                    if(ImGui.BeginTabItem(Plugin.Boards[i].Name)) { expansion=i; ImGui.EndTabItem(); }
+        float line=ImGui.GetTextLineHeight();
+        ImGui.TextColored(HuntTheme.Accent,"Hunt Route");
+        ImGui.SameLine(); ImGui.TextDisabled("/  Контракты на охоту");
+        if(!plugin.Ready) { ImGui.Spacing(); ImGui.TextWrapped(plugin.Error ?? "Войдите в игру, чтобы увидеть ваши контракты."); return; }
+        ImGui.Spacing();
+        if(ImGui.BeginTabBar("expansions",ImGuiTabBarFlags.FittingPolicyScroll)) {
+            for(int i=0;i<Plugin.Boards.Length;i++) {
+                if(ImGui.BeginTabItem(Plugin.Boards[i].Name)) {
+                    if(expansion!=i) { expansion=i; selectedZone=""; }
+                    ImGui.EndTabItem();
                 }
-                ImGui.EndTabBar();
             }
-            var board = Plugin.Boards[expansion];
-            ImGui.Spacing();
-            ImGui.TextColored(accent, "ДОСКА ОХОТЫ  /  " + board.Name);
-            ImGui.TextWrapped("Ежедневные: " + plugin.Status(board,false));
-            ImGui.TextWrapped("Еженедельный: " + plugin.Status(board,true));
-            ImGui.TextDisabled("Сброс: по расписанию UTC; факт получения: по наблюдению в игре.");
-            if (ImGui.Button("Телепорт к доске")) {
-                plugin.Teleport(board.Aetheryte);
-                var mapId = Service.DataManager.GetExcelSheet<TerritoryType>().GetRow(board.Territory).Map.RowId;
-                Service.GameGui.OpenMapWithMapLink(new MapLinkPayload(board.Territory,mapId,(int)(board.Position.X*1000),(int)(board.Position.Y*1000)));
-            }
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Телепорт в город доски, затем отметка её расположения на карте. Расходует гилы по правилам игры.");
-            ImGui.Separator();
-            ImGui.TextDisabled("Нажмите цель для телепорта к ближайшему открытому эфириту. «Карта» ставит отметку.");
-            ImGui.TextDisabled("Маршрут по прямым расстояниям; рельеф и проходы могут потребовать обхода.");
-            bool found=false;
-            foreach (var zone in plugin.Routes.Where(z=>z.Mobs.Any(m=>board.Daily.Contains(m.BillNumber)||board.Weekly==m.BillNumber))) {
-                var mobs=zone.Mobs.Where(m=>board.Daily.Contains(m.BillNumber)||board.Weekly==m.BillNumber).ToList();
-                int done=mobs.Count(plugin.Done);
-                if (plugin.HideDone && done==mobs.Count) continue;
-                found=true;
-                ImGui.PushID(zone.Name);
-                ImGui.Spacing(); ImGui.TextColored(accent,zone.Name);
-                ImGui.ProgressBar((float)done/mobs.Count,new Vector2(-1,5),"");
-                ImGui.TextDisabled(zone.Start==null ? "Нет открытого эфирита в зоне" : "Начало маршрута: " + zone.Start.Name);
-                if (zone.Start!=null && ImGui.Button("К началу маршрута")) plugin.Teleport(zone.Start.Id);
-                int step=0;
-                foreach(var m in mobs) {
-                    step++;
-                    if(plugin.HideDone && plugin.Done(m)) continue;
-                    ImGui.PushID($"{m.BillNumber}:{m.MobIndex}");
-                    bool known=!m.IsEliteMark && Location.Database.ContainsKey(m.MobHuntId);
-                    ImGui.BeginDisabled(!known);
-                    if(ImGui.Selectable($"{step:00}  {m.Name}    {plugin.Kills(m)}/{m.NeededKills}",false,ImGuiSelectableFlags.None,new Vector2(Math.Max(250,ImGui.GetContentRegionAvail().X-90),30))) plugin.Travel(m);
-                    ImGui.SameLine();
-                    if(ImGui.Button("Карта")) Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
-                    ImGui.EndDisabled();
-                    if(m.IsEliteMark && ImGui.Button("Места появления / B-rank")) plugin.Elite.Show(m);
-                    else if(!known && !m.IsEliteMark) ImGui.TextDisabled("Для этой цели нет координат");
+            ImGui.EndTabBar();
+        }
+        var board=Plugin.Boards[expansion];
+        var now=DateTimeOffset.UtcNow;
+        float cardHeight=line*3+64;
+        if(ImGui.BeginTable("reset-cards",2,ImGuiTableFlags.SizingStretchSame)) {
+            ImGui.TableNextRow(); ImGui.TableNextColumn(); ResetCard(board,false,now,cardHeight);
+            ImGui.TableNextColumn(); ResetCard(board,true,now,cardHeight); ImGui.EndTable();
+        }
+        if(ImGui.Button("К доске охоты",new Vector2(180,0))) {
+            plugin.Teleport(board.Aetheryte);
+            var mapId=Service.DataManager.GetExcelSheet<TerritoryType>().GetRow(board.Territory).Map.RowId;
+            Service.GameGui.OpenMapWithMapLink(new MapLinkPayload(board.Territory,mapId,(int)(board.Position.X*1000),(int)(board.Position.Y*1000)));
+        }
+        HuntTheme.Hint("Телепорт в город и отметка доски на карте. Обычная стоимость телепорта в гилах.");
+        ImGui.SameLine();
+        ImGui.Checkbox("Скрыть выполненные",ref plugin.HideDone);
+        ImGui.SameLine();
+        if(ImGui.Button("Обновить")) plugin.Refresh();
+        ImGui.Spacing();
+        var zones=plugin.Routes.Select(z=>new ZoneRoute(z.Name,z.Mobs.Where(m=>board.Daily.Contains(m.BillNumber)||board.Weekly==m.BillNumber).ToList(),z.Start))
+            .Where(z=>z.Mobs.Count>0 && (!plugin.HideDone || z.Mobs.Any(m=>!plugin.Done(m)))).ToList();
+        if(zones.Count==0) {
+            ImGui.BeginChild("empty",Vector2.Zero,true);
+            ImGui.Spacing(); ImGui.TextColored(HuntTheme.Accent,"Здесь пока нет целей");
+            ImGui.TextWrapped(plugin.HideDone ? "Возьмите контракты на доске охоты или отключите скрытие выполненных." : "Возьмите контракты на доске охоты. Цели появятся автоматически.");
+            ImGui.EndChild(); return;
+        }
+        if(!zones.Any(z=>z.Name==selectedZone)) selectedZone=zones[0].Name;
+        float sidebar=Math.Clamp(ImGui.GetContentRegionAvail().X*.25f,185,235);
+        ImGui.BeginChild("zone-list",new Vector2(sidebar,0),true);
+        ImGui.TextDisabled($"ЗОНЫ  /  {zones.Count}"); ImGui.Spacing();
+        foreach(var zone in zones) {
+            ImGui.PushID(zone.Name);
+            int done=zone.Mobs.Count(plugin.Done);
+            var origin=ImGui.GetCursorScreenPos();
+            bool selected=selectedZone==zone.Name;
+            if(ImGui.Selectable("##zone",selected,ImGuiSelectableFlags.None,new Vector2(0,line*3+12))) selectedZone=zone.Name;
+            var draw=ImGui.GetWindowDrawList();
+            string title=zone.Name;
+            while(title.Length>3 && ImGui.CalcTextSize(title).X>ImGui.GetContentRegionAvail().X-12) title=title.EndsWith("...")?title[..^4]+"...":title[..^2]+"...";
+            draw.AddText(origin+new Vector2(8,7),ImGui.GetColorU32(selected?HuntTheme.Accent:new Vector4(.9f,.93f,.96f,1)),title);
+            draw.AddText(origin+new Vector2(8,line+15),ImGui.GetColorU32(HuntTheme.Muted),$"{done} / {zone.Mobs.Count} целей выполнено");
+            HuntTheme.Hint(zone.Name);
+            ImGui.PopID();
+        }
+        ImGui.EndChild(); ImGui.SameLine();
+        ImGui.BeginChild("zone-detail",Vector2.Zero,true);
+        DrawZone(zones.First(z=>z.Name==selectedZone));
+        ImGui.EndChild();
+    }
+    private void ResetCard(Board board,bool weekly,DateTimeOffset now,float height) {
+        ImGui.BeginChild(weekly?"weekly":"daily",new Vector2(0,height),true);
+        ImGui.TextDisabled(weekly?"ЕЖЕНЕДЕЛЬНЫЕ":"ЕЖЕДНЕВНЫЕ");
+        var (collected,total)=plugin.CollectionProgress(board,weekly);
+        bool all=total>0 && collected==total;
+        string status=total==0?"Охота не открыта":all?"Контракты взяты":"Проверьте доску";
+        ImGui.TextColored(total==0?HuntTheme.Muted:all?HuntTheme.Accent:HuntTheme.Gold,status);
+        HuntTheme.Hint(total==0?"Сначала откройте охоту этого дополнения.":all?"Получение контрактов за текущий период подтверждено.":$"Сброс по расписанию уже прошёл. Подтверждено взятых контрактов: {collected} из {total}. Если вы брали их при выключенном плагине, статус получения может быть неизвестен.");
+        ImGui.TextDisabled("Следующий сброс через "+Countdown(ResetClock.Next(now,weekly)-now));
+        ImGui.EndChild();
+    }
+    private void DrawZone(ZoneRoute zone) {
+        int done=zone.Mobs.Count(plugin.Done);
+        ImGui.TextColored(HuntTheme.Accent,zone.Name);
+        ImGui.TextDisabled($"Выполнено {done} из {zone.Mobs.Count} целей");
+        ImGui.ProgressBar((float)done/zone.Mobs.Count,new Vector2(-1,4),"");
+        if(zone.Start!=null) {
+            ImGui.TextDisabled("Начало: "+zone.Start.Name);
+            if(ImGui.Button("Начать маршрут")) plugin.Teleport(zone.Start.Id);
+            HuntTheme.Hint("Телепорт к начальному эфириту маршрута. Затем выполняйте цели по порядку.");
+        } else ImGui.TextDisabled("В зоне нет открытого эфирита");
+        ImGui.SameLine(); ImGui.TextDisabled("(?)");
+        HuntTheme.Hint("Маршрут соединяет соседние цели по кратчайшему расстоянию. Рельеф и закрытые проходы могут потребовать обхода. Кнопка «Телепорт» ведёт к ближайшему открытому эфириту выбранной цели.");
+        ImGui.Spacing();
+        var daily=zone.Mobs.Where(m=>!m.IsEliteMark).ToList();
+        if(daily.Any(m=>!plugin.HideDone||!plugin.Done(m))) {
+            ImGui.TextDisabled("ЦЕЛИ ПО ПОРЯДКУ");
+            if(ImGui.BeginTable("targets",4,ImGuiTableFlags.RowBg|ImGuiTableFlags.SizingStretchProp)) {
+                ImGui.TableSetupColumn("#",ImGuiTableColumnFlags.WidthFixed,24);
+                ImGui.TableSetupColumn("Цель",ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("Счёт",ImGuiTableColumnFlags.WidthFixed,48);
+                ImGui.TableSetupColumn("Действия",ImGuiTableColumnFlags.WidthFixed,ImGui.CalcTextSize("Телепорт").X+ImGui.CalcTextSize("Карта").X+ImGui.GetStyle().FramePadding.X*4+ImGui.GetStyle().ItemSpacing.X+4);
+                for(int i=0;i<daily.Count;i++) {
+                    var m=daily[i]; if(plugin.HideDone&&plugin.Done(m)) continue;
+                    ImGui.PushID($"{m.BillNumber}:{m.MobIndex}"); ImGui.TableNextRow(); ImGui.TableNextColumn();
+                    ImGui.TextDisabled($"{i+1:00}"); ImGui.TableNextColumn();
+                    bool known=Location.Database.TryGetValue(m.MobHuntId,out var position);
+                    ImGui.TextWrapped(m.Name);
+                    if(known && ImGui.IsItemClicked()) plugin.Travel(m);
+                    if(known) HuntTheme.Hint($"X {position!.X:F1}, Y {position.Y:F1}. Нажмите имя или кнопку «Телепорт», чтобы отправиться к цели.");
+                    ImGui.TableNextColumn(); ImGui.TextColored(plugin.Done(m)?HuntTheme.Accent:new Vector4(.9f,.93f,.96f,1),$"{plugin.Kills(m)}/{m.NeededKills}");
+                    ImGui.TableNextColumn(); ImGui.BeginDisabled(!known);
+                    if(ImGui.Button("Телепорт")) plugin.Travel(m);
+                    HuntTheme.Hint("Телепорт к ближайшему открытому эфириту и отметка цели на карте.");
+                    ImGui.SameLine(); if(ImGui.Button("Карта")) Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
+                    ImGui.EndDisabled(); if(!known) HuntTheme.Hint("Координаты этой цели пока неизвестны.");
                     ImGui.PopID();
                 }
-                ImGui.PopID();
+                ImGui.EndTable();
             }
-            if(!found) ImGui.TextWrapped("Нет незавершённых контрактов. Проверьте доску или покажите выполненные.");
-        } finally { ImGui.PopStyleVar(2); ImGui.PopStyleColor(7); }
+        }
+        foreach(var m in zone.Mobs.Where(m=>m.IsEliteMark&&(!plugin.HideDone||!plugin.Done(m)))) {
+            ImGui.PushID($"elite-{m.BillNumber}:{m.MobIndex}"); ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
+            ImGui.TextColored(HuntTheme.Gold,"НЕДЕЛЬНАЯ ЦЕЛЬ  /  B-РАНГ");
+            ImGui.TextWrapped(m.Name+"    "+plugin.Kills(m)+"/"+m.NeededKills);
+            if(ImGui.Button("Показать места появления")) plugin.Elite.Show(m);
+            HuntTheme.Hint("Предполагаемые точки на карте. Обнаруженная клиентом цель также отмечается в игровом мире.");
+            ImGui.PopID();
+        }
     }
-    private static string Countdown(TimeSpan t) => t.TotalDays>=1 ? $"{(int)t.TotalDays} д {t.Hours} ч" : $"{(int)t.TotalHours:00}:{t.Minutes:00}:{t.Seconds:00}";
+    private static string Countdown(TimeSpan t) => t.TotalDays>=1?$"{(int)t.TotalDays} д {t.Hours} ч":$"{(int)t.TotalHours} ч {t.Minutes:00} мин";
 }

@@ -27,6 +27,8 @@ public sealed class EliteWindow : Window {
         var source=JsonSerializer.Deserialize<Dictionary<uint,float[][]>>(stream)!;
         spawns=source.ToDictionary(p=>p.Key,p=>p.Value.Select(v=>new Vector2(v[0],v[1])).ToArray());
     }
+    public override void PreDraw() => HuntTheme.Push();
+    public override void PostDraw() => HuntTheme.Pop();
     internal void Show(MobHuntEntry mob) { Selected=mob; page=0; IsOpen=true; }
     public override void Draw() {
         if(!plugin.Ready || Selected==null) { ImGui.Text("Войдите в игру и выберите недельную цель."); return; }
