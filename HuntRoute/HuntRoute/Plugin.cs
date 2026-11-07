@@ -36,6 +36,8 @@ public sealed class Plugin : IDalamudPlugin {
     internal readonly ShortcutWindow Shortcut;
     internal readonly NativeDialogService NativeDialogs;
     private bool wasLoading;
+    private ShortcutTiming? shortcutTiming;
+    private ShortcutTiming Timing => shortcutTiming ??= new();
     private long nextScan;
     private string signature = "";
     private ulong character;
@@ -62,7 +64,7 @@ public sealed class Plugin : IDalamudPlugin {
     internal void Refresh() { nextScan = 0; signature = ""; }
     private void OnLogout(int type,int code) {
         Ready=false; character=0; signature=""; routeSignature=""; nextScan=0; nextTeleportAllowed=0;
-        wasLoading=false; CurrentTerritory=0; CurrentMap=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear();
+        wasLoading=false; Timing.Reset(); CurrentTerritory=0; CurrentMap=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear();
         Elite.Selected=null; Session.Stop(); NextZone.Sync(); Shortcut.Sync();
     }
     private void OnTerritoryChanged(uint territory) {
@@ -71,7 +73,7 @@ public sealed class Plugin : IDalamudPlugin {
     private unsafe void Update(IFramework _) {
         // Loading can temporarily clear LocalPlayer/ContentId. Only the logout event clears the route.
         bool loading=Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51);
-        if(loading) { if(!wasLoading) Session.ZoneTransition(); wasLoading=true; return; }
+        if(loading) { Timing.Loading(Environment.TickCount64);if(!wasLoading) Session.ZoneTransition(); wasLoading=true; return; }
         if(wasLoading) { wasLoading=false;nextScan=0;routeSignature="";Session.ZoneTransition(); }
         if(!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId==0) {
             Ready=false; return;
@@ -98,7 +100,7 @@ public sealed class Plugin : IDalamudPlugin {
                 snapshots[bill]=BillState.FromGame(hunt->IsMarkBillUnlocked(bill),obtained,hunt->ObtainedMarkId[bill],hunt->AvailableMarkId[bill],complete,type.OrderAmount);
             }
             BillStates=snapshots;
-            Ready = true; Error = null; AdvanceRoute(); NativeDialogs.Pump();
+            Timing.Ready(Environment.TickCount64); Ready = true; Error = null; AdvanceRoute(); NativeDialogs.Pump();
         } catch (Exception e) { Ready = false; Error = e.Message; nextScan=Environment.TickCount64+10000; Service.PluginLog.Error(e, "Reading hunt bills"); }
     }
     private unsafe void ReadBills() {
@@ -172,6 +174,7 @@ public sealed class Plugin : IDalamudPlugin {
         }
         var telepo=Telepo.Instance();
         if(telepo==null || telepo->ActiveTeleportRequest || !telepo->Teleport(id,0)) { Service.Chat.PrintError("Игра отклонила телепорт или уже выполняет его."); return false; }
+        Timing.Begin(Environment.TickCount64);
         nextTeleportAllowed=Environment.TickCount64+3000;
         return true;
     }
@@ -202,11 +205,11 @@ public sealed class Plugin : IDalamudPlugin {
         var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(target.MapId);
         var destination=MapCoordinates.ToWorld(position.Coordinate,map);
         var here=new Vector2(player.Position.X,player.Position.Z);
-        if(Vector2.Distance(here,destination)<ShortcutAdvisor.MinimumDistance) return null;
+
         var prices=Service.Aetherytes.GroupBy(a=>a.AetheryteId).ToDictionary(g=>g.Key,g=>g.Min(a=>a.GilCost));
         var candidates=Entries(target.MapId,target.TerritoryType).Where(e=>prices.ContainsKey(e.Id))
             .Select(e=>new ShortcutCandidate(e.Id,e.Name,MapCoordinates.ToWorld(e.Position,map),prices[e.Id]));
-        return ShortcutAdvisor.Evaluate(Session.RunId,target,here,destination,candidates);
+        return ShortcutAdvisor.Evaluate(Session.RunId,target,here,destination,candidates,Timing.OverheadSeconds);
     }
     internal bool AcceptShortcut(ShortcutOffer offered) {
         var current=FindShortcut();
