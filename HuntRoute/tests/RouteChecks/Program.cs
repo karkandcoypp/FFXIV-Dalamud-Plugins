@@ -88,6 +88,19 @@ Check(follow.Phase==RoutePhase.Finished,"Route completion");
 follow.Start(targetA,new byte[]{1});follow.Tick(new[]{targetB,targetC},_=>false,_=>true,397);
 Check(follow.Phase==RoutePhase.Changed,"Stop on replaced or discarded contract");
 follow.Stop();Check(follow.Tick(ordered,_=>false,_=>true,397)==null,"Stopped route never sets a marker");
+// Completion must still propose the next zone if the game removed the completed bill from the target list.
+var completion=new RouteSession();completion.Start(targetA,new byte[]{1});
+completion.Tick(ordered,_=>false,_=>true,397);
+completion.Tick(new[]{targetC},m=>m.TerritoryType==397,_=>true,397);
+Check(completion.Phase==RoutePhase.NextZone && completion.Suggested==targetC,"Offer next zone after completed target disappears");
+var notice=new NextZoneNotice();
+Check(notice.ShouldOpen(completion),"Open next-zone offer immediately, independently of main-window visibility");
+Check(!notice.ShouldOpen(completion),"Do not reopen dismissed offer on every tick");
+completion.Tick(new[]{targetC},m=>m.TerritoryType==397,_=>true,397);
+Check(!notice.ShouldOpen(completion),"Unchanged next-zone state does not repeat offer");
+completion.Start(targetA,new byte[]{1});completion.Tick(ordered,m=>m.TerritoryType==397,_=>true,397);
+Check(notice.ShouldOpen(completion),"A new route run can offer the same zone again");
+completion.Stop();Check(!notice.ShouldOpen(completion),"Do not offer a teleport after route stop");
 if(args.Length>0) {
  using var game=new GameData(args[0]);
  foreach(uint id in new uint[]{70,111,133,183,216,75}) { var a=game.Excel.GetSheet<Aetheryte>().GetRow(id); Console.WriteLine($"Aetheryte {id}: {a.PlaceName.Value.Name}, territory={a.Territory.RowId}, map={a.Territory.Value.Map.RowId}"); }

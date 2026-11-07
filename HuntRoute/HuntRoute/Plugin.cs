@@ -32,6 +32,7 @@ public sealed class Plugin : IDalamudPlugin {
     private readonly WindowSystem windows = new("HuntRoute");
     private readonly HuntWindow window;
     internal readonly EliteWindow Elite;
+    internal readonly NextZoneWindow NextZone;
     private long nextScan;
     private string signature = "";
     private ulong character;
@@ -45,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin {
         pi.Create<Service>();
         window = new(this); windows.AddWindow(window);
         Elite = new(this); windows.AddWindow(Elite);
+        NextZone=new(this); windows.AddWindow(NextZone);
         Service.Commands.AddHandler("/huntroute", new CommandInfo((_, _) => window.Toggle()) { HelpMessage = "Hunt Route: маршруты охоты и сброс контрактов" });
         pi.UiBuilder.Draw += windows.Draw; pi.UiBuilder.Draw += Elite.DrawWorld; pi.UiBuilder.OpenMainUi += Open; pi.UiBuilder.OpenConfigUi += Open;
         Service.Framework.Update += Update;
@@ -53,12 +55,12 @@ public sealed class Plugin : IDalamudPlugin {
     internal void Refresh() { nextScan = 0; signature = ""; }
     private unsafe void Update(IFramework _) {
         if (!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId == 0) {
-            Ready = false; character = 0; signature = ""; routeSignature=""; CurrentTerritory=0; CurrentMap=0; nextTeleportAllowed=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear(); Elite.Selected=null; Session.Stop(); return;
+            Ready = false; character = 0; signature = ""; routeSignature=""; CurrentTerritory=0; CurrentMap=0; nextTeleportAllowed=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear(); Elite.Selected=null; Session.Stop(); NextZone.Sync(); return;
         }
         if(Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51)) return;
         if (Environment.TickCount64 < nextScan) return; nextScan = Environment.TickCount64 + 1000;
         try {
-            if (character != Service.Player.ContentId) { character = Service.Player.ContentId; signature = ""; routeSignature=""; nextTeleportAllowed=0; Elite.Selected=null; Session.Stop(); }
+            if (character != Service.Player.ContentId) { character = Service.Player.ContentId; signature = ""; routeSignature=""; nextTeleportAllowed=0; Elite.Selected=null; Session.Stop(); NextZone.Sync(); }
             var hunt = MobHunt.Instance(); if (hunt == null) { Ready=false; return; }
             for(byte bill=0;bill<22;bill++) for(byte mob=0;mob<5;mob++) KillCounts[(bill,mob)]=hunt->GetKillCount(bill,mob);
             string current = hunt->ObtainedFlags + ":" + string.Join(",", Enumerable.Range(0,22).Select(i => hunt->ObtainedMarkId[i])) + ":" + string.Join(",", Service.Aetherytes.Select(a=>a.AetheryteId).Order());
@@ -172,6 +174,7 @@ public sealed class Plugin : IDalamudPlugin {
         if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent)) return;
         var mark=Session.Tick(Routes.SelectMany(r=>r.Mobs).ToArray(),Done,m=>Location.Database.ContainsKey(m.MobHuntId),Service.ClientState.TerritoryType);
         if(mark!=null && !Location.SetMapFlag(mark.TerritoryType,mark.MapId,mark.MobHuntId)) Session.RetryMarker();
+        NextZone.Sync();
     }
     internal ContractProgress CollectionProgress(Board b,bool weekly) =>
         Ready ? ContractProgress.Summarize(weekly?new[]{b.Weekly}:b.Daily,BillStates) : default;

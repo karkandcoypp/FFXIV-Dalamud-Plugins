@@ -6,6 +6,7 @@ using System.Runtime.Loader;
 using System.Text.Json;
 using Dalamud.Bindings.ImGui;
 using HuntRoute;
+using Dalamud.Interface.Windowing;
 class Program {
  static void Set(object instance,string name,object value) => instance.GetType().GetField(name,BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)!.SetValue(instance,value);
  public static unsafe void Main(string[] args) {
@@ -17,21 +18,27 @@ class Program {
   var mobs=new List<MobHuntEntry>{new(){Name="Archaeornis",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=0,MobHuntId=3481,NeededKills=3,TerritoryType=397},new(){Name="Wooly Yak",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=1,MobHuntId=3479,NeededKills=2,TerritoryType=397},new(){Name="Alteci",TerritoryName="Coerthas Western Highlands",BillNumber=5,MobIndex=0,MobHuntId=4350,NeededKills=1,IsEliteMark=true,TerritoryType=397}};
   Set(plugin,"Mobs",mobs); Set(plugin,"Routes",new List<ZoneRoute>{new("Coerthas Western Highlands",mobs,new(71,"Falcon's Nest",new(32,36))),new("The Sea of Clouds",mobs,new(73,"Camp Cloudtop",new(16,37))),new("The Dravanian Forelands",mobs,new(76,"Tailfeather",new(31,23)))});
   string directory=Path.GetFullPath(args[0]);Directory.CreateDirectory(directory);
-  foreach(var sample in new[]{(520,430,17f,"normal"),(620,500,17f,"following"),(620,500,17f,"next"),(800,620,17f,"normal"),(1180,800,20f,"normal")}) {
+  foreach(var sample in new[]{(520,430,17f,"normal"),(620,500,17f,"following"),(620,500,17f,"next"),(430,210,17f,"offer"),(800,620,17f,"normal"),(1180,800,20f,"normal")}) {
    var session=new RouteSession();Set(plugin,"Session",session);Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>());
    var other=new MobHuntEntry{Name="Gaelicat",BillNumber=1,MobIndex=2,MobHuntId=3494,NeededKills=1,TerritoryType=401,TerritoryName="The Sea of Clouds"};
    bool here=sample.Item4!="normal";
    Set(plugin,"Routes",new List<ZoneRoute>{new("Coerthas Western Highlands",mobs,new(71,"Falcon's Nest",new(32,36)),here),new("The Sea of Clouds",new(){other},new(72,"Camp Cloudtop",new(10,33)))});
    if(here) {
     session.Start(mobs[0],new byte[]{1,2,3});
-    if(sample.Item4=="next") Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>{{(1,0),3},{(1,1),2}});
-    session.Tick(mobs.Append(other).ToArray(),m=>sample.Item4=="next"&&m.TerritoryType==397,_=>true,397);
+    if((sample.Item4 is "next" or "offer")) Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>{{(1,0),3},{(1,1),2}});
+    session.Tick(mobs.Append(other).ToArray(),m=>(sample.Item4 is "next" or "offer")&&m.TerritoryType==397,_=>true,397);
    }
    ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(sample.Item1,sample.Item2);io.DeltaTime=1f/60;
    io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",sample.Item3,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
    byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
-   var window=new HuntWindow(plugin);
-   for(int frame=0;frame<3;frame++) { ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);window.PreDraw();ImGui.Begin("Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove);window.Draw();if(ImGui.GetScrollMaxX()>0)throw new Exception("Horizontal overflow");ImGui.End();window.PostDraw();ImGui.Render(); }
+   Window window=sample.Item4=="offer"?new NextZoneWindow(plugin):new HuntWindow(plugin);
+   if(window is NextZoneWindow offer) {
+    var sync=typeof(NextZoneWindow).GetMethod("Sync",BindingFlags.Instance|BindingFlags.NonPublic)!;
+    sync.Invoke(offer,null); if(!offer.IsOpen) throw new Exception("Offer did not open with main window absent");
+    offer.IsOpen=false; sync.Invoke(offer,null); if(offer.IsOpen) throw new Exception("Dismissed offer reopened");
+    offer.IsOpen=true;
+   }
+   for(int frame=0;frame<3;frame++) { ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);window.PreDraw();ImGui.Begin(sample.Item4=="offer"?"Продолжить охоту?":"Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove);window.Draw();if(ImGui.GetScrollMaxX()>0)throw new Exception("Horizontal overflow");ImGui.End();window.PostDraw();ImGui.Render(); }
    File.WriteAllBytes(Path.Combine(directory,$"font-{sample.Item3}.rgba"),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
    var draw=ImGui.GetDrawData();var lists=new List<object>();
    for(int i=0;i<draw.CmdListsCount;i++) { var list=new ImDrawListPtr(draw.CmdLists[i]);var vertices=new List<double[]>();var indices=new List<ushort>();var commands=new List<object>();
