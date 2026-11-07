@@ -51,9 +51,24 @@ class Program {
    if(!a.IsAetheryte || a.Territory.RowId!=board.Territory || map.RowId!=board.Map) throw new Exception($"Board destination mismatch {board.Name}");
    checks++;
   }
-  var endwalker=Plugin.Boards.Single(b=>b.Name=="Endwalker");
-  var sharlayan=game.Excel.GetSheet<Aetheryte>().Single(a=>a.IsAetheryte && a.PlaceName.Value.Name.ToString()=="Old Sharlayan");
-  if(endwalker.Aetheryte!=sharlayan.RowId || endwalker.Territory!=sharlayan.Territory.RowId || endwalker.Map!=sharlayan.Territory.Value.Map.RowId || Vector2.Distance(endwalker.Position,new(11.8f,13.2f))>.01f) throw new Exception("Endwalker board must route to Old Sharlayan");checks++;
+  // Independent world-object fixtures: validate each city AND the actual board, not a nearby NPC.
+  var boardObjects=new[]{("Foundation",5892509u,2005909u),("Kugane",6928982u,2008655u),("The Crystarium",7959481u,2010340u),("Old Sharlayan",8950392u,2012236u),("Tuliyollal",10577299u,2014155u)};
+  for(int i=0;i<Plugin.Boards.Length;i++) {
+   var b=Plugin.Boards[i];var (city,levelId,objectId)=boardObjects[i];
+   var level=game.Excel.GetSheet<Level>().GetRow(levelId);var a=game.Excel.GetSheet<Aetheryte>().GetRow(b.Aetheryte);
+   if(level.Object.RowId!=objectId || level.Territory.RowId!=b.Territory || level.Map.RowId!=b.Map || a.PlaceName.Value.Name.ToString()!=city) throw new Exception($"Wrong board object/city: {b.Name}");checks++;
+   var point=MapUtil.WorldToMap(new Vector2(level.X,level.Z),level.Map.Value);
+   if(Vector2.Distance(point,b.Position)>.001f)throw new Exception($"Board marker misses actual object: {b.Name}: expected {point}, actual {b.Position}");checks++;
+   foreach(byte tier in b.Daily.Append(b.Weekly)) {
+    var type=game.Excel.GetSheet<MobHuntOrderType>().GetRow(tier);
+    if(type.Type!=(tier==b.Weekly?2:1))throw new Exception($"Wrong daily/weekly tier: {b.Name}:{tier}");checks++;
+    for(uint order=0;order<type.OrderAmount;order++)foreach(var o in game.Excel.GetSubrowSheet<MobHuntOrder>().GetRow(type.OrderStart.RowId+order)) {
+     if(o.Target.RowId==0)continue;var target=o.Target.Value;
+     if(target.Map.Value.TerritoryType.Value.ExVersion.RowId!=(uint)i+1)throw new Exception($"Bill belongs to wrong expansion: {b.Name}");checks++;
+     if(tier!=b.Weekly && !Location.Database.ContainsKey(target.Name.RowId))throw new Exception($"Missing daily target coordinates: {target.Name.RowId}");checks++;
+    }
+   }
+  }
   foreach(uint mapId in maps) {
    var map=game.Excel.GetSheet<Map>().GetRow(mapId);
    foreach(var pixel in new[]{Vector2.Zero,new Vector2(512,1548),new Vector2(1024,1024),new Vector2(2048,2048)}) {
@@ -85,6 +100,49 @@ class Program {
   // Exercise the actual teleport wrapper without any bound native game functions.
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
   typeof(Plugin).GetField("Ready",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,true);
+  Service.DataManager=new SheetServices(game);
+  var entryMethod=typeof(Plugin).GetMethod("Entries",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  var allAetherytes=game.Excel.GetSheet<Aetheryte>().Where(a=>a.IsAetheryte).Select(a=>a.RowId).ToArray();
+  var unlockedEntries=allAetherytes.Select(id=>Proxy<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>((m,_)=>m.Name=="get_AetheryteId"?id:throw new Exception(m.Name))).ToArray();
+  Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?unlockedEntries.AsEnumerable().GetEnumerator():throw new Exception(m.Name));
+  foreach(uint mapId in maps) {
+   var row=game.Excel.GetSheet<Map>().GetRow(mapId);
+   var entries=(List<EntryPoint>)entryMethod.Invoke(plugin,new object[]{mapId,row.TerritoryType.RowId})!;
+   if(entries.Select(e=>e.Id).Distinct().Count()!=entries.Count)throw new Exception($"Duplicate aetheryte: {mapId}");checks++;
+   foreach(var entry in entries) {
+    if(game.Excel.GetSheet<Aetheryte>().GetRow(entry.Id).Territory.RowId!=row.TerritoryType.RowId)throw new Exception("Cross-zone aetheryte leaked");checks++;
+    var marker=game.Excel.GetSubrowSheet<MapMarker>().GetRow(row.MapMarkerRange).First(m=>m.DataType==3 && m.DataKey.RowId==entry.Id);
+    var expectedWorld=(new Vector2(marker.X,marker.Y)-new Vector2(1024))/(row.SizeFactor/100f)-new Vector2(row.OffsetX,row.OffsetY);
+    if(Vector2.Distance(MapCoordinates.ToWorld(entry.Position,row),expectedWorld)>.01f)throw new Exception("Entry point world coordinate mismatch");checks++;
+   }
+   if(((List<EntryPoint>)entryMethod.Invoke(plugin,new object[]{mapId,uint.MaxValue})!).Count!=0)throw new Exception("Mismatched map/territory accepted");checks++;
+  }
+  // Exercise the production route builder for first/middle/last bill sets of every expansion.
+  typeof(Plugin).GetField("KillCounts",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new Dictionary<(byte,byte),int>());
+  Service.ObjectTable=Proxy<IObjectTable>((m,_)=>m.Name=="get_LocalPlayer"?null:throw new Exception(m.Name));
+  var build=typeof(Plugin).GetMethod("BuildRoutes",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  foreach(var board in Plugin.Boards)foreach(int sample in new[]{0,1,2}) {
+   var mobs=new List<MobHuntEntry>();
+   foreach(byte tier in board.Daily) {
+    var type=game.Excel.GetSheet<MobHuntOrderType>().GetRow(tier);uint offset=sample==0?0:sample==1?(uint)type.OrderAmount/2:(uint)type.OrderAmount-1;
+    foreach(var o in game.Excel.GetSubrowSheet<MobHuntOrder>().GetRow(type.OrderStart.RowId+offset)) {
+     var t=o.Target.Value;mobs.Add(new(){BillNumber=tier,MobIndex=(byte)o.SubrowId,MobHuntId=t.Name.RowId,MapId=t.Map.RowId,TerritoryType=t.Map.Value.TerritoryType.RowId,NeededKills=o.NeededKills});
+    }
+   }
+   typeof(Plugin).GetField("Mobs",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,mobs);build.Invoke(plugin,null);
+   var routes=(List<ZoneRoute>)typeof(Plugin).GetField("Routes",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!;
+   if(routes.Sum(r=>r.Mobs.Count)!=mobs.Count)throw new Exception("Production route lost targets");checks++;
+   foreach(var route in routes) {
+    var first=route.Mobs[0];var entries=(List<EntryPoint>)entryMethod.Invoke(plugin,new object[]{first.MapId,first.TerritoryType})!;
+    if(route.Start is {} entry && !entries.Any(e=>e.Id==entry.Id) && !(first.TerritoryType==399 && entry.Id==75))throw new Exception("Invalid route entry point");checks++;
+    if(entries.Count>0 && route.Start==null)throw new Exception("Route ignored available unlocked aetherytes");checks++;
+   }
+  }
+  Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?Array.Empty<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>().AsEnumerable().GetEnumerator():throw new Exception(m.Name));
+  foreach(uint mapId in maps) {
+   var row=game.Excel.GetSheet<Map>().GetRow(mapId);
+   if(((List<EntryPoint>)entryMethod.Invoke(plugin,new object[]{mapId,row.TerritoryType.RowId})!).Count!=0)throw new Exception("Locked aetheryte was offered");checks++;
+  }
   uint currentTerritory=397; bool busy=false; int errors=0; MapLinkPayload? captured=null;
   Service.DataManager=new SheetServices(game);
   Service.ClientState=Proxy<IClientState>((m,_)=>m.Name switch {"get_IsLoggedIn"=>true,"get_TerritoryType"=>currentTerritory,_=>throw new Exception(m.Name)});
@@ -144,6 +202,29 @@ class Program {
   answer.Invoke(bridge,new object[]{nativeRequest.Key,true});answer.Invoke(bridge,new object[]{nativeRequest.Key,true});
   if(scheduled!=2) throw new Exception("Duplicate native response queued duplicate teleport");
   deferred!();if(nativeAccepted!=1) throw new Exception("Native Yes did not execute exactly once");checks++;
+  // Real shortcut controller: combat must defer the offer, not consume and cancel it.
+  var gnomeTarget=game.Excel.GetSubrowSheet<MobHuntOrder>().SelectMany(g=>g).Where(o=>o.Target.RowId!=0).Select(o=>o.Target.Value).First(t=>t.Name.Value.Singular.ToString()=="gnome");
+  var gm=gnomeTarget.Map.Value;var playerWorld=MapCoordinates.ToWorld(new(23.4f,31.5f),gm);
+  var playerProxy=Proxy<Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter>((m,_)=>m.Name switch {"get_Position"=>new Vector3(playerWorld.X,0,playerWorld.Y),"get_IsCasting"=>false,_=>throw new Exception(m.Name)});
+  Service.ObjectTable=Proxy<IObjectTable>((m,_)=>m.Name=="get_LocalPlayer"?playerProxy:throw new Exception(m.Name));
+  Service.ClientState=Proxy<IClientState>((m,_)=>m.Name switch {"get_IsLoggedIn"=>true,"get_TerritoryType"=>gm.TerritoryType.RowId,"get_MapId"=>gm.RowId,_=>throw new Exception(m.Name)});
+  var priced=allAetherytes.Select(id=>Proxy<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>((m,_)=>m.Name switch {"get_AetheryteId"=>id,"get_GilCost"=>100u,_=>throw new Exception(m.Name)})).ToArray();
+  Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?priced.AsEnumerable().GetEnumerator():throw new Exception(m.Name));
+  var gnome=new MobHuntEntry{BillNumber=10,MobIndex=0,MobHuntId=gnomeTarget.Name.RowId,MapId=gm.RowId,TerritoryType=gm.TerritoryType.RowId,NeededKills=2};
+  var shortcutSession=new RouteSession();shortcutSession.Start(gnome,new byte[]{10});shortcutSession.Tick(new[]{gnome},_=>false,_=>true,gm.TerritoryType.RowId);
+  typeof(Plugin).GetField("Session",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,shortcutSession);
+  typeof(Plugin).GetField("Ready",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,true);
+  typeof(Plugin).GetField("NativeDialogs",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,bridge);
+  typeof(Plugin).GetField("KillCounts",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new Dictionary<(byte,byte),int>());
+  bool shortcutBusy=true;Service.Condition=Proxy<ICondition>((_,_)=>shortcutBusy);
+  var controller=new ShortcutWindow(plugin);var sync=typeof(ShortcutWindow).GetMethod("Sync",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  sync.Invoke(controller,null);
+  if(confirmationQueue.Activate(true)!=null)throw new Exception("Busy shortcut displayed prematurely");checks++;
+  sync.Invoke(controller,null);shortcutBusy=false;sync.Invoke(controller,null);
+  var queuedShortcut=confirmationQueue.Activate(true);
+  if(queuedShortcut?.Owner!="shortcut")throw new Exception("Busy frame consumed useful shortcut forever");checks++;
+  if(confirmationQueue.Resolve(queuedShortcut.Key,false)!=null)throw new Exception("No approved a shortcut");checks++;
+  sync.Invoke(controller,null);if(confirmationQueue.Activate(true)!=null)throw new Exception("Declined shortcut repeated");checks++;
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
  }
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> handler) where T:class {

@@ -6,7 +6,7 @@ int checks=0;
 void Check(bool ok,string message) { checks++; if(!ok) throw new Exception(message); }
 float Cost(int[] order, Vector2[] p, Vector2[] e, int start) => order.Length==0 ? 0 : (start<0?0:Vector2.Distance(e[start],p[order[0]]))+order.Zip(order.Skip(1),(a,b)=>Vector2.Distance(p[a],p[b])).Sum();
 IEnumerable<int[]> Permute(int[] x) { if(x.Length==0) { yield return []; yield break; } foreach(int i in x) foreach(var tail in Permute(x.Where(v=>v!=i).ToArray())) yield return new[]{i}.Concat(tail).ToArray(); }
-var random=new Random(731);
+var random=new Random(args.Length<2?731:int.Parse(args[1]));
 for(int test=0;test<35;test++) {
  int n=1+test%7;
  var p=Enumerable.Range(0,n).Select(_=>new Vector2(random.Next(40),random.Next(40))).ToArray();
@@ -199,9 +199,9 @@ confirmations.Cancel("next");Check(confirmations.Activate(true)?.Owner=="shortcu
 confirmations.Clear();Check(confirmations.Active==null && confirmations.Activate(true)==null,"Plugin unload clears confirmation queue");
 if(args.Length>0) {
  using var game=new GameData(args[0]);
- foreach(uint id in new uint[]{70,111,133,183,216,75}) { var a=game.Excel.GetSheet<Aetheryte>().GetRow(id); Console.WriteLine($"Aetheryte {id}: {a.PlaceName.Value.Name}, territory={a.Territory.RowId}, map={a.Territory.Value.Map.RowId}"); }
+ foreach(uint id in new uint[]{70,111,133,182,216,75}) { var a=game.Excel.GetSheet<Aetheryte>().GetRow(id); Console.WriteLine($"Aetheryte {id}: {a.PlaceName.Value.Name}, territory={a.Territory.RowId}, map={a.Territory.Value.Map.RowId}"); }
  foreach(uint id in new uint[]{418,628,819,962,1185}) { var t=game.Excel.GetSheet<TerritoryType>().GetRow(id); Console.WriteLine($"Territory {id}: {t.PlaceName.Value.Name}, map={t.Map.RowId}"); }
- var dataset=System.Text.Json.JsonSerializer.Deserialize<Dictionary<uint,float[][]>>(File.ReadAllText("publish-repo/HuntRoute/data/elite-spawns.json"))!;
+ var dataset=System.Text.Json.JsonSerializer.Deserialize<Dictionary<uint,float[][]>>(File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../../data/elite-spawns.json"))))!;
  int weeklyTargets=0;
  foreach(var t in game.Excel.GetSheet<MobHuntOrderType>().Where(t=>t.RowId<22 && t.Type==2)) {
    foreach(var orders in game.Excel.GetSubrowSheet<MobHuntOrder>().Where(o=>o.RowId>=t.OrderStart.RowId && o.RowId<t.OrderStart.RowId+(t.RowId==4?17:12))) {
@@ -220,4 +220,14 @@ if(args.Length>0) {
  }
  Console.WriteLine($"Validated {weeklyTargets} weekly targets, {dataset.Count} spawn maps, {dataset.Values.Sum(p=>p.Length)} possible B-rank points and all map textures.");
 }
-Console.WriteLine($"PASS: {checks} route, reset and installed game data checks");
+
+
+// Complete same-zone policy matrix: no hidden cast when readiness, unlocks or busy state reject it.
+foreach(bool ready in new[]{false,true})foreach(bool unlocked in new[]{false,true})foreach(bool busy in new[]{false,true})foreach(bool allow in new[]{false,true})foreach(bool same in new[]{false,true}) {
+ var expected=!ready?TravelDecision.NotReady:same&&!allow?TravelDecision.AlreadyThere:!unlocked?TravelDecision.Locked:busy?TravelDecision.Busy:TravelDecision.Teleport;
+ Check(TravelPolicy.Decide(397,same?397u:401u,ready,unlocked,busy,allow)==expected,"Complete teleport policy matrix");
+}
+var largePoints=Enumerable.Range(0,24).Select(i=>new Vector2(i*13%41,i*7%37)).ToArray();
+var largeRoute=RouteSolver.Solve(largePoints,new[]{Vector2.Zero});
+Check(largeRoute.Order.Length==24 && largeRoute.Order.Distinct().Count()==24 && largeRoute.Entry==0,"Fallback route includes every target exactly once");
+Console.WriteLine($"PASS extended audit: {checks} checks, random seed {(args.Length<2?731:int.Parse(args[1]))}");

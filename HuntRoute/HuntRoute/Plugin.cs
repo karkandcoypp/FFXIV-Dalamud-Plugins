@@ -17,11 +17,11 @@ public record ZoneRoute(string Name, List<MobHuntEntry> Mobs, EntryPoint? Start,
 
 public sealed class Plugin : IDalamudPlugin {
     public static readonly Board[] Boards = [
-        new("Heavensward", [1,2,3], 5, 70, 418, 218, new(12.7f,11.8f)),
-        new("Stormblood", [6,7,8], 9, 111, 628, 370, new(10.4f,10.2f)),
-        new("Shadowbringers", [10,11,12], 13, 133, 819, 497, new(9.5f,9.4f)),
-        new("Endwalker", [14,15,16], 17, 182, 962, 693, new(11.8f,13.2f)),
-        new("Dawntrail", [18,19,20], 21, 216, 1185, 855, new(13.8f,13.6f))
+        new("Heavensward", [1,2,3], 5, 70, 418, 218, new(12.718168f,11.681350f)),
+        new("Stormblood", [6,7,8], 9, 111, 628, 370, new(10.609598f,10.362924f)),
+        new("Shadowbringers", [10,11,12], 13, 133, 819, 497, new(9.568138f,9.425624f)),
+        new("Endwalker", [14,15,16], 17, 182, 962, 693, new(11.834738f,13.205691f)),
+        new("Dawntrail", [18,19,20], 21, 216, 1185, 855, new(13.891332f,13.685839f))
     ];
     internal List<MobHuntEntry> Mobs = [];
     internal List<ZoneRoute> Routes = [];
@@ -125,6 +125,7 @@ public sealed class Plugin : IDalamudPlugin {
     }
     internal List<EntryPoint> Entries(uint mapId, uint territory) {
         var map = Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(mapId);
+        if(map.TerritoryType.RowId!=territory) return [];
         var unlocked = Service.Aetherytes.Select(a => a.AetheryteId).ToHashSet();
         var result = new List<EntryPoint>();
         if(!Service.DataManager.GetSubrowExcelSheet<MapMarker>().TryGetRow(map.MapMarkerRange,out var markers)) return result;
@@ -198,7 +199,7 @@ public sealed class Plugin : IDalamudPlugin {
         NextZone.Sync(); Shortcut.Sync();
     }
     internal ShortcutOffer? FindShortcut() {
-        if(!Ready || Session.Phase!=RoutePhase.Following || Session.Target is not {} target || TravelBusy
+        if(!Ready || Session.Phase!=RoutePhase.Following || Session.Target is not {} target
             || Service.ClientState.TerritoryType!=target.TerritoryType || Service.ClientState.MapId!=target.MapId
             || Service.ObjectTable.LocalPlayer is not {} player || Done(target)
             || !Location.Database.TryGetValue(target.MobHuntId,out var position)) return null;

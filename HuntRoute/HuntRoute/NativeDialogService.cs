@@ -45,10 +45,11 @@ internal sealed class NativeDialogService : IDisposable {
     private void Answered(string key,bool yes) {
         try {
             if(queue.Active?.Key!=key) return;
-            var request=queue.Resolve(key,yes);addon=null;
-            if(request==null || disposed) return;
+            var request=queue.Resolve(key,yes);var retired=addon;addon=null;
+            if(request==null && retired==null) return;
             Service.Framework.RunOnTick(()=> {
-                if(disposed || !request.Valid()) return;
+                retired?.Dispose();
+                if(disposed || request==null || !request.Valid()) return;
                 if(!request.Ready() || !request.Accept()) queue.Retry(request);
             },delayTicks:1);
         } catch(Exception e) { Service.PluginLog.Error(e,"Ошибка ответа на игровой диалог Hunt Route"); }
@@ -91,5 +92,5 @@ internal sealed unsafe class NativeConfirmationAddon(string text,Func<bool> read
         if(answered || (yes&&!ready())) return;
         answered=true;if(close) Close();answer(yes);
     }
-    internal void CloseQuietly() { answered=true;Close(); }
+    internal void CloseQuietly() { answered=true;Dispose(); }
 }
