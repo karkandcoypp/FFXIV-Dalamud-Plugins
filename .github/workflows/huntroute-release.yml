@@ -47,6 +47,8 @@ jobs:
           Expand-Archive "$env:RUNNER_TEMP/dalamud.zip" -DestinationPath $directory -Force
       - name: Test and build plugin
         run: |
+          python HuntRoute/tools/verify_coordinate_data.py
+          if ($LASTEXITCODE -ne 0) { throw 'Coordinate source verification failed' }
           dotnet run --project HuntRoute/tests/RouteChecks/RouteChecks.csproj -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Hunt Route logic checks failed' }
           dotnet build HuntRoute/HuntRoute/HuntRoute.csproj -c Release --warnaserror

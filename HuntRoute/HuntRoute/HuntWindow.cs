@@ -44,8 +44,9 @@ public sealed class HuntWindow : Window {
             .Where(z=>z.Mobs.Count>0 && (!plugin.HideDone||z.Mobs.Any(m=>!plugin.Done(m)))).ToList();
         if(zones.Count==0) {
             ImGui.BeginChild("empty",Vector2.Zero,true);
-            ImGui.TextColored(HuntTheme.Accent,"Нет незавершённых целей");
-            ImGui.TextWrapped("Возьмите контракты на доске или отключите скрытие выполненных."); ImGui.EndChild(); return;
+            bool dailyDone=plugin.CollectionProgress(board,false).AllCompleted;
+            ImGui.TextColored(HuntTheme.Accent,dailyDone?"Все ежедневные контракты на сегодня выполнены":"Нет незавершённых целей");
+            ImGui.TextWrapped(dailyDone?"Можно вернуться после ежедневного сброса. Недельный контракт отмечается отдельно.":"Возьмите контракты на доске или отключите скрытие выполненных."); ImGui.EndChild(); return;
         }
         if(!zones.Any(z=>z.Name==selectedZone)) selectedZone=zones[0].Name;
         bool narrow=ImGui.GetContentRegionAvail().X<740;
@@ -103,7 +104,14 @@ public sealed class HuntWindow : Window {
         ImGui.TextDisabled(weekly?"Еженедельные":"Ежедневные");
         var progress=plugin.CollectionProgress(board,weekly);
         bool all=progress.Total>0 && progress.Taken==progress.Total && progress.NewSets==0;
-        ImGui.TextColored(progress.Total==0?HuntTheme.Muted:all?HuntTheme.Accent:HuntTheme.Gold,progress.Label);
+        if(progress.AllCompleted) {
+            var at=ImGui.GetCursorScreenPos();float h=ImGui.GetTextLineHeight();var draw=ImGui.GetWindowDrawList();uint color=ImGui.GetColorU32(HuntTheme.Accent);
+            draw.AddLine(at+new Vector2(1,h*.5f),at+new Vector2(5,h*.75f),color,2);
+            draw.AddLine(at+new Vector2(5,h*.75f),at+new Vector2(13,h*.2f),color,2);
+            ImGui.Dummy(new Vector2(15,h));ImGui.SameLine();
+        }
+        string label=progress.AllCompleted?(weekly?"Выполнено за неделю":"Выполнено сегодня")+$" · {progress.Completed}/{progress.Total}":progress.Label;
+        ImGui.TextColored(progress.Total==0?HuntTheme.Muted:all||progress.AllCompleted?HuntTheme.Accent:HuntTheme.Gold,Fit(label,ImGui.GetContentRegionAvail().X));
         HuntTheme.Hint(progress.Total==0?"Сначала откройте охоту этого дополнения.":$"Взято {progress.Taken}/{progress.Total}, выполнено {progress.Completed}. Обновлённых наборов на доске: {progress.NewSets}. Статус берётся из игры; таймер показывает расписание сброса.");
         ImGui.TextDisabled("Сброс через "+Countdown(ResetClock.Next(now,weekly)-now));
         ImGui.EndChild(); ImGui.PopStyleVar(2);

@@ -1,9 +1,9 @@
-# Hunt Route 0.3.3
+# Hunt Route 0.3.4
 
-- Align all five hunt-board markers with the actual game Level objects in Foundation, Kugane, the Crystarium, Old Sharlayan and Tuliyollal. Keep each city's verified aetheryte/territory/map IDs.
-- Reject mismatched map/territory pairs before selecting a route entry point.
-- Keep profitable intra-zone teleport offers queued while the character is busy; a transient busy frame no longer consumes the only offer. No/close still declines it.
-- Dispose closed native confirmation addons explicitly after callbacks instead of leaving them to garbage collection.
-- Expand data, route-builder, unlocked-aetheryte, same-zone and randomized route regression checks; see AUDIT.md for source object IDs and validation limits.
+- Replace zone-wide weekly search points with target-specific sets: 77 B-ranks, 47 territories and 922 point entries. Validate target ID, map and territory; never show another mob's zone fallback.
+- Review all 476 daily anchors against current XIVDaily data and individual FFXIVHunt observation maps. Alternative valid packs are preserved; no confirmed daily coordinate error remained. Source revisions and review evidence are documented in COORDINATE-AUDIT.md.
+- Fix completed daily bills displaying as not taken after they disappear: validate retained order IDs and all kill requirements against the current available set.
+- Show a green check, `Выполнено сегодня · 3/3` and a clear daily-completion message. Weekly completion remains separate. Partial/discarded bills do not count; new available sets clear completion.
+- Add offline coordinate-source verification, per-target weekly map checks and compact completed-state UI regression cases.
 
-Public package/feed verification and local tests do not replace live-game checks of casting, loading, markers and native UI.
+Public package/feed and local tests are verified separately from live-game behavior. Positions are community observations, not guaranteed current sightings.

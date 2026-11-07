@@ -201,24 +201,24 @@ if(args.Length>0) {
  using var game=new GameData(args[0]);
  foreach(uint id in new uint[]{70,111,133,182,216,75}) { var a=game.Excel.GetSheet<Aetheryte>().GetRow(id); Console.WriteLine($"Aetheryte {id}: {a.PlaceName.Value.Name}, territory={a.Territory.RowId}, map={a.Territory.Value.Map.RowId}"); }
  foreach(uint id in new uint[]{418,628,819,962,1185}) { var t=game.Excel.GetSheet<TerritoryType>().GetRow(id); Console.WriteLine($"Territory {id}: {t.PlaceName.Value.Name}, map={t.Map.RowId}"); }
- var dataset=System.Text.Json.JsonSerializer.Deserialize<Dictionary<uint,float[][]>>(File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../../data/elite-spawns.json"))))!;
+ var dataset=System.Text.Json.JsonSerializer.Deserialize<Dictionary<uint,EliteSpawnSet>>(File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../../data/elite-spawns.json"))))!;
  int weeklyTargets=0;
  foreach(var t in game.Excel.GetSheet<MobHuntOrderType>().Where(t=>t.RowId<22 && t.Type==2)) {
-   foreach(var orders in game.Excel.GetSubrowSheet<MobHuntOrder>().Where(o=>o.RowId>=t.OrderStart.RowId && o.RowId<t.OrderStart.RowId+(t.RowId==4?17:12))) {
+   foreach(var orders in game.Excel.GetSubrowSheet<MobHuntOrder>().Where(o=>o.RowId>=t.OrderStart.RowId && o.RowId<t.OrderStart.RowId+t.OrderAmount)) {
      foreach(var order in orders) {
        if(order.Target.RowId==0) continue;
        var target=order.Target.Value; uint territory=target.Map.Value.TerritoryType.RowId;
-       Check(dataset.ContainsKey(territory),$"Missing elite spawn zone {territory}"); weeklyTargets++;
+       Check(dataset.ContainsKey(target.Name.RowId),$"Missing elite spawn zone {territory}"); weeklyTargets++;
      }
    }
  }
  foreach(var pair in dataset) {
-   var territory=game.Excel.GetSheet<TerritoryType>().GetRow(pair.Key); var map=territory.Map.Value;
+   var territory=game.Excel.GetSheet<TerritoryType>().GetRow(pair.Value.Territory); var map=territory.Map.Value;
    string id=map.Id.ToString(); string texture=$"ui/map/{id}/{id.Replace("/", "")}_m.tex";
    Check(game.FileExists(texture),$"Missing map texture {texture}");
-   foreach(var point in pair.Value) Check(point.Length==2 && point.All(float.IsFinite) && point.All(v=>v>0 && v<100),"Invalid spawn coordinate");
+   foreach(var point in pair.Value.Points) Check(point.Length==2 && point.All(float.IsFinite) && point.All(v=>v>0 && v<100),"Invalid spawn coordinate");
  }
- Console.WriteLine($"Validated {weeklyTargets} weekly targets, {dataset.Count} spawn maps, {dataset.Values.Sum(p=>p.Length)} possible B-rank points and all map textures.");
+ Console.WriteLine($"Validated {weeklyTargets} weekly targets, {dataset.Values.Select(p=>p.Territory).Distinct().Count()} spawn maps, {dataset.Values.Sum(p=>p.Points.Length)} possible B-rank points and all map textures.");
 }
 
 
@@ -231,3 +231,26 @@ var largePoints=Enumerable.Range(0,24).Select(i=>new Vector2(i*13%41,i*7%37)).To
 var largeRoute=RouteSolver.Solve(largePoints,new[]{Vector2.Zero});
 Check(largeRoute.Order.Length==24 && largeRoute.Order.Distinct().Count()==24 && largeRoute.Entry==0,"Fallback route includes every target exactly once");
 Console.WriteLine($"PASS extended audit: {checks} checks, random seed {(args.Length<2?731:int.Parse(args[1]))}");
+
+var retained=BillState.FromGame(true,false,7,7,true,10);
+Check(Summary(retained,retained,retained).AllCompleted,"Completed removed bills still count for today");
+Check(Summary(retained,retained,retained).Taken==0 && Summary(retained,retained,retained).Completed==3,"Do not confuse completed with held bills");
+Check(Summary(retained,retained,absent).Completed==2 && !Summary(retained,retained,absent).AllCompleted,"Partial completion does not check the entire expansion");
+Check(!Summary(retained with {AvailableId=8},retained with {AvailableId=8},retained with {AvailableId=8}).AllCompleted,"New daily sets clear today's completion check");
+Check(!Summary(retained with {AvailableId=0},retained,retained).AllCompleted,"Unknown available set cannot assert completion today");
+Check(!BillCompletion.IsComplete(0,10,new[]{new BillRequirement(0,1)},_=>5),"Retained zero ID cannot be completed");
+Check(!BillCompletion.IsComplete(11,10,new[]{new BillRequirement(0,1)},_=>5),"Invalid retained ID cannot be completed");
+Check(!BillCompletion.IsComplete(7,10,Array.Empty<BillRequirement>(),_=>5),"Empty target list is not completion");
+Check(BillCompletion.IsComplete(7,10,new[]{new BillRequirement(0,1),new BillRequirement(1,3)},i=>i==0?1:3),"All retained kill requirements establish completion");
+Check(!BillCompletion.IsComplete(7,10,new[]{new BillRequirement(0,1),new BillRequirement(1,3)},_=>1),"Abandoned partial bill is not completion");
+Check(!BillCompletion.IsComplete(7,10,new[]{new BillRequirement(5,1)},_=>1),"Invalid kill slot is rejected");
+Console.WriteLine($"PASS completion audit: {checks} checks");
+
+var hecatomb=EliteSpawns.Sets.Single(p=>p.Value.Name=="Juggler Hecatomb");
+var worm=EliteSpawns.Sets.Single(p=>p.Value.Name=="Worm of the Well");
+Vector2[] ElitePoints(KeyValuePair<uint,EliteSpawnSet> entry)=>EliteSpawns.For(new(){MobHuntId=entry.Key,MapId=entry.Value.Map,TerritoryType=entry.Value.Territory,IsEliteMark=true});
+Check(hecatomb.Value.Territory==worm.Value.Territory && ElitePoints(hecatomb).Length==9 && ElitePoints(worm).Length==9,"Amh Araeng uses nine points per selected B-rank, not the old zone union of eighteen");
+Check(!ElitePoints(hecatomb).Intersect(ElitePoints(worm)).Any(),"Changing weekly mob does not reuse the other mark's points");
+Check(EliteSpawns.For(new(){MobHuntId=hecatomb.Key,MapId=hecatomb.Value.Map,TerritoryType=hecatomb.Value.Territory}).Length==0,"Daily mob cannot request elite points");
+Check(EliteSpawns.For(new(){MobHuntId=uint.MaxValue,MapId=hecatomb.Value.Map,TerritoryType=hecatomb.Value.Territory,IsEliteMark=true}).Length==0,"Unknown elite never falls back to unrelated zone points");
+Console.WriteLine($"PASS final audit: {checks} checks");

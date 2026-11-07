@@ -35,10 +35,19 @@ class Program {
   }
   Console.WriteLine($"Daily target map flags checked: {checks}");
   foreach(var board in Plugin.Boards) CheckPoint(board.Territory,game.Excel.GetSheet<TerritoryType>().GetRow(board.Territory).Map.Value,board.Position,board.Name+" board");
-  var spawns=JsonSerializer.Deserialize<Dictionary<uint,float[][]>>(File.ReadAllText(args[1]))!;
-  foreach(var (territory,points) in spawns) {
-   var map=game.Excel.GetSheet<TerritoryType>().GetRow(territory).Map.Value; maps.Add(map.RowId);
-   foreach(var p in points) CheckPoint(territory,map,new Vector2(p[0],p[1]),"B-rank spawn");
+  var spawns=JsonSerializer.Deserialize<Dictionary<uint,EliteSpawnSet>>(File.ReadAllText(args[1]))!;
+  var weekly=game.Excel.GetSubrowSheet<MobHuntOrder>().SelectMany(g=>g).Where(o=>o.Target.RowId!=0).Select(o=>o.Target.Value).Where(t=>spawns.ContainsKey(t.Name.RowId)).DistinctBy(t=>t.Name.RowId).ToDictionary(t=>t.Name.RowId);
+  if(spawns.Count!=77 || weekly.Count!=77)throw new Exception("Target-specific B-rank coverage changed");checks++;
+  foreach(var (id,entry) in spawns) {
+   var target=weekly[id];var map=game.Excel.GetSheet<Map>().GetRow(entry.Map);maps.Add(map.RowId);
+   if(target.Map.RowId!=entry.Map || map.TerritoryType.RowId!=entry.Territory || target.Name.Value.Singular.ToString()!=entry.Name || map.PlaceName.Value.Name.ToString()!=entry.Zone)throw new Exception($"Wrong weekly target binding {id}");checks++;
+   if(entry.Points.Length==0 || entry.Points.Any(p=>p.Length!=2 || !p.All(float.IsFinite)))throw new Exception("Invalid weekly points");checks++;
+   var selected=new MobHuntEntry{MobHuntId=id,MapId=entry.Map,TerritoryType=entry.Territory,IsEliteMark=true};
+   var selectedPoints=EliteSpawns.For(selected);
+   if(selectedPoints.Length!=entry.Points.Length)throw new Exception("Weekly selector lost target points");checks++;
+   foreach(var p in entry.Points) CheckPoint(entry.Territory,map,new Vector2(p[0],p[1]),"Target-specific B-rank spawn");
+   if(EliteSpawns.For(new(){MobHuntId=id,MapId=entry.Map,TerritoryType=uint.MaxValue,IsEliteMark=true}).Length!=0)throw new Exception("Weekly selector accepted wrong territory");checks++;
+   if(EliteSpawns.For(new(){MobHuntId=id,MapId=uint.MaxValue,TerritoryType=entry.Territory,IsEliteMark=true}).Length!=0)throw new Exception("Weekly selector accepted wrong map");checks++;
   }
   foreach(uint icon in icons) {
    string directory=$"ui/icon/{icon/1000*1000:D6}/{icon:D6}";

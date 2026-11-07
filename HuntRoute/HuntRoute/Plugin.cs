@@ -91,12 +91,17 @@ public sealed class Plugin : IDalamudPlugin {
             CurrentTerritory=Service.ClientState.TerritoryType; CurrentMap=Service.ClientState.MapId;
             string routeKey=current+":"+CurrentTerritory+":"+CurrentMap+":"+string.Join(",",Mobs.Where(Done).Select(m=>$"{m.BillNumber}-{m.MobIndex}"));
             if(routeSignature!=routeKey) { BuildRoutes(); routeSignature=routeKey; }
-            var entries=Mobs.ToLookup(m=>m.BillNumber);
             var snapshots=new Dictionary<byte,BillState>();
             for(byte bill=0;bill<22;bill++) {
                 bool obtained=(hunt->ObtainedFlags & (1<<bill))!=0;
-                bool complete=entries[bill].Any() && entries[bill].All(Done);
                 var type=Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(bill);
+                byte retainedId=hunt->ObtainedMarkId[bill];
+                bool complete=false;
+                // Completed bills clear ObtainedFlags, but the game retains their order ID and kills.
+                if(retainedId>0 && retainedId<=type.OrderAmount && Service.DataManager.GetSubrowExcelSheet<MobHuntOrder>().TryGetRow(type.OrderStart.RowId+retainedId-1u,out var rows)) {
+                    var requirements=rows.Where(o=>o.Target.RowId!=0).Select(o=>new BillRequirement((byte)o.SubrowId,o.NeededKills));
+                    complete=BillCompletion.IsComplete(retainedId,type.OrderAmount,requirements,m=>KillCounts.GetValueOrDefault((bill,m)));
+                }
                 snapshots[bill]=BillState.FromGame(hunt->IsMarkBillUnlocked(bill),obtained,hunt->ObtainedMarkId[bill],hunt->AvailableMarkId[bill],complete,type.OrderAmount);
             }
             BillStates=snapshots;

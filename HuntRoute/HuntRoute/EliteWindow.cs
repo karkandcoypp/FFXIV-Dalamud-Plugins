@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Reflection;
-using System.Text.Json;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.ClientState.Conditions;
@@ -18,14 +16,11 @@ public sealed class EliteWindow : Window {
     private readonly Plugin plugin;
     internal MobHuntEntry? Selected;
     private int page;
-    private readonly Dictionary<uint, Vector2[]> spawns;
     internal bool WorldMarkers = true;
     internal int MaxDistance = 300;
     public EliteWindow(Plugin plugin) : base("Недельная охота — места появления###HuntRouteElite") {
         this.plugin=plugin; Size=new(720,800); SizeCondition=ImGuiCond.FirstUseEver;
-        using var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("HuntRoute.elite-spawns.json")!;
-        var source=JsonSerializer.Deserialize<Dictionary<uint,float[][]>>(stream)!;
-        spawns=source.ToDictionary(p=>p.Key,p=>p.Value.Select(v=>new Vector2(v[0],v[1])).ToArray());
+
     }
     public override void PreDraw() => HuntTheme.Push();
     public override void PostDraw() => HuntTheme.Pop();
@@ -37,10 +32,11 @@ public sealed class EliteWindow : Window {
             Selected=null; ImGui.TextWrapped("Этот контракт больше не активен. Выберите текущую недельную цель."); return;
         }
         ImGui.TextColored(new Vector4(.4f,.85f,.78f,1),mob.Name+" / "+mob.TerritoryName);
-        ImGui.TextWrapped("Жёлтые точки — предполагаемые места B-рангов в зоне. Они не подтверждают присутствие цели; точный набор мест может отличаться для конкретного моба.");
+        ImGui.TextWrapped("Жёлтые точки — известные места появления выбранной цели. Это возможные точки, а не её текущая позиция.");
         ImGui.Checkbox("Метки обнаруженной цели в игровом мире",ref WorldMarkers);
         ImGui.SliderInt("Дальность, м",ref MaxDistance,50,500);
-        if(!spawns.TryGetValue(mob.TerritoryType,out var points) || points.Length==0) { ImGui.Text("Для этой зоны нет точек появления."); return; }
+        var points=EliteSpawns.For(mob);
+        if(points.Length==0) { ImGui.Text("Для этой цели нет проверенных точек появления."); return; }
         ImGui.TextDisabled($"Известных мест: {points.Length}. Нажатие точки откроет игровую карту.");
         if(ImGui.Button("Отметить группу на игровой карте")) ShowNative(points);
         ImGui.SameLine();
@@ -69,7 +65,7 @@ public sealed class EliteWindow : Window {
             var p=MapUtil.WorldToMap(new Vector2(player.Position.X,player.Position.Z),map);
             draw.AddCircleFilled(Pixel(p),6,0xffffff40);
         }
-        ImGui.TextDisabled("Источник точек: HuntHelper (MIT). Голубая точка — вы.");
+        ImGui.TextDisabled("Источник точек: ffxiv-huntmaps-maker (MIT). Голубая точка — вы.");
     }
     private unsafe void ShowNative(Vector2[] points) {
         if(Selected==null) return;
