@@ -1,3 +1,10 @@
+# 0.3.10
+
+- Empty ObjectTable snapshots never auto-skip a weekly spawn. Confirm an empty spot explicitly after arriving and landing; loading, flight, combat and casting disable confirmation. Detection remains automatic, with no dwell timer.
+- A detected elite locks the flag to its latest observed position until contract completion. Despawn, lost visibility, death before kill credit, and same-route loading preserve the lock. Re-selecting the tracked elite cannot reset it.
+- Expanded deterministic and randomized search regressions cover delayed streaming, flight, combat, marker retries, duplicate points, exhausted searches and completion/next-zone continuation.
+- Runtime NPC streaming and native map behavior still require in-game validation.
+
 # 0.3.9
 
 - Removed the elite spawn dwell timer. At arrival within 45 yalms, a single shared detector checks loaded living contract elites; detected targets take priority, otherwise the next candidate is flagged immediately. Combat/casting pause speculative advancement; flight no longer forces waiting.

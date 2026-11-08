@@ -197,8 +197,12 @@ public sealed class HuntWindow : Window {
         }
         if(plugin.Session.Target is {IsEliteMark:true} elite && elite.TerritoryType==plugin.CurrentTerritory && plugin.Session.Phase==RoutePhase.Following) {
             ImGui.TextWrapped(plugin.Search.Status);
-            if(ImGui.Button("Следующая точка")) plugin.Search.Skip();
-            ImGui.SameLine();if(ImGui.Button("Повторить поиск")) plugin.Travel(elite);
+            ImGui.BeginDisabled(!plugin.Search.CanSkip || plugin.TravelBusy || Service.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.InFlight]);
+            if(ImGui.Button("Здесь пусто — дальше")) plugin.ConfirmEmptyElite();
+            ImGui.EndDisabled();
+            ImGui.SameLine();ImGui.BeginDisabled(plugin.Search.LockedPosition!=null);
+            if(ImGui.Button("Повторить поиск")) plugin.Travel(elite);
+            ImGui.EndDisabled();
         }
 
     }

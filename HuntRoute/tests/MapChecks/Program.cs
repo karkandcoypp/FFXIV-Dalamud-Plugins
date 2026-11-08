@@ -108,6 +108,8 @@ class Program {
   if(Vector2.Distance(new(p1.RawX/1000f,p1.RawY/1000f),new(p2.RawX/1000f,p2.RawY/1000f))<500) throw new Exception("Distinct target flags still collapsed");
   // Exercise the actual teleport wrapper without any bound native game functions.
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+  var streamingSearch=new EliteSearch();
+  typeof(Plugin).GetField("Search",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,streamingSearch);
   typeof(Plugin).GetField("Ready",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,true);
   Service.DataManager=new SheetServices(game);
   var entryMethod=typeof(Plugin).GetMethod("Entries",BindingFlags.Instance|BindingFlags.NonPublic)!;
@@ -183,7 +185,9 @@ class Program {
   Service.Condition=Proxy<ICondition>((_,_)=>true);
   Service.ClientState=Proxy<IClientState>((m,_)=>m.Name=="get_IsLoggedIn"?false:throw new Exception(m.Name));
   var update=typeof(Plugin).GetMethod("Update",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  streamingSearch.Start([new(0,0)]);streamingSearch.Tick(new(0,0),new Vector2(12,4),false);
   update.Invoke(plugin,new object?[]{null});
+  if(streamingSearch.LockedPosition!=new Vector2(12,4) || streamingSearch.CanSkip || streamingSearch.Tick(new(0,0),null,true)!=new Vector2(12,4))throw new Exception("Actual loading discarded elite lock or failed to reapply marker");checks++;
   if(session.Target!=arrivalTarget || session.Phase!=RoutePhase.WaitingForZone) throw new Exception("Route lost on active loading frame");checks++;
   Service.Condition=Proxy<ICondition>((_,_)=>false);
   update.Invoke(plugin,new object?[]{null});

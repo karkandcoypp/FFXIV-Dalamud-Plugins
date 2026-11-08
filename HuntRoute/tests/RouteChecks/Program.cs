@@ -343,14 +343,51 @@ Check(presentedQueue.Resolve(presented.Key,false)==null && presentedAccepted==0,
 Console.WriteLine($"PASS styled dialog audit: {checks} checks");
 var searchAudit=new EliteSearch();
 searchAudit.Start([new(200,0),new(0,0),new(100,0),new(0,0)]);
-Check(searchAudit.Tick(new(-100,0),null,false)==new Vector2(0,0),"Elite starts at nearest unique point");
-Check(searchAudit.Tick(new(0,0),new Vector2(12,4),false)==new Vector2(12,4),"Detection takes priority over arriving at empty candidate");
-searchAudit.Skip();Check(searchAudit.Tick(new(0,0),new Vector2(12,4),false)==null,"Cannot skip detected elite");
-Check(searchAudit.Tick(new(0,0),null,true)==new Vector2(0,0),"Combat prevents speculative advancement");
-Check(searchAudit.Tick(new(0,0),null,false)==new Vector2(100,0),"Empty point advances immediately without timer");
-Check(searchAudit.Tick(new(100,0),null,false)==new Vector2(200,0),"Next empty point advances without timer");
-Check(searchAudit.Tick(new(200,0),null,false)==null,"Exhaustion never completes contract or loops");
-Check(searchAudit.Tick(new(200,0),new Vector2(210,0),false)==new Vector2(210,0),"Detection remains active after all spawn points visited");
+Check(searchAudit.Tick(new(-100,0),null,false)==new Vector2(0,0),"Starts at nearest unique spawn");
+Check(!searchAudit.Skip(),"Cannot skip a point from outside inspection radius");
+for(int i=0;i<120;i++) {
+ Check(searchAudit.Tick(new(0,0),null,false)==null,"Arbitrarily delayed streaming never auto-skips spawn");
+ Check(searchAudit.CanSkip,"Explicit empty confirmation available at inspected point");
+}
+Check(searchAudit.Tick(new(0,0),new Vector2(12,4),false)==new Vector2(12,4),"Late elite detection takes priority");
+Check(!searchAudit.Skip() && !searchAudit.CanSkip,"Detected elite cannot be skipped");
+for(int i=0;i<120;i++) Check(searchAudit.Tick(new(0,0),null,i%2==0)==null,"Temporary disappearance and combat keep detected lock");
+searchAudit.Suspend();
+Check(!searchAudit.CanSkip && searchAudit.LockedPosition==new Vector2(12,4),"Loading preserves lock and disables confirmation");
+Check(searchAudit.Tick(new(0,0),null,false)==new Vector2(12,4),"Return from loading reapplies last known elite marker");
+Check(searchAudit.Tick(new(0,0),new Vector2(20,8),true)==new Vector2(20,8),"Moving detected elite updates locked position even in combat");
+searchAudit.Retry();Check(searchAudit.Tick(new(0,0),null,false)==new Vector2(20,8),"Marker failure retries locked elite, not spawn");
+searchAudit.Start([new(0,0),new(100,0)]);
+Check(searchAudit.LockedPosition==null,"Explicit new route clears old detection state");
+searchAudit.Tick(new(0,0),null,true);Check(!searchAudit.Skip(),"Flight/combat/loading cannot confirm a spawn empty");
+searchAudit.Tick(new(0,0),null,false);Check(searchAudit.Skip(),"Explicit empty confirmation advances after arrival");
+Check(searchAudit.Tick(new(0,0),null,false)==new Vector2(100,0),"Confirmation selects nearest remaining point");
+searchAudit.Tick(new(100,0),null,false);Check(searchAudit.Skip(),"Last spawn can be explicitly confirmed");
+Check(searchAudit.Tick(new(100,0),null,false)==null && !searchAudit.CanSkip,"Exhaustion neither loops nor completes hunt");
+Check(searchAudit.Tick(new(100,0),new Vector2(120,0),false)==new Vector2(120,0),"Detection still works after exhaustion");
+searchAudit.Start([new(float.NaN,0),new(float.PositiveInfinity,0)]);
+Check(searchAudit.Tick(new(0,0),null,false)==null,"Invalid spawn data does not create a marker");
+for(int scenario=0;scenario<100;scenario++) {
+ var search=new EliteSearch();search.Start([new(0,0),new(200,0)]);
+ Vector2? expectedLock=null;
+ for(int step=0;step<200;step++) {
+  bool busy=random.Next(3)==0;var player=new Vector2(random.Next(-10,220),0);
+  Vector2? detection=random.Next(8)==0?new Vector2(random.Next(250),random.Next(20)):null;
+  if(detection!=null) expectedLock=detection;
+  if(random.Next(12)==0) search.Suspend();
+  if(random.Next(12)==0) search.Retry();
+  var marker=search.Tick(player,detection,busy);
+  if(expectedLock!=null) {
+   Check(search.LockedPosition==expectedLock && !search.CanSkip && !search.Skip(),"Randomized lost visibility never unlocks elite");
+   Check(marker==null || marker==expectedLock,"Randomized marker stays on observed elite");
+  } else {
+   Check(search.LockedPosition==null,"Absence cannot create a fake detection");
+   if(busy) Check(!search.CanSkip && !search.Skip(),"Randomized busy frames cannot discard points");
+   else if(random.Next(10)==0) search.Skip();
+  }
+ }
+}
+Console.WriteLine($"PASS streaming/locked-elite deterministic and randomized audit: {checks}");
 var eliteRoute=new RouteSession();
 var normalTarget=new MobHuntEntry{BillNumber=1,MobIndex=0,MobHuntId=1,TerritoryType=100,NeededKills=1};
 var eliteTarget=new MobHuntEntry{BillNumber=2,MobIndex=0,MobHuntId=2,TerritoryType=100,NeededKills=1,IsEliteMark=true};

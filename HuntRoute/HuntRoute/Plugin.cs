@@ -76,12 +76,12 @@ public sealed class Plugin : IDalamudPlugin {
         Elite.Selected=null; Session.Stop(); NextZone.Sync(); Shortcut.Sync();
     }
     private void OnTerritoryChanged(uint territory) {
-        nextScan=0; routeSignature=""; Session.ZoneTransition();
+        nextScan=0; routeSignature=""; Session.ZoneTransition(); Search.Suspend();
     }
     private unsafe void Update(IFramework _) {
         // Loading can temporarily clear LocalPlayer/ContentId. Only the logout event clears the route.
         bool loading=Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51);
-        if(loading) { Timing.Loading(Environment.TickCount64);if(!wasLoading) Session.ZoneTransition(); wasLoading=true; return; }
+        if(loading) { Timing.Loading(Environment.TickCount64);if(!wasLoading) { Session.ZoneTransition();Search.Suspend(); } wasLoading=true; return; }
         if(wasLoading) { wasLoading=false;nextScan=0;routeSignature="";Session.ZoneTransition(); }
         if(!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId==0) {
             Ready=false; return;
@@ -207,6 +207,10 @@ public sealed class Plugin : IDalamudPlugin {
             else if(m.TerritoryType==399) { if(!Teleport(75)) return; }
             else { Service.Chat.PrintError("Нет открытого эфирита на этой карте."); return; }
         }
+        // Re-selecting a locked elite must not restart its spawn search, including after a teleport.
+        if(m.IsEliteMark && Search.LockedPosition!=null && Session.Target is {} tracked && tracked.BillNumber==m.BillNumber && tracked.MobIndex==m.MobIndex && tracked.MobHuntId==m.MobHuntId && searchKey==$"{Session.RunId}:{m.BillNumber}:{m.MobIndex}:{m.MobHuntId}") {
+            Search.Suspend();Session.ZoneTransition();AdvanceRoute();return;
+        }
         var board=Boards.FirstOrDefault(b=>b.Daily.Contains(m.BillNumber) || b.Weekly==m.BillNumber);
         if(board!=null) { Session.Start(m,board.Daily.Append(board.Weekly)); AdvanceRoute(); }
         else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
@@ -223,18 +227,27 @@ public sealed class Plugin : IDalamudPlugin {
         return Service.ObjectTable.OfType<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>().Where(n=>!n.IsDead && ids.Contains(n.NameId));
     }
     private void UpdateEliteSearch() {
-        if(Session.Phase!=RoutePhase.Following || Session.Target is not {IsEliteMark:true} target || Service.ClientState.MapId!=target.MapId || Service.ObjectTable.LocalPlayer is not {} player) { searchKey="";return; }
+        if(Session.Target is not {IsEliteMark:true} target || Session.Phase is RoutePhase.Idle or RoutePhase.Finished or RoutePhase.Changed or RoutePhase.NextZone) {
+            if(!string.IsNullOrEmpty(searchKey)) { searchKey="";Search.Start([]); }return;
+        }
+        if(Session.Phase!=RoutePhase.Following || Service.ClientState.MapId!=target.MapId || Service.ObjectTable.LocalPlayer is not {} player) { Search.Suspend();return; }
         var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(target.MapId);
         string key=$"{Session.RunId}:{target.BillNumber}:{target.MobIndex}:{target.MobHuntId}";
         bool firstPoint=key!=searchKey;
         if(firstPoint) { Search.Start(EliteSpawns.For(target).Select(p=>MapCoordinates.ToWorld(p,map)).ToArray());searchKey=key; }
         var npc=DetectedElites().FirstOrDefault(n=>n.NameId==target.MobHuntId);
         Vector2? found=npc==null?null:new Vector2(npc.Position.X,npc.Position.Z);
-        var point=Search.Tick(new Vector2(player.Position.X,player.Position.Z),found,Service.Condition[ConditionFlag.InCombat] || player.IsCasting);
+        var point=Search.Tick(new Vector2(player.Position.X,player.Position.Z),found,Service.Condition[ConditionFlag.InCombat] || Service.Condition[ConditionFlag.InFlight] || player.IsCasting);
         if(point is {} position) {
             if(!Location.SetWorldFlag(target.TerritoryType,target.MapId,position)) Search.Retry();
             else if(firstPoint) Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(target.TerritoryType,map,Dalamud.Utility.MapUtil.WorldToMap(position,map)));
         }
+    }
+    internal void ConfirmEmptyElite() {
+        if(!Ready || TravelBusy || Service.Condition[ConditionFlag.InFlight] || Session.Phase!=RoutePhase.Following || Session.Target is not {IsEliteMark:true}) return;
+        // Re-read detection at click time: a newly streamed elite wins over a stale empty-state button.
+        UpdateEliteSearch();
+        if(Search.Skip()) AdvanceRoute();
     }
     internal ShortcutOffer? FindShortcut() {
         if(!Ready || Session.Phase!=RoutePhase.Following || Session.Target is not {} target
