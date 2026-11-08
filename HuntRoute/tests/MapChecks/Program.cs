@@ -305,6 +305,24 @@ class Program {
   if(detectorReads!=1 || streamingSearch.LockedPosition!=new Vector2(12,4))throw new Exception("Airborne detector did not run between contract snapshots");checks++;
   if((long)typeof(Plugin).GetField("nextScan",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)! != laterScan)throw new Exception("Fly-by scan changed full contract-refresh cadence");checks++;
   if((long)typeof(Plugin).GetField("nextEliteScan",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)! <=0)throw new Exception("Fly-by detector did not schedule its next 100 ms scan");checks++;
+  // Shared production detector -> search: NPC streams in only after next-spawn flag was emitted.
+  bool lateNpcLoaded=false;
+  Service.ObjectTable=Proxy<IObjectTable>((m,_)=>m.Name=="GetEnumerator"?(lateNpcLoaded?new Dalamud.Game.ClientState.Objects.Types.IGameObject[]{flightNpc}:Array.Empty<Dalamud.Game.ClientState.Objects.Types.IGameObject>()).AsEnumerable().GetEnumerator():throw new Exception(m.Name));
+  var lateSearch=new EliteSearch();lateSearch.Start([new(0,0),new(200,0)]);
+  lateSearch.Tick(new(-100,0),null,false);
+  if(lateSearch.Tick(new(0,0),null,false)!=new Vector2(200,0))throw new Exception("Late-stream detector fixture did not advance its spawn flag");checks++;
+  Vector2? PollLate() {
+   var npc=((IEnumerable<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>)detect.Invoke(plugin,null)!).FirstOrDefault();
+   return lateSearch.Tick(new(100,0),npc==null?null:new Vector2(npc.Position.X,npc.Position.Z),false);
+  }
+  if(PollLate()!=null || lateSearch.LockedPosition!=null)throw new Exception("Empty detector invented an elite");checks++;
+  lateNpcLoaded=true;
+  if(PollLate()!=new Vector2(12,4) || lateSearch.LockedPosition!=new Vector2(12,4))throw new Exception("Shared detector failed to transfer next-spawn flag to late-streamed elite");checks++;
+  lateNpcLoaded=false;
+  for(int frame=0;frame<20;frame++) {
+   if(PollLate()!=null || lateSearch.LockedPosition!=new Vector2(12,4))throw new Exception("Shared-detector disappearance released late elite lock");checks++;
+  }
+  lateSearch.Suspend();if(PollLate()!=new Vector2(12,4))throw new Exception("Loading failed to restore late-elite flag");checks++;
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
  }
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> handler) where T:class {

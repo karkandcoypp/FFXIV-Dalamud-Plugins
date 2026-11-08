@@ -379,6 +379,29 @@ for(int scenario=0;scenario<100;scenario++) {
  }
 }
 Console.WriteLine($"PASS fly-by search and locked-elite audit: {checks}");
+// Regression: an elite can stream in at a previous spawn after the next flag was emitted.
+foreach(int delay in new[]{0,1,2,10,100,1000}) {
+ var late=new EliteSearch();late.Start([new(0,0),new(200,0),new(400,0)]);
+ Check(late.Tick(new(-100,0),null,false)==new Vector2(0,0),"Late-stream fixture flags initial spawn");
+ Check(late.Tick(new(0,0),null,false)==new Vector2(200,0),"Late-stream fixture already emitted next-spawn flag");
+ for(int i=0;i<delay;i++) Check(late.Tick(new(100,0),null,false)==null && late.LockedPosition==null,"No visibility timeout after advancing a point");
+ var actual=new Vector2(8,6);
+ Check(late.Tick(new(100,0),actual,false)==actual && late.LockedPosition==actual,"Late-loaded elite at previous spawn replaces next-spawn flag immediately");
+ for(int i=0;i<100;i++) Check(late.Tick(new(400,0),null,i%2==0)==null && late.LockedPosition==actual,"Reaching further spawn and losing visibility never releases late detection");
+ late.Suspend();Check(late.Tick(new(400,0),null,false)==actual,"Loading reapplies late-found elite flag");
+ var moved=actual+new Vector2(15,0);
+ Check(late.Tick(new(400,0),moved,true)==moved,"Late-found elite still updates actual position in combat");
+ late.Retry();Check(late.Tick(new(400,0),null,false)==moved,"Late-found elite survives marker retry");
+}
+var lateAfterExhaustion=new EliteSearch();lateAfterExhaustion.Start([new(0,0)]);
+lateAfterExhaustion.Tick(new(-100,0),null,false);lateAfterExhaustion.Tick(new(0,0),null,false);
+Check(lateAfterExhaustion.Status.Contains("Все точки"),"Late exhaustion fixture really consumed final spawn");
+Check(lateAfterExhaustion.Tick(new(100,0),new Vector2(4,8),false)==new Vector2(4,8),"Late detection after final visited point still emits elite flag");
+Check(lateAfterExhaustion.Tick(new(100,0),null,false)==null && lateAfterExhaustion.LockedPosition==new Vector2(4,8),"Final-point late detection remains locked");
+var sameFlag=new EliteSearch();sameFlag.Start([new(0,0),new(200,0)]);sameFlag.Tick(new(0,0),null,false);
+Check(sameFlag.Tick(new(100,0),new Vector2(200,0),false)==null && sameFlag.LockedPosition==new Vector2(200,0),"Elite coinciding with existing flag locks without redundant marker");
+Check(sameFlag.Tick(new(200,0),null,false)==null && sameFlag.LockedPosition==new Vector2(200,0),"Coincident late detection cannot be skipped on arrival");
+Console.WriteLine($"PASS late streaming after spawn advancement audit: {checks}");
 var eliteRoute=new RouteSession();
 var normalTarget=new MobHuntEntry{BillNumber=1,MobIndex=0,MobHuntId=1,TerritoryType=100,NeededKills=1};
 var eliteTarget=new MobHuntEntry{BillNumber=2,MobIndex=0,MobHuntId=2,TerritoryType=100,NeededKills=1,IsEliteMark=true};
