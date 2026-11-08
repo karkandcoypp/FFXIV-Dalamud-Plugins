@@ -15,7 +15,7 @@ static class JourneyRuntimeChecks {
  public static int Run(GameData game){
   int checks=0;void Check(bool yes,string message){checks++;if(!yes)throw new Exception(message);}
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
-  var session=new RouteSession();var search=new EliteSearch();Set(plugin,"Session",session);Set(plugin,"Search",search);Set(plugin,"Ready",true);Set(plugin,"character",123UL);
+  var session=new RouteSession();var search=new EliteSearch();Set(plugin,"Session",session);Set(plugin,"Search",search);Set(plugin,"Ready",true);Set(plugin,"character",123UL);Set(plugin,"loginNoticeShown",true);
   var flow=Get<JourneyFlow>(plugin,"Flow");var store=Get<HuntStore>(plugin,"Store");
   var bridgeType=typeof(Plugin).Assembly.GetType("HuntRoute.NativeDialogService")!;
   var bridge=RuntimeHelpers.GetUninitializedObject(bridgeType);var queue=new ConfirmationQueue();Set(bridge,"queue",queue);Set(plugin,"NativeDialogs",bridge);Set(plugin,"NextZone",new NextZoneWindow(plugin));Set(plugin,"Shortcut",new ShortcutWindow(plugin));
@@ -148,6 +148,23 @@ static class JourneyRuntimeChecks {
    Call(plugin,"SaveHistory",true);Check(Get<string?>(plugin,"HistorySaveError")!=null&&history.IsComplete(123,1,false,DateTimeOffset.UtcNow),"Write failure exposes persistent warning without altering confirmed completion");Directory.Delete(blocked);Call(plugin,"RetryPersistence");
    Check(Get<string?>(plugin,"HistorySaveError")==null&&CompletionHistory.Load(blocked).IsComplete(123,1,false,DateTimeOffset.UtcNow),"Explicit retry persists unchanged result and clears warning");
   }finally{Directory.Delete(ioFolder,true);Set(plugin,"completionFile",null);}
+  // Login proposals are session-scoped, independently of persisted reset acknowledgement.
+  queue.Clear();Set(plugin,"loginNoticeShown",false);Set(plugin,"Mobs",new List<MobHuntEntry>());Set(plugin,"completionHistory",new CompletionHistory());Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});flow.Active=false;flow.Pauses=PauseReason.None;
+  savedNotice.DailyNotice=ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds();combat=true;Call(plugin,"CheckResetNotice");
+  Check(queue.Activate(true)==null,"Login offer waits until combat ends");combat=false;request=queue.Activate(true);
+  Check(request?.Key.StartsWith("login:")==true&&request.Presentation?.ConfirmLabel=="Выбрать дополнение","Login offers board choice even if current reset was acknowledged earlier");
+  request!.OnShown!();queue.Resolve(request.Key,false);Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Later does not repeat login offer during the same session");
+  queue.Clear();Call(plugin,"LoadJourney");flow=Get<JourneyFlow>(plugin,"Flow");Set(plugin,"contractRevision",2L);Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
+  Check(request?.Key.StartsWith("login:")==true,"New login resets session suppression despite same character and daily period");
+  queue.Clear();Set(plugin,"Mobs",new List<MobHuntEntry>{a});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
+  Check(request?.Presentation?.ConfirmLabel=="Продолжить охоту","Obtained incomplete bills offer continuation instead of another board trip");
+  savedNotice.DailyNotice=0;request!.OnShown!();queue.Resolve(request.Key,false);Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null&&savedNotice.DailyNotice==0,"Continuation offer suppresses same-session reset duplicate without falsely persisting board-category acknowledgement");
+  queue.Clear();Set(plugin,"loginDailyPeriod",ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()-86400);Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Key.StartsWith("pickup:")==true,"A new reset period remains eligible after session login proposal");
+  queue.Clear();Set(plugin,"loginNoticeShown",false);Set(plugin,"Mobs",new List<MobHuntEntry>());Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,1,1,true)}});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
+  Check(request?.Presentation?.ConfirmLabel=="Открыть сводку"&&!request.Presentation.Destination.Contains("Доступны новые"),"Completed day still gets login summary without claiming new contracts exist");
+  queue.Clear();Set(plugin,"loginNoticeShown",false);store.Settings.ResetNotifications=false;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Explicit notification opt-out remains respected");store.Settings.ResetNotifications=true;
+  flow.Active=true;flow.Pauses=PauseReason.None;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"A started route defers the login popup until paused");flow.Pauses=PauseReason.User;Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request!=null,"Deferred login offer becomes available on manual pause");
+  queue.Clear();Set(plugin,"character",124UL);Call(plugin,"LoadJourney");Set(plugin,"contractRevision",2L);Set(plugin,"BillStates",new Dictionary<byte,BillState>());Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Key.StartsWith("login:124:")==true,"Another character has its own login offer");queue.Clear();
   // An invalid hi-res portrait must still try standard-res and never break the hunt UI.
   var picture=Proxy<Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap>((m,_)=>m.Name switch{"get_Width"=>128,"get_Height"=>128,_=>throw new Exception(m.Name)});
   var immediate=Proxy<Dalamud.Interface.Textures.ISharedImmediateTexture>((m,_)=>m.Name=="GetWrapOrDefault"?picture:throw new Exception(m.Name));

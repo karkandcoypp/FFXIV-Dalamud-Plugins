@@ -24,6 +24,8 @@ public sealed partial class Plugin {
  internal Func<uint,bool>? TeleportTransport {get;set;}
  internal long Now=>Clock?.Invoke()??Environment.TickCount64;
  private bool stateLoadPending;
+ private bool loginNoticeShown;
+ private long loginDailyPeriod,loginWeeklyPeriod;
  private HuntStore? store;
  internal HuntStore Store=>store??=new();
  private JourneyFlow? flow;
@@ -62,6 +64,7 @@ public sealed partial class Plugin {
   try{settingsStore=HuntSettingsFile.Load(settingsFile,Store.Settings);if(settingsStore.Recovered)NoticeText="Настройки восстановлены; история выполнения и маршруты хранятся отдельно.";}catch(Exception e){settingsLoadPending=true;SettingsSaveError="Настройки временно недоступны. Исходный файл сохранён.";Service.PluginLog.Error(e,"Чтение настроек");}
  }
  private void LoadJourney(){
+  loginNoticeShown=false;loginDailyPeriod=0;loginWeeklyPeriod=0;
   billGuard=new();uncertainBills.Clear();unreadBills.Clear();KillCounts=new();BillStates=new();Mobs=new();Routes=new();
   contractRevision=0;contractAt=0;flow=new();Flow.Load(CharacterSave);ordinaryActor=null;ordinaryKind=null;context=null;ownedMarker=null;pendingJourney=null;
   if(Flow.Active)Flow.Status="Сохранённый маршрут на паузе. Проверьте контракты и нажмите «Продолжить».";
@@ -272,10 +275,26 @@ public sealed partial class Plugin {
  internal bool BoardReachable(Board b)=>CurrentTerritory==b.Territory||Service.Aetherytes is not null&&Service.Aetherytes.Any(a=>a.AetheryteId==b.Aetheryte);
  internal string LocationLabel=>Session.Target is {IsEliteMark:true}?Search.Lost?"Последняя известная позиция":Search.ActorId!=null?"Элита обнаружена":"Предполагаемые места появления":ordinaryActor!=null&&Session.Target is {} goal&&ordinaryKind==JourneyFlow.Key(goal)?"Моб обнаружен":"Известная точка охоты";
  internal bool CanPickup(Board b,bool weekly){var ids=weekly?new[]{b.Weekly}:b.Daily;return ids.Any(i=>!unreadBills.Contains(i)&&BillStates.TryGetValue(i,out var state)&&state.Unlocked&&state.AvailableId>0&&!state.Taken&&!state.CompletedCurrentSet&&!History.IsComplete(character,i,weekly,DateTimeOffset.UtcNow,state.AvailableId));}
+ private string LoginMode()=>Mobs.Any(m=>AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m))?"taken":Boards.Any(b=>CanPickup(b,false)||CanPickup(b,true))?"pickup":"summary";
+ private void OfferLoginNotice(){
+  string mode=LoginMode();
+  if(Flow.Active&&Flow.Pauses==PauseReason.None){NoticeText="Предложение охоты ожидает паузы маршрута. Действия доступны в сводке.";return;}
+  NativeDialogs.Offer(new("pickup",$"login:{character}:{mode}","Начать охоту?",
+   ()=>Ready&&Settings.ResetNotifications&&LoginMode()==mode,
+   ()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),
+   ()=>{window.IsOpen=true;if(mode=="taken")ResumeJourney();else PickupOpen=mode=="pickup";return true;},
+   new("HUNT ROUTE · ВХОД В ИГРУ",mode=="taken"?"Продолжить охоту?":mode=="pickup"?"Начать охоту?":"Сводка охоты",
+    "СОСТОЯНИЕ",mode=="taken"?"Есть незавершённые взятые контракты":mode=="pickup"?"Доступны новые контракты":"Новых доступных целей пока нет",
+    mode=="taken"?"Начните сопровождение по уже взятым контрактам.":mode=="pickup"?"Выберите дополнение и доску охоты.":"Посмотрите выполненные, отложенные цели и время следующего сброса.",
+    "ПОСЛЕ ПОДТВЕРЖДЕНИЯ",mode=="taken"?"Продолжение маршрута":"Открытие сводки",
+    "Любой телепорт требует отдельного подтверждения.","«Позже» уберёт предложение до следующего входа. Действия останутся в сводке.",[],mode=="taken"?"Продолжить охоту":mode=="pickup"?"Выбрать дополнение":"Открыть сводку"),
+   ()=>{loginNoticeShown=true;var now=DateTimeOffset.UtcNow;loginDailyPeriod=ResetClock.Period(now,false).ToUnixTimeSeconds();loginWeeklyPeriod=ResetClock.Period(now,true).ToUnixTimeSeconds();if(mode=="pickup"){if(Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=loginDailyPeriod;if(Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=loginWeeklyPeriod;}SaveJourney(true);}));
+ }
  private void CheckResetNotice(){
   if(!Settings.ResetNotifications||!Ready||contractRevision<2)return;
+  if(!loginNoticeShown){OfferLoginNotice();return;}
   var now=DateTimeOffset.UtcNow;long daily=ResetClock.Period(now,false).ToUnixTimeSeconds(),weekly=ResetClock.Period(now,true).ToUnixTimeSeconds();
-  bool d=CharacterSave.DailyNotice!=daily&&Boards.Any(b=>CanPickup(b,false));bool w=CharacterSave.WeeklyNotice!=weekly&&Boards.Any(b=>CanPickup(b,true));
+  bool d=CharacterSave.DailyNotice!=daily&&loginDailyPeriod!=daily&&Boards.Any(b=>CanPickup(b,false));bool w=CharacterSave.WeeklyNotice!=weekly&&loginWeeklyPeriod!=weekly&&Boards.Any(b=>CanPickup(b,true));
   if(!d&&!w)return;
   if(Flow.Active&&Flow.Pauses==PauseReason.None){NoticeText="Доступны новые контракты — выберите доску в сводке.";return;}
   if(TravelBusy || pendingJourney!=null || Flow.Pauses.HasFlag(PauseReason.Marker))return;

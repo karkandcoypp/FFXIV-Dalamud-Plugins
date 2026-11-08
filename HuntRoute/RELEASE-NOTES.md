@@ -1,3 +1,9 @@
+# 0.3.18
+
+- Login now proposes hunting once per character session even when that reset period was acknowledged earlier. Available bills offer board selection; held unfinished bills offer continuation; no available objectives opens a truthful summary.
+- Later suppresses the login proposal only until the next login. Reset offers while staying logged in retain period deduplication. Combat/loading, active routes and user flag pauses still defer popups; notification opt-out remains respected.
+- Added controller regressions for same-period relog, held/completed bills, combat, active-route deferral and character switching. No game control used.
+
 # 0.3.17
 
 - Entry selection and teleport now share the reviewed zone plan. Estimates include the current-player leg and known elite spawn circuit, excluding deferred/unavailable anchors. Unknown elite search duration is never invented.

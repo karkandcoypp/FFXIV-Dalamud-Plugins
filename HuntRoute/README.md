@@ -25,7 +25,7 @@ Settings are independently stored in `hunt-settings.json` (legacy combined setti
 
 ## Reset notices and teleport suggestions
 
-After current game data confirms new bills, an idle/paused character may get one board-selection offer per daily/weekly reset period. During active hunting only a passive notice appears. The five-expansion board overview separates daily and weekly availability. Selection requires a second travel confirmation. Already in the city means only a board flag. Bills are never taken or discarded automatically. Later retains the overview action without repeated popups for that period.
+After each character login and fresh game data, an idle/paused character gets one hunting proposal, independently of prior reset acknowledgements: continue held bills, select a board for new bills, or open the summary when no new goals are available. Later suppresses this login offer until the next login. While staying logged in, reset offers remain once per daily/weekly period. During active hunting only a passive notice appears. The five-expansion board overview separates daily and weekly availability. Selection requires a second travel confirmation. Already in the city means only a board flag. Bills are never taken or discarded automatically. Later retains the overview action without repeated popups for that period.
 
 Long-flight shortcut settings default to <=200 gil, >=10 seconds and >=20% savings, with >=30 seconds original flight. Cast/load overhead is measured for plugin trips when possible, otherwise estimated. A zero budget permits free shortcuts only. Flight-based suggestions require current flight capability; inter-zone confirmations are outside the shortcut budget. Price, entry, target and route identity are rechecked at acceptance.
 

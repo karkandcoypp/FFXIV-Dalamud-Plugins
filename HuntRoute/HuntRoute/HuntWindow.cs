@@ -120,7 +120,7 @@ public sealed class HuntWindow:Window {
   var s=plugin.Settings;bool mini=s.Mini,eliteSound=s.EliteSound,nextSound=s.NextZoneSound,reset=s.ResetNotifications,shortcuts=s.Shortcuts;
   bool world=s.WorldMarkers;int distance=s.WorldDistance;
   int gil=(int)Math.Min(int.MaxValue,s.MaxGil);float seconds=s.MinSeconds,percent=s.MinPercent;
-  bool dirty=ImGui.Checkbox("Минипанель сопровождения",ref mini);dirty|=ImGui.Checkbox("Звук обнаружения элиты",ref eliteSound);dirty|=ImGui.Checkbox("Звук следующей зоны",ref nextSound);dirty|=ImGui.Checkbox("Предлагать новые контракты после сброса",ref reset);dirty|=ImGui.Checkbox("Предлагать сокращение перелёта",ref shortcuts);
+  bool dirty=ImGui.Checkbox("Минипанель сопровождения",ref mini);dirty|=ImGui.Checkbox("Звук обнаружения элиты",ref eliteSound);dirty|=ImGui.Checkbox("Звук следующей зоны",ref nextSound);dirty|=ImGui.Checkbox("Предлагать охоту при входе и после сброса",ref reset);dirty|=ImGui.Checkbox("Предлагать сокращение перелёта",ref shortcuts);
   dirty|=ImGui.Checkbox("Подсветка элиты в игровом мире",ref world);
   ImGui.SetNextItemWidth(150);dirty|=ImGui.SliderInt("Дальность подсветки, м",ref distance,50,500);
   ImGui.SetNextItemWidth(150);dirty|=ImGui.InputInt("Лимит гил (0 = бесплатно)",ref gil);
