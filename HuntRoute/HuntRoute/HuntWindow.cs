@@ -14,6 +14,11 @@ public sealed partial class HuntWindow:Window {
  private string zone="";
  private bool onlyNewBoards;
  private bool revealSelected;
+ private string? startFeedback;
+ private void StartHunt(){
+  page=HuntPage.Hunt;string? previous=plugin.NoticeText;plugin.ResumeJourney();
+  startFeedback=!plugin.Flow.Active?plugin.Flow.Status:plugin.NoticeText!=previous?plugin.NoticeText:null;
+ }
  public HuntWindow(Plugin plugin):base("Hunt Route###HuntRoute"){
   this.plugin=plugin;Size=new(480,540);SizeCondition=ImGuiCond.FirstUseEver;
   Flags=ImGuiWindowFlags.AlwaysVerticalScrollbar;
@@ -58,21 +63,22 @@ public sealed partial class HuntWindow:Window {
  }
  private void DrawHunt(){
   var remaining=plugin.Mobs.Where(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m)).ToArray();
-  bool active=plugin.Flow.Active||plugin.Session.Phase is not (RoutePhase.Idle or RoutePhase.Finished);
+  bool active=plugin.Flow.Active;
   if(active)DrawSession(plugin);
   else{
    if(!HuntTheme.BeginCard("ready"))return;
-   int available=remaining.Count(m=>!plugin.Flow.Excluded(m)&&!plugin.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m)));
+   int available=remaining.Count(m=>!plugin.Flow.Excluded(m));
    bool pickup=Plugin.Boards.Any(b=>plugin.CanPickup(b,false)||plugin.CanPickup(b,true));
    bool completed=Plugin.Boards.Any(b=>plugin.CollectionProgress(b,false).AllCompleted||plugin.CollectionProgress(b,true).AllCompleted);
    HuntTheme.Heading(available>0?"Готовы к охоте?":remaining.Length>0?"Цели отложены":pickup?"Новые контракты":completed?"Взятые цели выполнены":"Нет взятых контрактов");
    ImGui.TextWrapped(available>0?$"Осталось целей: {available} · зон: {remaining.Select(m=>m.TerritoryType).Distinct().Count()}":remaining.Length>0?$"Незавершённых целей: {remaining.Length}":pickup?"Выберите дополнение и возьмите контракты.":"Проверьте сводку контрактов и следующий сброс.");
    ImGui.Spacing();
    if(HuntTheme.Primary(available>0?"Начать охоту":remaining.Length>0?"Посмотреть цели":"К доскам охоты",new(-1,36))){
-    if(available>0)plugin.ResumeJourney();else if(remaining.Length>0)page=HuntPage.Targets;else{page=HuntPage.Boards;onlyNewBoards=pickup;}
+    if(available>0)StartHunt();else if(remaining.Length>0)page=HuntPage.Targets;else{page=HuntPage.Boards;onlyNewBoards=pickup;}
    }
    HuntTheme.EndCard();
   }
+  if(startFeedback!=null){ImGui.TextWrapped(startFeedback);if(ImGui.SmallButton("Скрыть пояснение"))startFeedback=null;}
   ImGui.Spacing();if(ImGui.Button($"Все цели · {remaining.Length}",new(-1,32)))page=HuntPage.Targets;
   if(!active&&remaining.Length>0){
    var first=plugin.Routes.SelectMany(r=>r.Mobs).FirstOrDefault(m=>!plugin.Done(m)&&!plugin.Flow.Excluded(m));

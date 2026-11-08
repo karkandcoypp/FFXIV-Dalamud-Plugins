@@ -269,6 +269,11 @@ public sealed partial class Plugin : IDalamudPlugin {
         if(Ready&&Session.Target is {IsEliteMark:true} credited&&!unreadBills.Contains(credited.BillNumber)&&Done(credited)){Search.Start([]);searchKey="";if(Flow.Manual==JourneyFlow.Key(credited))Flow.Manual=null;}
         if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.Casting,ConditionFlag.Unconscious) || Now<nextTeleportAllowed) { Search.Suspend();return; }
         if(Session.Target is {} uncertainTarget&&unreadBills.Contains(uncertainTarget.BillNumber)){Search.Suspend();Flow.Status="Данные текущего контракта уточняются. Цель сохранена.";NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");return;}
+        if(Flow.Active&&Session.Phase==RoutePhase.AwaitingTravel&&Session.Target is {} planned&&Done(planned)){
+            NativeDialogs.Cancel("travel");ResetTargetTracking();var remaining=BestTarget();
+            if(remaining==null){Session.Stop();Flow.Active=false;Flow.Status="Доступные цели выполнены. Проверьте отложенные.";SaveJourney(true);return;}
+            if(remaining.TerritoryType==Service.ClientState.TerritoryType)Session.Continue(remaining);else Session.PlanTravel(remaining,AllTiers);
+        }
         if(Flow.Active && Flow.Pauses.HasFlag(PauseReason.Unavailable) && Routes.SelectMany(r=>r.Mobs).Any(Eligible))Flow.Pauses&=~PauseReason.Unavailable;
         if(Flow.Active && Flow.Manual==null && Flow.Pauses.HasFlag(PauseReason.NoZone)){
             var local=Routes.SelectMany(r=>r.Mobs).FirstOrDefault(m=>m.TerritoryType==Service.ClientState.TerritoryType&&Eligible(m));

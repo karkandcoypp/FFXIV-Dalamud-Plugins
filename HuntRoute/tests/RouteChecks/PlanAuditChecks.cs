@@ -2,6 +2,12 @@ using HuntRoute;
 using System.Numerics;
 static class PlanAuditChecks {
  public static void Run(Action<bool,string> check){
+  var plannedSession=new RouteSession();var plannedGoal=new MobHuntEntry{BillNumber=6,OrderId=2,MobIndex=0,MobHuntId=100,TerritoryType=612,NeededKills=1};
+  plannedSession.PlanTravel(plannedGoal,new byte[]{6,7,8});uint plannedRun=plannedSession.RunId;
+  for(int i=0;i<10;i++)plannedSession.Tick(new[]{plannedGoal},_=>false,_=>true,628);
+  check(plannedSession.Phase==RoutePhase.AwaitingTravel&&plannedSession.RunId==plannedRun,"Unconfirmed city trip cannot become finished or pretend to be an accepted teleport");
+  plannedSession.PlanTravel(plannedGoal,new byte[]{6,7,8});check(plannedSession.RunId==plannedRun,"Reopening planned trip preserves route identity");
+  check(plannedSession.Tick(new[]{plannedGoal},_=>false,_=>true,612)==plannedGoal&&plannedSession.Phase==RoutePhase.Following,"Manual arrival in planned zone resumes following without teleport cast");
   var guard=new BillSnapshotGuard();
   BillSnapshot Taken(byte order,int kills=0)=>new(true,order,[kills,0,0,0,0]);
   check(guard.Observe(1,Taken(1,2),0,10),"Initial taken bill accepted");

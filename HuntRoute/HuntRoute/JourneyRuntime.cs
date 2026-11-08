@@ -123,7 +123,7 @@ public sealed partial class Plugin {
   target??=Session.Target is {} old?Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==JourneyFlow.Key(old)&&Eligible(m)):null;
   target??=BestTarget();
   if(target==null){Flow.Status="Нет доступных целей. Проверьте отложенные контракты.";NoticeText=Flow.Status;SaveJourney(true);return;}
-  bool starting=!Flow.Active || Session.Phase==RoutePhase.Idle;
+  bool starting=!Flow.Active || Session.Phase is RoutePhase.Idle or RoutePhase.Finished or RoutePhase.Changed;
   if(Flow.Restored && CharacterSave.Target==JourneyFlow.Key(target))restoreSearch=CharacterSave.Search;
   Flow.Active=true;Flow.Restored=false;Flow.RestoreTarget=null;
   if(CurrentTerritory==target.TerritoryType){if(starting)Session.Start(target,AllTiers);else Session.Continue(target);Session.RetryMarker();Search.Retry();AdvanceRoute();}
@@ -170,18 +170,21 @@ public sealed partial class Plugin {
  internal uint Price(uint id)=>Service.Aetherytes.Where(a=>a.AetheryteId==id).Select(a=>a.GilCost).DefaultIfEmpty(uint.MaxValue).Min();
  private void OfferTravel(MobHuntEntry target,bool starting){
   var entry=EntryFor(target);if(entry==null){Flow.Unavailable[JourneyFlow.Key(target)]="Нет открытого эфирита или проверенного входа";Flow.Status="Цель отложена: нет открытого входа.";return;}
+  if(Session.Target is {} old&&JourneyFlow.Key(old)!=JourneyFlow.Key(target))ResetTargetTracking();
+  Session.PlanTravel(target,AllTiers,starting);
   string key=JourneyFlow.Key(target);uint run=Session.RunId;uint quote=Price(entry.Id);
   NativeDialogs.Offer(new("travel",$"travel:{run}:{key}:{entry.Id}:{quote}","Продолжить охоту?",
-   ()=>Ready && Eligible(target)&&Flow.Active&&Session.RunId==run&&Mobs.Any(m=>JourneyFlow.Key(m)==key)&&EntryFor(target)?.Id==entry.Id&&Price(entry.Id)<=quote,
-   ()=>!TravelBusy && !Flow.Pauses.HasFlag(PauseReason.Marker),
-   ()=>{var current=EntryFor(target);if(current?.Id!=entry.Id || Price(entry.Id)>quote)return false;Travel(target);return Session.Target is {} t&&JourneyFlow.Key(t)==key&&Session.Phase!=RoutePhase.NextZone;},
+   ()=>Ready && Eligible(target)&&Flow.Active&&Session.RunId==run&&Session.Phase==RoutePhase.AwaitingTravel&&Session.Target is {} planned&&JourneyFlow.Key(planned)==key&&Mobs.Any(m=>JourneyFlow.Key(m)==key)&&EntryFor(target)?.Id==entry.Id&&Price(entry.Id)<=quote,
+   ()=>!TravelBusy && NavigationAllowed,
+   ()=>{var current=EntryFor(target);if(current?.Id!=entry.Id || Price(entry.Id)>quote)return false;Travel(target);return Session.Target is {} t&&JourneyFlow.Key(t)==key&&Session.Phase is RoutePhase.WaitingForZone or RoutePhase.Following;},
    TravelDialogContent.Next(CurrentTerritory.ToString(),target.TerritoryName??"Зона",target.Name??"Цель") with {Context=$"{entry.Name} · {quote} гил",Detail=TravelHint(target,entry),Footer="Сопровождение сохранится. Игра не перемещает персонажа пешком автоматически."}),true);
  }
  internal string TravelHint(MobHuntEntry target,EntryPoint? entry){
   if(entry!=null&&Service.DataManager.GetExcelSheet<Aetheryte>().GetRow(entry.Id).Territory.RowId!=target.TerritoryType)return "Эфирит в соседнем городе. После телепорта перейдите в "+target.TerritoryName+"; метка появится после входа в зону.";
   return "После прибытия метка и сопровождение продолжатся автоматически.";
  }
- internal void OfferNext(){if(Session.Suggested is {} next)OfferTravel(next,false);}
+ internal void OfferNext(){if(Session.Phase==RoutePhase.AwaitingTravel)OfferPlannedTravel();else if(Session.Suggested is {} next)OfferTravel(next,false);}
+ internal void OfferPlannedTravel(){if(Session.Phase==RoutePhase.AwaitingTravel&&Session.Target is {} target)OfferTravel(target,false);}
  internal void OfferBoard(Board board){
   if(!Ready)return;uint quote=CurrentTerritory==board.Territory?0:Price(board.Aetheryte);if(quote==uint.MaxValue){NoticeText="Эфирит города не открыт.";return;}
   NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");NativeDialogs.Cancel("travel");

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 namespace HuntRoute;
 
-public enum RoutePhase { Idle,WaitingForZone,Following,NextZone,Finished,Changed }
+public enum RoutePhase { Idle,WaitingForZone,Following,NextZone,Finished,Changed,AwaitingTravel }
 public sealed class RouteSession {
     public RoutePhase Phase { get; private set; }
     public MobHuntEntry? Target { get; private set; }
@@ -17,6 +17,10 @@ public sealed class RouteSession {
         RunId++; missingArrivalSnapshots=0; zoneOrder.Clear(); tiers=dailyTiers.ToHashSet(); Target=target; Suggested=null; marked=null; Phase=RoutePhase.WaitingForZone;
     }
     public void Continue(MobHuntEntry target) { Target=target;Suggested=null;marked=null;missingArrivalSnapshots=0;Phase=RoutePhase.WaitingForZone; }
+    public void PlanTravel(MobHuntEntry target,IEnumerable<byte> supported,bool restart=false){
+        if(restart||Phase is RoutePhase.Idle or RoutePhase.Finished or RoutePhase.Changed)Start(target,supported);else Continue(target);
+        Phase=RoutePhase.AwaitingTravel;
+    }
     public void Retarget(MobHuntEntry target) { Target=target;Suggested=null;marked=null;missingArrivalSnapshots=0;Phase=RoutePhase.Following; }
     public void RequestNext(MobHuntEntry next){Suggested=next;Phase=RoutePhase.NextZone;marked=null;}
     public void Suggest(MobHuntEntry? target) { if(Phase==RoutePhase.NextZone) { Suggested=target;if(target==null)Phase=RoutePhase.Finished; } }
@@ -29,6 +33,7 @@ public sealed class RouteSession {
     public void Stop() { Phase=RoutePhase.Idle; Target=null; Suggested=null; marked=null; missingArrivalSnapshots=0; tiers.Clear(); zoneOrder.Clear(); }
     public MobHuntEntry? Tick(IReadOnlyList<MobHuntEntry> ordered,System.Func<MobHuntEntry,bool> done,System.Func<MobHuntEntry,bool> hasPosition,uint territory) {
         if(Phase is RoutePhase.Idle or RoutePhase.Finished or RoutePhase.Changed || Target==null) return null;
+        if(Phase==RoutePhase.AwaitingTravel){if(territory!=Target.TerritoryType)return null;Phase=RoutePhase.WaitingForZone;}
         // Do not interpret transient pre-arrival bill data as a discarded contract.
         if(territory!=Target.TerritoryType) { Phase=RoutePhase.WaitingForZone; missingArrivalSnapshots=0; return null; }
         var active=ordered.FirstOrDefault(m=>Key(m)==Key(Target));

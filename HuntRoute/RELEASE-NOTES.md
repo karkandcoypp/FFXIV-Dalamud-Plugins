@@ -1,3 +1,10 @@
+# 0.3.21
+
+- Fixed starting fresh bills from a city after finishing a previous route: the new target/run is established before teleport confirmation, so the old Finished phase cannot retire the queued request.
+- Added explicit AwaitingTravel state distinct from an accepted teleport. Later preserves the planned target and a visible Teleport action; rejection cannot create fake arrival state. Confirmation still revalidates goal, entry, price and independent pauses.
+- Target list now has an explicit Start Hunt action; the old navigational Back to Hunt label is simply Back. Inactive stale session phases cannot replace Start with a no-op Pause, and cached technical exclusions no longer silently hide the retry action.
+- Added a reproduced Kugane / real Stormblood bill fixture, Later/retry/rejection/arrival regressions and compact UI states. Includes ordinary world labels from 0.3.20. No game control used.
+
 # 0.3.20
 
 - World overlays now include alive ordinary mobs still required by obtained contracts: name, authoritative kill count and 3D distance. The current followed instance is highlighted with a brighter label, thicker ring and explicit target prefix.

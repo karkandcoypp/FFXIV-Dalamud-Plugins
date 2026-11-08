@@ -6,9 +6,10 @@ namespace HuntRoute;
 
 public sealed partial class HuntWindow {
  private void DrawTargets(){
-  if(ImGui.SmallButton("К охоте"))page=HuntPage.Hunt;
+  if(ImGui.SmallButton("Назад"))page=HuntPage.Hunt;
   ImGui.SameLine();ImGui.TextUnformatted("Все цели");
   Colored(HuntTheme.Muted,"Нажмите на имя для действий");
+  if(!plugin.Flow.Active&&plugin.Mobs.Any(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m)&&!plugin.Flow.Excluded(m))&&HuntTheme.Primary("Начать охоту",new(-1,34)))StartHunt();
   if(plugin.Flow.Active&&plugin.Session.Target is {} active){
    ImGui.TextWrapped("Сейчас: "+active.Name);if(ImGui.SmallButton("К текущей цели"))plugin.FocusTarget();
   }
