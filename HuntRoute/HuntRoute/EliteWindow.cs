@@ -79,15 +79,9 @@ public sealed class EliteWindow : Window {
         map->OpenMap(Selected.MapId,Selected.TerritoryType,Selected.Name+" — possible spawns",FFXIVClientStructs.FFXIV.Client.UI.Agent.MapType.GatheringLog);
     }
     internal void DrawWorld() {
-        if(!plugin.Settings.WorldMarkers || !plugin.Ready || Service.ObjectTable.LocalPlayer is not {} player || Service.Condition[ConditionFlag.WatchingCutscene] || Service.Condition[ConditionFlag.OccupiedInCutSceneEvent] || Service.Condition[ConditionFlag.BetweenAreas] || Service.Condition[ConditionFlag.BetweenAreas51]) return;
-        foreach(var npc in plugin.DetectedElites()) {
-            float distance=Vector3.Distance(player.Position,npc.Position);
-            if(!float.IsFinite(distance)||distance>plugin.Settings.WorldDistance || !Service.GameGui.WorldToScreen(npc.Position+new Vector3(0,3,0),out var screen)) continue;
-            var label=$"[B] {npc.Name} · {distance:F0} м";
-            var draw=ImGui.GetBackgroundDrawList();
-            var textSize=ImGui.CalcTextSize(label); var top=screen-new Vector2(textSize.X/2,30);
-            draw.AddRectFilled(top-new Vector2(8,5),top+textSize+new Vector2(8,5),0xdd161a16,5);
-            draw.AddText(top,0xff88ff77,label); draw.AddCircle(screen,9,0xff88ff77,16,3);
+        foreach(var marker in plugin.ReadWorldHuntMarkers()) {
+            if(!Service.GameGui.WorldToScreen(marker.Position+new Vector3(0,3,0),out var screen))continue;
+            WorldHuntPainter.Draw(marker,screen);
         }
     }
 }

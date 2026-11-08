@@ -1,3 +1,10 @@
+# 0.3.20
+
+- World overlays now include alive ordinary mobs still required by obtained contracts: name, authoritative kill count and 3D distance. The current followed instance is highlighted with a brighter label, thicker ring and explicit target prefix.
+- Independent ordinary-overlay toggle (on by default) and distance (150 m default, 50–500 m) persist alongside existing elite settings. Only client-loaded objects are used; off-map, completed, unread and manually deferred requirements are excluded.
+- Duplicate species across bills emit one label per actor without adding kill requirements together. Completing one bill preserves remaining requirements from another. The overlay is read-only and remains independent of flags, travel and navigation pauses.
+- Added selector, persistence, substituted-runtime and offline drawing regressions. No live game control or streaming/projection verification performed.
+
 # 0.3.19
 
 - Rebuilt the main UI around a focused hunt screen, separate boards/settings views, and an on-demand target list. Removed the always-visible expansion table, filter stack and duplicate journey controls from the hunting view.

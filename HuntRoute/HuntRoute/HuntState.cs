@@ -9,6 +9,8 @@ namespace HuntRoute;
 public sealed class HuntSettings {
  public bool WorldMarkers {get;set;}=true;
  public int WorldDistance {get;set;}=300;
+ public bool OrdinaryWorldMarkers {get;set;}=true;
+ public int OrdinaryWorldDistance {get;set;}=150;
  public bool Mini {get;set;}
  public bool EliteSound {get;set;}
  public bool NextZoneSound {get;set;}
@@ -20,7 +22,7 @@ public sealed class HuntSettings {
  public uint MaxGil {get;set;}=200;
  public float MinSeconds {get;set;}=10;
  public float MinPercent {get;set;}=20;
- public void Validate(){WorldDistance=Math.Clamp(WorldDistance,50,500);if(!float.IsFinite(MinSeconds)||MinSeconds<0)MinSeconds=10;if(!float.IsFinite(MinPercent)||MinPercent<0||MinPercent>100)MinPercent=20;}
+ public void Validate(){WorldDistance=Math.Clamp(WorldDistance,50,500);OrdinaryWorldDistance=Math.Clamp(OrdinaryWorldDistance,50,500);if(!float.IsFinite(MinSeconds)||MinSeconds<0)MinSeconds=10;if(!float.IsFinite(MinPercent)||MinPercent<0||MinPercent>100)MinPercent=20;}
 }
 public sealed class ContractEpisode {public byte Order {get;set;} public bool Taken {get;set;} public uint Generation {get;set;} }
 public sealed class SavedJourney {

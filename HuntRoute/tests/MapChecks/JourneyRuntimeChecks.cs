@@ -22,11 +22,11 @@ static class JourneyRuntimeChecks {
   long clock=10000;Set(plugin,"Clock",(Func<long>)(()=>clock));Set(plugin,"FlightCapability",(Func<bool>)(()=>true));
   uint territory=397;var map=game.Excel.GetSheet<TerritoryType>().GetRow(territory).Map.Value;uint mapId=map.RowId;
   Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);
-  bool combat=false,casting=false,unconscious=false;var position=new Vector3(0,0,0);IGameObject[] objects=[];
+  bool combat=false,casting=false,unconscious=false,loading=false,cutscene=false;var position=new Vector3(0,0,0);IGameObject[] objects=[];
   var player=Proxy<Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter>((m,_)=>m.Name switch{"get_Position"=>position,"get_IsCasting"=>casting,_=>throw new Exception(m.Name)});
   Service.ObjectTable=Proxy<IObjectTable>((m,_)=>m.Name switch{"get_LocalPlayer"=>player,"GetEnumerator"=>objects.AsEnumerable().GetEnumerator(),_=>throw new Exception(m.Name)});
   Service.ClientState=Proxy<IClientState>((m,_)=>m.Name switch{"get_IsLoggedIn"=>true,"get_TerritoryType"=>territory,"get_MapId"=>mapId,_=>throw new Exception(m.Name)});
-  bool Flag(ConditionFlag f)=>f==ConditionFlag.InCombat?combat:f==ConditionFlag.Casting?casting:f==ConditionFlag.Unconscious?unconscious:false;
+  bool Flag(ConditionFlag f)=>f==ConditionFlag.InCombat?combat:f==ConditionFlag.Casting?casting:f==ConditionFlag.Unconscious?unconscious:f is ConditionFlag.BetweenAreas or ConditionFlag.BetweenAreas51?loading:f is ConditionFlag.WatchingCutscene or ConditionFlag.OccupiedInCutSceneEvent?cutscene:false;
   Service.Condition=Proxy<ICondition>((m,args)=>args is {Length:>0} ? args[0] is ConditionFlag[] flags?flags.Any(Flag):Flag((ConditionFlag)args[0]!) : false);
   Service.DataManager=new SheetServices(game);Service.PluginLog=Proxy<IPluginLog>((_,_)=>null);
   Service.Player=Proxy<IPlayerState>((m,_)=>m.Name switch{"get_IsLoaded"=>true,"get_ContentId"=>123UL,_=>throw new Exception(m.Name)});
@@ -165,6 +165,23 @@ static class JourneyRuntimeChecks {
   queue.Clear();Set(plugin,"loginNoticeShown",false);store.Settings.ResetNotifications=false;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Explicit notification opt-out remains respected");store.Settings.ResetNotifications=true;
   flow.Active=true;flow.Pauses=PauseReason.None;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"A started route defers the login popup until paused");flow.Pauses=PauseReason.User;Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request!=null,"Deferred login offer becomes available on manual pause");
   queue.Clear();Set(plugin,"character",124UL);Call(plugin,"LoadJourney");Set(plugin,"contractRevision",2L);Set(plugin,"BillStates",new Dictionary<byte,BillState>());Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Key.StartsWith("login:124:")==true,"Another character has its own login offer");queue.Clear();
+  // Read-only world overlay uses actual runtime bill, object and scene snapshots.
+  flow=Get<JourneyFlow>(plugin,"Flow");flow.Active=true;flow.Pauses=PauseReason.Marker|PauseReason.User;counts=new();Set(plugin,"KillCounts",counts);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,elite});territory=397;mapId=a.MapId;position=Vector3.Zero;
+  store.Settings.WorldMarkers=true;store.Settings.OrdinaryWorldMarkers=true;store.Settings.OrdinaryWorldDistance=150;store.Settings.WorldDistance=300;
+  objects=[Npc(100,a.MobHuntId,new(20,0,0)),Npc(106,a.MobHuntId,new(1,0,0)),Npc(101,b.MobHuntId,new(10,0,0)),Npc(102,elite.MobHuntId,new(30,0,0)),Npc(103,a.MobHuntId,new(1,0,0),true),Npc(104,999999,new(1,0,0)),Npc(105,a.MobHuntId,new(151,0,0))];
+  session.Retarget(a);Set(plugin,"ordinaryActor",(ulong?)100UL);Set(plugin,"ordinaryKind",JourneyFlow.Key(a));int overlayWrites=writes,overlayPorts=ports,overlayOpens=opens;
+  WorldHuntMarker[] Overlay()=>(WorldHuntMarker[])Call(plugin,"ReadWorldHuntMarkers")!;
+  Check(Overlay().Length==4&&Overlay().First().ActorId==100&&Overlay().Count(m=>m.Current)==1,"Runtime overlay labels required living instances and emphasizes navigator's exact ordinary actor");
+  Check(Overlay().First().Label.Contains("0/1"),"Runtime ordinary label uses authoritative counter");
+  counts[(1,0)]=1;Check(Overlay().All(m=>m.ActorId!=100&&m.ActorId!=106),"Actual kill-count completion removes all overlays of completed requirement");counts.Clear();
+  store.Settings.WorldMarkers=false;Check(Overlay().Length==3&&Overlay().All(m=>!m.Elite),"Ordinary runtime overlay works when elite overlay disabled");store.Settings.WorldMarkers=true;
+  store.Settings.OrdinaryWorldMarkers=false;Check(Overlay().Length==1&&Overlay()[0].Elite,"Ordinary runtime toggle does not hide required elite");store.Settings.OrdinaryWorldMarkers=true;
+  flow.Deferred.Add(JourneyFlow.Key(b));Check(Overlay().All(m=>m.ActorId!=101),"Runtime manual deferral removes ordinary labels without counting completion");flow.Deferred.Clear();
+  Get<HashSet<byte>>(plugin,"unreadBills").Add(1);Check(Overlay().Length==1&&Overlay()[0].Elite,"Unread ordinary bill hides its labels while valid elite remains visible");Get<HashSet<byte>>(plugin,"unreadBills").Clear();
+  mapId=c.MapId;Check(Overlay().Length==0,"Actual game map, not stale cached map, controls overlay eligibility");mapId=a.MapId;
+  loading=true;Check(Overlay().Length==0,"World overlay hidden during loading");loading=false;cutscene=true;Check(Overlay().Length==0,"World overlay hidden during cutscenes");cutscene=false;
+  flow.Active=false;Check(Overlay().Length==4&&!Overlay().Any(m=>m.Current),"Required mobs remain labelled without starting route, with no stale active-instance emphasis");
+  Check(writes==overlayWrites&&ports==overlayPorts&&opens==overlayOpens&&counts.Count==0&&flow.Pauses==(PauseReason.Marker|PauseReason.User),"World overlay cannot write flags, open map, submit teleport, count kills or clear independent pauses");
   // An invalid hi-res portrait must still try standard-res and never break the hunt UI.
   var picture=Proxy<Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap>((m,_)=>m.Name switch{"get_Width"=>128,"get_Height"=>128,_=>throw new Exception(m.Name)});
   var immediate=Proxy<Dalamud.Interface.Textures.ISharedImmediateTexture>((m,_)=>m.Name=="GetWrapOrDefault"?picture:throw new Exception(m.Name));

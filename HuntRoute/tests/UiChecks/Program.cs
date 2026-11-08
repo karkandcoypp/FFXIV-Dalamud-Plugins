@@ -18,7 +18,7 @@ class Program {
   var mobs=new List<MobHuntEntry>{new(){Name="Archaeornis",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=0,MobHuntId=3481,NeededKills=3,TerritoryType=397},new(){Name="Wooly Yak",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=1,MobHuntId=3479,NeededKills=2,TerritoryType=397},new(){Name="Alteci",TerritoryName="Coerthas Western Highlands",BillNumber=5,MobIndex=0,MobHuntId=4350,NeededKills=1,IsEliteMark=true,TerritoryType=397}};
   Set(plugin,"Mobs",mobs); Set(plugin,"Routes",new List<ZoneRoute>{new("Coerthas Western Highlands",mobs,new(71,"Falcon's Nest",new(32,36))),new("The Sea of Clouds",mobs,new(73,"Camp Cloudtop",new(16,37))),new("The Dravanian Forelands",mobs,new(76,"Tailfeather",new(31,23)))});
   string directory=Path.GetFullPath(args[0]);Directory.CreateDirectory(directory);
-  foreach(var sample in new[]{(520,430,17f,"normal"),(620,500,17f,"following"),(620,500,17f,"next"),(800,620,17f,"normal"),(1180,800,20f,"normal"),(520,430,17f,"completed"),(800,620,17f,"completed"),(520,430,20f,"completed-large"),(520,430,20f,"normal-large"),(520,430,17f,"settings"),(520,430,20f,"selected"),(620,500,17f,"elite"),(360,260,17f,"mini"),(360,360,20f,"mini-elite"),(520,430,20f,"settings-large"),(520,430,17f,"no-bills"),(520,430,17f,"deferred"),(520,430,17f,"unavailable"),(520,430,20f,"save-error"),(520,430,17f,"loading"),(400,340,17f,"normal"),(400,420,20f,"following"),(400,420,20f,"next"),(400,480,20f,"boards"),(620,620,17f,"boards-complete"),(400,480,20f,"targets"),(400,480,20f,"targets-selected"),(400,480,20f,"settings"),(300,280,20f,"mini-elite"),(400,480,20f,"paused"),(400,500,26f,"following"),(300,360,26f,"mini-elite"),(400,500,26f,"boards"),(400,480,20f,"boards-request"),(400,480,20f,"focus-request")}) {
+  foreach(var sample in new[]{(520,430,17f,"normal"),(620,500,17f,"following"),(620,500,17f,"next"),(800,620,17f,"normal"),(1180,800,20f,"normal"),(520,430,17f,"completed"),(800,620,17f,"completed"),(520,430,20f,"completed-large"),(520,430,20f,"normal-large"),(520,430,17f,"settings"),(520,430,20f,"selected"),(620,500,17f,"elite"),(360,260,17f,"mini"),(360,360,20f,"mini-elite"),(520,430,20f,"settings-large"),(520,430,17f,"no-bills"),(520,430,17f,"deferred"),(520,430,17f,"unavailable"),(520,430,20f,"save-error"),(520,430,17f,"loading"),(400,340,17f,"normal"),(400,420,20f,"following"),(400,420,20f,"next"),(400,480,20f,"boards"),(620,620,17f,"boards-complete"),(400,480,20f,"targets"),(400,480,20f,"targets-selected"),(400,480,20f,"settings"),(300,280,20f,"mini-elite"),(400,480,20f,"paused"),(400,500,26f,"following"),(300,360,26f,"mini-elite"),(400,500,26f,"boards"),(400,480,20f,"boards-request"),(400,480,20f,"focus-request"),(400,480,20f,"settings-ordinary-only"),(400,480,20f,"settings-ordinary-off"),(400,560,20f,"settings-ranges")}) {
    Set(plugin,"Mobs",mobs);Set(plugin,"SettingsOpen",sample.Item4.StartsWith("settings"));Set(plugin,"Selected",sample.Item4=="selected"?JourneyFlow.Key(mobs[0]):null!);
    var flow=(JourneyFlow)typeof(Plugin).GetProperty("Flow",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!;flow.Stop();
    var search=new EliteSearch();Set(plugin,"Search",search);
@@ -50,6 +50,9 @@ class Program {
    io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",sample.Item3,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
    byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
    var window=new HuntWindow(plugin);
+   var settings=(HuntSettings)typeof(Plugin).GetProperty("Settings",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!;
+   settings.WorldMarkers=sample.Item4!="settings-ordinary-only";settings.OrdinaryWorldMarkers=sample.Item4!="settings-ordinary-off";
+
    if(sample.Item4=="boards-request")Set(plugin,"PickupOpen",true);
    if(sample.Item4=="focus-request"){Set(plugin,"FocusRequested",true);Set(plugin,"Selected",JourneyFlow.Key(mobs[0]));}
 
@@ -59,7 +62,7 @@ class Program {
 
    string Journey()=>JsonSerializer.Serialize(new{session.RunId,session.Phase,Target=session.Target==null?null:JourneyFlow.Key(session.Target),flow.Active,flow.Pauses,flow.Manual,Deferred=flow.Deferred.Order().ToArray(),Zones=flow.Zones.Order().ToArray(),Kills=((Dictionary<(byte,byte),int>)typeof(Plugin).GetField("KillCounts",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!).OrderBy(p=>p.Key).Select(p=>$"{p.Key}:{p.Value}").ToArray(),Search=search.Capture(),search.ActorId});
    string before=Journey();float overflow=0;
-   for(int frame=0;frame<3;frame++) { ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);window.PreDraw();ImGui.Begin(sample.Item4=="offer"?"Продолжить охоту?":"Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove|(sample.Item4.StartsWith("mini")?ImGuiWindowFlags.None:window.Flags));if(sample.Item4.StartsWith("mini"))typeof(HuntWindow).GetMethod("DrawSession",BindingFlags.NonPublic|BindingFlags.Static)!.Invoke(null,new object[]{plugin});else window.Draw();overflow=Math.Max(overflow,ImGui.GetScrollMaxX());ImGui.End();window.PostDraw();ImGui.Render(); }
+   for(int frame=0;frame<3;frame++) { ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);window.PreDraw();ImGui.Begin(sample.Item4=="offer"?"Продолжить охоту?":"Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove|(sample.Item4.StartsWith("mini")?ImGuiWindowFlags.None:window.Flags));if(sample.Item4.StartsWith("mini"))typeof(HuntWindow).GetMethod("DrawSession",BindingFlags.NonPublic|BindingFlags.Static)!.Invoke(null,new object[]{plugin});else {if(sample.Item4=="settings-ranges")ImGui.GetStateStorage().SetInt(ImGui.GetID("Дальность подсветки"),1);window.Draw();}overflow=Math.Max(overflow,ImGui.GetScrollMaxX());ImGui.End();window.PostDraw();ImGui.Render(); }
    File.WriteAllBytes(Path.Combine(directory,$"font-{sample.Item3}.rgba"),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
    var draw=ImGui.GetDrawData();var lists=new List<object>();
    for(int i=0;i<draw.CmdListsCount;i++) { var list=new ImDrawListPtr(draw.CmdLists[i]);var vertices=new List<double[]>();var indices=new List<ushort>();var commands=new List<object>();
@@ -78,5 +81,6 @@ class Program {
    Console.WriteLine($"PASS production UI {sample}: exported vertices");
   }
   DialogPreviewChecks.Run(directory);
+  WorldMarkerPreviewChecks.Run(directory);
  }
 }

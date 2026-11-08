@@ -46,6 +46,12 @@ dotnet run --project HuntRoute/tests/UiChecks -c Release -- "<preview directory>
 
 MapChecks uses real game sheets and substituted clock/transport/flag services for controller scenarios. It verifies map links, boards, portrait availability, instance death/credit, route continuation, deferrals, resets, casts and restoration without controlling the game. UiChecks renders offline compositions at different sizes, including mini/settings/selection/elite states. These checks do not replace live FFXIV NPC streaming, native UI, sound or teleport testing.
 
+## Ordinary world labels
+
+Settings contains **Ordinary target highlighting** independently of elite highlighting. It is on by default, with a separate 150 m range (configurable 50–500 m under label distance). Labels show required living loaded mobs, their bill count and 3D distance; the followed instance is brighter and marked as the current target. Labels disappear when the game confirms completion. Deferred/unread objectives and other maps are excluded. Multiple bills for one species remain independent; counts are never summed. Disabling labels does not stop the route or detector.
+
+World labels cannot detect unloaded NPCs or see across the entire map, and do not move the player or map flag.
+
 ## Compact interface
 
 The default Hunt view contains the active target, kill count and the next action. **All targets** opens the grouped target list; clicking a name reveals explicit tracking/map/deferral controls. **Boards** contains the five-expansion completion/reset overview. **Settings** groups sound, shortcuts and maintenance separately. The **More** journey menu contains stop, manual-priority cancellation and lost-elite release.
