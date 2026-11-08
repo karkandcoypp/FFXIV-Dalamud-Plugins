@@ -153,10 +153,12 @@ public sealed partial class Plugin {
  internal void OfferBoard(Board board){
   if(!Ready)return;uint quote=CurrentTerritory==board.Territory?0:Price(board.Aetheryte);if(quote==uint.MaxValue){NoticeText="Эфирит города не открыт.";return;}
   NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");NativeDialogs.Cancel("travel");
+  string city=Service.DataManager.GetExcelSheet<TerritoryType>().GetRow(board.Territory).PlaceName.Value.Name.ToString();
+  string aetheryte=Service.DataManager.GetExcelSheet<Aetheryte>().GetRow(board.Aetheryte).PlaceName.Value.Name.ToString();
   bool onlyNew=PickupOpen;
   NativeDialogs.Offer(new("travel",$"board:{board.Name}:{quote}:{Session.RunId}","К доске охоты?",()=>Ready&&(!onlyNew||CanPickup(board,false)||CanPickup(board,true))&&(CurrentTerritory==board.Territory||Price(board.Aetheryte)<=quote),
    ()=>!TravelBusy,()=>{if(CurrentTerritory!=board.Territory&&Price(board.Aetheryte)>quote)return false;if(!Teleport(board.Aetheryte))return false;Flow.Pauses|=PauseReason.Board;Flow.Status="Поездка к доске. Маршрут сохранён.";pendingJourney=CurrentTerritory==board.Territory?null:new(CurrentTerritory,board.Territory,board.Map,Now,null,true);PlaceFlag(board.Territory,board.Map,MapCoordinates.ToWorld(board.Position,Service.DataManager.GetExcelSheet<Map>().GetRow(board.Map)));PickupOpen=false;SaveJourney(true);return true;},
-   new("HUNT ROUTE · ДОСКА",CurrentTerritory==board.Territory?"К доске без телепорта":"За новыми контрактами?","ДОПОЛНЕНИЕ",board.Name,$"{quote} гил","ДОСКА",board.Name,"После прибытия будет поставлена метка доски.","Контракты вы берёте самостоятельно. Текущий маршрут сохраняется.",[])),true);
+   new("HUNT ROUTE · ДОСКА",CurrentTerritory==board.Territory?"К доске без телепорта":"За новыми контрактами?","ГОРОД",city,$"{aetheryte} · {quote} гил","КОНТРАКТЫ",board.Name,"После прибытия будет поставлена метка доски.","Контракты вы берёте самостоятельно. Текущий маршрут сохраняется.",[])),true);
  }
  private unsafe string ContextKey()=> ContextProvider?.Invoke() ?? $"{Service.ObjectTable.LocalPlayer?.CurrentWorld.RowId ?? 0}:{UIState.Instance()->PublicInstance.InstanceId}:{CurrentTerritory}:{CurrentMap}";
  private void ReconcileContext(){

@@ -1,3 +1,8 @@
+# 0.3.15
+
+- Board confirmations now explicitly show the actual city and aetheryte, followed by the expansion and current price. Added a controller assertion for the displayed destination.
+- Includes the full unified journey, lifecycle, recovery, dashboard, mini panel and reset-notice changes from 0.3.14 below.
+
 # 0.3.14
 
 - Unified active-bill route across five expansions, dynamic bill additions, route-length zone ordering and explicit target/zone deferrals.

@@ -83,6 +83,7 @@ static class JourneyRuntimeChecks {
   Call(plugin,"ReconcileTravel");Call(plugin,"AdvanceRoute");Check(writes==beforeCreditedArrival&&session.Phase==RoutePhase.NextZone,"Goal credited during cast is not flagged again after arrival");
   var board=Plugin.Boards[0];territory=board.Territory;mapId=board.Map;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);queue.Clear();flow.Pauses=PauseReason.None;
   Call(plugin,"OfferBoard",board);request=queue.Activate(true);int beforeBoard=ports;
+  Check(request?.Presentation?.Destination==game.Excel.GetSheet<TerritoryType>().GetRow(board.Territory).PlaceName.Value.Name.ToString() && request.Presentation.Context.Contains(game.Excel.GetSheet<Aetheryte>().GetRow(board.Aetheryte).PlaceName.Value.Name.ToString()),"Board proposal explicitly identifies actual city and aetheryte");
   Check(request!=null&&queue.Resolve(request.Key,true)!.Accept(),"Board proposal accepts already-in-city action");Check(ports==beforeBoard&&Get<PendingJourney?>(plugin,"pendingJourney")==null&&marker?.Map==board.Map,"Already-in-city board action only flags board and cannot create fake travel timeout");
   string folder=Path.Combine(Path.GetTempPath(),"HuntRoute-runtime-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(folder);string file=Path.Combine(folder,"state.json");
   try {
