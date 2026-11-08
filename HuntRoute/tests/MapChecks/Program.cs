@@ -323,6 +323,44 @@ class Program {
    if(PollLate()!=null || lateSearch.LockedPosition!=new Vector2(12,4))throw new Exception("Shared-detector disappearance released late elite lock");checks++;
   }
   lateSearch.Suspend();if(PollLate()!=new Vector2(12,4))throw new Exception("Loading failed to restore late-elite flag");checks++;
+  // Full controller regression: completion clears repeat search before the next-zone offer.
+  confirmationQueue.Clear();
+  var finishedElite=new MobHuntEntry{Name="completed weekly elite",TerritoryName="Current zone",BillNumber=5,MobIndex=0,MobHuntId=900010,TerritoryType=1188,NeededKills=1,IsEliteMark=true};
+  var arrivalFirst=new MobHuntEntry{Name="Archaeornis",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=0,MobHuntId=3481,TerritoryType=397,MapId=highland.RowId,NeededKills=3};
+  var arrivalSecond=new MobHuntEntry{Name="Wooly Yak",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=1,MobHuntId=3479,TerritoryType=397,MapId=highland.RowId,NeededKills=2};
+  var completedRoute=new RouteSession();completedRoute.Start(finishedElite,new byte[]{1,5});
+  var completionTargets=new[]{finishedElite,arrivalFirst,arrivalSecond};
+  completedRoute.Tick(completionTargets,_=>false,_=>true,1188);
+  streamingSearch.Start([new(0,0),new(200,0)]);streamingSearch.Tick(new(0,0),null,false);streamingSearch.Tick(new(200,0),null,false);streamingSearch.Tick(new(200,0),new Vector2(210,4),false);
+  if(streamingSearch.Round!=2 || streamingSearch.LockedPosition==null)throw new Exception("Completion fixture must already have a repeated round and elite lock");checks++;
+  typeof(Plugin).GetField("Session",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,completedRoute);
+  typeof(Plugin).GetField("searchKey",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,$"{completedRoute.RunId}:5:0:900010");
+  typeof(Plugin).GetField("Routes",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new List<ZoneRoute>{new("Current zone",new(){finishedElite},null,true),new("Coerthas Western Highlands",new(){arrivalFirst,arrivalSecond},null)});
+  typeof(Plugin).GetField("KillCounts",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new Dictionary<(byte,byte),int>{{(5,0),1}});
+  typeof(Plugin).GetField("nextTeleportAllowed",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,0L);
+  typeof(Plugin).GetField("NextZone",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new NextZoneWindow(plugin));
+  typeof(Plugin).GetField("Shortcut",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new ShortcutWindow(plugin));
+  Service.ClientState=Proxy<IClientState>((m,_)=>m.Name switch {"get_IsLoggedIn"=>true,"get_TerritoryType"=>1188u,_=>throw new Exception(m.Name)});
+  Service.ObjectTable=Proxy<IObjectTable>((m,_)=>m.Name=="get_LocalPlayer"?flyingPlayer:throw new Exception(m.Name));
+  bool completionCombat=true;
+  Service.Condition=Proxy<ICondition>((_,args)=>completionCombat && (args![0] is Dalamud.Game.ClientState.Conditions.ConditionFlag[] flags ? flags.Contains(Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat) : Equals(args[0],Dalamud.Game.ClientState.Conditions.ConditionFlag.InCombat)));
+  var advance=typeof(Plugin).GetMethod("AdvanceRoute",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  advance.Invoke(plugin,null);
+  if(completedRoute.Phase!=RoutePhase.NextZone || completedRoute.Suggested!=arrivalFirst || streamingSearch.Round!=0 || streamingSearch.LockedPosition!=null)throw new Exception("Contract kill credit failed to stop repeat circles/clear lock and select first next-zone target");checks++;
+  if(confirmationQueue.Activate(true)!=null)throw new Exception("Next-zone dialog must defer while combat remains active");checks++;
+  completionCombat=false;advance.Invoke(plugin,null);
+  var completionOffer=confirmationQueue.Activate(true);
+  if(completionOffer?.Presentation is not {Destination:"Coerthas Western Highlands",Subject:"Archaeornis"} || !completionOffer.Valid() || !completionOffer.Ready())throw new Exception("Elite completion failed to offer correct next zone as soon as travel is available");checks++;
+  for(int frame=0;frame<20;frame++) advance.Invoke(plugin,null);
+  if(streamingSearch.Round!=0 || streamingSearch.LockedPosition!=null || completedRoute.Phase!=RoutePhase.NextZone)throw new Exception("Completed elite search restarted while next-zone prompt remained open");checks++;
+  // Simulate the travel boundary without invoking native teleport/AgentMap functions offline.
+  completedRoute.Start(completedRoute.Suggested!,new byte[]{1,5});
+  if(completedRoute.Tick(completionTargets,m=>m==finishedElite,_=>true,1188)!=null || completedRoute.Phase!=RoutePhase.WaitingForZone)throw new Exception("Confirmed route emitted an arrival flag before changing zones");checks++;
+  completedRoute.ZoneTransition();
+  if(completedRoute.Tick(completionTargets,m=>m==finishedElite,_=>true,397)!=arrivalFirst || completedRoute.Phase!=RoutePhase.Following)throw new Exception("After elite completion and teleport, first needed daily flag/following did not resume automatically");checks++;
+  if(completedRoute.Tick(completionTargets,m=>m==finishedElite,_=>true,397)!=null)throw new Exception("First arrival flag was duplicated");checks++;
+  if(completedRoute.Tick(completionTargets,m=>m==finishedElite || m==arrivalFirst,_=>true,397)!=arrivalSecond)throw new Exception("Following failed to advance to next daily mob after the first arrival target");checks++;
+  confirmationQueue.Clear();
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
  }
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> handler) where T:class {
