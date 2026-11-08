@@ -185,9 +185,9 @@ class Program {
   Service.Condition=Proxy<ICondition>((_,_)=>true);
   Service.ClientState=Proxy<IClientState>((m,_)=>m.Name=="get_IsLoggedIn"?false:throw new Exception(m.Name));
   var update=typeof(Plugin).GetMethod("Update",BindingFlags.Instance|BindingFlags.NonPublic)!;
-  streamingSearch.Start([new(0,0)]);streamingSearch.Tick(new(0,0),new Vector2(12,4),false,0);
+  streamingSearch.Start([new(0,0)]);streamingSearch.Tick(new(0,0),new Vector2(12,4),false);
   update.Invoke(plugin,new object?[]{null});
-  if(streamingSearch.LockedPosition!=new Vector2(12,4) || streamingSearch.Tick(new(0,0),null,true,1000)!=new Vector2(12,4))throw new Exception("Actual loading discarded elite lock or failed to reapply marker");checks++;
+  if(streamingSearch.LockedPosition!=new Vector2(12,4) || streamingSearch.Tick(new(0,0),null,true)!=new Vector2(12,4))throw new Exception("Actual loading discarded elite lock or failed to reapply marker");checks++;
   if(session.Target!=arrivalTarget || session.Phase!=RoutePhase.WaitingForZone) throw new Exception("Route lost on active loading frame");checks++;
   Service.Condition=Proxy<ICondition>((_,_)=>false);
   update.Invoke(plugin,new object?[]{null});
@@ -280,6 +280,31 @@ class Program {
   if(Detect() is not [var only] || !ReferenceEquals(only,liveNpc))throw new Exception("Shared elite detector accepted dead or unrelated NPC");checks++;
   detectedZone=1189;if(Detect().Length!=0)throw new Exception("Shared elite detector crossed zones");checks++;
   detectedZone=1188;detectionKills[(21,0)]=1;if(Detect().Length!=0)throw new Exception("Shared detector retained a completed contract");checks++;
+  // Actual framework fast path: airborne detection must run before the next contract refresh.
+  var spawnFixture=EliteSpawns.Sets.First();var spawnData=spawnFixture.Value;
+  var flightTarget=new MobHuntEntry{MobHuntId=spawnFixture.Key,BillNumber=21,MobIndex=0,TerritoryType=spawnData.Territory,MapId=spawnData.Map,NeededKills=1,IsEliteMark=true};
+  var flightSession=new RouteSession();flightSession.Start(flightTarget,new byte[]{21});flightSession.Tick(new[]{flightTarget},_=>false,_=>true,flightTarget.TerritoryType);
+  typeof(Plugin).GetField("Session",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,flightSession);
+  typeof(Plugin).GetField("Mobs",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new List<MobHuntEntry>{flightTarget});
+  typeof(Plugin).GetField("KillCounts",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new Dictionary<(byte,byte),int>());
+  typeof(Plugin).GetField("character",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,123UL);
+  typeof(Plugin).GetField("Ready",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,true);
+  typeof(Plugin).GetField("searchKey",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,$"{flightSession.RunId}:21:0:{flightTarget.MobHuntId}");
+  long laterScan=Environment.TickCount64+60000;
+  typeof(Plugin).GetField("nextScan",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,laterScan);
+  typeof(Plugin).GetField("nextEliteScan",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,0L);
+  Service.ClientState=Proxy<IClientState>((m,_)=>m.Name switch {"get_IsLoggedIn"=>true,"get_TerritoryType"=>flightTarget.TerritoryType,"get_MapId"=>flightTarget.MapId,_=>throw new Exception(m.Name)});
+  Service.Player=Proxy<IPlayerState>((m,_)=>m.Name switch {"get_IsLoaded"=>true,"get_ContentId"=>123UL,_=>throw new Exception(m.Name)});
+  Service.Condition=Proxy<ICondition>((_,args)=>Equals(args![0],Dalamud.Game.ClientState.Conditions.ConditionFlag.InFlight));
+  var flyingPlayer=Proxy<Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter>((m,_)=>m.Name switch {"get_Position"=>new Vector3(0,100,0),"get_IsCasting"=>false,_=>throw new Exception(m.Name)});
+  var flightNpc=Proxy<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>((m,_)=>m.Name switch {"get_IsDead"=>false,"get_NameId"=>flightTarget.MobHuntId,"get_Position"=>new Vector3(12,0,4),_=>throw new Exception(m.Name)});
+  int detectorReads=0;
+  Service.ObjectTable=Proxy<IObjectTable>((m,_)=> {if(m.Name=="get_LocalPlayer")return flyingPlayer;if(m.Name=="GetEnumerator"){detectorReads++;return new Dalamud.Game.ClientState.Objects.Types.IGameObject[]{flightNpc}.AsEnumerable().GetEnumerator();}throw new Exception(m.Name);});
+  streamingSearch.Start([]);streamingSearch.Tick(new(0,0),new Vector2(12,4),false);
+  update.Invoke(plugin,new object?[]{null});
+  if(detectorReads!=1 || streamingSearch.LockedPosition!=new Vector2(12,4))throw new Exception("Airborne detector did not run between contract snapshots");checks++;
+  if((long)typeof(Plugin).GetField("nextScan",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)! != laterScan)throw new Exception("Fly-by scan changed full contract-refresh cadence");checks++;
+  if((long)typeof(Plugin).GetField("nextEliteScan",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)! <=0)throw new Exception("Fly-by detector did not schedule its next 100 ms scan");checks++;
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
  }
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> handler) where T:class {

@@ -42,7 +42,7 @@ public sealed class Plugin : IDalamudPlugin {
     private bool wasLoading;
     private ShortcutTiming? shortcutTiming;
     private ShortcutTiming Timing => shortcutTiming ??= new();
-    private long nextScan;
+    private long nextScan,nextEliteScan;
     private string signature = "";
     private ulong character;
     private string routeSignature="";
@@ -86,8 +86,18 @@ public sealed class Plugin : IDalamudPlugin {
         if(!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId==0) {
             Ready=false; Search.Suspend();return;
         }
-        if (Environment.TickCount64 < nextScan) return; nextScan = Environment.TickCount64 + 1000;
         try {
+            long now=Environment.TickCount64;
+            if(now<nextScan) {
+                // Contract snapshots stay on the 1-second cadence; fly-by detection runs at 10 Hz.
+                if(Ready && character==Service.Player.ContentId && now>=nextEliteScan && Session.Phase==RoutePhase.Following && Session.Target is {IsEliteMark:true}
+                    && !Service.Condition.Any(ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent) && now>=nextTeleportAllowed) {
+                    nextEliteScan=now+100;UpdateEliteSearch();
+                }
+                return;
+            }
+            nextScan=now+1000;
+
             if (character != Service.Player.ContentId) { character = Service.Player.ContentId; signature = ""; routeSignature=""; nextTeleportAllowed=0; Elite.Selected=null; Session.Stop(); NextZone.Sync(); Shortcut.Sync(); }
             var hunt = MobHunt.Instance(); if (hunt == null) { Ready=false; return; }
             for(byte bill=0;bill<22;bill++) for(byte mob=0;mob<5;mob++) KillCounts[(bill,mob)]=hunt->GetKillCount(bill,mob);
@@ -237,7 +247,7 @@ public sealed class Plugin : IDalamudPlugin {
         if(firstPoint) { Search.Start(EliteSpawns.For(target).Select(p=>MapCoordinates.ToWorld(p,map)).ToArray());searchKey=key; }
         var npc=DetectedElites().FirstOrDefault(n=>n.NameId==target.MobHuntId);
         Vector2? found=npc==null?null:new Vector2(npc.Position.X,npc.Position.Z);
-        var point=Search.Tick(new Vector2(player.Position.X,player.Position.Z),found,Service.Condition[ConditionFlag.InCombat] || Service.Condition[ConditionFlag.InFlight] || player.IsCasting,Environment.TickCount64,player.Position.Y);
+        var point=Search.Tick(new Vector2(player.Position.X,player.Position.Z),found,Service.Condition[ConditionFlag.InCombat] || player.IsCasting);
         if(point is {} position) {
             if(!Location.SetWorldFlag(target.TerritoryType,target.MapId,position)) Search.Retry();
             else if(firstPoint) Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(target.TerritoryType,map,Dalamud.Utility.MapUtil.WorldToMap(position,map)));

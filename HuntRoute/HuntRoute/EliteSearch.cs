@@ -3,37 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 namespace HuntRoute;
-// Streaming is observed conservatively; absence is never treated as contract completion.
+// A fly-by visit advances an undetected candidate. Only contract credit completes the hunt.
 public sealed class EliteSearch {
-    public const long InspectionMilliseconds=5000;
-    public const long MaxObservationGap=1500;
-    public const int MinimumObservations=4;
+    public const float VisitRadius=45;
     private List<Vector2> remaining=[];
     private Vector2? current,marked;
-    private Vector3? lastPlayer;
-    private long? firstObservation,lastObservation;
-    private int observations;
     public Vector2? LockedPosition { get; private set; }
-    public string Status => LockedPosition!=null ? "Элита найдена. Метка закреплена до выполнения контракта; при потере видимости сохраняется последняя позиция." : current==null ? "Все точки проверены. Обнаружение остаётся включённым; можно повторить поиск." : firstObservation!=null ? "Проверка прогрузки: метка сменится автоматически после стабильного наблюдения без цели." : $"Поиск элиты: осталось точек {remaining.Count+1}. Приблизьтесь к метке и приземлитесь для автоматической проверки.";
-    public void Start(IEnumerable<Vector2> points) { remaining=points.Where(p=>Finite(p)).Distinct().ToList();current=null;marked=null;LockedPosition=null;ResetObservation(); }
+    public string Status => LockedPosition!=null ? "Элита найдена. Метка закреплена до выполнения контракта; при потере видимости сохраняется последняя позиция." : current==null ? "Все точки проверены. Обнаружение остаётся включённым; можно повторить поиск." : $"Поиск элиты: осталось точек {remaining.Count+1}. Подлетите к метке — следующая точка выберется автоматически, если цель не обнаружена.";
+    public void Start(IEnumerable<Vector2> points) { remaining=points.Where(Finite).Distinct().ToList();current=null;marked=null;LockedPosition=null; }
     private static bool Finite(Vector2 point) => float.IsFinite(point.X)&&float.IsFinite(point.Y);
-    private void ResetObservation() { firstObservation=null;lastObservation=null;lastPlayer=null;observations=0; }
-    public void Retry() { marked=null;ResetObservation(); }
+    public void Retry() => marked=null;
     public void Suspend() => Retry();
-    public Vector2? Tick(Vector2 player,Vector2? detected,bool busy,long now,float height=0) {
+    public Vector2? Tick(Vector2 player,Vector2? detected,bool busy) {
+        // Detection wins before proximity, including on the exact tick a spawn would be skipped.
         if(detected is {} found && Finite(found)) LockedPosition=found;
-        if(LockedPosition is {} locked) { ResetObservation();return Mark(locked); }
+        if(LockedPosition is {} locked) return Mark(locked);
         SelectNearest(player);
-        if(current is not {} point) return null;
-        if(busy || !Finite(player) || !float.IsFinite(height) || Vector2.Distance(player,point)>45) ResetObservation();
-        else {
-            var position=new Vector3(player.X,height,player.Y);
-            // A loading gap, clock rollback or fast approach cannot count as stable observation.
-            if(lastObservation is {} previous && (now<=previous || now-previous>MaxObservationGap || lastPlayer is {} old && Vector3.Distance(old,position)>6)) ResetObservation();
-            firstObservation??=now;lastObservation=now;lastPlayer=position;observations++;
-            if(now-firstObservation.Value>=InspectionMilliseconds && observations>=MinimumObservations) {
-                current=null;marked=null;ResetObservation();SelectNearest(player);
-            }
+        if(current is {} point && !busy && Finite(player) && Vector2.Distance(player,point)<=VisitRadius) {
+            current=null;marked=null;SelectNearest(player);
         }
         return current is {} next ? Mark(next) : null;
     }

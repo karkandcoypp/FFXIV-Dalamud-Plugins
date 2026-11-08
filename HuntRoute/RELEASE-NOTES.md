@@ -1,3 +1,10 @@
+# 0.3.12
+
+- Fly-by weekly search: the next point is selected immediately within 45 horizontal yalms if no matching elite is detected. Works in flight without landing, stopping, hovering, timers or manual confirmation.
+- Route detection runs at 10 Hz using the same loaded-object detector as the world overlay; contract refreshes retain the existing 1-second cadence.
+- Detection takes priority on every scan. Found elites remain locked through loss of visibility and loading until contract credit; combat/casting pause speculative point changes.
+- Detection is limited to client-loaded objects. No automatic movement or teleport was added. Tests cover fly-by visits, late detection, lock retention and route continuation; actual streaming needs in-game verification.
+
 # 0.3.11
 
 - Restored automatic elite spawn advancement with a streaming guard: 5 seconds of continuous stable nearby observations, at least 4 samples, maximum 1.5-second scan gap. Fast approach (including vertical movement), flight, loading, combat/casting and leaving the radius reset inspection.
