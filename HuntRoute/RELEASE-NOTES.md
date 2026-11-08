@@ -1,3 +1,8 @@
+# 0.3.16
+
+- The 100 ms elite branch now suspends during unconscious/loading/cutscene states. Contract credit clears elite tracking before busy-state deferral. Added controller regressions for both paths.
+- Includes the full 0.3.14 journey implementation and the explicit board-city confirmation from 0.3.15.
+
 # 0.3.15
 
 - Board confirmations now explicitly show the actual city and aetheryte, followed by the expansion and current price. Added a controller assertion for the displayed destination.

@@ -261,6 +261,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
     }
     internal void AdvanceRoute() {
+        if(Ready&&Session.Target is {IsEliteMark:true} credited&&!unreadBills.Contains(credited.BillNumber)&&Done(credited)){Search.Start([]);searchKey="";if(Flow.Manual==JourneyFlow.Key(credited))Flow.Manual=null;}
         if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.Casting,ConditionFlag.Unconscious) || Now<nextTeleportAllowed) { Search.Suspend();return; }
         if(Flow.Active && Flow.Pauses.HasFlag(PauseReason.Unavailable) && Routes.SelectMany(r=>r.Mobs).Any(Eligible))Flow.Pauses&=~PauseReason.Unavailable;
         if(Flow.Active && Flow.Manual==null && Flow.Pauses.HasFlag(PauseReason.NoZone)){
@@ -307,7 +308,7 @@ public sealed partial class Plugin : IDalamudPlugin {
             Search.Start(EliteSpawns.For(target).Select(p=>MapCoordinates.ToWorld(p,map)).ToArray());searchKey=key;
             if(restoreSearch is {} saved){Search.Restore(saved);restoreSearch=null;}
         }
-        if(!NavigationAllowed || pendingJourney!=null)return;
+        if(!NavigationAllowed || pendingJourney!=null || Service.Condition.Any(ConditionFlag.Unconscious,ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent)){Search.Suspend();return;}
         var actors=Service.ObjectTable.OfType<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>().Where(n=>n.NameId==target.MobHuntId)
             .Select(n=>new EliteActor(n.GameObjectId,new Vector2(n.Position.X,n.Position.Z),n.IsDead)).ToArray();
         ulong? previous=Search.ActorId;

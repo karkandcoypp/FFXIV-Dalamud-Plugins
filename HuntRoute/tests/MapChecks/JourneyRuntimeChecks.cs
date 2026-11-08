@@ -109,6 +109,11 @@ static class JourneyRuntimeChecks {
   // A queued login offer must be deferred again if hunting resumes before the UI pump.
   queue.Clear();var savedNotice=Get<SavedJourney>(plugin,"CharacterSave");savedNotice.DailyNotice=0;flow.Active=true;flow.Pauses=PauseReason.User;Call(plugin,"CheckResetNotice");flow.Pauses=PauseReason.None;
   Check(queue.Activate(true)==null,"Queued reset dialog cannot interrupt a resumed active route");flow.Pauses=PauseReason.User;request=queue.Activate(true);Check(request?.Owner=="pickup","Deferred reset remains available at next explicit pause");queue.Clear();
+  // The fast elite branch must not progress while the player is unconscious.
+  queue.Clear();flow.Active=true;flow.Pauses=PauseReason.None;territory=397;mapId=elite.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);session.Retarget(elite);search.Start([new(0,0),new(200,0)]);Set(plugin,"searchKey",Call(plugin,"SearchIdentity",elite));counts.Clear();objects=[Npc(90,elite.MobHuntId,new(5,0,0))];unconscious=true;int beforeUnconscious=writes;
+  Call(plugin,"UpdateEliteSearch");Check(search.ActorId==null&&writes==beforeUnconscious,"Fast search is suspended while unconscious and does not flag an encountered actor");
+  unconscious=false;Set(plugin,"contractAt",clock);Call(plugin,"UpdateEliteSearch");Check(search.ActorId==90,"Fast detection resumes after recovering consciousness");
+  counts[(5,0)]=1;unconscious=true;Call(plugin,"AdvanceRoute");Check(search.ActorId==null&&search.Round==0,"Authoritative credit clears elite search even before a busy/unconscious early return");unconscious=false;
   // An invalid hi-res portrait must still try standard-res and never break the hunt UI.
   var picture=Proxy<Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap>((m,_)=>m.Name switch{"get_Width"=>128,"get_Height"=>128,_=>throw new Exception(m.Name)});
   var immediate=Proxy<Dalamud.Interface.Textures.ISharedImmediateTexture>((m,_)=>m.Name=="GetWrapOrDefault"?picture:throw new Exception(m.Name));
