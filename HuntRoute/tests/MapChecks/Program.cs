@@ -185,9 +185,9 @@ class Program {
   Service.Condition=Proxy<ICondition>((_,_)=>true);
   Service.ClientState=Proxy<IClientState>((m,_)=>m.Name=="get_IsLoggedIn"?false:throw new Exception(m.Name));
   var update=typeof(Plugin).GetMethod("Update",BindingFlags.Instance|BindingFlags.NonPublic)!;
-  streamingSearch.Start([new(0,0)]);streamingSearch.Tick(new(0,0),new Vector2(12,4),false);
+  streamingSearch.Start([new(0,0)]);streamingSearch.Tick(new(0,0),new Vector2(12,4),false,0);
   update.Invoke(plugin,new object?[]{null});
-  if(streamingSearch.LockedPosition!=new Vector2(12,4) || streamingSearch.CanSkip || streamingSearch.Tick(new(0,0),null,true)!=new Vector2(12,4))throw new Exception("Actual loading discarded elite lock or failed to reapply marker");checks++;
+  if(streamingSearch.LockedPosition!=new Vector2(12,4) || streamingSearch.Tick(new(0,0),null,true,1000)!=new Vector2(12,4))throw new Exception("Actual loading discarded elite lock or failed to reapply marker");checks++;
   if(session.Target!=arrivalTarget || session.Phase!=RoutePhase.WaitingForZone) throw new Exception("Route lost on active loading frame");checks++;
   Service.Condition=Proxy<ICondition>((_,_)=>false);
   update.Invoke(plugin,new object?[]{null});

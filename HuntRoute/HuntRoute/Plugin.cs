@@ -84,7 +84,7 @@ public sealed class Plugin : IDalamudPlugin {
         if(loading) { Timing.Loading(Environment.TickCount64);if(!wasLoading) { Session.ZoneTransition();Search.Suspend(); } wasLoading=true; return; }
         if(wasLoading) { wasLoading=false;nextScan=0;routeSignature="";Session.ZoneTransition(); }
         if(!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId==0) {
-            Ready=false; return;
+            Ready=false; Search.Suspend();return;
         }
         if (Environment.TickCount64 < nextScan) return; nextScan = Environment.TickCount64 + 1000;
         try {
@@ -216,7 +216,7 @@ public sealed class Plugin : IDalamudPlugin {
         else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
     }
     internal void AdvanceRoute() {
-        if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.Casting) || Environment.TickCount64<nextTeleportAllowed) return;
+        if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.Casting) || Environment.TickCount64<nextTeleportAllowed) { Search.Suspend();return; }
         var mark=Session.Tick(Routes.SelectMany(r=>r.Mobs).ToArray(),Done,HasPosition,Service.ClientState.TerritoryType);
         if(mark!=null && !mark.IsEliteMark && !Location.SetMapFlag(mark.TerritoryType,mark.MapId,mark.MobHuntId)) Session.RetryMarker();
         UpdateEliteSearch();
@@ -237,17 +237,11 @@ public sealed class Plugin : IDalamudPlugin {
         if(firstPoint) { Search.Start(EliteSpawns.For(target).Select(p=>MapCoordinates.ToWorld(p,map)).ToArray());searchKey=key; }
         var npc=DetectedElites().FirstOrDefault(n=>n.NameId==target.MobHuntId);
         Vector2? found=npc==null?null:new Vector2(npc.Position.X,npc.Position.Z);
-        var point=Search.Tick(new Vector2(player.Position.X,player.Position.Z),found,Service.Condition[ConditionFlag.InCombat] || Service.Condition[ConditionFlag.InFlight] || player.IsCasting);
+        var point=Search.Tick(new Vector2(player.Position.X,player.Position.Z),found,Service.Condition[ConditionFlag.InCombat] || Service.Condition[ConditionFlag.InFlight] || player.IsCasting,Environment.TickCount64,player.Position.Y);
         if(point is {} position) {
             if(!Location.SetWorldFlag(target.TerritoryType,target.MapId,position)) Search.Retry();
             else if(firstPoint) Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(target.TerritoryType,map,Dalamud.Utility.MapUtil.WorldToMap(position,map)));
         }
-    }
-    internal void ConfirmEmptyElite() {
-        if(!Ready || TravelBusy || Service.Condition[ConditionFlag.InFlight] || Session.Phase!=RoutePhase.Following || Session.Target is not {IsEliteMark:true}) return;
-        // Re-read detection at click time: a newly streamed elite wins over a stale empty-state button.
-        UpdateEliteSearch();
-        if(Search.Skip()) AdvanceRoute();
     }
     internal ShortcutOffer? FindShortcut() {
         if(!Ready || Session.Phase!=RoutePhase.Following || Session.Target is not {} target

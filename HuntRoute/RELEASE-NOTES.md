@@ -1,3 +1,10 @@
+# 0.3.11
+
+- Restored automatic elite spawn advancement with a streaming guard: 5 seconds of continuous stable nearby observations, at least 4 samples, maximum 1.5-second scan gap. Fast approach (including vertical movement), flight, loading, combat/casting and leaving the radius reset inspection.
+- Each new point is inspected separately; no chain-skipping on a single snapshot. Detection always wins, including on the last inspection tick.
+- Found elites remain locked at their latest observed position until contract completion, through temporary disappearance and loading. Manual empty-point confirmation removed.
+- Deterministic and randomized tests cover delayed detection, pauses, movement, sparse/duplicate timestamps, loading, lock retention and completion/next-zone continuation. Native streaming still needs in-game verification.
+
 # 0.3.10
 
 - Empty ObjectTable snapshots never auto-skip a weekly spawn. Confirm an empty spot explicitly after arriving and landing; loading, flight, combat and casting disable confirmation. Detection remains automatic, with no dwell timer.
