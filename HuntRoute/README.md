@@ -21,7 +21,7 @@ The optional mini panel keeps the goal, counters, status, map and pause controls
 
 Unsupported positions/entries are deferred with reasons; explicit manual deferrals require returning them. Deferred objectives are never claimed completed. Stop ends the route; Pause keeps it. Visiting a board preserves the route on a service pause.
 
-Route state is saved per character in `journey-state.json` and restores paused, with contract revalidation and no automatic teleport. Object identities and pending casts are not carried across game sessions/world/instance contexts. Atomic writes, a backup and quarantined corrupt files protect state. Existing `completion-history.json` remains separate: daily/weekly checks persist per character/tier and expire at their UTC reset boundary.
+Settings are independently stored in `hunt-settings.json` (legacy combined settings migrate automatically). Route state is saved per character in `journey-state.json` and restores paused, with contract revalidation and no automatic teleport. Object identities and pending casts are not carried across game sessions/world/instance contexts. Atomic writes, a backup and quarantined corrupt files protect state. Existing `completion-history.json` remains separate: daily/weekly checks persist per character/tier and expire at their UTC reset boundary.
 
 ## Reset notices and teleport suggestions
 
@@ -31,7 +31,9 @@ Long-flight shortcut settings default to <=200 gil, >=10 seconds and >=20% savin
 
 Cancelled/rejected casts and missing/incorrect arrivals are explicit states, never automatic re-casts. Another manual destination adopts or pauses according to the current mode. Goal credit during travel is reconciled at arrival instead of reflagging a completed target.
 
-Optional sounds default off. Debug export is local and bounded; nothing is uploaded automatically.
+Separate elite-detection and next-zone sounds default off. Debug export is local and bounded; nothing is uploaded automatically.
+
+Bill removal/replacement is confirmed by two consistent reads at least 750 ms apart; an uncertain current bill retains its goal and blocks navigation until refreshed. Shortcut proposals include the full contract generation. Failed saves keep a visible warning and an explicit retry action without changing game completion.
 
 ## Validation
 

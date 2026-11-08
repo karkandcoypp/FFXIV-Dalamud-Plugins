@@ -41,6 +41,7 @@ static class LifecycleChecks {
   try{var history=new CompletionHistory();history.Save(historyFile);history.Save(historyFile);File.WriteAllText(historyFile,"bad");var recovered=CompletionHistory.LoadRecovering(historyFile);check(recovered.Recovered,"Completion history recovers with explicit recovery status");recovered.Save(historyFile);check(CompletionHistory.Load(historyFile+".bak")!=null,"Completion history backup survives recovery save");File.Delete(historyFile+".bak");File.WriteAllText(historyFile,"bad again");recovered=CompletionHistory.LoadRecovering(historyFile);recovered.Observe(10,1,false,DateTimeOffset.UtcNow,new(true,false,1,1,true));check(!recovered.IsComplete(10,1,false,DateTimeOffset.UtcNow),"Lost history does not manufacture today's completion from ambiguous retained counts");}finally{foreach(string file in Directory.GetFiles(historyDirectory))File.Delete(file);Directory.Delete(historyDirectory);}
   var cycle=new EliteSearch();cycle.Start([new(0,0),new(200,0)]);cycle.Tick(new(0,0),null,false);var progress=cycle.Capture();
   var reload=new EliteSearch();reload.Start([new(0,0),new(200,0)]);reload.Restore(progress);check(reload.Capture().Current==progress.Current&&reload.ActorId==null,"Circle progress restores without NPC identities");
+  PlanAuditChecks.Run(check);
   Console.WriteLine("PASS actor death, delayed credit, visibility, pause, travel and persistence lifecycle");
  }
 }

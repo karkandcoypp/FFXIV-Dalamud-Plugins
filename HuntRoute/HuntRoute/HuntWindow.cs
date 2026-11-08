@@ -14,7 +14,9 @@ public sealed class HuntWindow:Window {
  public override void Draw(){
   if(plugin.FocusRequested){expansion=-1;zone="";plugin.FocusRequested=false;}
   Colored(HuntTheme.Brand,"HUNT ROUTE / Охота по контрактам");
-  if(!plugin.Ready){ImGui.TextWrapped(plugin.Error??"Данные персонажа загружаются. Сохранённый маршрут не потерян.");return;}
+  foreach(var failure in new[]{plugin.JourneySaveError,plugin.SettingsSaveError,plugin.HistorySaveError}.Where(s=>s!=null))ImGui.TextWrapped(failure!);
+  if(plugin.JourneySaveError!=null||plugin.SettingsSaveError!=null||plugin.HistorySaveError!=null){if(ImGui.Button("Повторить сохранение"))plugin.RetryPersistence();}
+  if(!plugin.Ready){var loading=EmptyView.Describe(false,0,0,0,0,0);ImGui.TextWrapped(plugin.Error??loading.Text);if(ImGui.Button(loading.Action))plugin.Refresh();return;}
   bool canStart=plugin.Flow.Active||plugin.Mobs.Any(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m)&&!plugin.Flow.Excluded(m));
   ImGui.BeginDisabled(!canStart);
   if(ImGui.Button(plugin.Flow.Active?"Продолжить охоту":"Начать охоту"))plugin.ResumeJourney();
@@ -62,7 +64,15 @@ public sealed class HuntWindow:Window {
    ImGui.EndCombo();
   }
   var shown=source.Where(m=>(zone==""||m.TerritoryName==zone)&&(!plugin.HideDone||!plugin.Done(m))&&(!plugin.DeferredOpen||plugin.Flow.Excluded(m)||plugin.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m)))).ToArray();
-  if(shown.Length==0){ImGui.TextWrapped(source.Length==0?"Нет взятых контрактов для этого просмотра. Проверьте сводку и доски охоты.":"Нет целей по выбранным фильтрам. Выполнение и отложенные контракты учтены отдельно.");if(ImGui.Button("Сбросить фильтры")){expansion=-1;zone="";plugin.HideDone=false;plugin.DeferredOpen=false;}}
+  var all=plugin.Mobs.Where(m=>Plugin.AllTiers.Contains(m.BillNumber)).ToArray();var remaining=all.Where(m=>!plugin.Done(m)).ToArray();
+  if(shown.Length==0||remaining.Length>0&&remaining.All(m=>plugin.Flow.Excluded(m)||plugin.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m)))){
+   bool completed=Plugin.Boards.Any(b=>plugin.CollectionProgress(b,false).AllCompleted||plugin.CollectionProgress(b,true).AllCompleted);
+   var empty=all.Length==0&&completed?EmptyView.Describe(true,1,0,0,0,0):EmptyView.Describe(true,all.Length,remaining.Length,remaining.Count(plugin.Flow.Excluded),remaining.Count(m=>!plugin.Flow.Excluded(m)&&plugin.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m))),0);
+   ImGui.TextWrapped(empty.Text);if(ImGui.Button(empty.Action)){
+    if(empty.Kind is EmptyKind.NoBills or EmptyKind.Completed)plugin.PickupOpen=true;
+    else{expansion=-1;zone="";plugin.HideDone=false;plugin.DeferredOpen=empty.Kind is EmptyKind.Deferred or EmptyKind.Unavailable;if(empty.Kind==EmptyKind.Unavailable)plugin.Refresh();}
+   }
+  }
   var selected=plugin.Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==plugin.Selected);
   if(selected!=null){
    Colored(HuntTheme.Brand,"Выбрано: "+selected.Name);ImGui.TextWrapped(selected.TerritoryName??"");
@@ -94,7 +104,7 @@ public sealed class HuntWindow:Window {
   if(target!=null)MobPreview.OnHover(target,p.Kills(target));
   if(target!=null)ImGui.TextDisabled(p.LocationLabel);
   if(target!=null)ImGui.TextWrapped($"{target.TerritoryName} · {p.Kills(target)}/{target.NeededKills}");
-  if(p.Flow.Pauses!=PauseReason.None||p.Session.Phase==RoutePhase.WaitingForZone)ImGui.TextWrapped(p.Flow.Status);
+  if(p.Flow.Pauses!=PauseReason.None||!p.NavigationAllowed||p.Session.Phase==RoutePhase.WaitingForZone)ImGui.TextWrapped(p.Flow.Status);
   if(ImGui.SmallButton(p.Flow.Pauses.HasFlag(PauseReason.User)?"Продолжить":"Пауза"))p.TogglePause();
   ImGui.SameLine();if(ImGui.SmallButton("Стоп"))p.StopJourney();
   if(ImGui.SmallButton("К текущей цели")&&target!=null)p.FocusTarget();
@@ -107,16 +117,16 @@ public sealed class HuntWindow:Window {
  }
  private void DrawSettings(){
   ImGui.BeginDisabled(plugin.PersistenceBlocked);
-  var s=plugin.Settings;bool mini=s.Mini,sound=s.Sound,reset=s.ResetNotifications,shortcuts=s.Shortcuts;
+  var s=plugin.Settings;bool mini=s.Mini,eliteSound=s.EliteSound,nextSound=s.NextZoneSound,reset=s.ResetNotifications,shortcuts=s.Shortcuts;
   bool world=s.WorldMarkers;int distance=s.WorldDistance;
   int gil=(int)Math.Min(int.MaxValue,s.MaxGil);float seconds=s.MinSeconds,percent=s.MinPercent;
-  bool dirty=ImGui.Checkbox("Минипанель сопровождения",ref mini);dirty|=ImGui.Checkbox("Звук элиты и следующей зоны",ref sound);dirty|=ImGui.Checkbox("Предлагать новые контракты после сброса",ref reset);dirty|=ImGui.Checkbox("Предлагать сокращение перелёта",ref shortcuts);
+  bool dirty=ImGui.Checkbox("Минипанель сопровождения",ref mini);dirty|=ImGui.Checkbox("Звук обнаружения элиты",ref eliteSound);dirty|=ImGui.Checkbox("Звук следующей зоны",ref nextSound);dirty|=ImGui.Checkbox("Предлагать новые контракты после сброса",ref reset);dirty|=ImGui.Checkbox("Предлагать сокращение перелёта",ref shortcuts);
   dirty|=ImGui.Checkbox("Подсветка элиты в игровом мире",ref world);
   ImGui.SetNextItemWidth(150);dirty|=ImGui.SliderInt("Дальность подсветки, м",ref distance,50,500);
   ImGui.SetNextItemWidth(150);dirty|=ImGui.InputInt("Лимит гил (0 = бесплатно)",ref gil);
   ImGui.SetNextItemWidth(150);dirty|=ImGui.InputFloat("Минимум экономии, с",ref seconds);
   ImGui.SetNextItemWidth(150);dirty|=ImGui.SliderFloat("Минимум экономии, %",ref percent,0,100);
-  if(dirty){plugin.SetMini(mini);s.Sound=sound;s.ResetNotifications=reset;s.Shortcuts=shortcuts;s.WorldMarkers=world;s.WorldDistance=distance;s.MaxGil=(uint)Math.Max(0,gil);s.MinSeconds=seconds;s.MinPercent=percent;s.Validate();plugin.SaveJourney(true);}
+  if(dirty){plugin.SetMini(mini);s.EliteSound=eliteSound;s.NextZoneSound=nextSound;s.ResetNotifications=reset;s.Shortcuts=shortcuts;s.WorldMarkers=world;s.WorldDistance=distance;s.MaxGil=(uint)Math.Max(0,gil);s.MinSeconds=seconds;s.MinPercent=percent;s.Validate();plugin.SaveJourney(true);}
   ImGui.EndDisabled();
   if(ImGui.Button("Сохранить диагностику локально"))plugin.Export();ImGui.Separator();
  }

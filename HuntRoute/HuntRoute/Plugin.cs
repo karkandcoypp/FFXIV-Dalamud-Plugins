@@ -13,7 +13,7 @@ namespace HuntRoute;
 
 public record Board(string Name, byte[] Daily, byte Weekly, uint Aetheryte, uint Territory, uint Map, Vector2 Position);
 public record EntryPoint(uint Id, string Name, Vector2 Position);
-public record ZoneRoute(string Name, List<MobHuntEntry> Mobs, EntryPoint? Start, bool StartsHere=false);
+public record ZoneRoute(string Name, List<MobHuntEntry> Mobs, EntryPoint? Start, bool StartsHere=false,float EstimatedCost=0);
 
 public sealed partial class Plugin : IDalamudPlugin {
     public static readonly Board[] Boards = [
@@ -47,6 +47,10 @@ public sealed partial class Plugin : IDalamudPlugin {
     private long nextScan,nextEliteScan;
     private HashSet<byte>? unread;
     private HashSet<byte> unreadBills=>unread??=new();
+    private BillSnapshotGuard? billGuard;
+    private BillSnapshotGuard Guard=>billGuard??=new();
+    private HashSet<byte>? uncertain;
+    private HashSet<byte> uncertainBills=>uncertain??=new();
     private string signature = "";
     private ulong character;
     private string routeSignature="";
@@ -100,7 +104,7 @@ public sealed partial class Plugin : IDalamudPlugin {
                 // Contract snapshots stay on the 1-second cadence; fly-by detection runs at 10 Hz.
                 if(Ready && character==Service.Player.ContentId && now>=nextEliteScan && Session.Phase==RoutePhase.Following
                     && !Service.Condition.Any(ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent) && now>=nextTeleportAllowed) {
-                    nextEliteScan=now+100;if(NavigationAllowed){CheckMarker();DetectorNavigation();UpdateEliteSearch();}
+                    nextEliteScan=now+100;CheckMarker();DetectorNavigation();UpdateEliteSearch();
                 }
                 return;
             }
@@ -108,14 +112,11 @@ public sealed partial class Plugin : IDalamudPlugin {
 
             if (character != Service.Player.ContentId) { if(character!=0)SaveJourney(true);NativeDialogs.CancelAll();character = Service.Player.ContentId; signature = ""; routeSignature=""; nextTeleportAllowed=0; Elite.Selected=null; Session.Stop(); LoadJourney(); NextZone.Sync(); Shortcut.Sync(); }
             var hunt = MobHunt.Instance(); if (hunt == null) { Ready=false; return; }
-            for(byte bill=0;bill<22;bill++) for(byte mob=0;mob<5;mob++) KillCounts[(bill,mob)]=hunt->GetKillCount(bill,mob);
             for(byte bill=0;bill<22;bill++){
-                var episodes=CharacterSave.Contracts;if(!episodes.TryGetValue(bill,out var episode))episodes[bill]=episode=new();
-                bool taken=(hunt->ObtainedFlags&(1<<bill))!=0;byte order=hunt->ObtainedMarkId[bill];
-                if(taken&&order>0&&(!episode.Taken||episode.Order!=order))episode.Generation++;
-                episode.Taken=taken;if(order>0)episode.Order=order;
+                var kills=new int[5];for(byte mob=0;mob<5;mob++)kills[mob]=hunt->GetKillCount(bill,mob);
+                AcceptBillSnapshot(bill,new((hunt->ObtainedFlags&(1<<bill))!=0,hunt->ObtainedMarkId[bill],kills),Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(bill).OrderAmount);
             }
-            string current = hunt->ObtainedFlags + ":" + string.Join(",", Enumerable.Range(0,22).Select(i => hunt->ObtainedMarkId[i])) + ":" + string.Join(",", Service.Aetherytes.Select(a=>a.AetheryteId).Order());
+            string current = string.Join(",",Enumerable.Range(0,22).Select(i=>$"{Guard.Current((byte)i)?.Taken}:{Guard.Current((byte)i)?.Order}")) + ":" + string.Join(",", Service.Aetherytes.Select(a=>a.AetheryteId).Order());
             if (current != signature || unreadBills.Count>0) {
                 ReadBills(); signature = current; routeSignature="";
                 if(Elite.Selected is {} old) Elite.Selected=Mobs.FirstOrDefault(m=>m.BillNumber==old.BillNumber && m.MobIndex==old.MobIndex && m.MobHuntId==old.MobHuntId);
@@ -126,16 +127,17 @@ public sealed partial class Plugin : IDalamudPlugin {
             var snapshots=new Dictionary<byte,BillState>();
             for(byte bill=0;bill<22;bill++) {
                 if(unreadBills.Contains(bill)){if(BillStates.TryGetValue(bill,out var known))snapshots[bill]=known;continue;}
-                bool obtained=(hunt->ObtainedFlags & (1<<bill))!=0;
+                var accepted=Guard.Current(bill);if(accepted==null)continue;
+                bool obtained=accepted.Taken;
                 var type=Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(bill);
-                byte retainedId=hunt->ObtainedMarkId[bill];
+                byte retainedId=accepted.Order;
                 bool complete=false;
                 // Completed bills clear ObtainedFlags, but the game retains their order ID and kills.
                 if(retainedId>0 && retainedId<=type.OrderAmount && Service.DataManager.GetSubrowExcelSheet<MobHuntOrder>().TryGetRow(type.OrderStart.RowId+retainedId-1u,out var rows)) {
                     var requirements=rows.Where(o=>o.Target.RowId!=0).Select(o=>new BillRequirement((byte)o.SubrowId,o.NeededKills));
                     complete=BillCompletion.IsComplete(retainedId,type.OrderAmount,requirements,m=>KillCounts.GetValueOrDefault((bill,m)));
                 }
-                snapshots[bill]=BillState.FromGame(hunt->IsMarkBillUnlocked(bill),obtained,hunt->ObtainedMarkId[bill],hunt->AvailableMarkId[bill],complete,type.OrderAmount);
+                snapshots[bill]=BillState.FromGame(hunt->IsMarkBillUnlocked(bill),obtained,retainedId,hunt->AvailableMarkId[bill],complete,type.OrderAmount);
             }
             var observedAt=DateTimeOffset.UtcNow;
             foreach(var pair in snapshots.Where(p=>!unreadBills.Contains(p.Key))) History.Observe(character,pair.Key,Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(pair.Key).Type==2,observedAt,pair.Value);
@@ -151,9 +153,10 @@ public sealed partial class Plugin : IDalamudPlugin {
         unreadBills.Clear();var orders=Service.DataManager.GetSubrowExcelSheet<MobHuntOrder>();
         for(byte bill=0;bill<22;bill++) {
             try {
-                if((hunt->ObtainedFlags&(1<<bill))==0 || hunt->ObtainedMarkId[bill]==0)continue;
+                if(uncertainBills.Contains(bill)){unreadBills.Add(bill);result.AddRange(previous.Where(m=>m.BillNumber==bill));continue;}
+                var accepted=Guard.Current(bill);if(accepted is not {Taken:true,Order:>0})continue;
                 var type=Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(bill);
-                byte orderId=hunt->ObtainedMarkId[bill];
+                byte orderId=accepted.Order;
                 if(orderId>type.OrderAmount || !orders.TryGetRow(type.OrderStart.RowId+orderId-1u,out var rows))throw new InvalidOperationException("Контракт ещё не доступен в данных игры");
                 var batch=new List<MobHuntEntry>();
                 foreach(var order in rows) {
@@ -192,15 +195,17 @@ public sealed partial class Plugin : IDalamudPlugin {
                 var targets=group.OrderBy(m=>m.MobHuntId).ThenBy(m=>m.BillNumber).ToList();
                 var entries=Entries(group.Key.MapId,group.Key.TerritoryType);
                 bool here=CurrentTerritory==group.Key.TerritoryType;
-                Vector2[] origins=entries.Select(e=>e.Position).ToArray();
-                if(here&&CurrentMap==group.Key.MapId&&Service.ObjectTable.LocalPlayer is {} player){var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(group.Key.MapId);origins=[Dalamud.Utility.MapUtil.WorldToMap(new Vector2(player.Position.X,player.Position.Z),map)];}
-                var(order,start)=RoutePlanner.Order(targets,m=>Done(m)||Flow.Excluded(m),m=>!m.IsEliteMark&&Location.Database.TryGetValue(m.MobHuntId,out var p)?p.Coordinate:null,origins);
+                var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(group.Key.MapId);
+                Vector2[] origins=entries.Select(e=>MapCoordinates.ToWorld(e.Position,map)).ToArray();
+                if(here&&CurrentMap==group.Key.MapId&&Service.ObjectTable.LocalPlayer is {} player)origins=[new(player.Position.X,player.Position.Z)];
+                bool reachable=here||entries.Count>0||group.Key.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75);
+                var(order,start,cost)=RoutePlanner.Zone(targets,m=>!reachable||Done(m)||Flow.Excluded(m),m=>m.IsEliteMark,PlanningPoints,origins);
                 EntryPoint? entry=!here&&start>=0?entries[start]:null;
-                if(!here&&entry==null&&order.FirstOrDefault(m=>!Done(m)&&!Flow.Excluded(m)) is {} first)entry=EntryFor(first);
-                result.Add(new(group.First().TerritoryName??"Зона",order.ToList(),entry,here));
+                if(!here&&entry==null&&order.FirstOrDefault(m=>!Done(m)&&!Flow.Excluded(m)) is {} first)entry=NearestEntryFor(first);
+                result.Add(new(group.First().TerritoryName??"Зона",order.ToList(),entry,here,cost));
             }catch(Exception e){foreach(var m in group)Flow.Unavailable[JourneyFlow.Key(m)]="Ошибка связи карты и координат: "+e.Message;result.Add(new(group.First().TerritoryName??"Зона",group.ToList(),null));Service.PluginLog.Debug(e,"Проверка зоны {Territory}",group.Key.TerritoryType);}
         }
-        Routes=result.OrderBy(r=>r.StartsHere?0:1).ThenBy(r=>{try{return ZoneCost(r);}catch{return float.MaxValue;}}).ThenBy(r=>r.Mobs.First().TerritoryType).ToList();
+        Routes=result.OrderBy(r=>r.StartsHere?0:1).ThenBy(r=>r.EstimatedCost).ThenBy(r=>r.Mobs.First().TerritoryType).ToList();
     }
     internal int Kills(MobHuntEntry m) => Math.Clamp(KillCounts.GetValueOrDefault((m.BillNumber,m.MobIndex)),0,(int)Math.Min(m.NeededKills,(uint)int.MaxValue));
     internal bool Done(MobHuntEntry m) => Kills(m) >= m.NeededKills;
@@ -234,7 +239,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         Flow.Unavailable.Remove(JourneyFlow.Key(m));return true;
     }
     internal void Travel(MobHuntEntry m) {
-        if(!Ready || !Service.ClientState.IsLoggedIn || !HasPosition(m)) return;
+        if(!Ready || !Service.ClientState.IsLoggedIn || unreadBills.Contains(m.BillNumber) || !HasPosition(m)) return;
         if(Done(m)) { Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name); return; }
         EntryPoint? requestedEntry=null;
         if(Service.ClientState.TerritoryType!=m.TerritoryType) {
@@ -263,6 +268,7 @@ public sealed partial class Plugin : IDalamudPlugin {
     internal void AdvanceRoute() {
         if(Ready&&Session.Target is {IsEliteMark:true} credited&&!unreadBills.Contains(credited.BillNumber)&&Done(credited)){Search.Start([]);searchKey="";if(Flow.Manual==JourneyFlow.Key(credited))Flow.Manual=null;}
         if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.Casting,ConditionFlag.Unconscious) || Now<nextTeleportAllowed) { Search.Suspend();return; }
+        if(Session.Target is {} uncertainTarget&&unreadBills.Contains(uncertainTarget.BillNumber)){Search.Suspend();Flow.Status="Данные текущего контракта уточняются. Цель сохранена.";NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");return;}
         if(Flow.Active && Flow.Pauses.HasFlag(PauseReason.Unavailable) && Routes.SelectMany(r=>r.Mobs).Any(Eligible))Flow.Pauses&=~PauseReason.Unavailable;
         if(Flow.Active && Flow.Manual==null && Flow.Pauses.HasFlag(PauseReason.NoZone)){
             var local=Routes.SelectMany(r=>r.Mobs).FirstOrDefault(m=>m.TerritoryType==Service.ClientState.TerritoryType&&Eligible(m));
@@ -276,6 +282,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         if(Flow.Active && Flow.Pauses!=PauseReason.None){
             Search.Suspend();
             if(Session.Target is {} paused && Done(paused)){Search.Start([]);searchKey="";}
+            else UpdateEliteSearch();
             NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");return;
         }
         if(Flow.Active && Session.Phase==RoutePhase.NextZone){
@@ -308,12 +315,12 @@ public sealed partial class Plugin : IDalamudPlugin {
             Search.Start(EliteSpawns.For(target).Select(p=>MapCoordinates.ToWorld(p,map)).ToArray());searchKey=key;
             if(restoreSearch is {} saved){Search.Restore(saved);restoreSearch=null;}
         }
-        if(!NavigationAllowed || pendingJourney!=null || Service.Condition.Any(ConditionFlag.Unconscious,ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent)){Search.Suspend();return;}
+        if(pendingJourney!=null || Service.Condition.Any(ConditionFlag.Unconscious,ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent)){Search.Suspend();return;}
         var actors=Service.ObjectTable.OfType<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>().Where(n=>n.NameId==target.MobHuntId)
             .Select(n=>new EliteActor(n.GameObjectId,new Vector2(n.Position.X,n.Position.Z),n.IsDead)).ToArray();
         ulong? previous=Search.ActorId;
-        var point=Search.Observe(new Vector2(player.Position.X,player.Position.Z),actors,Service.Condition[ConditionFlag.InCombat] || player.IsCasting,Now,Done(target),contractRevision,contractAt,!unreadBills.Contains(target.BillNumber));
-        if(previous!=Search.ActorId && Search.ActorId!=null && Flow.Active)Ping("Элита обнаружена: "+target.Name,true);
+        var point=Search.Observe(new Vector2(player.Position.X,player.Position.Z),actors,Service.Condition[ConditionFlag.InCombat] || player.IsCasting,Now,Done(target),contractRevision,contractAt,!unreadBills.Contains(target.BillNumber),NavigationAllowed);
+        if(previous!=Search.ActorId && Search.ActorId!=null && Flow.Active)Ping("Элита обнаружена: "+target.Name,Settings.EliteSound);
         if(Search.Round>=4 && Flow.LongNotified.Add(JourneyFlow.Key(target)))Ping("Три круга без цели: "+target.Name+". Поиск продолжается.");
         if(point is {} position && !PlaceFlag(target.TerritoryType,target.MapId,position))Search.Retry();
     }
@@ -337,7 +344,7 @@ public sealed partial class Plugin : IDalamudPlugin {
     }
     internal bool AcceptShortcut(ShortcutOffer offered) {
         var current=FindShortcut();
-        if(current==null || current.RunId!=offered.RunId || current.Bill!=offered.Bill || current.Mob!=offered.Mob
+        if(current==null || current.RunId!=offered.RunId || current.ContractKey!=offered.ContractKey || current.Bill!=offered.Bill || current.Mob!=offered.Mob
             || current.TargetId!=offered.TargetId || current.Aetheryte!=offered.Aetheryte || current.GilCost>offered.GilCost) {
             Service.Chat.PrintError("Предложение изменилось или больше не сокращает путь. Проверьте обновлённые данные."); return false;
         }
@@ -360,12 +367,12 @@ public sealed partial class Plugin : IDalamudPlugin {
     }
     private void SaveHistory(bool force=false) {
         if(completionLoadPending && completionFile!=null && (force || Now>=nextHistorySave)){
-            try{completionHistory=CompletionHistory.LoadRecovering(completionFile);completionLoadPending=false;foreach(var pair in BillStates)History.Observe(character,pair.Key,Boards.Any(b=>b.Weekly==pair.Key),DateTimeOffset.UtcNow,pair.Value);}
-            catch(Exception e){nextHistorySave=Now+10000;NoticeText="История выполнения временно недоступна для чтения. Исходный файл сохранён.";Service.PluginLog.Debug(e,"Повторное чтение истории");return;}
+            try{completionHistory=CompletionHistory.LoadRecovering(completionFile);completionLoadPending=false;HistorySaveError=null;foreach(var pair in BillStates)History.Observe(character,pair.Key,Boards.Any(b=>b.Weekly==pair.Key),DateTimeOffset.UtcNow,pair.Value);}
+            catch(Exception e){nextHistorySave=Now+10000;HistorySaveError="История выполнения временно недоступна для чтения. Исходный файл сохранён.";Service.PluginLog.Debug(e,"Повторное чтение истории");return;}
         }
         if(completionLoadPending || !History.Dirty || completionFile==null || (!force && Now<nextHistorySave)) return;
-        try { History.Save(completionFile); }
-        catch(Exception e) { nextHistorySave=Now+10000;Service.PluginLog.Error(e,"Не удалось сохранить историю выполнения охоты"); }
+        try { History.Save(completionFile);HistorySaveError=null; }
+        catch(Exception e) { nextHistorySave=Now+10000;HistorySaveError="Не удалось сохранить отметки выполнения. В игре зачёт сохранён, но отметки могут пропасть после перезапуска.";Service.PluginLog.Error(e,"Не удалось сохранить историю выполнения охоты"); }
     }
     public void Dispose() {
         SaveJourney(true);

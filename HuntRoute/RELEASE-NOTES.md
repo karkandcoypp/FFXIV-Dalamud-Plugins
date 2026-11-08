@@ -1,3 +1,13 @@
+# 0.3.17
+
+- Entry selection and teleport now share the reviewed zone plan. Estimates include the current-player leg and known elite spawn circuit, excluding deferred/unavailable anchors. Unknown elite search duration is never invented.
+- Destructive bill changes require two consistent observations at least 750 ms apart. Ambiguous/invalid reads retain accepted counters, contract generation and current goal, and block transport/navigation for that bill.
+- Shortcut dialogs and notices include order and generation; replacement contracts cannot accept stale proposals. Reset offers acknowledge only categories still available at actual show time.
+- Elite observation remains active during navigation pauses without changing flags, visiting points or consuming death grace. Independent user/flag pauses remain in place.
+- Independent versioned settings file with atomic saves, backup and migration from the old route file. Separate elite/next-zone sounds; persistent save-error warnings and explicit retry preserve game credit.
+- Distinct no-bill, completed, deferred, unavailable, filtered and loading states with matching actions.
+- Added pure and substituted-controller regressions plus six UI states. No live-game control or NPC streaming/native teleport/UI verification was performed.
+
 # 0.3.16
 
 - The 100 ms elite branch now suspends during unconscious/loading/cutscene states. Contract credit clears elite tracking before busy-state deferral. Added controller regressions for both paths.

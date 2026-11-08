@@ -28,7 +28,12 @@ public sealed partial class Plugin {
  internal HuntStore Store=>store??=new();
  private JourneyFlow? flow;
  internal JourneyFlow Flow=>flow??=new();
- internal HuntSettings Settings=>Store.Settings;
+ private HuntSettingsFile? settingsStore;
+ private string? settingsFile,lastSettingsSaved;
+ private bool settingsLoadPending;
+ private long nextSettingsSave;
+ internal string? JourneySaveError,SettingsSaveError,HistorySaveError;
+ internal HuntSettings Settings=>settingsStore?.Settings??Store.Settings;
  private string? stateFile,lastSaved,context;
  private long nextStateSave,contractRevision,contractAt;
  private PendingJourney? pendingJourney;
@@ -52,22 +57,43 @@ public sealed partial class Plugin {
  }
  private void InitializeStore(){
   stateFile=Path.Combine(Service.PluginInterface.GetPluginConfigDirectory(),"journey-state.json");
+  settingsFile=Path.Combine(Service.PluginInterface.GetPluginConfigDirectory(),"hunt-settings.json");
   try{store=HuntStore.Load(stateFile);}catch(Exception e){stateLoadPending=true;store=new();Service.PluginLog.Error(e,"Не удалось прочитать состояние маршрута");NoticeText="Сохранение маршрута недоступно; история контрактов хранится отдельно.";}
+  try{settingsStore=HuntSettingsFile.Load(settingsFile,Store.Settings);if(settingsStore.Recovered)NoticeText="Настройки восстановлены; история выполнения и маршруты хранятся отдельно.";}catch(Exception e){settingsLoadPending=true;SettingsSaveError="Настройки временно недоступны. Исходный файл сохранён.";Service.PluginLog.Error(e,"Чтение настроек");}
  }
  private void LoadJourney(){
+  billGuard=new();uncertainBills.Clear();unreadBills.Clear();KillCounts=new();BillStates=new();Mobs=new();Routes=new();
   contractRevision=0;contractAt=0;flow=new();Flow.Load(CharacterSave);ordinaryActor=null;ordinaryKind=null;context=null;ownedMarker=null;pendingJourney=null;
   if(Flow.Active)Flow.Status="Сохранённый маршрут на паузе. Проверьте контракты и нажмите «Продолжить».";
  }
+ internal bool AcceptBillSnapshot(byte bill,BillSnapshot snapshot,byte maximum){
+  var episodes=CharacterSave.Contracts;if(!episodes.TryGetValue(bill,out var episode))episodes[bill]=episode=new();
+  if(!Guard.Observe(bill,snapshot,Now,maximum,episode.Taken,episode.Order)){uncertainBills.Add(bill);unreadBills.Add(bill);return false;}
+  uncertainBills.Remove(bill);
+  if(snapshot.Taken&&(!episode.Taken||episode.Order!=snapshot.Order))episode.Generation++;
+  episode.Taken=snapshot.Taken;if(snapshot.Order>0)episode.Order=snapshot.Order;
+  for(byte mob=0;mob<5;mob++)KillCounts[(bill,mob)]=snapshot.Kills[mob];
+  return true;
+ }
  internal void SaveJourney(bool force=false){
+  SaveSettings(force);
   if(stateFile==null || character==0 || (!force && Now<nextStateSave))return;
   var s=CharacterSave;s.Context=context;s.Active=Flow.Active;s.Manual=Flow.Manual;s.Target=Session.Target is {} t?JourneyFlow.Key(t):Flow.RestoreTarget;
   s.Deferred=Flow.Deferred.ToHashSet();s.Zones=Flow.Zones.ToHashSet();s.LongNotified=Flow.LongNotified.ToHashSet();
   if(!Flow.Restored){s.SearchTarget=searchKey;s.Search=Session.Target is {IsEliteMark:true} currentSearch&&searchKey==SearchIdentity(currentSearch)?Search.Capture():null;}
-  if(stateLoadPending){try{var recovered=HuntStore.Load(stateFile);recovered.Characters[character]=s;store=recovered;stateLoadPending=false;}catch(Exception e){nextStateSave=Now+10000;NoticeText="Сохранение маршрута временно недоступно. Исходный файл не перезаписан.";Service.PluginLog.Debug(e,"Повторное чтение маршрута");return;}}
+  if(stateLoadPending){try{var recovered=HuntStore.Load(stateFile);recovered.Characters[character]=s;store=recovered;stateLoadPending=false;}catch(Exception e){nextStateSave=Now+10000;JourneySaveError="Сохранение маршрута временно недоступно. Исходный файл не перезаписан.";Service.PluginLog.Debug(e,"Повторное чтение маршрута");return;}}
   string value=JsonSerializer.Serialize(Store,new JsonSerializerOptions{IncludeFields=true});
-  if(!force && value==lastSaved)return;
-  try{Store.Save(stateFile);lastSaved=value;nextStateSave=Now+2000;}catch(Exception e){nextStateSave=Now+10000;NoticeText="Не удалось сохранить маршрут: после перезапуска изменения могут пропасть.";Service.PluginLog.Error(e,"Сохранение маршрута");}
+  if(!force && value==lastSaved&&JourneySaveError==null)return;
+  try{Store.Save(stateFile);lastSaved=value;nextStateSave=Now+2000;JourneySaveError=null;}catch(Exception e){nextStateSave=Now+10000;JourneySaveError="Не удалось сохранить маршрут: после перезапуска изменения могут пропасть.";Service.PluginLog.Error(e,"Сохранение маршрута");}
  }
+ private void SaveSettings(bool force=false){
+  if(settingsFile==null||!force&&Now<nextSettingsSave)return;
+  if(settingsLoadPending)try{settingsStore=HuntSettingsFile.Load(settingsFile,Store.Settings);settingsLoadPending=false;}catch(Exception e){nextSettingsSave=Now+10000;SettingsSaveError="Настройки недоступны для чтения. Исходный файл не перезаписан.";Service.PluginLog.Debug(e,"Повторное чтение настроек");return;}
+  settingsStore??=new(){Settings=Store.Settings};string value=JsonSerializer.Serialize(settingsStore);
+  if(!force&&lastSettingsSaved==value&&SettingsSaveError==null)return;
+  try{settingsStore.Save(settingsFile);lastSettingsSaved=value;nextSettingsSave=Now+2000;SettingsSaveError=null;}catch(Exception e){nextSettingsSave=Now+10000;SettingsSaveError="Не удалось сохранить настройки: изменения могут пропасть после перезапуска.";Service.PluginLog.Error(e,"Сохранение настроек");}
+ }
+ internal void RetryPersistence(){SaveJourney(true);SaveHistory(true);if(JourneySaveError==null&&SettingsSaveError==null&&HistorySaveError==null)NoticeText="Данные сохранены.";}
  internal static byte[] AllTiers=>Boards.SelectMany(b=>b.Daily.Append(b.Weekly)).ToArray();
  internal bool Eligible(MobHuntEntry m){
   if(unreadBills.Contains(m.BillNumber)||!AllTiers.Contains(m.BillNumber)||Done(m)||Flow.Excluded(m)||!Mobs.Any(current=>JourneyFlow.Key(current)==JourneyFlow.Key(m)))return false;
@@ -80,7 +106,7 @@ public sealed partial class Plugin {
  }
  private void ResetTargetTracking(){Search.Start([]);searchKey="";ordinaryActor=null;ordinaryKind=null;ordinaryPosition=null;}
  private string SearchIdentity(MobHuntEntry target)=>$"{Session.RunId}:{JourneyFlow.Key(target)}";
- internal bool NavigationAllowed=>!Flow.Active || Flow.Pauses==PauseReason.None;
+ internal bool NavigationAllowed=>(!Flow.Active || Flow.Pauses==PauseReason.None)&&!(Session.Target is {} t&&unreadBills.Contains(t.BillNumber));
  internal void StopJourney(){Flow.Stop();Session.Stop();Search.Start([]);searchKey="";pendingJourney=null;ordinaryActor=null;ownedMarker=null;NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");NativeDialogs.Cancel("travel");SaveJourney(true);}
  internal void TogglePause(){if(!Flow.Active)return;if(Flow.Pauses.HasFlag(PauseReason.User))ResumeJourney();else{Flow.Pauses|=PauseReason.User;Search.Suspend();Flow.Status="Пауза по вашему выбору";SaveJourney(true);}}
  internal void ResumeJourney(){
@@ -101,17 +127,15 @@ public sealed partial class Plugin {
   else OfferTravel(target,starting);
   SaveJourney(true);
  }
- private float ZoneCost(ZoneRoute route) {
-  Vector2? last=route.Start?.Id==75&&route.Mobs.FirstOrDefault()?.TerritoryType==399?null:route.Start?.Position;float cost=0;
-  foreach(var m in route.Mobs.Where(m=>!Done(m)&&!Flow.Excluded(m))) {
-   if(Position(m) is not {} pos)continue;
-   var map=Service.DataManager.GetExcelSheet<Map>().GetRow(m.MapId);
-   if(last is {} previous)cost+=Vector2.Distance(MapCoordinates.ToWorld(previous,map),MapCoordinates.ToWorld(pos,map));last=pos;
-  }
-  return cost;
+ private Vector2[] PlanningPoints(MobHuntEntry m){
+  if(unreadBills.Contains(m.BillNumber)||Done(m)||Flow.Excluded(m))return [];
+  var map=Service.DataManager.GetExcelSheet<Map>().GetRow(m.MapId);if(map.SizeFactor==0||map.TerritoryType.RowId!=m.TerritoryType)return [];
+  if(livePositions.TryGetValue(JourneyFlow.Key(m),out var livePoint))return [livePoint];
+  if(m.IsEliteMark)return EliteSpawns.For(m).Select(p=>MapCoordinates.ToWorld(p,map)).ToArray();
+  return Location.Database.TryGetValue(m.MobHuntId,out var anchor)?[MapCoordinates.ToWorld(anchor.Coordinate,map)]:[];
  }
  internal void SetMini(bool enabled){Settings.Mini=enabled;if(miniWindow!=null)miniWindow.IsOpen=enabled;SaveJourney(true);}
- internal void NextOffered(){if(Flow.Active)Ping("Цели зоны выполнены. Доступен переход в следующую зону.",true);}
+ internal void NextOffered(){if(Flow.Active)Ping("Цели зоны выполнены. Доступен переход в следующую зону.",Settings.NextZoneSound);}
  internal MobHuntEntry? BestTarget()=>Routes.SelectMany(r=>r.Mobs).Where(Eligible).OrderBy(m=>m.TerritoryType==CurrentTerritory?0:1).FirstOrDefault();
  internal void Track(MobHuntEntry m){
   if(!Ready||Done(m)||Flow.Excluded(m))return;
@@ -134,13 +158,18 @@ public sealed partial class Plugin {
   }
   return Location.Database.TryGetValue(m.MobHuntId,out var p)?p.Coordinate:null;
  }
- internal EntryPoint? EntryFor(MobHuntEntry m){var positions=m.IsEliteMark?EliteSpawns.For(m):Position(m) is {} p?new[]{p}:Array.Empty<Vector2>();return Entries(m.MapId,m.TerritoryType).OrderBy(e=>positions.Length==0?float.MaxValue:positions.Min(p=>Vector2.DistanceSquared(e.Position,p))).ThenBy(e=>e.Id).FirstOrDefault() ?? (m.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75)?new(75,"Idyllshire",Vector2.Zero):null);}
+ internal EntryPoint? EntryFor(MobHuntEntry m){
+  var route=Routes.FirstOrDefault(r=>r.Mobs.Any(t=>JourneyFlow.Key(t)==JourneyFlow.Key(m)));
+  if(route?.Start is {} planned&&route.Mobs.FirstOrDefault(t=>!Done(t)&&!Flow.Excluded(t)&&PlanningPoints(t).Length>0) is {} first&&JourneyFlow.Key(first)==JourneyFlow.Key(m)&&Service.Aetherytes.Any(a=>a.AetheryteId==planned.Id))return planned;
+  return NearestEntryFor(m);
+ }
+ private EntryPoint? NearestEntryFor(MobHuntEntry m){var positions=m.IsEliteMark?EliteSpawns.For(m):Position(m) is {} p?new[]{p}:Array.Empty<Vector2>();return Entries(m.MapId,m.TerritoryType).OrderBy(e=>positions.Length==0?float.MaxValue:positions.Min(p=>Vector2.DistanceSquared(e.Position,p))).ThenBy(e=>e.Id).FirstOrDefault() ?? (m.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75)?new(75,"Idyllshire",Vector2.Zero):null);}
  internal uint Price(uint id)=>Service.Aetherytes.Where(a=>a.AetheryteId==id).Select(a=>a.GilCost).DefaultIfEmpty(uint.MaxValue).Min();
  private void OfferTravel(MobHuntEntry target,bool starting){
   var entry=EntryFor(target);if(entry==null){Flow.Unavailable[JourneyFlow.Key(target)]="Нет открытого эфирита или проверенного входа";Flow.Status="Цель отложена: нет открытого входа.";return;}
   string key=JourneyFlow.Key(target);uint run=Session.RunId;uint quote=Price(entry.Id);
   NativeDialogs.Offer(new("travel",$"travel:{run}:{key}:{entry.Id}:{quote}","Продолжить охоту?",
-   ()=>Ready && !Done(target)&&!Flow.Excluded(target)&&Flow.Active&&Session.RunId==run&&Mobs.Any(m=>JourneyFlow.Key(m)==key)&&EntryFor(target)?.Id==entry.Id&&Price(entry.Id)<=quote,
+   ()=>Ready && Eligible(target)&&Flow.Active&&Session.RunId==run&&Mobs.Any(m=>JourneyFlow.Key(m)==key)&&EntryFor(target)?.Id==entry.Id&&Price(entry.Id)<=quote,
    ()=>!TravelBusy && !Flow.Pauses.HasFlag(PauseReason.Marker),
    ()=>{var current=EntryFor(target);if(current?.Id!=entry.Id || Price(entry.Id)>quote)return false;Travel(target);return Session.Target is {} t&&JourneyFlow.Key(t)==key&&Session.Phase!=RoutePhase.NextZone;},
    TravelDialogContent.Next(CurrentTerritory.ToString(),target.TerritoryName??"Зона",target.Name??"Цель") with {Context=$"{entry.Name} · {quote} гил",Detail=TravelHint(target,entry),Footer="Сопровождение сохранится. Игра не перемещает персонажа пешком автоматически."}),true);
@@ -218,7 +247,7 @@ public sealed partial class Plugin {
   foreach(var m in Mobs.Where(m=>!unreadBills.Contains(m.BillNumber)&&m.TerritoryType==CurrentTerritory&&m.MapId==CurrentMap&&!Done(m)&&!Flow.Excluded(m))){var npc=actors.Where(n=>n.NameId==m.MobHuntId).OrderBy(n=>Vector3.DistanceSquared(player.Position,n.Position)).FirstOrDefault();if(npc!=null)livePositions[JourneyFlow.Key(m)]=new(npc.Position.X,npc.Position.Z);}
  }
  private bool DetectorNavigation(){
-  if(!Flow.Active || !Flow.CanNavigate || pendingJourney!=null || Service.ObjectTable.LocalPlayer is not {} player || Service.Condition.Any(ConditionFlag.Unconscious,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent))return false;
+  if(!Flow.Active || !Flow.CanNavigate || !NavigationAllowed || pendingJourney!=null || Service.ObjectTable.LocalPlayer is not {} player || Service.Condition.Any(ConditionFlag.Unconscious,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent))return false;
   var candidates=Mobs.Where(m=>!unreadBills.Contains(m.BillNumber)&&AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m)&&m.TerritoryType==CurrentTerritory&&m.MapId==CurrentMap).ToArray();
   var actors=Service.ObjectTable.OfType<IBattleNpc>().Where(n=>!n.IsDead&&n.GameObjectId!=0&&float.IsFinite(n.Position.X)&&float.IsFinite(n.Position.Y)&&float.IsFinite(n.Position.Z) && candidates.Any(m=>m.MobHuntId==n.NameId)).ToArray();
   livePositions.Clear();foreach(var m in candidates){var near=actors.Where(n=>n.NameId==m.MobHuntId).OrderBy(n=>Vector3.DistanceSquared(player.Position,n.Position)).FirstOrDefault();if(near!=null)livePositions[JourneyFlow.Key(m)]=new(near.Position.X,near.Position.Z);}
@@ -235,10 +264,10 @@ public sealed partial class Plugin {
   if(changed)PlaceFlag(target.TerritoryType,target.MapId,position);
   return true;
  }
- private unsafe void Ping(string text,bool sound=false){NoticeText=text;if(sound&&Settings.Sound){try{FFXIVClientStructs.FFXIV.Client.UI.UIGlobals.PlaySoundEffect(0x29);}catch(Exception e){Service.PluginLog.Debug(e,"Сигнал охоты недоступен");}}}
+ private unsafe void Ping(string text,bool sound=false){NoticeText=text;if(sound){try{FFXIVClientStructs.FFXIV.Client.UI.UIGlobals.PlaySoundEffect(0x29);}catch(Exception e){Service.PluginLog.Debug(e,"Сигнал охоты недоступен");}}}
  private void AuditState(){string value=$"{Session.Phase}|{Session.Target?.MobHuntId}|{Flow.Pauses}|{Flow.Status}";if(value==lastJournal)return;lastJournal=value;journal.Enqueue(DateTimeOffset.UtcNow.ToString("O")+" "+value);while(journal.Count>200)journal.Dequeue();}
  internal void Export(){if(stateFile==null)return;string path=Path.Combine(Path.GetDirectoryName(stateFile)!,"hunt-diagnostics.txt");try{File.WriteAllLines(path,new[]{"Hunt Route "+typeof(Plugin).Assembly.GetName().Version}.Concat(journal));NoticeText="Диагностика сохранена: "+path;}catch(Exception e){NoticeText="Не удалось сохранить диагностику: "+e.Message;}}
- internal bool PersistenceBlocked=>stateLoadPending;
+ internal bool PersistenceBlocked=>settingsLoadPending;
  internal bool CompletionUncertain(Board board,bool weekly)=>(completionLoadPending||History.RequiresPickupEvidence)&&(weekly?new[]{board.Weekly}:board.Daily).Any(i=>BillStates.TryGetValue(i,out var s)&&s.CompletedCurrentSet&&!History.IsComplete(character,i,weekly,DateTimeOffset.UtcNow,s.AvailableId));
  internal bool BoardReachable(Board b)=>CurrentTerritory==b.Territory||Service.Aetherytes is not null&&Service.Aetherytes.Any(a=>a.AetheryteId==b.Aetheryte);
  internal string LocationLabel=>Session.Target is {IsEliteMark:true}?Search.Lost?"Последняя известная позиция":Search.ActorId!=null?"Элита обнаружена":"Предполагаемые места появления":ordinaryActor!=null&&Session.Target is {} goal&&ordinaryKind==JourneyFlow.Key(goal)?"Моб обнаружен":"Известная точка охоты";
@@ -250,6 +279,6 @@ public sealed partial class Plugin {
   if(!d&&!w)return;
   if(Flow.Active&&Flow.Pauses==PauseReason.None){NoticeText="Доступны новые контракты — выберите доску в сводке.";return;}
   if(TravelBusy || pendingJourney!=null || Flow.Pauses.HasFlag(PauseReason.Marker))return;
-  NativeDialogs.Offer(new("pickup",$"pickup:{character}:{(d?daily:0)}:{(w?weekly:0)}","Доступны новые контракты",()=>Ready&&Settings.ResetNotifications&&(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false))||w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true))),()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),()=>{PickupOpen=true;window.IsOpen=true;return true;},new("HUNT ROUTE · КОНТРАКТЫ","Доступны новые контракты","ДОСКА ОХОТЫ","Выберите дополнение","Ежедневные и недельные статусы показаны отдельно.","ПОСЛЕ ВЫБОРА","Подтверждение поездки","Контракты вы берёте самостоятельно.","Текущий маршрут сохранится. «Позже» оставит действие в сводке.",[],"Выбрать дополнение"),()=>{if(d)CharacterSave.DailyNotice=daily;if(w)CharacterSave.WeeklyNotice=weekly;SaveJourney(true);}));
+  NativeDialogs.Offer(new("pickup",$"pickup:{character}:{(d?daily:0)}:{(w?weekly:0)}","Доступны новые контракты",()=>Ready&&Settings.ResetNotifications&&(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false))||w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true))),()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),()=>{PickupOpen=true;window.IsOpen=true;return true;},new("HUNT ROUTE · КОНТРАКТЫ","Доступны новые контракты","ДОСКА ОХОТЫ","Выберите дополнение","Ежедневные и недельные статусы показаны отдельно.","ПОСЛЕ ВЫБОРА","Подтверждение поездки","Контракты вы берёте самостоятельно.","Текущий маршрут сохранится. «Позже» оставит действие в сводке.",[],"Выбрать дополнение"),()=>{if(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=daily;if(w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=weekly;SaveJourney(true);}));
  }
 }

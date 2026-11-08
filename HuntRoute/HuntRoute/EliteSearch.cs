@@ -38,15 +38,15 @@ public sealed class EliteSearch {
         LockedPosition=null;actor=null;Lost=false;deathRevision=null;deathElapsed=0;lastObservation=null;marked=null;
         if(current is {} point) { remaining.Add(point);current=null; }
     }
-    public Vector2? Observe(Vector2 player,IReadOnlyList<EliteActor> actors,bool busy,long now,bool completed,long revision,long snapshotAt,bool ready=true) {
+    public Vector2? Observe(Vector2 player,IReadOnlyList<EliteActor> actors,bool busy,long now,bool completed,long revision,long snapshotAt,bool ready=true,bool navigate=true) {
         if(completed) { Start([]);return null; }
         if(!ready) { Suspend();return null; }
         long delta=lastObservation is {} previous && now>=previous && now-previous<=1500 ? now-previous : 0;
-        lastObservation=now;
+        lastObservation=navigate?now:null;if(!navigate)delta=0;
         EliteActor? original=actor is {} id ? actors.Where(a=>a.Id==id).Cast<EliteActor?>().FirstOrDefault() : null;
         if(original is {Dead:false} live && Finite(live.Position)) {
             deathRevision=null;deathElapsed=0;Lost=false;
-            return Tick(player,live.Position,busy);
+            return ObservedPoint(player,live.Position,busy,navigate);
         }
         if(original is {Dead:true} && deathRevision==null) { deathRevision=revision;deathElapsed=0;delta=0; }
         var replacement=actors.Where(a=>!a.Dead && a.Id!=0 && !deadActors.Contains(a.Id) && Finite(a.Position))
@@ -54,18 +54,19 @@ public sealed class EliteSearch {
         if(replacement is {} next) {
             if(actor is {} previousActor && deathRevision!=null) deadActors.Add(previousActor);
             actor=next.Id;Lost=false;deathRevision=null;deathElapsed=0;
-            return Tick(player,next.Position,busy);
+            return ObservedPoint(player,next.Position,busy,navigate);
         }
         if(deathRevision is {} atDeath) {
             if(now>=snapshotAt && now-snapshotAt<=1500) deathElapsed+=delta;
             if(deathElapsed>=3000 && revision>=atDeath+2 && now>=snapshotAt && now-snapshotAt<=1500) {
                 if(actor is {} dead) deadActors.Add(dead);
-                Unlock();return Tick(player,null,busy);
+                Unlock();return ObservedPoint(player,null,busy,navigate);
             }
         }
         Lost=LockedPosition!=null && deathRevision==null;
-        return Tick(player,null,busy);
+        return ObservedPoint(player,null,busy,navigate);
     }
+    private Vector2? ObservedPoint(Vector2 player,Vector2? found,bool busy,bool navigate){if(found is {} position)LockedPosition=position;return navigate?Tick(player,found,busy):null;}
     public Vector2? Tick(Vector2 player,Vector2? detected,bool busy) {
         // Detection wins even on the round boundary or when a late NPC appears at an old point.
         if(detected is {} found && Finite(found)) LockedPosition=found;

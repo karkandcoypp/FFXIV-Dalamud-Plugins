@@ -18,8 +18,8 @@ class Program {
   var mobs=new List<MobHuntEntry>{new(){Name="Archaeornis",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=0,MobHuntId=3481,NeededKills=3,TerritoryType=397},new(){Name="Wooly Yak",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=1,MobHuntId=3479,NeededKills=2,TerritoryType=397},new(){Name="Alteci",TerritoryName="Coerthas Western Highlands",BillNumber=5,MobIndex=0,MobHuntId=4350,NeededKills=1,IsEliteMark=true,TerritoryType=397}};
   Set(plugin,"Mobs",mobs); Set(plugin,"Routes",new List<ZoneRoute>{new("Coerthas Western Highlands",mobs,new(71,"Falcon's Nest",new(32,36))),new("The Sea of Clouds",mobs,new(73,"Camp Cloudtop",new(16,37))),new("The Dravanian Forelands",mobs,new(76,"Tailfeather",new(31,23)))});
   string directory=Path.GetFullPath(args[0]);Directory.CreateDirectory(directory);
-  foreach(var sample in new[]{(520,430,17f,"normal"),(620,500,17f,"following"),(620,500,17f,"next"),(800,620,17f,"normal"),(1180,800,20f,"normal"),(520,430,17f,"completed"),(800,620,17f,"completed"),(520,430,20f,"completed-large"),(520,430,20f,"normal-large"),(520,430,17f,"settings"),(520,430,20f,"selected"),(620,500,17f,"elite"),(360,260,17f,"mini"),(360,360,20f,"mini-elite")}) {
-   Set(plugin,"Mobs",mobs);Set(plugin,"SettingsOpen",sample.Item4=="settings");Set(plugin,"Selected",sample.Item4=="selected"?JourneyFlow.Key(mobs[0]):null!);
+  foreach(var sample in new[]{(520,430,17f,"normal"),(620,500,17f,"following"),(620,500,17f,"next"),(800,620,17f,"normal"),(1180,800,20f,"normal"),(520,430,17f,"completed"),(800,620,17f,"completed"),(520,430,20f,"completed-large"),(520,430,20f,"normal-large"),(520,430,17f,"settings"),(520,430,20f,"selected"),(620,500,17f,"elite"),(360,260,17f,"mini"),(360,360,20f,"mini-elite"),(520,430,20f,"settings-large"),(520,430,17f,"no-bills"),(520,430,17f,"deferred"),(520,430,17f,"unavailable"),(520,430,20f,"save-error"),(520,430,17f,"loading")}) {
+   Set(plugin,"Mobs",mobs);Set(plugin,"SettingsOpen",sample.Item4.StartsWith("settings"));Set(plugin,"Selected",sample.Item4=="selected"?JourneyFlow.Key(mobs[0]):null!);
    var flow=(JourneyFlow)typeof(Plugin).GetProperty("Flow",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!;flow.Stop();
    var search=new EliteSearch();Set(plugin,"Search",search);
    var session=new RouteSession();Set(plugin,"Session",session);Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>());
@@ -40,6 +40,12 @@ class Program {
    if(sample.Item4 is "elite" or "mini-elite") {session.Start(mobs[2],new byte[]{5});session.Tick(mobs,_=>false,_=>true,397);flow.Active=true;search.Start([new(0,0)]);search.Observe(new(0,0),[new(1,new(10,10),false)],false,0,false,0,0);}
    if(sample.Item4=="mini")flow.Active=true;
    if(completed) { Set(plugin,"Routes",new List<ZoneRoute>());Set(plugin,"Mobs",new List<MobHuntEntry>()); }
+   Set(plugin,"Ready",sample.Item4!="loading");
+   Set(plugin,"HistorySaveError",sample.Item4=="save-error"?"Не удалось сохранить отметки выполнения. В игре зачёт сохранён, но отметки могут пропасть после перезапуска.":null);
+   flow.Unavailable.Clear();
+   if(sample.Item4=="no-bills"){Set(plugin,"Mobs",new List<MobHuntEntry>());Set(plugin,"Routes",new List<ZoneRoute>());}
+   if(sample.Item4=="deferred")foreach(var mob in mobs)flow.Deferred.Add(JourneyFlow.Key(mob));
+   if(sample.Item4=="unavailable")foreach(var mob in mobs)flow.Unavailable[JourneyFlow.Key(mob)]="Нет проверенных координат";
    ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(sample.Item1,sample.Item2);io.DeltaTime=1f/60;
    io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",sample.Item3,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
    byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));

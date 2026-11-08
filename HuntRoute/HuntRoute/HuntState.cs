@@ -3,13 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 namespace HuntRoute;
 [Flags] public enum PauseReason { None=0,User=1,Restored=2,Marker=4,NoZone=8,TravelError=16,Unavailable=32,Board=64,FlagError=128 }
 public sealed class HuntSettings {
  public bool WorldMarkers {get;set;}=true;
  public int WorldDistance {get;set;}=300;
  public bool Mini {get;set;}
- public bool Sound {get;set;}
+ public bool EliteSound {get;set;}
+ public bool NextZoneSound {get;set;}
+ // Read old combined preference, but write only the independent preferences.
+ [JsonPropertyName("Sound"),JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)]
+ public bool? LegacySound {get=>null;set{if(value is {} enabled){EliteSound=enabled;NextZoneSound=enabled;}}}
  public bool ResetNotifications {get;set;}=true;
  public bool Shortcuts {get;set;}=true;
  public uint MaxGil {get;set;}=200;
@@ -34,7 +39,7 @@ public sealed class SavedJourney {
 }
 public sealed class HuntStore {
  public int Version {get;set;}=1;
- public HuntSettings Settings {get;set;}=new();
+ [JsonIgnore] public HuntSettings Settings {get;set;}=new();
  public Dictionary<ulong,SavedJourney> Characters {get;set;}=[];
  private bool skipBackup;
  private static readonly JsonSerializerOptions Options=new(){IncludeFields=true};
@@ -46,7 +51,7 @@ public sealed class HuntStore {
    return new(){skipBackup=true};
   }
  }
- private static HuntStore Parse(string json){var value=JsonSerializer.Deserialize<HuntStore>(json,Options)??throw new InvalidDataException("Empty route state");if(value.Version!=1||value.Settings==null||value.Characters==null||value.Characters.Values.Any(v=>v==null||v.Deferred==null||v.Zones==null||v.LongNotified==null||v.Contracts==null||v.Contracts.Any(p=>p.Key>=22||p.Value==null)))throw new InvalidDataException("Invalid route state");value.Settings.Validate();return value;}
+ private static HuntStore Parse(string json){var value=JsonSerializer.Deserialize<HuntStore>(json,Options)??throw new InvalidDataException("Empty route state");if(value.Version!=1||value.Characters==null||value.Characters.Values.Any(v=>v==null||v.Deferred==null||v.Zones==null||v.LongNotified==null||v.Contracts==null||v.Contracts.Any(p=>p.Key>=22||p.Value==null)))throw new InvalidDataException("Invalid route state");using var doc=JsonDocument.Parse(json);if(doc.RootElement.TryGetProperty("Settings",out var legacy))value.Settings=legacy.Deserialize<HuntSettings>()??new();value.Settings.Validate();return value;}
  public void Save(string path){Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);string temp=path+".tmp";using(var stream=new FileStream(temp,FileMode.Create,FileAccess.Write,FileShare.None)){JsonSerializer.Serialize(stream,this,Options);stream.Flush(true);}if(!skipBackup&&File.Exists(path))File.Copy(path,path+".bak",true);File.Move(temp,path,true);skipBackup=false;}
 }
 public sealed class JourneyFlow {

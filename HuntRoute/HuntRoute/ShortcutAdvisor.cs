@@ -6,6 +6,9 @@ namespace HuntRoute;
 
 public readonly record struct ShortcutCandidate(uint Id,string Name,Vector2 Position,uint GilCost);
 public sealed record ShortcutOffer(uint RunId,byte Bill,byte Mob,uint TargetId,uint Territory,uint Aetheryte,string Name,uint GilCost,float DirectDistance,float FinalDistance,float DirectSeconds,float TeleportSeconds) {
+    public byte OrderId {get;init;}
+    public uint Generation {get;init;}
+    public string ContractKey=>$"{Bill}:{OrderId}:{Generation}:{Mob}:{TargetId}";
     public float SavedSeconds => DirectSeconds-TeleportSeconds;
 }
 public static class ShortcutAdvisor {
@@ -23,16 +26,16 @@ public static class ShortcutAdvisor {
         if(candidates.Length==0) return null;
         var chosen=candidates[0];
         return new(run,target.BillNumber,target.MobIndex,target.MobHuntId,target.TerritoryType,
-            chosen.Entry.Id,chosen.Entry.Name,chosen.Entry.GilCost,direct,chosen.Last,directSeconds,teleportOverheadSeconds+chosen.Last/FlightSpeed);
+            chosen.Entry.Id,chosen.Entry.Name,chosen.Entry.GilCost,direct,chosen.Last,directSeconds,teleportOverheadSeconds+chosen.Last/FlightSpeed){OrderId=target.OrderId,Generation=target.Generation};
     }
 }
 public sealed class ShortcutNotice {
     private uint run;
-    private readonly HashSet<(byte,byte,uint)> announced=[];
+    private readonly HashSet<string> announced=[];
     public bool ShouldOpen(ShortcutOffer? offer) {
         if(offer==null) return false;
         if(run!=offer.RunId) { run=offer.RunId;announced.Clear(); }
-        return announced.Add((offer.Bill,offer.Mob,offer.TargetId));
+        return announced.Add(offer.ContractKey);
     }
 }
 

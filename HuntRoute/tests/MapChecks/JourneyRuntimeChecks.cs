@@ -114,6 +114,40 @@ static class JourneyRuntimeChecks {
   Call(plugin,"UpdateEliteSearch");Check(search.ActorId==null&&writes==beforeUnconscious,"Fast search is suspended while unconscious and does not flag an encountered actor");
   unconscious=false;Set(plugin,"contractAt",clock);Call(plugin,"UpdateEliteSearch");Check(search.ActorId==90,"Fast detection resumes after recovering consciousness");
   counts[(5,0)]=1;unconscious=true;Call(plugin,"AdvanceRoute");Check(search.ActorId==null&&search.Round==0,"Authoritative credit clears elite search even before a busy/unconscious early return");unconscious=false;
+  // Audit regressions exercise the actual controller, not only the pure models.
+  queue.Clear();counts.Clear();objects=[];flow.Pauses=PauseReason.None;flow.Manual=null;flow.Active=true;Set(plugin,"nextTeleportAllowed",0L);Set(plugin,"pendingJourney",null);Set(plugin,"ownedMarker",null);
+  int[] kills=[2,0,0,0,0];Check((bool)Call(plugin,"AcceptBillSnapshot",(byte)1,new BillSnapshot(true,1,kills),(byte)10)!,"Controller accepts initial observed bill");
+  uint generation=Get<SavedJourney>(plugin,"CharacterSave").Contracts[1].Generation;clock+=1000;
+  Check(!(bool)Call(plugin,"AcceptBillSnapshot",(byte)1,new BillSnapshot(false,0,[0,0,0,0,0]),(byte)10)!&&counts[(1,0)]==2&&Get<SavedJourney>(plugin,"CharacterSave").Contracts[1].Taken,"Controller preserves counters and obtained episode after single empty snapshot");
+  session.Retarget(b);objects=[Npc(92,elite.MobHuntId,new(1,0,0))];int beforeUncertain=writes,beforeUncertainPorts=ports;Call(plugin,"AdvanceRoute");Call(plugin,"DetectorNavigation");Call(plugin,"Travel",c);
+  Check(session.Target==b&&writes==beforeUncertain&&ports==beforeUncertainPorts,"Uncertain current bill freezes goal, automatic detection and transport until confirmed data");objects=[];
+  clock+=1000;Call(plugin,"AcceptBillSnapshot",(byte)1,new BillSnapshot(true,1,kills),(byte)10);Check(Get<SavedJourney>(plugin,"CharacterSave").Contracts[1].Generation==generation,"Transient empty read cannot create false contract generation");
+  Get<HashSet<byte>>(plugin,"unreadBills").Clear();counts.Clear();
+  session.Retarget(elite);search.Start([new(0,0),new(200,0)]);Set(plugin,"searchKey",Call(plugin,"SearchIdentity",elite));objects=[Npc(91,elite.MobHuntId,new(4,0,0))];flow.Pauses=PauseReason.Marker|PauseReason.User;before=writes;
+  Call(plugin,"AdvanceRoute");Check(search.ActorId==91&&writes==before&&flow.Pauses.HasFlag(PauseReason.User),"Paused controller detects elite without replacing user flag or clearing independent pause");
+  objects=[];flow.Pauses=PauseReason.None;flow.Active=false;territory=401;mapId=c.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,elite});Call(plugin,"BuildRoutes");
+  var calculated=Get<List<ZoneRoute>>(plugin,"Routes").Single();var first=calculated.Mobs.First(m=>!Get<Dictionary<string,string>>(flow,"Unavailable").ContainsKey(JourneyFlow.Key(m)));
+  Check(calculated.Start!=null&&(EntryPoint?)Call(plugin,"EntryFor",first)==calculated.Start,"Calculated entry is retained for first target");
+  // Force a valid non-nearest entry: transport must consume the reviewed plan.
+  var alternatives=(List<EntryPoint>)Call(plugin,"Entries",a.MapId,a.TerritoryType)!;var planned=alternatives.Last();Set(plugin,"Routes",new List<ZoneRoute>{new(a.TerritoryName!,new(){a,b,elite},planned)});uint transported=0;
+  Set(plugin,"TeleportTransport",(Func<uint,bool>)(id=>{transported=id;ports++;return true;}));flow.Active=true;session.Retarget(a);Set(plugin,"nextTeleportAllowed",0L);Call(plugin,"Travel",a);
+  Check(transported==planned.Id,"Actual teleport consumes planned entry rather than independently selecting nearest anchor");
+  Set(plugin,"pendingJourney",null);Set(plugin,"nextTeleportAllowed",0L);flow.Pauses=PauseReason.None;territory=397;mapId=a.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);session.Retarget(a);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,c,elite});counts.Clear();
+  var anchor=MapCoordinates.ToWorld(Location.Database[a.MobHuntId].Coordinate,game.Excel.GetSheet<Map>().GetRow(a.MapId));position=new(anchor.X+5000,0,anchor.Y);
+  var shortcut=(ShortcutOffer?)Call(plugin,"FindShortcut");Check(shortcut!=null,$"Long-flight regression fixture has a valid shortcut: phase={session.Phase}, pause={flow.Pauses}, ready={Get<bool>(plugin,"Ready")}, settings={store.Settings.Shortcuts}, overhead={Get<ShortcutTiming>(plugin,"Timing").OverheadSeconds}, point={position}, anchor={anchor}, entries={alternatives.Count}");queue.Clear();Call(Get<ShortcutWindow>(plugin,"Shortcut"),"Sync");request=queue.Activate(true);Check(request?.Owner=="shortcut","Shortcut controller queues reviewed proposal");
+  var replacement=new MobHuntEntry{Name=a.Name,BillNumber=a.BillNumber,OrderId=a.OrderId,Generation=a.Generation+1,MobIndex=a.MobIndex,MobHuntId=a.MobHuntId,MapId=a.MapId,TerritoryType=a.TerritoryType,NeededKills=1};session.Retarget(replacement);
+  Check(!request!.Valid(),"Same mob in a new contract generation invalidates open shortcut dialog");Service.Chat=Proxy<IChatGui>((_,_)=>null);int beforeStale=ports;
+  Check(!(bool)Call(plugin,"AcceptShortcut",shortcut)!&&ports==beforeStale,"Stale shortcut acceptance cannot submit teleport for a replacement contract");queue.Clear();position=Vector3.Zero;
+  // The union offer may remain valid when just one category became unavailable.
+  savedNotice.DailyNotice=0;savedNotice.WeeklyNotice=0;flow.Active=false;flow.Pauses=PauseReason.None;Set(plugin,"contractRevision",20L);Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)},{5,new(true,false,0,1,false)}});Call(plugin,"CheckResetNotice");
+  request=queue.Activate(true);Check(request?.Owner=="pickup","Combined daily and weekly offer exists");Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,true,1,1,false)},{5,new(true,false,0,1,false)}});
+  Check(request!.Valid(),"Weekly category keeps union offer valid after daily pickup");request.OnShown!();Check(savedNotice.DailyNotice==0&&savedNotice.WeeklyNotice!=0,"Actual show records only category still presented as available");queue.Clear();
+  string ioFolder=Path.Combine(Path.GetTempPath(),"HuntRoute-history-failure-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(ioFolder);
+  try{
+   string blocked=Path.Combine(ioFolder,"history.json");Directory.CreateDirectory(blocked);var history=new CompletionHistory();history.Observe(123,1,false,DateTimeOffset.UtcNow,new(true,true,1,1,false));history.Observe(123,1,false,DateTimeOffset.UtcNow,new(true,false,1,1,true));Set(plugin,"completionHistory",history);Set(plugin,"completionFile",blocked);
+   Call(plugin,"SaveHistory",true);Check(Get<string?>(plugin,"HistorySaveError")!=null&&history.IsComplete(123,1,false,DateTimeOffset.UtcNow),"Write failure exposes persistent warning without altering confirmed completion");Directory.Delete(blocked);Call(plugin,"RetryPersistence");
+   Check(Get<string?>(plugin,"HistorySaveError")==null&&CompletionHistory.Load(blocked).IsComplete(123,1,false,DateTimeOffset.UtcNow),"Explicit retry persists unchanged result and clears warning");
+  }finally{Directory.Delete(ioFolder,true);Set(plugin,"completionFile",null);}
   // An invalid hi-res portrait must still try standard-res and never break the hunt UI.
   var picture=Proxy<Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap>((m,_)=>m.Name switch{"get_Width"=>128,"get_Height"=>128,_=>throw new Exception(m.Name)});
   var immediate=Proxy<Dalamud.Interface.Textures.ISharedImmediateTexture>((m,_)=>m.Name=="GetWrapOrDefault"?picture:throw new Exception(m.Name));
