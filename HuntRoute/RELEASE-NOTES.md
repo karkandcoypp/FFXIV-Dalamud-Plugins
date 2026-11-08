@@ -1,3 +1,10 @@
+# 0.3.13
+
+- Weekly search automatically starts another round after the last spawn. A new round avoids immediately returning to the last visited point when others exist. Near/single-point repeats require leaving and re-entering the visit radius, avoiding flag spam while stationary.
+- The round number is visible. Late detection always wins, including at a round boundary, and stays locked until contract credit.
+- Mob-name hover previews are present for both daily and weekly targets, using game hunt portrait icons with high/standard-resolution fallback. Added an explicit missing-image message.
+- Local/CI checks do not replace in-game validation of repeated map routes and texture rendering.
+
 # 0.3.12
 
 - Fly-by weekly search: the next point is selected immediately within 45 horizontal yalms if no matching elite is detected. Works in flight without landing, stopping, hovering, timers or manual confirmation.

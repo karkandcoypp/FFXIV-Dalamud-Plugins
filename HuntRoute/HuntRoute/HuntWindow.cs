@@ -197,9 +197,6 @@ public sealed class HuntWindow : Window {
         }
         if(plugin.Session.Target is {IsEliteMark:true} elite && elite.TerritoryType==plugin.CurrentTerritory && plugin.Session.Phase==RoutePhase.Following) {
             ImGui.TextWrapped(plugin.Search.Status);
-            ImGui.BeginDisabled(plugin.Search.LockedPosition!=null);
-            if(ImGui.Button("Повторить поиск")) plugin.Travel(elite);
-            ImGui.EndDisabled();
         }
 
     }

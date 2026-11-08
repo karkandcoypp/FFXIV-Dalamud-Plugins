@@ -355,7 +355,7 @@ searchAudit.Start([new(0,0),new(100,0)]);
 Check(searchAudit.LockedPosition==null,"New route clears previous lock");
 Check(searchAudit.Tick(new(0,0),null,true)==new Vector2(0,0),"Combat/casting hold unobserved point");
 Check(searchAudit.Tick(new(0,0),null,false)==new Vector2(100,0),"Leaving combat allows immediate fly-by advancement");
-Check(searchAudit.Tick(new(100,0),null,false)==null && searchAudit.Status.Contains("Все точки"),"Exhaustion does not complete contract or loop");
+Check(searchAudit.Tick(new(100,0),null,false)==new Vector2(0,0) && searchAudit.Round==2,"Last visited spawn automatically starts next round away from previous point");
 Check(searchAudit.Tick(new(100,0),new Vector2(120,0),false)==new Vector2(120,0),"Detection continues after visiting every candidate");
 searchAudit.Start([new(0,0),new(1,0),new(2,0)]);
 Check(searchAudit.Tick(new(0,0),null,false)==new Vector2(1,0),"Only one point advances per fresh scan");
@@ -395,13 +395,42 @@ foreach(int delay in new[]{0,1,2,10,100,1000}) {
 }
 var lateAfterExhaustion=new EliteSearch();lateAfterExhaustion.Start([new(0,0)]);
 lateAfterExhaustion.Tick(new(-100,0),null,false);lateAfterExhaustion.Tick(new(0,0),null,false);
-Check(lateAfterExhaustion.Status.Contains("Все точки"),"Late exhaustion fixture really consumed final spawn");
+Check(lateAfterExhaustion.Round==2,"Late exhaustion fixture automatically started next round");
 Check(lateAfterExhaustion.Tick(new(100,0),new Vector2(4,8),false)==new Vector2(4,8),"Late detection after final visited point still emits elite flag");
 Check(lateAfterExhaustion.Tick(new(100,0),null,false)==null && lateAfterExhaustion.LockedPosition==new Vector2(4,8),"Final-point late detection remains locked");
 var sameFlag=new EliteSearch();sameFlag.Start([new(0,0),new(200,0)]);sameFlag.Tick(new(0,0),null,false);
 Check(sameFlag.Tick(new(100,0),new Vector2(200,0),false)==null && sameFlag.LockedPosition==new Vector2(200,0),"Elite coinciding with existing flag locks without redundant marker");
 Check(sameFlag.Tick(new(200,0),null,false)==null && sameFlag.LockedPosition==new Vector2(200,0),"Coincident late detection cannot be skipped on arrival");
 Console.WriteLine($"PASS late streaming after spawn advancement audit: {checks}");
+// Repeat search automatically without marker churn or repeatedly consuming a nearby spawn.
+var circles=new EliteSearch();circles.Start([new(0,0),new(200,0),new(400,0)]);
+Check(circles.Round==1 && circles.Tick(new(-100,0),null,false)==new Vector2(0,0),"Round one starts at nearest spawn");
+Check(circles.Tick(new(0,0),null,false)==new Vector2(200,0),"First round visits second spawn");
+Check(circles.Tick(new(200,0),null,false)==new Vector2(400,0),"First round visits final spawn");
+Check(circles.Tick(new(400,0),null,false)==new Vector2(200,0) && circles.Round==2,"New round avoids immediately revisiting its last spawn");
+Check(circles.Tick(new(200,0),null,false)==new Vector2(0,0),"Repeated round starts with nearest other spawn");
+Check(circles.Tick(new(0,0),null,false)==new Vector2(400,0),"Repeated round still includes previous-round final point");
+Check(circles.Tick(new(400,0),new Vector2(405,3),false)==new Vector2(405,3) && circles.Round==2,"Detection wins on repeated-round boundary");
+for(int tick=0;tick<100;tick++) Check(circles.Tick(new(0,0),null,false)==null && circles.Round==2 && circles.LockedPosition==new Vector2(405,3),"Detected elite stops all repeat rounds until completion");
+var singleton=new EliteSearch();singleton.Start([new(0,0)]);singleton.Tick(new(-100,0),null,false);singleton.Tick(new(0,0),null,false);
+Check(singleton.Round==2,"Single spawn automatically schedules a second visit");
+for(int tick=0;tick<100;tick++) Check(singleton.Tick(new(0,0),null,false)==null && singleton.Round==2,"Stationary single-point route does not spam flags or churn rounds");
+singleton.Tick(new(100,0),null,false);singleton.Tick(new(0,0),null,false);
+Check(singleton.Round==3,"Single-point automatic repeat counts a fresh departure and return");
+var nearby=new EliteSearch();nearby.Start([new(0,0),new(5,0)]);nearby.Tick(new(0,0),null,false);nearby.Tick(new(0,0),null,false);
+for(int tick=0;tick<100;tick++) Check(nearby.Tick(new(0,0),null,false)==null && nearby.Round==2,"Nearby point cluster cannot spin through repeated rounds on the spot");
+Check(nearby.Tick(new(0,0),new Vector2(3,3),false)==new Vector2(3,3),"Stationary repeat guard never blocks late elite detection");
+var absentData=new EliteSearch();absentData.Start([]);
+for(int tick=0;tick<100;tick++) Check(absentData.Tick(new(0,0),null,false)==null && absentData.Round==0,"Empty spawn data never invents repeat rounds");
+Check(absentData.Tick(new(0,0),new Vector2(2,2),true)==new Vector2(2,2),"Detection works even when spawn data is absent");
+var manyCircles=new EliteSearch();manyCircles.Start([new(0,0),new(200,0),new(400,0)]);
+var nextCirclePoint=manyCircles.Tick(new(-100,0),null,false);
+for(int visit=0;visit<300;visit++) {
+ Check(nextCirclePoint!=null,"Automatic repeated route always has a next point");
+ nextCirclePoint=manyCircles.Tick(nextCirclePoint!.Value,null,false);
+}
+Check(manyCircles.Round==101,"One hundred complete circles restart automatically without a manual action");
+Console.WriteLine($"PASS automatic repeat-circle audit: {checks}");
 var eliteRoute=new RouteSession();
 var normalTarget=new MobHuntEntry{BillNumber=1,MobIndex=0,MobHuntId=1,TerritoryType=100,NeededKills=1};
 var eliteTarget=new MobHuntEntry{BillNumber=2,MobIndex=0,MobHuntId=2,TerritoryType=100,NeededKills=1,IsEliteMark=true};
