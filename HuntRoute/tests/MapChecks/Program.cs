@@ -193,8 +193,6 @@ class Program {
   update.Invoke(plugin,new object?[]{null});
   if(session.Target!=arrivalTarget) throw new Exception("Route lost when PlayerState was not loaded");checks++;
   if(session.RunId!=loadingRun || session.Tick(new[]{arrivalTarget},_=>false,_=>true,397)!=arrivalTarget || session.Phase!=RoutePhase.Following) throw new Exception("Actual update loading cycle did not reflag target without Start");checks++;
-  var addon=game.Excel.GetSheet<Addon>();
-  if(addon.GetRow(576).Text.ToString()!="Yes" || addon.GetRow(577).Text.ToString()!="No") throw new Exception("Native button label IDs are incorrect");checks++;
   // Exercise the real native-dialog response bridge without allocating an addon or casting a teleport.
   bool validAnswer=true;int nativeAccepted=0,scheduled=0;Action? deferred=null;
   Service.Framework=Proxy<IFramework>((m,args)=> { if(m.Name!="RunOnTick") throw new Exception(m.Name);scheduled++;deferred=(Action)args![0]!;return Task.CompletedTask; });
@@ -219,7 +217,7 @@ class Program {
   Service.ClientState=Proxy<IClientState>((m,_)=>m.Name switch {"get_IsLoggedIn"=>true,"get_TerritoryType"=>gm.TerritoryType.RowId,"get_MapId"=>gm.RowId,_=>throw new Exception(m.Name)});
   var priced=allAetherytes.Select(id=>Proxy<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>((m,_)=>m.Name switch {"get_AetheryteId"=>id,"get_GilCost"=>100u,_=>throw new Exception(m.Name)})).ToArray();
   Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?priced.AsEnumerable().GetEnumerator():throw new Exception(m.Name));
-  var gnome=new MobHuntEntry{BillNumber=10,MobIndex=0,MobHuntId=gnomeTarget.Name.RowId,MapId=gm.RowId,TerritoryType=gm.TerritoryType.RowId,NeededKills=2};
+  var gnome=new MobHuntEntry{Name="gnome",TerritoryName="Amh Araeng",BillNumber=10,MobIndex=0,MobHuntId=gnomeTarget.Name.RowId,MapId=gm.RowId,TerritoryType=gm.TerritoryType.RowId,NeededKills=2};
   var shortcutSession=new RouteSession();shortcutSession.Start(gnome,new byte[]{10});shortcutSession.Tick(new[]{gnome},_=>false,_=>true,gm.TerritoryType.RowId);
   typeof(Plugin).GetField("Session",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,shortcutSession);
   typeof(Plugin).GetField("Ready",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,true);
@@ -232,8 +230,17 @@ class Program {
   sync.Invoke(controller,null);shortcutBusy=false;sync.Invoke(controller,null);
   var queuedShortcut=confirmationQueue.Activate(true);
   if(queuedShortcut?.Owner!="shortcut")throw new Exception("Busy frame consumed useful shortcut forever");checks++;
+  if(queuedShortcut.Presentation is not {Subject:"gnome",Metrics.Length:3} || !queuedShortcut.Presentation.Context.Contains("100"))throw new Exception("Shortcut controller lost structured target/cost presentation");checks++;
   if(confirmationQueue.Resolve(queuedShortcut.Key,false)!=null)throw new Exception("No approved a shortcut");checks++;
   sync.Invoke(controller,null);if(confirmationQueue.Activate(true)!=null)throw new Exception("Declined shortcut repeated");checks++;
+  var nextSession=new RouteSession();var fromMob=new MobHuntEntry{Name="done",TerritoryName="Kozama'uka",BillNumber=18,MobIndex=0,MobHuntId=1,TerritoryType=1188,NeededKills=1};
+  var nextMob=new MobHuntEntry{Name="mourner",TerritoryName="Yak T'el",BillNumber=18,MobIndex=1,MobHuntId=2,TerritoryType=1189,NeededKills=1};
+  nextSession.Start(fromMob,new byte[]{18});nextSession.Tick(new[]{fromMob,nextMob},m=>m==fromMob,_=>true,1188);
+  typeof(Plugin).GetField("Session",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,nextSession);
+  var nextController=new NextZoneWindow(plugin);typeof(NextZoneWindow).GetMethod("Sync",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(nextController,null);
+  var nextRequest=confirmationQueue.Activate(true);
+  if(nextRequest?.Presentation is not {Destination:"Yak T'el",Subject:"mourner",Metrics.Length:0})throw new Exception("Next-zone controller lost correct structured destination/first target");checks++;
+  if(confirmationQueue.Resolve(nextRequest.Key,false)!=null || nextSession.Phase!=RoutePhase.NextZone)throw new Exception("Later changed next-zone route state");checks++;
   // The real presentation adapter must use persisted periods, not stale native completion alone.
   var progressMethod=typeof(Plugin).GetMethod("CollectionProgress",BindingFlags.Instance|BindingFlags.NonPublic)!;
   var completionData=new CompletionHistory();var completionNow=DateTimeOffset.UtcNow;

@@ -34,7 +34,7 @@ public sealed class RouteSession {
         }
         missingArrivalSnapshots=0;
         if(active!=null) Target=active;
-        var candidates=ordered.Where(m=>!m.IsEliteMark && tiers.Contains(m.BillNumber) && hasPosition(m)).ToList();
+        var candidates=ordered.Where(m=>tiers.Contains(m.BillNumber) && (m.IsEliteMark || hasPosition(m))).OrderBy(m=>m.IsEliteMark).ToList();
         foreach(uint zone in candidates.Select(m=>m.TerritoryType).Distinct()) if(!zoneOrder.Contains(zone)) zoneOrder.Add(zone);
         if(!zoneOrder.Contains(Target.TerritoryType)) {
             int at=zoneOrder.FindIndex(z=>z>Target.TerritoryType);

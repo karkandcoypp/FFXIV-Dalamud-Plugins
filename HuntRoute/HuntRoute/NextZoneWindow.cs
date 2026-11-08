@@ -13,6 +13,7 @@ public sealed class NextZoneWindow(Plugin plugin) {
             $"Цели маршрута в зоне {from.TerritoryName} выполнены.\n\nСледующая зона: {next.TerritoryName}\nПервая цель: {next.Name}\n\nТелепортироваться и продолжить охоту?",
             ()=>plugin.Ready && session.RunId==run && session.Phase==RoutePhase.NextZone && session.Suggested?.TerritoryType==zone,
             ()=>!plugin.TravelBusy,
-            ()=> { var target=session.Suggested;if(target==null) return false;plugin.Travel(target);return session.Phase!=RoutePhase.NextZone; }));
+            ()=> { var target=session.Suggested;if(target==null) return false;plugin.Travel(target);return session.Phase!=RoutePhase.NextZone; },
+            TravelDialogContent.Next(from.TerritoryName ?? "Текущая зона",next.TerritoryName ?? "Следующая зона",next.Name ?? "Цель контракта")));
     }
 }

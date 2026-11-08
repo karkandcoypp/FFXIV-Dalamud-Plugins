@@ -54,5 +54,6 @@ class Program {
    if(overflow>0)throw new Exception($"Horizontal overflow {overflow}px in {sample}");
    Console.WriteLine($"PASS production UI {sample}: exported vertices");
   }
+  DialogPreviewChecks.Run(directory);
  }
 }

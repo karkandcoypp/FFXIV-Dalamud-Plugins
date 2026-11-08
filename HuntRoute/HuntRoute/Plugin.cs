@@ -195,24 +195,42 @@ public sealed class Plugin : IDalamudPlugin {
         nextTeleportAllowed=Environment.TickCount64+3000;
         return true;
     }
+    internal readonly EliteSearch Search = new();
+    private string searchKey="";
+    internal bool HasPosition(MobHuntEntry m) => m.IsEliteMark ? EliteSpawns.For(m).Length>0 : Location.Database.ContainsKey(m.MobHuntId);
     internal void Travel(MobHuntEntry m) {
-        if(!Ready || !Service.ClientState.IsLoggedIn || m.IsEliteMark || !Location.Database.TryGetValue(m.MobHuntId,out var pos)) return;
+        if(!Ready || !Service.ClientState.IsLoggedIn || !HasPosition(m)) return;
         if(Done(m)) { Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name); return; }
         if(Service.ClientState.TerritoryType!=m.TerritoryType) {
-            var entry=Entries(m.MapId,m.TerritoryType).MinBy(a=>Vector2.DistanceSquared(a.Position,pos.Coordinate));
+            var entry=Entries(m.MapId,m.TerritoryType).MinBy(a=>Vector2.DistanceSquared(a.Position,m.IsEliteMark?EliteSpawns.For(m)[0]:Location.Database[m.MobHuntId].Coordinate));
             if(entry!=null) { if(!Teleport(entry.Id)) return; }
             else if(m.TerritoryType==399) { if(!Teleport(75)) return; }
             else { Service.Chat.PrintError("Нет открытого эфирита на этой карте."); return; }
         }
-        var board=Boards.FirstOrDefault(b=>b.Daily.Contains(m.BillNumber));
-        if(board!=null) { Session.Start(m,board.Daily); AdvanceRoute(); }
+        var board=Boards.FirstOrDefault(b=>b.Daily.Contains(m.BillNumber) || b.Weekly==m.BillNumber);
+        if(board!=null) { Session.Start(m,board.Daily.Append(board.Weekly)); AdvanceRoute(); }
         else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
     }
     internal void AdvanceRoute() {
         if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.Casting) || Environment.TickCount64<nextTeleportAllowed) return;
-        var mark=Session.Tick(Routes.SelectMany(r=>r.Mobs).ToArray(),Done,m=>Location.Database.ContainsKey(m.MobHuntId),Service.ClientState.TerritoryType);
-        if(mark!=null && !Location.SetMapFlag(mark.TerritoryType,mark.MapId,mark.MobHuntId)) Session.RetryMarker();
+        var mark=Session.Tick(Routes.SelectMany(r=>r.Mobs).ToArray(),Done,HasPosition,Service.ClientState.TerritoryType);
+        if(mark!=null && !mark.IsEliteMark && !Location.SetMapFlag(mark.TerritoryType,mark.MapId,mark.MobHuntId)) Session.RetryMarker();
+        UpdateEliteSearch();
         NextZone.Sync(); Shortcut.Sync();
+    }
+    private void UpdateEliteSearch() {
+        if(Session.Phase!=RoutePhase.Following || Session.Target is not {IsEliteMark:true} target || Service.ClientState.MapId!=target.MapId || Service.ObjectTable.LocalPlayer is not {} player) { searchKey="";return; }
+        var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(target.MapId);
+        string key=$"{Session.RunId}:{target.BillNumber}:{target.MobIndex}:{target.MobHuntId}";
+        bool firstPoint=key!=searchKey;
+        if(firstPoint) { Search.Start(EliteSpawns.For(target).Select(p=>MapCoordinates.ToWorld(p,map)).ToArray());searchKey=key; }
+        var npc=Service.ObjectTable.OfType<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>().FirstOrDefault(n=>n.NameId==target.MobHuntId && !n.IsDead);
+        Vector2? found=npc==null?null:new Vector2(npc.Position.X,npc.Position.Z);
+        var point=Search.Tick(new Vector2(player.Position.X,player.Position.Z),found,Environment.TickCount64,Service.Condition[ConditionFlag.InCombat] || Service.Condition[ConditionFlag.InFlight] || player.IsCasting);
+        if(point is {} position) {
+            if(!Location.SetWorldFlag(target.TerritoryType,target.MapId,position)) Search.Retry();
+            else if(firstPoint) Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(target.TerritoryType,map,Dalamud.Utility.MapUtil.WorldToMap(position,map)));
+        }
     }
     internal ShortcutOffer? FindShortcut() {
         if(!Ready || Session.Phase!=RoutePhase.Following || Session.Target is not {} target

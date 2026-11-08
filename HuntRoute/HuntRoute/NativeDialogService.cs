@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -31,8 +32,8 @@ internal sealed class NativeDialogService : IDisposable {
         var request=queue.Activate(available);
         if(request==null) return;
         try {
-            addon=new NativeConfirmationAddon(request.Text,request.Ready,yes=>Answered(request.Key,yes)) {
-                InternalName="HuntRouteConfirm",Title=string.Empty,Size=new Vector2(420,240),
+            addon=new NativeConfirmationAddon(request.Presentation ?? TravelDialogContent.Plain(request.Text),request.Ready,yes=>Answered(request.Key,yes)) {
+                InternalName="HuntRouteConfirm",Title=string.Empty,Size=new Vector2(520,420),
                 RememberClosePosition=false,EnableContextMenu=false,DisableClamping=false
             };
             addon.Open();
@@ -64,7 +65,7 @@ internal sealed class NativeDialogService : IDisposable {
         catch(Exception e) { Service.PluginLog.Error(e,"Очистка native UI Hunt Route"); }
     }
 }
-internal sealed unsafe class NativeConfirmationAddon(string text,Func<bool> ready,Action<bool> answer) : NativeAddon {
+internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content,Func<bool> ready,Action<bool> answer) : NativeAddon {
     private bool answered;
     private TextButtonNode? yesButton;
     protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values) {
@@ -72,17 +73,25 @@ internal sealed unsafe class NativeConfirmationAddon(string text,Func<bool> read
             window.TitleNode.IsVisible=false;window.SubtitleNode.IsVisible=false;window.DividingLineNode.IsVisible=false;
             window.ShowConfigButton=false;window.ShowHelpButton=false;
         }
-        var prompt=new TextNode { Position=new Vector2(24,24),Size=new Vector2(372,160),FontSize=14,
-            LineSpacing=18,String=text,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine };
-        AddNode(prompt);
-        float height=Math.Max(144,prompt.GetTextDrawSize().Y);
-        prompt.Size=new Vector2(372,height);
-        float y=24+height+12;
-        yesButton=new TextButtonNode { Position=new Vector2(102,y),Size=new Vector2(100,28),TextId=576,SheetType=Lumina.Data.Parsing.Uld.NodeData.SheetType.Addon,
+        // Backgrounds are attached first so they cannot cover text or interactive buttons.
+        var backgrounds=new List<ColorImageNode>();
+        for(int i=0;i<content.Metrics.Length+4;i++) { var panel=new ColorImageNode();backgrounds.Add(panel);AddNode(panel); }
+        var textNodes=new List<TextNode>();
+        var layout=TravelDialogLayout.Build(content,(text,width,font)=> {
+            var node=new TextNode { Size=new Vector2(width,4096),FontSize=font,LineSpacing=font+4,
+                String=text,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine };
+            textNodes.Add(node);AddNode(node);return node.GetTextDrawSize(considerScale:false).Y;
+        });
+        for(int i=0;i<layout.Panels.Count;i++) { var spec=layout.Panels[i];var node=backgrounds[i];node.Position=spec.Position;node.Size=spec.Size;node.Color=spec.Color; }
+        for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color; }
+        yesButton=new TextButtonNode { Position=new Vector2(72,layout.ButtonsY),Size=new Vector2(180,30),String=content.ConfirmLabel,
             NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true,true) };
-        var no=new TextButtonNode { Position=new Vector2(214,y),Size=new Vector2(100,28),TextId=577,SheetType=Lumina.Data.Parsing.Uld.NodeData.SheetType.Addon,
+        yesButton.LabelNode.FontSize=14;
+        yesButton.BackgroundNode.Color=new Vector4(.65f,.72f,1,1);
+        var no=new TextButtonNode { Position=new Vector2(268,layout.ButtonsY),Size=new Vector2(180,30),String=content.DeclineLabel,
             NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false,true) };
-        AddNode(yesButton);AddNode(no);SetWindowSize(new Vector2(420,y+48));
+        no.LabelNode.FontSize=14;
+        AddNode(yesButton);AddNode(no);SetWindowSize(new Vector2(layout.Width,layout.Height));
         native->FocusNode=no;
     }
     protected override void OnUpdate(AtkUnitBase* native) { if(!answered && yesButton!=null) yesButton.IsEnabled=ready(); }

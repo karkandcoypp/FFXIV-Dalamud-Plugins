@@ -30,5 +30,9 @@ public static class Location {
         agent->SetFlagMapMarker(territory,mapId,world.X,world.Y);
         return true;
     }
+    public static unsafe bool SetWorldFlag(uint territory,uint mapId,Vector2 world) {
+        var agent=AgentMap.Instance(); if(agent==null) return false;
+        agent->FlagMarkerCount=0;agent->SetFlagMapMarker(territory,mapId,world.X,world.Y);return true;
+    }
     public static Vector2 ToWorld(Vector2 position,Map map) => MapCoordinates.ToWorld(position,map);
 }

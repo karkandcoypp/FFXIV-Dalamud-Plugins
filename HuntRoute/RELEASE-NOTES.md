@@ -1,9 +1,17 @@
-# Hunt Route 0.3.5
+# 0.3.7
 
-- Persist completion in completion-history.json, keyed by the character ContentId and bill tier. Each expansion and character keeps independent daily/weekly progress across plugin/game restarts.
-- Expire daily completion at 15:00 UTC and weekly completion Tuesday at 08:00 UTC, including while the client still retains old kill counters. Stale completed sets cannot re-award expired checks; observed fresh pickup permits legitimate repeated order IDs.
-- Save atomically on changes, retry failed writes and attempt a final save on logout/unload. Invalid history is logged without breaking hunt routing.
-- Refresh the compact UI with slate/lavender colors, mint completion checks, segmented daily/weekly progress, completed expansion labels and responsive expansion selection for narrow windows/large fonts.
-- Retain route, map, aetheryte and teleport algorithms. Expand tests for real file reloads, independent characters/expansions, exact UTC boundaries, stale snapshots, failed saves and compact UI layouts.
+- Weekly B-rank targets join the numbered zone route after daily targets. An unfinished elite blocks the next-zone suggestion, including when its spawn data is missing.
+- Tracking an elite opens the in-game map and flags the nearest known spawn; no plugin map is opened. Each visited point waits 8 seconds within 45 yalms before advancing. Combat, casting and flight pause the absence timer.
+- A matching live, locally loaded NPC overrides the speculative point. Exhausting points does not mark the hunt complete; manual next point/restart remain available.
+- Includes redesigned native teleport confirmations from 0.3.6.
+- Automated search/route regression checks pass; actual NPC streaming and native UI require in-game verification.
 
-Offline persistence/data/UI checks and release package verification do not replace live-game validation of restart and teleport behavior.
+# Hunt Route 0.3.6
+
+- Redesign both native travel confirmation windows with a dark inset panel, lavender heading, destination, separate target card and clearer action labels: Teleport / Later (Russian UI).
+- Intra-zone offers show the actual quoted gil cost, the remaining distance after teleport, and three separate estimate cards: direct flight, total with teleport, and time saved.
+- Next-zone offers clearly show the completed zone, destination and first target, with automatic marker/following reminders.
+- Size text blocks using native game text measurement, wrap long names and reserve button space. Keep native buttons/gamepad navigation with Later focused by default.
+- Preserve confirmation serialization, busy/stale/price checks, deferred callbacks and one-action behavior. Add shared-layout, controller and offline composition regressions.
+
+Offline previews verify composition, not FFXIV's actual Atk fonts, theme textures or live interactions. Actual native appearance requires an in-game check after updating.

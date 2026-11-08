@@ -161,13 +161,13 @@ public sealed class HuntWindow : Window {
         int done=zone.Mobs.Count(plugin.Done);
         ImGui.TextColored(HuntTheme.Brand,zone.Name); ImGui.SameLine(); ImGui.TextDisabled($"{done}/{zone.Mobs.Count}");
         ImGui.ProgressBar((float)done/zone.Mobs.Count,new Vector2(-1,3),"");
-        var first=zone.Mobs.FirstOrDefault(m=>!m.IsEliteMark && !plugin.Done(m) && Location.Database.ContainsKey(m.MobHuntId));
+        var first=zone.Mobs.FirstOrDefault(m=>!plugin.Done(m) && plugin.HasPosition(m));
         if(first!=null) {
             if(ImGui.Button(zone.StartsHere?"Следующая цель":"Начать маршрут")) plugin.Travel(first);
             HuntTheme.Hint(zone.StartsHere?"Вы уже в зоне. Начать сопровождение и поставить метку без телепорта.":"Телепорт к первой цели и автоматическая смена меток после выполнения каждой цели.");
             ImGui.SameLine(); ImGui.TextDisabled(zone.StartsHere?"Вы уже в зоне":Fit(zone.Start?.Name ?? "Нет открытого эфирита",Math.Max(80,ImGui.GetContentRegionAvail().X-20)));
         }
-        var daily=zone.Mobs.Where(m=>!m.IsEliteMark).ToList();
+        var daily=zone.Mobs.OrderBy(m=>m.IsEliteMark).ToList();
         if(daily.Any(m=>!plugin.HideDone||!plugin.Done(m)) && ImGui.BeginTable("targets",4,ImGuiTableFlags.RowBg|ImGuiTableFlags.SizingStretchProp)) {
             bool here=zone.StartsHere;
             string action=here?"К цели":"Телепорт";
@@ -182,25 +182,25 @@ public sealed class HuntWindow : Window {
                 if(plugin.Session.Phase==RoutePhase.Following && plugin.Session.Target is {} tracked && tracked.BillNumber==m.BillNumber && tracked.MobIndex==m.MobIndex)
                     ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0,ImGui.GetColorU32(new Vector4(.12f,.29f,.27f,1)));
                 ImGui.TableNextColumn(); ImGui.TextDisabled($"{step:00}"); ImGui.TableNextColumn();
-                bool known=Location.Database.ContainsKey(m.MobHuntId);
-                ImGui.TextWrapped(m.Name);
+                bool known=plugin.HasPosition(m);
+                ImGui.TextWrapped((m.IsEliteMark?"[B] ":"")+m.Name);
                 if(known && ImGui.IsItemClicked()) plugin.Travel(m);
                 MobPreview.OnHover(m,plugin.Kills(m));
                 ImGui.TableNextColumn(); ImGui.TextColored(plugin.Done(m)?HuntTheme.Accent:new Vector4(.9f,.93f,.96f,1),$"{plugin.Kills(m)}/{m.NeededKills}");
                 ImGui.TableNextColumn(); ImGui.BeginDisabled(!known);
                 if(ImGui.Button(action)) plugin.Travel(m);
                 HuntTheme.Hint(here?"Вы уже в зоне: только метка и сопровождение.":"Телепорт к ближайшему открытому эфириту цели и сопровождение маршрута.");
-                ImGui.SameLine(); if(ImGui.Button("Карта")) Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name);
+                ImGui.SameLine(); if(ImGui.Button("Карта")) { if(m.IsEliteMark) plugin.Travel(m); else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name); }
                 ImGui.EndDisabled(); if(!known) HuntTheme.Hint("Координаты этой цели пока неизвестны."); ImGui.PopID();
             }
             ImGui.EndTable();
         }
-        foreach(var m in zone.Mobs.Where(m=>m.IsEliteMark&&(!plugin.HideDone||!plugin.Done(m)))) {
-            ImGui.PushID($"elite-{m.BillNumber}:{m.MobIndex}"); ImGui.Separator();
-            ImGui.TextColored(HuntTheme.Gold,"B-ранг · "+m.Name); MobPreview.OnHover(m,plugin.Kills(m));
-            if(ImGui.Button("Места появления")) plugin.Elite.Show(m);
-            HuntTheme.Hint("Предполагаемые точки на карте и метки обнаруженной клиентом цели в мире. Недельная охота не входит в автоматический дневной маршрут."); ImGui.PopID();
+        if(plugin.Session.Target is {IsEliteMark:true} elite && elite.TerritoryType==plugin.CurrentTerritory && plugin.Session.Phase==RoutePhase.Following) {
+            ImGui.TextWrapped(plugin.Search.Status);
+            if(ImGui.Button("Следующая точка")) plugin.Search.Skip();
+            ImGui.SameLine();if(ImGui.Button("Повторить поиск")) plugin.Travel(elite);
         }
+
     }
     private static string Fit(string text,float width) {
         if(ImGui.CalcTextSize(text).X<=width) return text;

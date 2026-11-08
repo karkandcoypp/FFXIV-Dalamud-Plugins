@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 namespace HuntRoute;
 
-public sealed record ConfirmationRequest(string Owner,string Key,string Text,Func<bool> Valid,Func<bool> Ready,Func<bool> Accept);
+public sealed record ConfirmationRequest(string Owner,string Key,string Text,Func<bool> Valid,Func<bool> Ready,Func<bool> Accept,TravelDialogContent? Presentation=null);
 public sealed class ConfirmationQueue {
     private readonly Dictionary<string,ConfirmationRequest> pending=[];
     private readonly HashSet<string> shown=[];

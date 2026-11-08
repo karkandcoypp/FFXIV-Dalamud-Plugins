@@ -319,3 +319,50 @@ try {
  if(Directory.Exists(historyFolder))Directory.Delete(historyFolder);
 }
 Console.WriteLine($"PASS persisted completion audit: {checks} checks");
+
+// Dialog presentation changes must not change the confirmation queue or travel callbacks.
+float MeasureDialog(string text,float width,uint font) => text.Split('\n').Sum(line=>Math.Max(1,(int)Math.Ceiling(line.Length*font*.62f/width)))*(font+4);
+var nextDialog=TravelDialogContent.Next("Kozama'uka","Yak T'el","mourner");
+var shortcutDialog=TravelDialogContent.Shortcut(new(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40),"Amh Araeng","gnome");
+Check(nextDialog.Destination=="Yak T'el" && nextDialog.Subject=="mourner" && nextDialog.Metrics.Length==0,"Next-zone dialog names the correct zone and first mob");
+Check(shortcutDialog.Destination=="Mord Souq" && shortcutDialog.Context.Contains("100") && shortcutDialog.Subject=="gnome","Intra-zone dialog names the actual aetheryte, cost and target");
+Check(shortcutDialog.Metrics.Length==3 && shortcutDialog.Metrics[2].Highlight && shortcutDialog.Metrics[2].Value=="~15 с","Savings are a separate rounded estimate");
+foreach(var content in new[]{nextDialog,shortcutDialog,nextDialog with {Destination=new string('W',95),Subject=new string('Ж',120)},TravelDialogContent.Plain(new string('Я',180))}) {
+ var layout=TravelDialogLayout.Build(content,MeasureDialog);
+ Check(layout.Width==520 && layout.Height>200 && layout.ButtonsY+30<layout.Height-16,"Native dialog reserves visible buttons and margins");
+ Check(layout.Panels.Count==content.Metrics.Length+4,"Native background allocation matches shared layout");
+ foreach(var text in layout.Texts)Check(text.Position.X>=16 && text.Position.Y>=32 && text.Position.X+text.Size.X<=layout.Width-16 && text.Position.Y+text.Size.Y<layout.ButtonsY,"Wrapped dialog text remains within content bounds");
+ foreach(var panel in layout.Panels)Check(panel.Size.X>0 && panel.Size.Y>0 && panel.Position.X+panel.Size.X<=layout.Width && panel.Position.Y+panel.Size.Y<=layout.Height,"Dialog panels fit the window");
+}
+try { TravelDialogLayout.Build(nextDialog,(_,_,_)=>float.NaN);throw new Exception("Invalid measurement accepted"); }catch(ArgumentException){checks++;}
+var presentedQueue=new ConfirmationQueue();int presentedAccepted=0;
+var presented=new ConfirmationRequest("next","presented","Legacy text",()=>true,()=>true,()=>{presentedAccepted++;return true;},nextDialog);
+presentedQueue.Offer(presented);var activePresentation=presentedQueue.Activate(true);
+Check(activePresentation?.Presentation==nextDialog && presentedAccepted==0,"Building/showing structured presentation cannot teleport");
+Check(presentedQueue.Resolve(presented.Key,false)==null && presentedAccepted==0,"Later declines the structured dialog without teleporting");
+Console.WriteLine($"PASS styled dialog audit: {checks} checks");
+var searchAudit=new EliteSearch();
+searchAudit.Start([new(200,0),new(0,0),new(100,0),new(0,0)]);
+Check(searchAudit.Tick(new(0,0),null,0,false)==new Vector2(0,0),"Elite search starts nearest, deduplicated");
+Check(searchAudit.Tick(new(0,0),null,7999,false)==null,"Elite point waits for visibility");
+Check(searchAudit.Tick(new(0,0),null,8000,false)==new Vector2(100,0),"Elite advances after dwell");
+Check(searchAudit.Tick(new(100,0),new Vector2(123,4),9000,false)==new Vector2(123,4),"Detected elite overrides spawn");
+searchAudit.Skip();Check(searchAudit.Tick(new(100,0),new Vector2(123,4),10000,false)==null,"Cannot skip detected elite");
+searchAudit.Tick(new(100,0),null,11000,true);
+Check(searchAudit.Tick(new(100,0),null,25000,true)==null,"Combat pauses absence timer");
+searchAudit.Tick(new(100,0),null,26000,false);
+Check(searchAudit.Tick(new(100,0),null,34000,false)==new Vector2(200,0),"Search resumes after combat");
+searchAudit.Skip();Check(searchAudit.Tick(new(200,0),null,35000,false)==null,"Exhausted search does not loop or complete hunt");
+searchAudit.Start([new(0,0)]);searchAudit.Tick(new(0,0),null,0,false);searchAudit.Tick(new(100,0),null,7000,false);
+Check(searchAudit.Tick(new(0,0),null,9000,false)==null,"Leaving radius resets dwell");
+var eliteRoute=new RouteSession();
+var normalTarget=new MobHuntEntry{BillNumber=1,MobIndex=0,MobHuntId=1,TerritoryType=100,NeededKills=1};
+var eliteTarget=new MobHuntEntry{BillNumber=2,MobIndex=0,MobHuntId=2,TerritoryType=100,NeededKills=1,IsEliteMark=true};
+var otherTarget=new MobHuntEntry{BillNumber=1,MobIndex=1,MobHuntId=3,TerritoryType=200,NeededKills=1};
+var completed=new HashSet<uint>{1};
+eliteRoute.Start(normalTarget,[1,2]);
+Check(eliteRoute.Tick([normalTarget,otherTarget,eliteTarget],m=>completed.Contains(m.MobHuntId),_=>true,100)==eliteTarget,"Weekly elite blocks departure after daily targets");
+Check(eliteRoute.Phase==RoutePhase.Following && eliteRoute.Suggested==null,"No next-zone prompt before elite completion");
+completed.Add(2);eliteRoute.Tick([normalTarget,otherTarget,eliteTarget],m=>completed.Contains(m.MobHuntId),_=>true,100);
+Check(eliteRoute.Phase==RoutePhase.NextZone && eliteRoute.Suggested==otherTarget,"Next zone available after elite completion");
+Console.WriteLine($"PASS elite search and combined route: {checks}");
