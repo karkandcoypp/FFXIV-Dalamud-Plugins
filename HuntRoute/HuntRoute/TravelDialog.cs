@@ -4,8 +4,8 @@ using System.Numerics;
 namespace HuntRoute;
 
 public sealed record DialogMetric(string Label,string Value,bool Highlight=false);
-public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics) {
-    public string ConfirmLabel => "Телепортироваться";
+public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null) {
+    public string ConfirmLabel => ActionLabel ?? "Телепортироваться";
     public string DeclineLabel => "Позже";
     public static TravelDialogContent Next(string from,string zone,string target) => new(
         "HUNT ROUTE · СЛЕДУЮЩАЯ ЗОНА","Продолжить охоту?","КУДА",zone,

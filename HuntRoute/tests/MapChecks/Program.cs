@@ -107,6 +107,7 @@ class Program {
   var p2=MapCoordinates.CreateLink(397,sampleMap,new(32,24));
   if(Vector2.Distance(new(p1.RawX/1000f,p1.RawY/1000f),new(p2.RawX/1000f,p2.RawY/1000f))<500) throw new Exception("Distinct target flags still collapsed");
   // Exercise the actual teleport wrapper without any bound native game functions.
+  Service.PluginLog=Proxy<IPluginLog>((m,args)=>{if(m.Name=="Error")Console.WriteLine("RUNTIME ERROR "+string.Join(" ",args??[]));return null;});
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
   var streamingSearch=new EliteSearch();
   typeof(Plugin).GetField("Search",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,streamingSearch);
@@ -289,7 +290,7 @@ class Program {
   typeof(Plugin).GetField("KillCounts",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new Dictionary<(byte,byte),int>());
   typeof(Plugin).GetField("character",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,123UL);
   typeof(Plugin).GetField("Ready",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,true);
-  typeof(Plugin).GetField("searchKey",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,$"{flightSession.RunId}:21:0:{flightTarget.MobHuntId}");
+  typeof(Plugin).GetField("searchKey",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,$"{flightSession.RunId}:{JourneyFlow.Key(flightTarget)}");
   long laterScan=Environment.TickCount64+60000;
   typeof(Plugin).GetField("nextScan",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,laterScan);
   typeof(Plugin).GetField("nextEliteScan",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,0L);
@@ -297,7 +298,7 @@ class Program {
   Service.Player=Proxy<IPlayerState>((m,_)=>m.Name switch {"get_IsLoaded"=>true,"get_ContentId"=>123UL,_=>throw new Exception(m.Name)});
   Service.Condition=Proxy<ICondition>((_,args)=>Equals(args![0],Dalamud.Game.ClientState.Conditions.ConditionFlag.InFlight));
   var flyingPlayer=Proxy<Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter>((m,_)=>m.Name switch {"get_Position"=>new Vector3(0,100,0),"get_IsCasting"=>false,_=>throw new Exception(m.Name)});
-  var flightNpc=Proxy<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>((m,_)=>m.Name switch {"get_IsDead"=>false,"get_NameId"=>flightTarget.MobHuntId,"get_Position"=>new Vector3(12,0,4),_=>throw new Exception(m.Name)});
+  var flightNpc=Proxy<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>((m,_)=>m.Name switch {"get_IsDead"=>false,"get_NameId"=>flightTarget.MobHuntId,"get_GameObjectId"=>10UL,"get_Position"=>new Vector3(12,0,4),_=>throw new Exception(m.Name)});
   int detectorReads=0;
   Service.ObjectTable=Proxy<IObjectTable>((m,_)=> {if(m.Name=="get_LocalPlayer")return flyingPlayer;if(m.Name=="GetEnumerator"){detectorReads++;return new Dalamud.Game.ClientState.Objects.Types.IGameObject[]{flightNpc}.AsEnumerable().GetEnumerator();}throw new Exception(m.Name);});
   streamingSearch.Start([]);streamingSearch.Tick(new(0,0),new Vector2(12,4),false);
@@ -361,6 +362,7 @@ class Program {
   if(completedRoute.Tick(completionTargets,m=>m==finishedElite,_=>true,397)!=null)throw new Exception("First arrival flag was duplicated");checks++;
   if(completedRoute.Tick(completionTargets,m=>m==finishedElite || m==arrivalFirst,_=>true,397)!=arrivalSecond)throw new Exception("Following failed to advance to next daily mob after the first arrival target");checks++;
   confirmationQueue.Clear();
+  checks+=JourneyRuntimeChecks.Run(game);
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
  }
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> handler) where T:class {

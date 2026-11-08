@@ -316,6 +316,7 @@ try {
 } finally {
  if(File.Exists(historyPath))File.Delete(historyPath);
  if(File.Exists(historyPath+".tmp"))File.Delete(historyPath+".tmp");
+ if(File.Exists(historyPath+".bak"))File.Delete(historyPath+".bak");
  if(Directory.Exists(historyFolder))Directory.Delete(historyFolder);
 }
 Console.WriteLine($"PASS persisted completion audit: {checks} checks");
@@ -455,3 +456,7 @@ Check(eliteRoute.Tick([otherTarget],_=>false,_=>true,200)==null,"Arrival marker 
 eliteRoute.Start(eliteTarget,[1,2]);
 Check(eliteRoute.Tick([otherTarget],m=>m.MobHuntId==eliteTarget.MobHuntId,_=>true,100)==null && eliteRoute.Suggested==otherTarget,"Removed completed weekly bill still offers next zone");
 Console.WriteLine($"PASS immediate elite completion and arrival: {checks}");
+
+LifecycleChecks.Run(Check);
+
+Console.WriteLine($"PASS total route/state checks: {checks}");

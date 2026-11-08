@@ -11,11 +11,15 @@ public sealed class RouteSession {
     private int missingArrivalSnapshots;
     private List<uint> zoneOrder=[];
     private HashSet<byte> tiers=[];
-    private (byte Bill,byte Mob,uint Id)? marked;
-    private static (byte,byte,uint) Key(MobHuntEntry m) => (m.BillNumber,m.MobIndex,m.MobHuntId);
+    private (byte Bill,byte Order,uint Generation,byte Mob,uint Id)? marked;
+    private static (byte,byte,uint,byte,uint) Key(MobHuntEntry m) => (m.BillNumber,m.OrderId,m.Generation,m.MobIndex,m.MobHuntId);
     public void Start(MobHuntEntry target,IEnumerable<byte> dailyTiers) {
         RunId++; missingArrivalSnapshots=0; zoneOrder.Clear(); tiers=dailyTiers.ToHashSet(); Target=target; Suggested=null; marked=null; Phase=RoutePhase.WaitingForZone;
     }
+    public void Continue(MobHuntEntry target) { Target=target;Suggested=null;marked=null;missingArrivalSnapshots=0;Phase=RoutePhase.WaitingForZone; }
+    public void Retarget(MobHuntEntry target) { Target=target;Suggested=null;marked=null;missingArrivalSnapshots=0;Phase=RoutePhase.Following; }
+    public void RequestNext(MobHuntEntry next){Suggested=next;Phase=RoutePhase.NextZone;marked=null;}
+    public void Suggest(MobHuntEntry? target) { if(Phase==RoutePhase.NextZone) { Suggested=target;if(target==null)Phase=RoutePhase.Finished; } }
     public void ZoneTransition() {
         if(Phase is RoutePhase.Following or RoutePhase.WaitingForZone) {
             Phase=RoutePhase.WaitingForZone; missingArrivalSnapshots=0; marked=null;
@@ -34,7 +38,7 @@ public sealed class RouteSession {
         }
         missingArrivalSnapshots=0;
         if(active!=null) Target=active;
-        var candidates=ordered.Where(m=>tiers.Contains(m.BillNumber) && (m.IsEliteMark || hasPosition(m))).OrderBy(m=>m.IsEliteMark).ToList();
+        var candidates=ordered.Where(m=>tiers.Contains(m.BillNumber) && hasPosition(m)).OrderBy(m=>m.IsEliteMark).ToList();
         foreach(uint zone in candidates.Select(m=>m.TerritoryType).Distinct()) if(!zoneOrder.Contains(zone)) zoneOrder.Add(zone);
         if(!zoneOrder.Contains(Target.TerritoryType)) {
             int at=zoneOrder.FindIndex(z=>z>Target.TerritoryType);

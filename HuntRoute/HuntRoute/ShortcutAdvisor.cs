@@ -12,13 +12,13 @@ public static class ShortcutAdvisor {
     // Estimates use horizontal flight distance; terrain and altitude are not available here.
     public const float FlightSpeed=20,MinimumFlightSeconds=30,MinimumSavedSeconds=10,MinimumSavedFraction=.20f;
     public const uint MaximumCost=200;
-    public static ShortcutOffer? Evaluate(uint run,MobHuntEntry target,Vector2 player,Vector2 destination,IEnumerable<ShortcutCandidate> entries,float teleportOverheadSeconds=18) {
+    public static ShortcutOffer? Evaluate(uint run,MobHuntEntry target,Vector2 player,Vector2 destination,IEnumerable<ShortcutCandidate> entries,float teleportOverheadSeconds=18,uint maximumCost=MaximumCost,float minimumSeconds=MinimumSavedSeconds,float minimumFraction=MinimumSavedFraction) {
         float direct=Vector2.Distance(player,destination);
         float directSeconds=direct/FlightSpeed;
         if(!float.IsFinite(directSeconds)||directSeconds<MinimumFlightSeconds || !float.IsFinite(teleportOverheadSeconds) || teleportOverheadSeconds<0) return null;
-        var candidates=entries.Where(e=>e.GilCost<=MaximumCost)
+        var candidates=entries.Where(e=>e.GilCost<=maximumCost)
             .Select(e=>(Entry:e,Last:Vector2.Distance(e.Position,destination)))
-            .Where(e=>float.IsFinite(e.Last) && directSeconds-(teleportOverheadSeconds+e.Last/FlightSpeed)>=Math.Max(MinimumSavedSeconds,directSeconds*MinimumSavedFraction))
+            .Where(e=>float.IsFinite(e.Last) && directSeconds-(teleportOverheadSeconds+e.Last/FlightSpeed)>=Math.Max(minimumSeconds,directSeconds*minimumFraction))
             .OrderBy(e=>e.Last).ThenBy(e=>e.Entry.GilCost).ThenBy(e=>e.Entry.Id).ToArray();
         if(candidates.Length==0) return null;
         var chosen=candidates[0];

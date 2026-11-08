@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 namespace HuntRoute;
 
-public sealed record ConfirmationRequest(string Owner,string Key,string Text,Func<bool> Valid,Func<bool> Ready,Func<bool> Accept,TravelDialogContent? Presentation=null);
+public sealed record ConfirmationRequest(string Owner,string Key,string Text,Func<bool> Valid,Func<bool> Ready,Func<bool> Accept,TravelDialogContent? Presentation=null,Action? OnShown=null);
 public sealed class ConfirmationQueue {
     private readonly Dictionary<string,ConfirmationRequest> pending=[];
     private readonly HashSet<string> shown=[];
@@ -13,7 +13,7 @@ public sealed class ConfirmationQueue {
     }
     public ConfirmationRequest? Activate(bool available) {
         if(!available || Active!=null) return null;
-        foreach(string owner in new[]{"next","shortcut"}) {
+        foreach(string owner in new[]{"travel","next","shortcut","pickup"}) {
             if(!pending.TryGetValue(owner,out var request)) continue;
             if(!request.Valid()) { pending.Remove(owner);continue; }
             if(!request.Ready()) continue;

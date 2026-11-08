@@ -15,7 +15,9 @@ internal sealed class NativeDialogService : IDisposable {
     private NativeConfirmationAddon? addon;
     private bool disposed,failed;
     internal NativeDialogService(IDalamudPluginInterface pi) => initialization=KamiToolKitLibrary.InitializeAsync(pi);
-    internal void Offer(ConfirmationRequest request) { if(!disposed) queue.Offer(request); }
+    internal string? Error=>failed?"Не удалось открыть игровое подтверждение. Маршрут сохранён; проверьте журнал Dalamud.":null;
+    internal void Offer(ConfirmationRequest request,bool repeat=false) { if(disposed||queue.Active?.Key==request.Key)return;if(repeat)queue.Retry(request);else queue.Offer(request); }
+    internal void CancelAll(){queue.Clear();addon?.CloseQuietly();addon=null;}
     internal void Cancel(string owner) {
         if(queue.Cancel(owner)) { addon?.CloseQuietly();addon=null; }
     }
@@ -36,7 +38,7 @@ internal sealed class NativeDialogService : IDisposable {
                 InternalName="HuntRouteConfirm",Title=string.Empty,Size=new Vector2(520,420),
                 RememberClosePosition=false,EnableContextMenu=false,DisableClamping=false
             };
-            addon.Open();
+            addon.Open();request.OnShown?.Invoke();
         } catch(Exception e) {
             addon?.CloseQuietly();addon=null;
             queue.Resolve(request.Key,false);queue.Retry(request);

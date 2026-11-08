@@ -1,3 +1,13 @@
+# 0.3.14
+
+- Unified active-bill route across five expansions, dynamic bill additions, route-length zone ordering and explicit target/zone deferrals.
+- Instance-aware elite tracking: observed death waits for fresh credit before resuming, missing visibility retains the anchor, repeated rounds and late detections remain automatic. Nearby ordinary targets use actual positions and stable instance selection. Explicit manual goals win over automatic discoveries.
+- Independent pause reasons, external-map-flag ownership, expected/cancelled travel, exact destination/price revalidation and automatic following after arrival.
+- Per-character route restoration on pause with atomic state, backup and corrupt-file quarantine. Completion history remains independent.
+- Overview-first dashboard, passive name selection, explicit map opening, optional mini panel, settings and local diagnostic export. Reset offers are period/character scoped and do not interrupt an active route.
+- Fixed portrait lookup: the prior positional boolean requested item HQ rather than switching high resolution. Explicit high/normal resolution fallback is now tested and texture failures are isolated.
+- Extended pure lifecycle, substituted-controller and offline layout checks. No live-game streaming/native-map/teleport/sound validation was performed.
+
 # 0.3.13
 
 - Weekly search automatically starts another round after the last spawn. A new round avoids immediately returning to the last visited point when others exist. Near/single-point repeats require leaving and re-entering the visit radius, avoiding flag spam while stationary.

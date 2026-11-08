@@ -4,16 +4,18 @@ public sealed class NextZoneWindow(Plugin plugin) {
     private readonly NextZoneNotice notice=new();
     internal void Sync() {
         var session=plugin.Session;
-        if(session.Phase!=RoutePhase.NextZone || session.Suggested is not {} next || session.Target is not {} from) {
+        if(!plugin.NavigationAllowed || session.Phase!=RoutePhase.NextZone || session.Suggested is not {} next || session.Target is not {} from) {
             plugin.NativeDialogs.Cancel("next");return;
         }
         if(!notice.ShouldOpen(session)) return;
-        uint run=session.RunId,zone=next.TerritoryType;
+        uint run=session.RunId,zone=next.TerritoryType;string targetKey=JourneyFlow.Key(next);
+        var entry=plugin.Flow.Active?plugin.EntryFor(next):null;uint quote=entry==null?0:plugin.Price(entry.Id);
+        plugin.NextOffered();
         plugin.NativeDialogs.Offer(new("next",$"next:{run}:{from.TerritoryType}:{zone}",
             $"Цели маршрута в зоне {from.TerritoryName} выполнены.\n\nСледующая зона: {next.TerritoryName}\nПервая цель: {next.Name}\n\nТелепортироваться и продолжить охоту?",
-            ()=>plugin.Ready && session.RunId==run && session.Phase==RoutePhase.NextZone && session.Suggested?.TerritoryType==zone,
-            ()=>!plugin.TravelBusy,
-            ()=> { var target=session.Suggested;if(target==null) return false;plugin.Travel(target);return session.Phase!=RoutePhase.NextZone; },
-            TravelDialogContent.Next(from.TerritoryName ?? "Текущая зона",next.TerritoryName ?? "Следующая зона",next.Name ?? "Цель контракта")));
+            ()=>plugin.Ready && session.RunId==run && session.Phase==RoutePhase.NextZone && session.Suggested?.TerritoryType==zone && JourneyFlow.Key(session.Suggested)==targetKey && (entry==null || plugin.EntryFor(next)?.Id==entry.Id && plugin.Price(entry.Id)<=quote),
+            ()=>!plugin.TravelBusy && plugin.NavigationAllowed,
+            ()=> { var target=session.Suggested;if(target==null || entry!=null && (plugin.Price(entry.Id)>quote || plugin.EntryFor(target)?.Id!=entry.Id)) return false;plugin.Travel(target);return session.Phase!=RoutePhase.NextZone; },
+            TravelDialogContent.Next(from.TerritoryName ?? "Текущая зона",next.TerritoryName ?? "Следующая зона",next.Name ?? "Цель контракта") with {Detail=entry==null?"Метка появится после прибытия.":plugin.TravelHint(next,entry),Context=entry==null?"Цели текущей зоны выполнены.":$"{entry.Name} · {quote} гил"}));
     }
 }

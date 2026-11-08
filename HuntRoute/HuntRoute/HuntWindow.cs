@@ -3,207 +3,133 @@ using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
-using Lumina.Excel.Sheets;
 namespace HuntRoute;
-
-public sealed class HuntWindow : Window {
-    private readonly Plugin plugin;
-    private int expansion;
-    private string selectedZone="";
-    public HuntWindow(Plugin plugin) : base("Hunt Route###HuntRoute") {
-        this.plugin=plugin; Size=new(800,620); SizeCondition=ImGuiCond.FirstUseEver;
-        SizeConstraints=new WindowSizeConstraints { MinimumSize=new(520,430),MaximumSize=new(float.MaxValue,float.MaxValue) };
-    }
-    public override void PreDraw() => HuntTheme.Push();
-    public override void PostDraw() => HuntTheme.Pop();
-    public override void Draw() {
-        float line=ImGui.GetTextLineHeight();
-        bool compact=ImGui.GetContentRegionAvail().X<640;
-        var header=ImGui.GetCursorScreenPos();
-        ImGui.GetWindowDrawList().AddRectFilled(header,header+new Vector2(3,compact?line:line*2+2),ImGui.GetColorU32(HuntTheme.Brand),2);
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX()+12);ImGui.TextColored(HuntTheme.Brand,"HUNT ROUTE");
-        if(compact) { ImGui.SameLine();ImGui.TextDisabled("/  Охота по контрактам"); }
-        else { ImGui.SetCursorPosX(ImGui.GetCursorPosX()+12);ImGui.TextDisabled("Контракты охоты и маршруты"); }
-        if(!plugin.Ready) { ImGui.TextWrapped(plugin.Error ?? (plugin.Session.Phase!=RoutePhase.Idle?"Загрузка зоны. Сопровождение продолжится автоматически.":"Войдите в игру, чтобы увидеть контракты.")); return; }
-        float tabsWidth=Plugin.Boards.Sum(b=>ImGui.CalcTextSize(b.Name).X+ImGui.GetStyle().FramePadding.X*2)+ImGui.GetStyle().ItemInnerSpacing.X*(Plugin.Boards.Length-1);
-        if(tabsWidth>ImGui.GetContentRegionAvail().X) {
-            ImGui.SetNextItemWidth(-1);
-            string preview=Plugin.Boards[expansion].Name+(plugin.CollectionProgress(Plugin.Boards[expansion],false).AllCompleted?" · готово":"");
-            if(ImGui.BeginCombo("##expansion-choice",preview)) {
-                for(int i=0;i<Plugin.Boards.Length;i++) {
-                    bool done=plugin.CollectionProgress(Plugin.Boards[i],false).AllCompleted;
-                    if(done) ImGui.PushStyleColor(ImGuiCol.Text,HuntTheme.Accent);
-                    bool chosen=ImGui.Selectable(Plugin.Boards[i].Name+(done?" · готово":""),expansion==i);
-                    if(done) ImGui.PopStyleColor();
-                    if(chosen && expansion!=i) { expansion=i;selectedZone=""; }
-                }
-                ImGui.EndCombo();
-            }
-        } else if(ImGui.BeginTabBar("expansions",ImGuiTabBarFlags.FittingPolicyScroll)) {
-            for(int i=0;i<Plugin.Boards.Length;i++) {
-                bool done=plugin.CollectionProgress(Plugin.Boards[i],false).AllCompleted;
-                if(done) ImGui.PushStyleColor(ImGuiCol.Text,HuntTheme.Accent);
-                bool open=ImGui.BeginTabItem(Plugin.Boards[i].Name);
-                if(done) ImGui.PopStyleColor();
-                if(open) { if(expansion!=i) { expansion=i;selectedZone=""; } ImGui.EndTabItem(); }
-            }
-            ImGui.EndTabBar();
-        }
-        var board=Plugin.Boards[expansion]; var now=DateTimeOffset.UtcNow;
-        if(ImGui.BeginTable("reset-cards",2,ImGuiTableFlags.SizingStretchSame)) {
-            ImGui.TableNextRow(); ImGui.TableNextColumn(); ResetCard(board,false,now,line*3+40);
-            ImGui.TableNextColumn(); ResetCard(board,true,now,line*3+40); ImGui.EndTable();
-        }
-        ImGui.PushStyleColor(ImGuiCol.Button,new Vector4(.24f,.30f,.49f,1));
-        bool boardClicked=ImGui.Button("К доске охоты");
-        ImGui.PopStyleColor();
-        if(boardClicked && plugin.Teleport(board.Aetheryte)) {
-            plugin.Session.Stop();
-            var map=Service.DataManager.GetExcelSheet<TerritoryType>().GetRow(board.Territory).Map.Value;
-            Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(board.Territory,map,board.Position));
-        }
-        HuntTheme.Hint("Телепорт в город и отметка доски на карте. Если вы уже в этом городе, откроется только карта.");
-        ImGui.SameLine(); ImGui.Checkbox("Скрыть готовые",ref plugin.HideDone);
-        ImGui.SameLine(); if(ImGui.Button("Обновить")) plugin.Refresh();
-        DrawSession();
-        var zones=plugin.Routes.Select(z=>new ZoneRoute(z.Name,z.Mobs.Where(m=>board.Daily.Contains(m.BillNumber)||board.Weekly==m.BillNumber).ToList(),z.Start,z.StartsHere))
-            .Where(z=>z.Mobs.Count>0 && (!plugin.HideDone||z.Mobs.Any(m=>!plugin.Done(m)))).ToList();
-        if(zones.Count==0) {
-            ImGui.BeginChild("empty",Vector2.Zero,true);
-            bool dailyDone=plugin.CollectionProgress(board,false).AllCompleted;
-            ImGui.PushTextWrapPos(0);
-            ImGui.TextColored(HuntTheme.Accent,dailyDone?"Все ежедневные контракты на сегодня выполнены":"Нет незавершённых целей");
-            ImGui.PopTextWrapPos();
-            ImGui.TextWrapped(dailyDone?"Можно вернуться после ежедневного сброса. Недельный контракт отмечается отдельно.":"Возьмите контракты на доске или отключите скрытие выполненных."); ImGui.EndChild(); return;
-        }
-        if(!zones.Any(z=>z.Name==selectedZone)) selectedZone=zones[0].Name;
-        bool narrow=ImGui.GetContentRegionAvail().X<740;
-        if(narrow) {
-            ImGui.SetNextItemWidth(-1);
-            if(ImGui.BeginCombo("##zone-choice",selectedZone)) {
-                foreach(var zone in zones) if(ImGui.Selectable($"{zone.Name}  ({zone.Mobs.Count(plugin.Done)}/{zone.Mobs.Count})",zone.Name==selectedZone)) selectedZone=zone.Name;
-                ImGui.EndCombo();
-            }
-        } else {
-            ImGui.BeginChild("zone-list",new Vector2(Math.Clamp(ImGui.GetContentRegionAvail().X*.23f,170,215),0),true);
-            ImGui.TextDisabled($"ЗОНЫ / {zones.Count}");
-            foreach(var zone in zones) {
-                ImGui.PushID(zone.Name); var top=ImGui.GetCursorScreenPos();
-                bool selected=selectedZone==zone.Name;
-                if(ImGui.Selectable("##zone",selected,ImGuiSelectableFlags.None,new Vector2(0,line*2+14))) selectedZone=zone.Name;
-                var draw=ImGui.GetWindowDrawList();
-                draw.AddText(top+new Vector2(6,4),ImGui.GetColorU32(selected?HuntTheme.Accent:new Vector4(.9f,.93f,.96f,1)),Fit(zone.Name,ImGui.GetContentRegionAvail().X-12));
-                draw.AddText(top+new Vector2(6,line+9),ImGui.GetColorU32(HuntTheme.Muted),$"{zone.Mobs.Count(plugin.Done)}/{zone.Mobs.Count} целей выполнено");
-                HuntTheme.Hint(zone.Name); ImGui.PopID();
-            }
-            ImGui.EndChild(); ImGui.SameLine();
-        }
-        ImGui.BeginChild("zone-detail",Vector2.Zero,true); DrawZone(zones.First(z=>z.Name==selectedZone)); ImGui.EndChild();
-    }
-    private void DrawSession() {
-        var session=plugin.Session;
-        if(session.Phase==RoutePhase.Idle) return;
-        ImGui.PushStyleColor(ImGuiCol.ChildBg,new Vector4(.105f,.145f,.205f,1));
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,new Vector2(8,6)); ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,new Vector2(6,4));
-        ImGui.BeginChild("route-follow",new Vector2(0,ImGui.GetTextLineHeight()*2+30),true);
-        string text=session.Phase switch {
-            RoutePhase.WaitingForZone=>"В пути: "+session.Target?.TerritoryName,
-            RoutePhase.Following=>$"Цель: {session.Target?.Name}  {plugin.Kills(session.Target!)}/{session.Target?.NeededKills}",
-            RoutePhase.NextZone=>"Цели маршрута в зоне выполнены",
-            RoutePhase.Finished=>"Маршрут по известным точкам завершён",
-            _=>"Контракт изменился. Начните маршрут заново."
-        };
-        float stopWidth=ImGui.CalcTextSize("Стоп").X+ImGui.GetStyle().FramePadding.X*2;
-        ImGui.TextColored(HuntTheme.Brand,Fit(text,ImGui.GetContentRegionAvail().X-stopWidth-12));
-        HuntTheme.Hint(text);
-        ImGui.SameLine(ImGui.GetWindowContentRegionMax().X-stopWidth);
-        if(ImGui.SmallButton("Стоп")) session.Stop();
-        if(session.Phase==RoutePhase.NextZone && session.Suggested is {} next) {
-            if(ImGui.Button("Телепорт: "+Fit(next.TerritoryName ?? "Следующая зона",Math.Max(120,ImGui.GetContentRegionAvail().X-150)))) plugin.Travel(next);
-            HuntTheme.Hint("Перейти к следующей зоне. Телепорт запускается только по вашему нажатию; после прибытия метки переключаются автоматически.");
-        } else if(session.Phase==RoutePhase.Following) ImGui.TextDisabled(session.Target?.IsEliteMark==true?"Поиск элиты на игровой карте. Зона ещё не завершена.":"Метка сменится после выполнения цели.");
-        else if(session.Phase==RoutePhase.WaitingForZone) ImGui.TextDisabled("Метка появится после прибытия в зону.");
-        else if(session.Phase==RoutePhase.Finished) ImGui.TextDisabled("Доступные цели маршрута выполнены.");
-        ImGui.EndChild(); ImGui.PopStyleVar(2); ImGui.PopStyleColor();
-    }
-    private void ResetCard(Board board,bool weekly,DateTimeOffset now,float height) {
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,new Vector2(11,9));ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing,new Vector2(6,5));
-        ImGui.BeginChild(weekly?"weekly":"daily",new Vector2(0,height),true);
-        var progress=plugin.CollectionProgress(board,weekly);
-        Vector4 color=progress.AllCompleted?HuntTheme.Accent:progress.Taken>0?HuntTheme.Brand:HuntTheme.Gold;
-        var origin=ImGui.GetWindowPos();var draw=ImGui.GetWindowDrawList();
-        draw.AddRectFilled(origin+new Vector2(12,0),origin+new Vector2(ImGui.GetWindowSize().X-12,2),ImGui.GetColorU32(color),1);
-        ImGui.TextDisabled(weekly?"ЕЖЕНЕДЕЛЬНО":"ЕЖЕДНЕВНО");
-        if(progress.Total>0) {
-            string count=$"{progress.Completed}/{progress.Total}";
-            ImGui.SameLine(ImGui.GetWindowContentRegionMax().X-ImGui.CalcTextSize(count).X);
-            ImGui.TextColored(color,count);
-        }
-        if(progress.AllCompleted) {
-            var at=ImGui.GetCursorScreenPos();float h=ImGui.GetTextLineHeight();uint packed=ImGui.GetColorU32(color);
-            draw.AddLine(at+new Vector2(1,h*.5f),at+new Vector2(5,h*.75f),packed,2);
-            draw.AddLine(at+new Vector2(5,h*.75f),at+new Vector2(13,h*.2f),packed,2);
-            ImGui.Dummy(new Vector2(15,h));ImGui.SameLine();
-        }
-        string label=progress.AllCompleted?(weekly?"Неделя завершена":"Выполнено сегодня"):$"{progress.Label}";
-        ImGui.TextColored(progress.Total==0?HuntTheme.Muted:color,Fit(label,ImGui.GetContentRegionAvail().X));
-        HuntTheme.Hint($"{progress.Label}. Взято {progress.Taken}/{progress.Total}, выполнено {progress.Completed}/{progress.Total}. Отметка сохраняется отдельно для этого персонажа до следующего сброса.");
-        float width=ImGui.GetContentRegionAvail().X;var bars=ImGui.GetCursorScreenPos();int total=Math.Max(1,progress.Total);
-        for(int i=0;i<total;i++) {
-            float segment=(width-(total-1)*4)/total;var left=bars+new Vector2(i*(segment+4),0);
-            draw.AddRectFilled(left,left+new Vector2(segment,3),ImGui.GetColorU32(i<progress.Completed?HuntTheme.Accent:new Vector4(.17f,.20f,.28f,1)),2);
-        }
-        ImGui.Dummy(new Vector2(width,3));
-        ImGui.TextDisabled("Сброс через "+Countdown(ResetClock.Next(now,weekly)-now));
-        ImGui.EndChild();ImGui.PopStyleVar(2);
-    }
-    private void DrawZone(ZoneRoute zone) {
-        int done=zone.Mobs.Count(plugin.Done);
-        ImGui.TextColored(HuntTheme.Brand,zone.Name); ImGui.SameLine(); ImGui.TextDisabled($"{done}/{zone.Mobs.Count}");
-        ImGui.ProgressBar((float)done/zone.Mobs.Count,new Vector2(-1,3),"");
-        var first=zone.Mobs.FirstOrDefault(m=>!plugin.Done(m) && plugin.HasPosition(m));
-        if(first!=null) {
-            if(ImGui.Button(zone.StartsHere?"Следующая цель":"Начать маршрут")) plugin.Travel(first);
-            HuntTheme.Hint(zone.StartsHere?"Вы уже в зоне. Начать сопровождение и поставить метку без телепорта.":"Телепорт к первой цели и автоматическая смена меток после выполнения каждой цели.");
-            ImGui.SameLine(); ImGui.TextDisabled(zone.StartsHere?"Вы уже в зоне":Fit(zone.Start?.Name ?? "Нет открытого эфирита",Math.Max(80,ImGui.GetContentRegionAvail().X-20)));
-        }
-        var daily=zone.Mobs.OrderBy(m=>m.IsEliteMark).ToList();
-        if(daily.Any(m=>!plugin.HideDone||!plugin.Done(m)) && ImGui.BeginTable("targets",4,ImGuiTableFlags.RowBg|ImGuiTableFlags.SizingStretchProp)) {
-            bool here=zone.StartsHere;
-            string action=here?"К цели":"Телепорт";
-            ImGui.TableSetupColumn("#",ImGuiTableColumnFlags.WidthFixed,20);
-            ImGui.TableSetupColumn("Цель",ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Счёт",ImGuiTableColumnFlags.WidthFixed,ImGui.CalcTextSize("99/99").X);
-            ImGui.TableSetupColumn("Действия",ImGuiTableColumnFlags.WidthFixed,ImGui.CalcTextSize(action+"Карта").X+ImGui.GetStyle().FramePadding.X*4+ImGui.GetStyle().ItemSpacing.X+4);
-            int step=0;
-            foreach(var m in daily) {
-                if(plugin.HideDone&&plugin.Done(m)) continue;
-                step++; ImGui.PushID($"{m.BillNumber}:{m.MobIndex}"); ImGui.TableNextRow();
-                if(plugin.Session.Phase==RoutePhase.Following && plugin.Session.Target is {} tracked && tracked.BillNumber==m.BillNumber && tracked.MobIndex==m.MobIndex)
-                    ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0,ImGui.GetColorU32(new Vector4(.12f,.29f,.27f,1)));
-                ImGui.TableNextColumn(); ImGui.TextDisabled($"{step:00}"); ImGui.TableNextColumn();
-                bool known=plugin.HasPosition(m);
-                ImGui.TextWrapped((m.IsEliteMark?"[B] ":"")+m.Name);
-                if(known && ImGui.IsItemClicked()) plugin.Travel(m);
-                MobPreview.OnHover(m,plugin.Kills(m));
-                ImGui.TableNextColumn(); ImGui.TextColored(plugin.Done(m)?HuntTheme.Accent:new Vector4(.9f,.93f,.96f,1),$"{plugin.Kills(m)}/{m.NeededKills}");
-                ImGui.TableNextColumn(); ImGui.BeginDisabled(!known);
-                if(ImGui.Button(action)) plugin.Travel(m);
-                HuntTheme.Hint(here?"Вы уже в зоне: только метка и сопровождение.":"Телепорт к ближайшему открытому эфириту цели и сопровождение маршрута.");
-                ImGui.SameLine(); if(ImGui.Button("Карта")) { if(m.IsEliteMark) { var points=EliteSpawns.For(m); if(points.Length>0) Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(m.TerritoryType,Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(m.MapId),points[0])); } else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name); }
-                ImGui.EndDisabled(); if(!known) HuntTheme.Hint("Координаты этой цели пока неизвестны."); ImGui.PopID();
-            }
-            ImGui.EndTable();
-        }
-        if(plugin.Session.Target is {IsEliteMark:true} elite && elite.TerritoryType==plugin.CurrentTerritory && plugin.Session.Phase==RoutePhase.Following) {
-            ImGui.TextWrapped(plugin.Search.Status);
-        }
-
-    }
-    private static string Fit(string text,float width) {
-        if(ImGui.CalcTextSize(text).X<=width) return text;
-        while(text.Length>1 && ImGui.CalcTextSize(text+"...").X>width) text=text[..^1];
-        return text+"...";
-    }
-    private static string Countdown(TimeSpan t) => t.TotalDays>=1?$"{(int)t.TotalDays} д {t.Hours} ч":$"{(int)t.TotalHours} ч {t.Minutes:00} мин";
+public sealed class HuntWindow:Window {
+ private readonly Plugin plugin;
+ private int expansion=-1;
+ private string zone="";
+ public HuntWindow(Plugin plugin):base("Hunt Route###HuntRoute"){this.plugin=plugin;Size=new(800,620);SizeCondition=ImGuiCond.FirstUseEver;SizeConstraints=new(){MinimumSize=new(520,430),MaximumSize=new(float.MaxValue,float.MaxValue)};}
+ public override void PreDraw()=>HuntTheme.Push();
+ public override void PostDraw()=>HuntTheme.Pop();
+ public override void Draw(){
+  if(plugin.FocusRequested){expansion=-1;zone="";plugin.FocusRequested=false;}
+  Colored(HuntTheme.Brand,"HUNT ROUTE / Охота по контрактам");
+  if(!plugin.Ready){ImGui.TextWrapped(plugin.Error??"Данные персонажа загружаются. Сохранённый маршрут не потерян.");return;}
+  bool canStart=plugin.Flow.Active||plugin.Mobs.Any(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m)&&!plugin.Flow.Excluded(m));
+  ImGui.BeginDisabled(!canStart);
+  if(ImGui.Button(plugin.Flow.Active?"Продолжить охоту":"Начать охоту"))plugin.ResumeJourney();
+  ImGui.EndDisabled();HuntTheme.Hint(canStart?"Запустить общий маршрут. Поездка в другую зону требует подтверждения.":"Нет взятых доступных целей. Выберите доску или верните отложенные цели.");
+  ImGui.SameLine();if(ImGui.Button("Доски охоты"))plugin.PickupOpen=!plugin.PickupOpen;
+  ImGui.SameLine();if(ImGui.Button("Настройки"))plugin.SettingsOpen=!plugin.SettingsOpen;
+  if(ImGui.SmallButton("Обновить"))plugin.Refresh();
+  DrawSession(plugin);
+  if(plugin.NoticeText is {} notice){ImGui.TextWrapped(notice);if(ImGui.SmallButton("Скрыть сообщение"))plugin.NoticeText=null;}
+  if(plugin.SettingsOpen)DrawSettings();
+  if(ImGui.CollapsingHeader("Сводка / все пять дополнений",ImGuiTreeNodeFlags.DefaultOpen)){
+  if(ImGui.BeginTable("overview",4,ImGuiTableFlags.RowBg|ImGuiTableFlags.SizingStretchProp)){
+   ImGui.TableSetupColumn("Дополнение",ImGuiTableColumnFlags.WidthStretch);
+   ImGui.TableSetupColumn("Ежедневные",ImGuiTableColumnFlags.WidthStretch);
+   ImGui.TableSetupColumn("Недельный",ImGuiTableColumnFlags.WidthStretch);
+   ImGui.TableSetupColumn("Доска",ImGuiTableColumnFlags.WidthFixed,70);
+   ImGui.TableHeadersRow();
+   foreach(var b in Plugin.Boards){ImGui.PushID(b.Name);ImGui.TableNextRow();ImGui.TableNextColumn();ImGui.TextWrapped(b.Name);
+    ImGui.TableNextColumn();Progress(b,false);ImGui.TableNextColumn();Progress(b,true);ImGui.TableNextColumn();
+    bool available=plugin.CanPickup(b,false)||plugin.CanPickup(b,true);
+    bool reachable=plugin.BoardReachable(b);ImGui.BeginDisabled(!reachable||plugin.PickupOpen&&!available);if(ImGui.SmallButton("К доске"))plugin.OfferBoard(b);ImGui.EndDisabled();
+    if(!reachable)HuntTheme.Hint("Эфирит города не открыт; если добраться в город самостоятельно, доска будет доступна без телепорта.");
+    else if(plugin.PickupOpen&&!available)HuntTheme.Hint("Нет подтверждённых доступных новых контрактов. Статусы показаны слева.");
+    ImGui.PopID();}
+   ImGui.EndTable();
+  }
+  var now=DateTimeOffset.UtcNow;
+  ImGui.TextWrapped("Сброс: ежедневные "+Countdown(ResetClock.Next(now,false)-now)+" / недельный "+Countdown(ResetClock.Next(now,true)-now));
+  }
+  ImGui.Separator();
+  ImGui.SetNextItemWidth(Math.Min(220,ImGui.GetContentRegionAvail().X));
+  if(ImGui.BeginCombo("##view",expansion<0?"Просмотр: все дополнения":Plugin.Boards[expansion].Name)){
+   if(ImGui.Selectable("Все дополнения",expansion<0))expansion=-1;
+   for(int i=0;i<Plugin.Boards.Length;i++)if(ImGui.Selectable(Plugin.Boards[i].Name,expansion==i))expansion=i;
+   ImGui.EndCombo();
+  }
+  ImGui.SameLine();ImGui.Checkbox("Скрыть готовые",ref plugin.HideDone);
+  if(ImGui.SmallButton("Отложенные"))plugin.DeferredOpen=!plugin.DeferredOpen;
+  var source=plugin.Routes.SelectMany(r=>r.Mobs).Where(m=>Plugin.AllTiers.Contains(m.BillNumber)&&(expansion<0||Plugin.Boards[expansion].Daily.Contains(m.BillNumber)||Plugin.Boards[expansion].Weekly==m.BillNumber)).ToArray();
+  var zones=source.Select(m=>m.TerritoryName??"Зона").Distinct().ToArray();
+  ImGui.SetNextItemWidth(-1);
+  if(ImGui.BeginCombo("##zones",zone==""?"Просмотр: все зоны":zone)){
+   if(ImGui.Selectable("Все зоны",zone==""))zone="";
+   foreach(var name in zones)if(ImGui.Selectable(name,zone==name))zone=name;
+   ImGui.EndCombo();
+  }
+  var shown=source.Where(m=>(zone==""||m.TerritoryName==zone)&&(!plugin.HideDone||!plugin.Done(m))&&(!plugin.DeferredOpen||plugin.Flow.Excluded(m)||plugin.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m)))).ToArray();
+  if(shown.Length==0){ImGui.TextWrapped(source.Length==0?"Нет взятых контрактов для этого просмотра. Проверьте сводку и доски охоты.":"Нет целей по выбранным фильтрам. Выполнение и отложенные контракты учтены отдельно.");if(ImGui.Button("Сбросить фильтры")){expansion=-1;zone="";plugin.HideDone=false;plugin.DeferredOpen=false;}}
+  var selected=plugin.Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==plugin.Selected);
+  if(selected!=null){
+   Colored(HuntTheme.Brand,"Выбрано: "+selected.Name);ImGui.TextWrapped(selected.TerritoryName??"");
+   bool excluded=plugin.Flow.Excluded(selected);ImGui.BeginDisabled(plugin.Done(selected)||excluded);
+   if(ImGui.Button("Сопровождать эту цель"))plugin.Track(selected);ImGui.EndDisabled();ImGui.SameLine();
+   if(ImGui.Button("Карта"))plugin.ShowMap(selected);
+   if(excluded){ImGui.SameLine();if(ImGui.Button("Вернуть в маршрут"))plugin.RestoreDeferred(selected);}
+   else{if(ImGui.Button("Отложить"))plugin.Defer(selected);ImGui.SameLine();if(ImGui.Button("Отложить зону"))plugin.Defer(selected,true);}
+   if(plugin.Flow.Unavailable.TryGetValue(JourneyFlow.Key(selected),out var reason))ImGui.TextWrapped("Недоступно: "+reason);
+  }
+  if(ImGui.BeginTable("targets",3,ImGuiTableFlags.RowBg|ImGuiTableFlags.SizingStretchProp)){
+   ImGui.TableSetupColumn("Цель",ImGuiTableColumnFlags.WidthStretch);ImGui.TableSetupColumn("Счёт",ImGuiTableColumnFlags.WidthFixed,48);ImGui.TableSetupColumn("Статус",ImGuiTableColumnFlags.WidthFixed,90);
+   int step=0; (uint,uint)? group=null;
+   foreach(var m in shown){if(group!=(m.TerritoryType,m.MapId)){group=(m.TerritoryType,m.MapId);ImGui.TableNextRow();ImGui.TableNextColumn();Colored(HuntTheme.Brand,m.TerritoryName??"Зона");}
+    ImGui.PushID(JourneyFlow.Key(m));ImGui.TableNextRow();
+    if(plugin.Session.Target is {} current&&JourneyFlow.Key(current)==JourneyFlow.Key(m))ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0,ImGui.GetColorU32(new Vector4(.16f,.28f,.34f,1)));
+    ImGui.TableNextColumn();ImGui.TextWrapped($"{++step:00}  "+(m.IsEliteMark?"[B] ":"")+m.Name);if(ImGui.IsItemClicked())plugin.Selected=JourneyFlow.Key(m);MobPreview.OnHover(m,plugin.Kills(m));
+    ImGui.TableNextColumn();ImGui.TextUnformatted($"{plugin.Kills(m)}/{m.NeededKills}");ImGui.TableNextColumn();
+    ImGui.TextWrapped(plugin.Done(m)?"Готово":plugin.Flow.Excluded(m)?"Отложено":plugin.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m))?"Недоступно":"В маршруте");
+    ImGui.PopID();}
+   ImGui.EndTable();
+  }
+ }
+ private void Progress(Board b,bool weekly){if(plugin.CompletionUncertain(b,weekly)){ImGui.TextWrapped("История не подтверждена");HuntTheme.Hint("Повреждённая история сохранена отдельно. Счётчики игры читаются, но выполнение за текущий период пока не подтверждено.");return;}var p=plugin.CollectionProgress(b,weekly);string text=p.AllCompleted?(weekly?"Неделя завершена":"Выполнено сегодня"):p.Label;Colored(p.AllCompleted?HuntTheme.Accent:p.Taken>0?HuntTheme.Brand:HuntTheme.Muted,text);HuntTheme.Hint($"Взято {p.Taken}/{p.Total}; выполнено {p.Completed}/{p.Total}. "+(plugin.CanPickup(b,weekly)?"Можно взять новые контракты.":"Зачёт сохраняется отдельно для персонажа до сброса."));}
+ internal static void DrawSession(Plugin p){
+  if(!p.Flow.Active&&p.Session.Phase==RoutePhase.Idle)return;
+  var target=p.Session.Target;
+  Colored(HuntTheme.Brand,p.Flow.Pauses!=PauseReason.None?"Сопровождение на паузе: "+PauseLabel(p.Flow.Pauses):p.Session.Phase==RoutePhase.Finished?"Доступные цели маршрута завершены":"Текущая цель: "+(target?.Name??"выбирается"));
+  if(target!=null)MobPreview.OnHover(target,p.Kills(target));
+  if(target!=null)ImGui.TextDisabled(p.LocationLabel);
+  if(target!=null)ImGui.TextWrapped($"{target.TerritoryName} · {p.Kills(target)}/{target.NeededKills}");
+  if(p.Flow.Pauses!=PauseReason.None||p.Session.Phase==RoutePhase.WaitingForZone)ImGui.TextWrapped(p.Flow.Status);
+  if(ImGui.SmallButton(p.Flow.Pauses.HasFlag(PauseReason.User)?"Продолжить":"Пауза"))p.TogglePause();
+  ImGui.SameLine();if(ImGui.SmallButton("Стоп"))p.StopJourney();
+  if(ImGui.SmallButton("К текущей цели")&&target!=null)p.FocusTarget();
+  ImGui.SameLine();if(ImGui.SmallButton("Карта")&&target!=null)p.ShowMap(target);
+  if(p.Flow.Pauses!=PauseReason.None && p.Flow.Pauses!=PauseReason.User){if(ImGui.Button("Вернуть сопровождение"))p.ResumeJourney();}
+  if(p.Flow.Manual!=null){ImGui.TextDisabled("Ручная цель имеет приоритет");if(ImGui.SmallButton("Вернуться в авторежим")){p.Flow.Manual=null;p.ResumeJourney();}}
+  if(p.Session.Phase==RoutePhase.NextZone&&p.Session.Suggested is {} next){ImGui.TextWrapped("Следующая зона: "+next.TerritoryName);if(ImGui.Button("Предложить телепорт"))p.OfferNext();}
+  if(target is {IsEliteMark:true}){ImGui.TextWrapped(p.Search.Status);if(p.Search.Lost&&!p.Search.AwaitingCredit&&ImGui.Button("Снять закрепление и продолжить поиск")){p.ReleaseLostTarget();}}
+  int deferred=p.Mobs.Count(m=>!p.Done(m)&&(p.Flow.Excluded(m)||p.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m))));if(deferred>0)ImGui.TextWrapped($"Незавершённых отложенных/недоступных целей: {deferred}");
+ }
+ private void DrawSettings(){
+  ImGui.BeginDisabled(plugin.PersistenceBlocked);
+  var s=plugin.Settings;bool mini=s.Mini,sound=s.Sound,reset=s.ResetNotifications,shortcuts=s.Shortcuts;
+  bool world=s.WorldMarkers;int distance=s.WorldDistance;
+  int gil=(int)Math.Min(int.MaxValue,s.MaxGil);float seconds=s.MinSeconds,percent=s.MinPercent;
+  bool dirty=ImGui.Checkbox("Минипанель сопровождения",ref mini);dirty|=ImGui.Checkbox("Звук элиты и следующей зоны",ref sound);dirty|=ImGui.Checkbox("Предлагать новые контракты после сброса",ref reset);dirty|=ImGui.Checkbox("Предлагать сокращение перелёта",ref shortcuts);
+  dirty|=ImGui.Checkbox("Подсветка элиты в игровом мире",ref world);
+  ImGui.SetNextItemWidth(150);dirty|=ImGui.SliderInt("Дальность подсветки, м",ref distance,50,500);
+  ImGui.SetNextItemWidth(150);dirty|=ImGui.InputInt("Лимит гил (0 = бесплатно)",ref gil);
+  ImGui.SetNextItemWidth(150);dirty|=ImGui.InputFloat("Минимум экономии, с",ref seconds);
+  ImGui.SetNextItemWidth(150);dirty|=ImGui.SliderFloat("Минимум экономии, %",ref percent,0,100);
+  if(dirty){plugin.SetMini(mini);s.Sound=sound;s.ResetNotifications=reset;s.Shortcuts=shortcuts;s.WorldMarkers=world;s.WorldDistance=distance;s.MaxGil=(uint)Math.Max(0,gil);s.MinSeconds=seconds;s.MinPercent=percent;s.Validate();plugin.SaveJourney(true);}
+  ImGui.EndDisabled();
+  if(ImGui.Button("Сохранить диагностику локально"))plugin.Export();ImGui.Separator();
+ }
+ private static string PauseLabel(PauseReason reasons)=>string.Join("; ",Enum.GetValues<PauseReason>().Where(r=>r!=PauseReason.None&&reasons.HasFlag(r)).Select(r=>r switch{PauseReason.User=>"по вашему выбору",PauseReason.Restored=>"восстановленное сохранение",PauseReason.Marker=>"изменена игровая метка",PauseReason.NoZone=>"нет подходящей цели в этой зоне",PauseReason.TravelError=>"телепорт не подтверждён",PauseReason.Unavailable=>"цели недоступны",PauseReason.Board=>"посещение доски",PauseReason.FlagError=>"не удалось поставить метку",_=>"данные обновляются"}));
+ internal static void Colored(Vector4 color,string text){ImGui.PushStyleColor(ImGuiCol.Text,color);ImGui.TextWrapped(text);ImGui.PopStyleColor();}
+ private static string Countdown(TimeSpan t)=>t.TotalDays>=1?$"{(int)t.TotalDays} д {t.Hours} ч":$"{(int)t.TotalHours} ч {t.Minutes:00} мин";
+}
+public sealed class MiniWindow:Window {
+ private readonly Plugin plugin;
+ public MiniWindow(Plugin plugin):base("Охота###HuntRouteMini"){this.plugin=plugin;Size=new(360,180);SizeCondition=ImGuiCond.FirstUseEver;Flags=ImGuiWindowFlags.AlwaysAutoResize;SizeConstraints=new(){MinimumSize=new(300,120),MaximumSize=new(500,900)};IsOpen=true;RespectCloseHotkey=false;}
+ public override void OnClose(){plugin.SetMini(false);}
+ public override bool DrawConditions()=>plugin.Ready&&plugin.Settings.Mini&&plugin.Flow.Active;
+ public override void PreDraw()=>HuntTheme.Push();
+ public override void PostDraw()=>HuntTheme.Pop();
+ public override void Draw()=>HuntWindow.DrawSession(plugin);
 }

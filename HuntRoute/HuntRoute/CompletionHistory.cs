@@ -15,6 +15,9 @@ public sealed class CompletionRecord {
     public byte CompletedOrder { get; set; }
 }
 public sealed class CompletionHistory {
+    private bool skipBackup;
+    public bool RequiresPickupEvidence {get;set;}
+    [JsonIgnore] public bool Recovered {get;private set;}
     public int Version { get; set; }=1;
     public Dictionary<ulong,Dictionary<byte,CompletionRecord>> Characters { get; set; }=[];
     [JsonIgnore] public bool Dirty { get; private set; }
@@ -31,7 +34,7 @@ public sealed class CompletionHistory {
         }
         bool fresh=record.LastOrder==0 || record.LastOrder!=state.ObtainedId
             || (record.ActivePeriod==period && record.ActiveOrder==state.ObtainedId);
-        if(state.CompletedCurrentSet && fresh && (record.CompletedPeriod!=period || record.CompletedOrder!=state.ObtainedId)) {
+        if(state.CompletedCurrentSet && fresh && (!RequiresPickupEvidence || record.ActivePeriod==period && record.ActiveOrder==state.ObtainedId) && (record.CompletedPeriod!=period || record.CompletedOrder!=state.ObtainedId)) {
             record.CompletedPeriod=period;record.CompletedOrder=state.ObtainedId;Dirty=true;
         }
         if(record.SeenPeriod!=period) { record.SeenPeriod=period;Dirty=true; }
@@ -52,12 +55,21 @@ public sealed class CompletionHistory {
         }
         return history;
     }
+    public static CompletionHistory LoadRecovering(string path) {
+        try{return Load(path);}catch(Exception e)when(e is JsonException or InvalidDataException or NotSupportedException){
+            File.Copy(path,path+".invalid-"+DateTime.UtcNow.Ticks,false);
+            CompletionHistory? history=null;
+            if(File.Exists(path+".bak"))try{history=Load(path+".bak");}catch(Exception backup)when(backup is JsonException or InvalidDataException or NotSupportedException){}
+            history??=new(){RequiresPickupEvidence=true};history.skipBackup=true;history.Recovered=true;history.Dirty=true;return history;
+        }
+    }
     public void Save(string path) {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         string temporary=path+".tmp";
         using(var stream=new FileStream(temporary,FileMode.Create,FileAccess.Write,FileShare.None)) {
             JsonSerializer.Serialize(stream,this);stream.Flush(true);
         }
-        File.Move(temporary,path,true);Dirty=false;
+        if(!skipBackup&&File.Exists(path))File.Copy(path,path+".bak",true);
+        File.Move(temporary,path,true);skipBackup=false;Dirty=false;
     }
 }
