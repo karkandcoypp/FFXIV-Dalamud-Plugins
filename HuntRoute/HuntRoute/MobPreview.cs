@@ -33,7 +33,7 @@ internal static class MobPreview {
         else ImGui.TextDisabled("Для этой цели в игровых данных нет изображения.");
         if(!mob.IsEliteMark && Location.Database.TryGetValue(mob.MobHuntId,out var pos)) {
             ImGui.TextDisabled($"X {pos.X:F1}   Y {pos.Y:F1}");
-            ImGui.TextDisabled("Нажмите имя, чтобы перейти к цели.");
+            ImGui.TextDisabled("Нажмите имя, чтобы открыть сведения.");
         }
         ImGui.EndTooltip();
     }

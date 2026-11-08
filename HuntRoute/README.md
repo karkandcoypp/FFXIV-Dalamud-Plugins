@@ -46,6 +46,12 @@ dotnet run --project HuntRoute/tests/UiChecks -c Release -- "<preview directory>
 
 MapChecks uses real game sheets and substituted clock/transport/flag services for controller scenarios. It verifies map links, boards, portrait availability, instance death/credit, route continuation, deferrals, resets, casts and restoration without controlling the game. UiChecks renders offline compositions at different sizes, including mini/settings/selection/elite states. These checks do not replace live FFXIV NPC streaming, native UI, sound or teleport testing.
 
+## Compact interface
+
+The default Hunt view contains the active target, kill count and the next action. **All targets** opens the grouped target list; clicking a name reveals explicit tracking/map/deferral controls. **Boards** contains the five-expansion completion/reset overview. **Settings** groups sound, shortcuts and maintenance separately. The **More** journey menu contains stop, manual-priority cancellation and lost-elite release.
+
+The UI uses progressive disclosure and Fluent spacing guidance; see [design and verification notes](DESIGN-0.3.19.md). No automatic map opening, teleport or hunt-state mutation was added by the UI refactor.
+
 ## Sources
 
 - HuntBuddy coordinate reference: https://github.com/SheepGoMeh/HuntBuddy/tree/1de61e25b99b6473f4d2c75b4023e588016f0aa4

@@ -1,3 +1,11 @@
+# 0.3.19
+
+- Rebuilt the main UI around a focused hunt screen, separate boards/settings views, and an on-demand target list. Removed the always-visible expansion table, filter stack and duplicate journey controls from the hunting view.
+- Current target, progress and one primary action remain visible; map and additional actions stay explicit. Mini panel uses the same compact target card. Board selection, completion/reset statuses, portraits, manual priority and deferral controls remain available.
+- Grouped advanced settings and maintenance behind labelled disclosures. Opaque neutral surfaces, one accent, consistent spacing, wrapped labels and adaptive navigation/action rows support narrow windows and larger fonts.
+- Main minimum width reduced from 520 to 400 px; mini supports 300 px. Explicit focus/board requests select the appropriate view without automatic target changes interrupting browsing.
+- 35 UI compositions plus four native dialog previews check overflow and read-only rendering, with fonts 17/20/26 and main/mini widths down to 400/300 px. Hunt algorithms, persistence, detection, teleport logic and native confirmations unchanged.
+
 # 0.3.18
 
 - Login now proposes hunting once per character session even when that reset period was acknowledged earlier. Available bills offer board selection; held unfinished bills offer continuation; no available objectives opens a truthful summary.
