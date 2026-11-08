@@ -343,18 +343,14 @@ Check(presentedQueue.Resolve(presented.Key,false)==null && presentedAccepted==0,
 Console.WriteLine($"PASS styled dialog audit: {checks} checks");
 var searchAudit=new EliteSearch();
 searchAudit.Start([new(200,0),new(0,0),new(100,0),new(0,0)]);
-Check(searchAudit.Tick(new(0,0),null,0,false)==new Vector2(0,0),"Elite search starts nearest, deduplicated");
-Check(searchAudit.Tick(new(0,0),null,7999,false)==null,"Elite point waits for visibility");
-Check(searchAudit.Tick(new(0,0),null,8000,false)==new Vector2(100,0),"Elite advances after dwell");
-Check(searchAudit.Tick(new(100,0),new Vector2(123,4),9000,false)==new Vector2(123,4),"Detected elite overrides spawn");
-searchAudit.Skip();Check(searchAudit.Tick(new(100,0),new Vector2(123,4),10000,false)==null,"Cannot skip detected elite");
-searchAudit.Tick(new(100,0),null,11000,true);
-Check(searchAudit.Tick(new(100,0),null,25000,true)==null,"Combat pauses absence timer");
-searchAudit.Tick(new(100,0),null,26000,false);
-Check(searchAudit.Tick(new(100,0),null,34000,false)==new Vector2(200,0),"Search resumes after combat");
-searchAudit.Skip();Check(searchAudit.Tick(new(200,0),null,35000,false)==null,"Exhausted search does not loop or complete hunt");
-searchAudit.Start([new(0,0)]);searchAudit.Tick(new(0,0),null,0,false);searchAudit.Tick(new(100,0),null,7000,false);
-Check(searchAudit.Tick(new(0,0),null,9000,false)==null,"Leaving radius resets dwell");
+Check(searchAudit.Tick(new(-100,0),null,false)==new Vector2(0,0),"Elite starts at nearest unique point");
+Check(searchAudit.Tick(new(0,0),new Vector2(12,4),false)==new Vector2(12,4),"Detection takes priority over arriving at empty candidate");
+searchAudit.Skip();Check(searchAudit.Tick(new(0,0),new Vector2(12,4),false)==null,"Cannot skip detected elite");
+Check(searchAudit.Tick(new(0,0),null,true)==new Vector2(0,0),"Combat prevents speculative advancement");
+Check(searchAudit.Tick(new(0,0),null,false)==new Vector2(100,0),"Empty point advances immediately without timer");
+Check(searchAudit.Tick(new(100,0),null,false)==new Vector2(200,0),"Next empty point advances without timer");
+Check(searchAudit.Tick(new(200,0),null,false)==null,"Exhaustion never completes contract or loops");
+Check(searchAudit.Tick(new(200,0),new Vector2(210,0),false)==new Vector2(210,0),"Detection remains active after all spawn points visited");
 var eliteRoute=new RouteSession();
 var normalTarget=new MobHuntEntry{BillNumber=1,MobIndex=0,MobHuntId=1,TerritoryType=100,NeededKills=1};
 var eliteTarget=new MobHuntEntry{BillNumber=2,MobIndex=0,MobHuntId=2,TerritoryType=100,NeededKills=1,IsEliteMark=true};
@@ -366,3 +362,16 @@ Check(eliteRoute.Phase==RoutePhase.Following && eliteRoute.Suggested==null,"No n
 completed.Add(2);eliteRoute.Tick([normalTarget,otherTarget,eliteTarget],m=>completed.Contains(m.MobHuntId),_=>true,100);
 Check(eliteRoute.Phase==RoutePhase.NextZone && eliteRoute.Suggested==otherTarget,"Next zone available after elite completion");
 Console.WriteLine($"PASS elite search and combined route: {checks}");
+
+var eliteNotice=new NextZoneNotice();
+Check(eliteNotice.ShouldOpen(eliteRoute),"Elite death immediately produces next-zone notice");
+Check(!eliteNotice.ShouldOpen(eliteRoute),"Elite death notice is not duplicated");
+eliteRoute.Start(otherTarget,[1,2]);
+Check(eliteRoute.Tick([otherTarget],_=>false,_=>true,100)==null && eliteRoute.Phase==RoutePhase.WaitingForZone,"Accepted next-zone route waits through teleport");
+eliteRoute.ZoneTransition();
+Check(eliteRoute.Tick([otherTarget],_=>false,_=>true,200)==otherTarget && eliteRoute.Phase==RoutePhase.Following,"Arrival marks first target and resumes without restart");
+Check(eliteRoute.Tick([otherTarget],_=>false,_=>true,200)==null,"Arrival marker emitted once");
+// Completed weekly bill may disappear from active snapshots; retained kills still advance the route.
+eliteRoute.Start(eliteTarget,[1,2]);
+Check(eliteRoute.Tick([otherTarget],m=>m.MobHuntId==eliteTarget.MobHuntId,_=>true,100)==null && eliteRoute.Suggested==otherTarget,"Removed completed weekly bill still offers next zone");
+Console.WriteLine($"PASS immediate elite completion and arrival: {checks}");

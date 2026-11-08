@@ -218,15 +218,19 @@ public sealed class Plugin : IDalamudPlugin {
         UpdateEliteSearch();
         NextZone.Sync(); Shortcut.Sync();
     }
+    internal IEnumerable<Dalamud.Game.ClientState.Objects.Types.IBattleNpc> DetectedElites() {
+        var ids=Mobs.Where(m=>m.IsEliteMark && m.TerritoryType==Service.ClientState.TerritoryType && !Done(m)).Select(m=>m.MobHuntId).ToHashSet();
+        return Service.ObjectTable.OfType<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>().Where(n=>!n.IsDead && ids.Contains(n.NameId));
+    }
     private void UpdateEliteSearch() {
         if(Session.Phase!=RoutePhase.Following || Session.Target is not {IsEliteMark:true} target || Service.ClientState.MapId!=target.MapId || Service.ObjectTable.LocalPlayer is not {} player) { searchKey="";return; }
         var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(target.MapId);
         string key=$"{Session.RunId}:{target.BillNumber}:{target.MobIndex}:{target.MobHuntId}";
         bool firstPoint=key!=searchKey;
         if(firstPoint) { Search.Start(EliteSpawns.For(target).Select(p=>MapCoordinates.ToWorld(p,map)).ToArray());searchKey=key; }
-        var npc=Service.ObjectTable.OfType<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>().FirstOrDefault(n=>n.NameId==target.MobHuntId && !n.IsDead);
+        var npc=DetectedElites().FirstOrDefault(n=>n.NameId==target.MobHuntId);
         Vector2? found=npc==null?null:new Vector2(npc.Position.X,npc.Position.Z);
-        var point=Search.Tick(new Vector2(player.Position.X,player.Position.Z),found,Environment.TickCount64,Service.Condition[ConditionFlag.InCombat] || Service.Condition[ConditionFlag.InFlight] || player.IsCasting);
+        var point=Search.Tick(new Vector2(player.Position.X,player.Position.Z),found,Service.Condition[ConditionFlag.InCombat] || player.IsCasting);
         if(point is {} position) {
             if(!Location.SetWorldFlag(target.TerritoryType,target.MapId,position)) Search.Retry();
             else if(firstPoint) Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(target.TerritoryType,map,Dalamud.Utility.MapUtil.WorldToMap(position,map)));

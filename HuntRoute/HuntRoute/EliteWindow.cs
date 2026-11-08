@@ -80,10 +80,7 @@ public sealed class EliteWindow : Window {
     }
     internal void DrawWorld() {
         if(!WorldMarkers || !plugin.Ready || Service.ObjectTable.LocalPlayer is not {} player || Service.Condition[ConditionFlag.WatchingCutscene] || Service.Condition[ConditionFlag.OccupiedInCutSceneEvent] || Service.Condition[ConditionFlag.BetweenAreas] || Service.Condition[ConditionFlag.BetweenAreas51]) return;
-        var targets=plugin.Mobs.Where(m=>m.IsEliteMark && m.TerritoryType==Service.ClientState.TerritoryType && !plugin.Done(m)).Select(m=>m.MobHuntId).ToHashSet();
-        if(targets.Count==0) return;
-        foreach(var npc in Service.ObjectTable.OfType<IBattleNpc>()) {
-            if(npc.IsDead || !targets.Contains(npc.NameId)) continue;
+        foreach(var npc in plugin.DetectedElites()) {
             float distance=Vector3.Distance(player.Position,npc.Position);
             if(distance>MaxDistance || !Service.GameGui.WorldToScreen(npc.Position+new Vector3(0,3,0),out var screen)) continue;
             var label=$"[B] {npc.Name} · {distance:F0} м";

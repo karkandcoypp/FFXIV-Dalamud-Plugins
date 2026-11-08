@@ -1,3 +1,10 @@
+# 0.3.9
+
+- Removed the elite spawn dwell timer. At arrival within 45 yalms, a single shared detector checks loaded living contract elites; detected targets take priority, otherwise the next candidate is flagged immediately. Combat/casting pause speculative advancement; flight no longer forces waiting.
+- World overlays and route search now use the same detector. Exhaustion never completes the contract and detection continues afterward.
+- Regression coverage: elite completion (including a disappearing completed bill), immediate next-zone notice, loading transition, automatic first marker and continued following.
+- Local and CI verification do not replace in-game NPC streaming/teleport validation.
+
 # 0.3.8
 
 - The Map button previews elite spawns without teleporting or restarting tracking.

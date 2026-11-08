@@ -233,7 +233,7 @@ class Program {
   if(queuedShortcut.Presentation is not {Subject:"gnome",Metrics.Length:3} || !queuedShortcut.Presentation.Context.Contains("100"))throw new Exception("Shortcut controller lost structured target/cost presentation");checks++;
   if(confirmationQueue.Resolve(queuedShortcut.Key,false)!=null)throw new Exception("No approved a shortcut");checks++;
   sync.Invoke(controller,null);if(confirmationQueue.Activate(true)!=null)throw new Exception("Declined shortcut repeated");checks++;
-  var nextSession=new RouteSession();var fromMob=new MobHuntEntry{Name="done",TerritoryName="Kozama'uka",BillNumber=18,MobIndex=0,MobHuntId=1,TerritoryType=1188,NeededKills=1};
+  var nextSession=new RouteSession();var fromMob=new MobHuntEntry{Name="done elite",IsEliteMark=true,TerritoryName="Kozama'uka",BillNumber=18,MobIndex=0,MobHuntId=1,TerritoryType=1188,NeededKills=1};
   var nextMob=new MobHuntEntry{Name="mourner",TerritoryName="Yak T'el",BillNumber=18,MobIndex=1,MobHuntId=2,TerritoryType=1189,NeededKills=1};
   nextSession.Start(fromMob,new byte[]{18});nextSession.Tick(new[]{fromMob,nextMob},m=>m==fromMob,_=>true,1188);
   typeof(Plugin).GetField("Session",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,nextSession);
@@ -259,6 +259,23 @@ class Program {
   typeof(Plugin).GetField("completionHistory",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,yesterdayData);
   typeof(Plugin).GetField("BillStates",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new byte[]{14,15,16}.ToDictionary(i=>i,_=>completedState));
   if(((ContractProgress)progressMethod.Invoke(plugin,new object[]{Plugin.Boards[3],false})!).AllCompleted)throw new Exception("Raw retained counts resurrected an expired UI check");checks++;
+  // Exercise the shared production detector: live contract elite only, current zone, not completed.
+  var detectionTarget=new MobHuntEntry{MobHuntId=900001,BillNumber=21,MobIndex=0,TerritoryType=1188,NeededKills=1,IsEliteMark=true};
+  typeof(Plugin).GetField("Mobs",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new List<MobHuntEntry>{detectionTarget});
+  var detectionKills=new Dictionary<(byte,byte),int>();
+  typeof(Plugin).GetField("KillCounts",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,detectionKills);
+  uint detectedZone=1188;
+  Service.ClientState=Proxy<IClientState>((m,_)=>m.Name=="get_TerritoryType"?detectedZone:throw new Exception(m.Name));
+  var liveNpc=Proxy<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>((m,_)=>m.Name switch {"get_IsDead"=>false,"get_NameId"=>900001u,_=>throw new Exception(m.Name)});
+  var deadNpc=Proxy<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>((m,_)=>m.Name switch {"get_IsDead"=>true,"get_NameId"=>900001u,_=>throw new Exception(m.Name)});
+  var unrelatedNpc=Proxy<Dalamud.Game.ClientState.Objects.Types.IBattleNpc>((m,_)=>m.Name switch {"get_IsDead"=>false,"get_NameId"=>900002u,_=>throw new Exception(m.Name)});
+  var objects=new Dalamud.Game.ClientState.Objects.Types.IGameObject[]{liveNpc,deadNpc,unrelatedNpc};
+  Service.ObjectTable=Proxy<IObjectTable>((m,_)=>m.Name=="GetEnumerator"?objects.AsEnumerable().GetEnumerator():throw new Exception(m.Name));
+  var detect=typeof(Plugin).GetMethod("DetectedElites",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  object[] Detect()=>((System.Collections.IEnumerable)detect.Invoke(plugin,null)!).Cast<object>().ToArray();
+  if(Detect() is not [var only] || !ReferenceEquals(only,liveNpc))throw new Exception("Shared elite detector accepted dead or unrelated NPC");checks++;
+  detectedZone=1189;if(Detect().Length!=0)throw new Exception("Shared elite detector crossed zones");checks++;
+  detectedZone=1188;detectionKills[(21,0)]=1;if(Detect().Length!=0)throw new Exception("Shared detector retained a completed contract");checks++;
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
  }
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> handler) where T:class {
