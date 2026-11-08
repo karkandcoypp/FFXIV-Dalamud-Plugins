@@ -1,5 +1,6 @@
-# 0.3.7
+# 0.3.8
 
+- The Map button previews elite spawns without teleporting or restarting tracking.
 - Weekly B-rank targets join the numbered zone route after daily targets. An unfinished elite blocks the next-zone suggestion, including when its spawn data is missing.
 - Tracking an elite opens the in-game map and flags the nearest known spawn; no plugin map is opened. Each visited point waits 8 seconds within 45 yalms before advancing. Combat, casting and flight pause the absence timer.
 - A matching live, locally loaded NPC overrides the speculative point. Exhausting points does not mark the hunt complete; manual next point/restart remain available.

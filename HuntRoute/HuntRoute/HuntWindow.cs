@@ -121,9 +121,9 @@ public sealed class HuntWindow : Window {
         if(session.Phase==RoutePhase.NextZone && session.Suggested is {} next) {
             if(ImGui.Button("Телепорт: "+Fit(next.TerritoryName ?? "Следующая зона",Math.Max(120,ImGui.GetContentRegionAvail().X-150)))) plugin.Travel(next);
             HuntTheme.Hint("Перейти к следующей зоне. Телепорт запускается только по вашему нажатию; после прибытия метки переключаются автоматически.");
-        } else if(session.Phase==RoutePhase.Following) ImGui.TextDisabled("Метка сменится после выполнения цели.");
+        } else if(session.Phase==RoutePhase.Following) ImGui.TextDisabled(session.Target?.IsEliteMark==true?"Поиск элиты на игровой карте. Зона ещё не завершена.":"Метка сменится после выполнения цели.");
         else if(session.Phase==RoutePhase.WaitingForZone) ImGui.TextDisabled("Метка появится после прибытия в зону.");
-        else if(session.Phase==RoutePhase.Finished) ImGui.TextDisabled("Цели без координат и B-ранги ищутся отдельно.");
+        else if(session.Phase==RoutePhase.Finished) ImGui.TextDisabled("Доступные цели маршрута выполнены.");
         ImGui.EndChild(); ImGui.PopStyleVar(2); ImGui.PopStyleColor();
     }
     private void ResetCard(Board board,bool weekly,DateTimeOffset now,float height) {
@@ -190,7 +190,7 @@ public sealed class HuntWindow : Window {
                 ImGui.TableNextColumn(); ImGui.BeginDisabled(!known);
                 if(ImGui.Button(action)) plugin.Travel(m);
                 HuntTheme.Hint(here?"Вы уже в зоне: только метка и сопровождение.":"Телепорт к ближайшему открытому эфириту цели и сопровождение маршрута.");
-                ImGui.SameLine(); if(ImGui.Button("Карта")) { if(m.IsEliteMark) plugin.Travel(m); else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name); }
+                ImGui.SameLine(); if(ImGui.Button("Карта")) { if(m.IsEliteMark) { var points=EliteSpawns.For(m); if(points.Length>0) Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(m.TerritoryType,Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(m.MapId),points[0])); } else Location.CreateMapMarker(m.TerritoryType,m.MapId,m.MobHuntId,m.Name); }
                 ImGui.EndDisabled(); if(!known) HuntTheme.Hint("Координаты этой цели пока неизвестны."); ImGui.PopID();
             }
             ImGui.EndTable();
