@@ -162,6 +162,16 @@ static class JourneyRuntimeChecks {
   queue.Clear();Set(plugin,"loginDailyPeriod",ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()-86400);Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Key.StartsWith("pickup:")==true,"A new reset period remains eligible after session login proposal");
   queue.Clear();Set(plugin,"loginNoticeShown",false);Set(plugin,"Mobs",new List<MobHuntEntry>());Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,1,1,true)}});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
   Check(request?.Presentation?.ConfirmLabel=="Открыть"&&request.Presentation.Context=="Новых контрактов пока нет.","Completed day still gets login summary without claiming new contracts exist");
+  Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,1,1,true)},{5,new(true,false,0,1,false)}});
+  var oldBoardHistory=Get<CompletionHistory>(plugin,"History");var boardHistory=new CompletionHistory();
+  boardHistory.Observe(123,1,false,DateTimeOffset.UtcNow,new(true,true,1,1,false));
+  boardHistory.Observe(123,1,false,DateTimeOffset.UtcNow,new(true,false,1,1,true));
+  Set(plugin,"completionHistory",boardHistory);
+  var boardUi=new NativeHuntController(plugin);boardUi.Navigate(NativeHuntPage.Boards);
+  var coloredBoard=boardUi.Build().Buttons.Single(b=>b.Key=="board:Heavensward").Board!;
+  Check(coloredBoard.Daily is {Label:"выполнено",Color:{}}&&coloredBoard.Weekly is {Label:"можно взять",Color:{}}&&
+   coloredBoard.Daily.Color!=coloredBoard.Weekly.Color,"Board presents completed daily and available weekly status in separate colors");
+  Set(plugin,"completionHistory",oldBoardHistory);
   queue.Clear();Set(plugin,"loginNoticeShown",false);store.Settings.ResetNotifications=false;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Explicit notification opt-out remains respected");store.Settings.ResetNotifications=true;
   flow.Active=true;flow.Pauses=PauseReason.None;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"A started route defers the login popup until paused");flow.Pauses=PauseReason.User;Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request!=null,"Deferred login offer becomes available on manual pause");
   queue.Clear();Set(plugin,"character",124UL);Call(plugin,"LoadJourney");Set(plugin,"contractRevision",2L);Set(plugin,"BillStates",new Dictionary<byte,BillState>());Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Key.StartsWith("login:124:")==true,"Another character has its own login offer");queue.Clear();

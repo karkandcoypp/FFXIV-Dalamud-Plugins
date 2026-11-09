@@ -71,11 +71,22 @@ public sealed class NativeHuntController {
   buttons.Add(Button("targets","К списку целей","page",NativeHuntPage.Targets.ToString()));return new(goal.Name??"Цель",summary,buttons,goal.Icon,new(plugin.Kills(goal),goal.NeededKills));
  }
  private NativeHuntScreen BoardScreen(){
-  var buttons=Plugin.Boards.Select(b=>Button("board:"+b.Name,$"{b.Name} · день: {Progress(b,false)} · неделя: {Progress(b,true)}","board",b.Name,plugin.BoardReachable(b)&&(!OnlyNewBoards||plugin.CanPickup(b,false)||plugin.CanPickup(b,true)))).ToList();
+  var buttons=Plugin.Boards.Select(b=>{
+   var row=new NativeBoardRow(b.Name,Progress(b,false),Progress(b,true));
+   return Button("board:"+b.Name,row.Label,"board",b.Name,plugin.BoardReachable(b)&&(!OnlyNewBoards||plugin.CanPickup(b,false)||plugin.CanPickup(b,true))) with {Board=row};
+  }).ToList();
   buttons.Add(Button("boards-all",OnlyNewBoards?"Показать все доски":"Обновить статусы",OnlyNewBoards?"boards-all":"refresh"));
   var now=DateTimeOffset.UtcNow;var day=ResetClock.Next(now,false)-now;var week=ResetClock.Next(now,true)-now;return new("Доски охоты",$"Сброс дня через {(int)day.TotalHours} ч {day.Minutes} мин · недели через {(int)week.TotalDays} д {week.Hours} ч",buttons);
  }
- private string Progress(Board b,bool weekly){if(plugin.CompletionUncertain(b,weekly))return "история неизвестна";var p=plugin.CollectionProgress(b,weekly);return p.AllCompleted?"выполнено":p.Total==0?"не открыто":p.Taken>0?$"{p.Taken}/{p.Total} взято":plugin.CanPickup(b,weekly)?"можно взять":p.Completed>0?$"{p.Completed}/{p.Total} выполнено":"нет новых";}
+ private NativeBoardStatus Progress(Board b,bool weekly){
+  if(plugin.CompletionUncertain(b,weekly))return new("неизвестно");
+  var p=plugin.CollectionProgress(b,weekly);
+  if(p.AllCompleted)return new("выполнено",new(.50f,1,.64f,1));
+  if(p.Total==0)return new("не открыто");
+  if(p.Taken>0)return new($"{p.Taken}/{p.Total} взято",new(.62f,.84f,1,1));
+  if(plugin.CanPickup(b,weekly))return new("можно взять",new(1,.83f,.48f,1));
+  return new(p.Completed>0?$"{p.Completed}/{p.Total} готово":"нет новых");
+ }
  private NativeHuntScreen Settings(){
   var s=plugin.Settings;string On(bool v)=>v?"Вкл":"Выкл";
   return new("Настройки","",[

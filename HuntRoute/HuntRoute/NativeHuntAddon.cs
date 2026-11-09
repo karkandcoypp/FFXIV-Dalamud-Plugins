@@ -5,6 +5,7 @@ using System.Numerics;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit.BaseTypes;
 using KamiToolKit.Nodes;
+using Lumina.Text;
 namespace HuntRoute;
 
 internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Action<NativeHuntAction> execute,Action closed,Func<bool> modal,bool mini=false):NativeAddon {
@@ -62,6 +63,20 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   else execute(command);
   nextUpdate=0;
  }
+ private static void SetLabel(TextButtonNode button,NativeHuntButton spec){
+  if(spec.Board is not {} row){button.String=spec.Label;return;}
+  var builder=new SeStringBuilder();
+  void Status(NativeBoardStatus status){
+   if(status.Color is {} color)builder.PushColorRgba(color);
+   builder.Append(status.Label);
+   if(status.Color.HasValue)builder.PopColor();
+  }
+  builder.Append(row.Name+"\nДень: ");
+  Status(row.Daily);
+  builder.Append(" · Неделя: ");
+  Status(row.Weekly);
+  button.String=builder.ToReadOnlySeString();
+ }
  private void Refresh(AtkUnitBase* native){
   if(heading==null||summary==null||portrait==null||pageLabel==null||progressLabel==null||progressTrack==null||progressFill==null)return;
   // Do not steal focus from the map or another game window on passive updates.
@@ -104,7 +119,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    if(button.Position!=placement.Rect.Position)button.Position=placement.Rect.Position;
    if(button.Size!=placement.Rect.Size){button.Size=placement.Rect.Size;buttonText[slot]=null;}
    button.LabelNode.TextColor=spec.Emphasized?new(1,.85f,.55f,1):Vector4.One;
-   if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=16;button.String=spec.Label;if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=16;}buttonText[slot]=spec.Label;}
+   if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=16;SetLabel(button,spec);if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=16;}buttonText[slot]=spec.Label;}
    button.IsVisible=true;button.IsEnabled=spec.Enabled;
    keys[slot]=spec.Key;commands[slot]=spec.Action;items.Add(new(slot+1,placement.Row,placement.Column,spec.Key,spec.Enabled));
   }
