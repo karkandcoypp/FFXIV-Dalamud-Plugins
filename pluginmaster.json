@@ -139,7 +139,7 @@
     "Author": "Carcosa Lyuman",
     "Name": "Hunt Route",
     "InternalName": "HuntRoute",
-    "AssemblyVersion": "0.4.18.0",
+    "AssemblyVersion": "0.4.19.0",
     "Description": "Unified hunt-bill routes, instance-aware elite search, native travel confirmations, reset dashboard and paused per-character recovery. Based on HuntBuddy.",
     "ApplicableVersion": "any",
     "Tags": [
@@ -155,8 +155,8 @@
     "Punchline": "Efficient hunt bill routes and reset dashboard.",
     "AcceptsFeedback": true,
     "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.4.18/HuntRoute.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.4.18/HuntRoute.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.4.18/HuntRoute.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.4.19/HuntRoute.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.4.19/HuntRoute.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.4.19/HuntRoute.zip"
   }
 ]
