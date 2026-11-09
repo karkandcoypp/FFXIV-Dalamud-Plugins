@@ -37,9 +37,9 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  public const int ButtonCapacity=13;
  private const float Margin=16,Gap=8;
  public const float PortraitSize=76;
- public static float ContentWidth(bool mini)=>(mini?360:480)-2*Margin;
+ public static float ContentWidth(bool mini)=>(mini?340:420)-2*Margin;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
- private static bool IsSecondary(NativeHuntButton button)=>button.Key is "map" or "actions" or "targets" or "message";
+ private static bool IsSecondary(NativeHuntButton button)=>button.Key is "primary" or "map" or "actions" or "targets" or "message";
  public static string FitLabel(string value,int length=64)=>value.Length<=length?value:string.Concat(value.EnumerateRunes().Take(length-1).Select(r=>r.ToString()))+"…";
  public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false){
   float inner=ContentWidth(mini),width=inner+2*Margin,titleY=mini?40:78;
@@ -51,7 +51,9 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   float bodyY=summaryY+Math.Max(portrait?PortraitSize:0,summaryHeight+(screen.Progress!=null?33:0))+10;
   int page=mini?0:NativeHuntNavigation.ClampPage(requestedPage,screen.Buttons.Count);
   int pageCount=Math.Max(1,(screen.Buttons.Count+5)/6);
-  var visible=screen.Buttons.Skip(page*6).Take(mini?3:6).ToArray();var buttons=new List<NativeHuntPlacement>();
+  var visible=screen.Buttons.Skip(page*6).Take(mini?3:6).ToArray();
+  if(!mini&&view==NativeHuntPage.Hunt&&visible is [{Key:"primary"},{Key:"map"},{Key:"actions"},{Key:"targets"},..])
+   (visible[1],visible[2],visible[3])=(visible[3],visible[1],visible[2]);var buttons=new List<NativeHuntPlacement>();
   void Set(int slot,int row,int col,NativeHuntButton button,float x,float y,float w,float h)=>buttons.Add(new(slot,row,col,button with {Label=FitLabel(button.Label)},new(new(x,y),new(w,h))));
   NativeHuntButton Page(string key,string label,NativeHuntPage p)=>new(key,label,new("page",p.ToString()),Emphasized:key.StartsWith("tab:",StringComparison.Ordinal)&&p==(view switch {NativeHuntPage.Boards=>NativeHuntPage.Boards,NativeHuntPage.Settings or NativeHuntPage.Advanced or NativeHuntPage.Number=>NativeHuntPage.Settings,_=>NativeHuntPage.Hunt}));
   if(!mini){
@@ -64,10 +66,11 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   float bottom=bodyY;
   for(int i=0;i<visible.Length;i++){
    var button=visible[i];
-   bool pair=(mini||view==NativeHuntPage.Hunt)&&i+1<visible.Length&&IsSecondary(button)&&IsSecondary(visible[i+1]);
+   bool pair=(mini||view==NativeHuntPage.Hunt)&&(!mini||button.Key!="primary")&&i+1<visible.Length&&IsSecondary(button)&&IsSecondary(visible[i+1]);
    float h=button.Label.Length>54?54:button.Label.Contains('\n')||button.Label.Length>40?42:34;
    float half=(inner-Gap)/2;
-   Set(i+3,++rows,0,button,Margin,bottom,pair?half:inner,h);
+   float single=(mini||view==NativeHuntPage.Hunt)&&IsSecondary(button)?Math.Min(inner,200):inner;
+   Set(i+3,++rows,0,button,Margin,bottom,pair?half:single,h);
    if(pair){i++;Set(i+3,rows,1,visible[i],Margin+half+Gap,bottom,half,h);}
    bottom+=h+Gap;
   }

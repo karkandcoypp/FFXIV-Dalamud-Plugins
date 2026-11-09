@@ -330,9 +330,13 @@ Check(shortcutDialog.Destination=="Mord Souq" && shortcutDialog.Context.Contains
 Check(shortcutDialog.Metrics.Length==3 && shortcutDialog.Metrics[2].Highlight && shortcutDialog.Metrics[2].Value=="~15 с","Savings are a separate rounded estimate");
 foreach(var content in new[]{nextDialog,shortcutDialog,nextDialog with {Destination=new string('W',95),Subject=new string('Ж',120)},TravelDialogContent.Plain(new string('Я',180))}) {
  var layout=TravelDialogLayout.Build(content,MeasureDialog);
- Check(layout.Width==520 && layout.Height>200 && layout.ButtonsY+30<layout.Height-16,"Native dialog reserves visible buttons and margins");
+ Check(layout.Width==420 && layout.Height>200 && new[]{layout.Confirm,layout.Decline}.All(b=>b.Position.X>=16&&b.Position.X+b.Size.X<=layout.Width-16&&b.Position.Y+b.Size.Y<=layout.Height-12)&&layout.Confirm.Position.X+layout.Confirm.Size.X<layout.Decline.Position.X,"Native dialog reserves visible buttons and margins");
+ var viewport=new Vector2(640,360);var dialogSize=new Vector2(layout.Width,layout.Height);
+ float fitted=TravelDialogLayout.FitScale(dialogSize,viewport,2);
+ Check(dialogSize.X*fitted<=viewport.X-15&&dialogSize.Y*fitted<=viewport.Y-15,"Scaled confirmation fits inside a short viewport");
+ Check(TravelDialogLayout.FitScale(dialogSize,new(1920,1080),1)==1,"Confirmation keeps normal UI scale when it fits");
  Check(layout.Panels.Count==content.Metrics.Length+4,"Native background allocation matches shared layout");
- foreach(var text in layout.Texts)Check(text.Position.X>=16 && text.Position.Y>=32 && text.Position.X+text.Size.X<=layout.Width-16 && text.Position.Y+text.Size.Y<layout.ButtonsY,"Wrapped dialog text remains within content bounds");
+ foreach(var text in layout.Texts)Check(text.Position.X>=16 && text.Position.Y>=32 && text.Position.X+text.Size.X<=layout.Width-16 && text.Position.Y+text.Size.Y<layout.Confirm.Position.Y,"Wrapped dialog text remains within content bounds");
  foreach(var panel in layout.Panels)Check(panel.Size.X>0 && panel.Size.Y>0 && panel.Position.X+panel.Size.X<=layout.Width && panel.Position.Y+panel.Size.Y<=layout.Height,"Dialog panels fit the window");
 }
 try { TravelDialogLayout.Build(nextDialog,(_,_,_)=>float.NaN);throw new Exception("Invalid measurement accepted"); }catch(ArgumentException){checks++;}

@@ -37,13 +37,13 @@ public sealed class NativeHuntController {
    summary=target==null?status:$"{target.TerritoryName} · {(target.IsEliteMark?"Недельная цель":"Ежедневная цель")}\n{status}";
    string kind=plugin.Flow.Pauses!=PauseReason.None?"resume":plugin.Session.Phase==RoutePhase.AwaitingTravel?"planned":plugin.Session.Phase==RoutePhase.NextZone?"next":"pause";
    buttons.Add(Button("primary",kind is "planned" or "next"?"Телепортироваться":kind=="pause"?"Пауза":"Продолжить охоту",kind));
-   if(target!=null)buttons.Add(Button("map","Карта цели","map",JourneyFlow.Key(target)));
+   if(target!=null)buttons.Add(Button("map","Карта","map",JourneyFlow.Key(target)));
    buttons.Add(Button("actions","Маршрут","page",NativeHuntPage.Actions.ToString()));
   }else{
    int count=plugin.Mobs.Count(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m));summary=count>0?$"Незавершённых целей: {count}\nВыберите «Начать охоту» или верните отложенные цели.":"Нет взятых незавершённых целей.\nДоступность и выполнение — в разделе «Доски».";
    buttons.Add(remaining?Button("primary","Начать охоту","resume"):Button("primary","Доски охоты","page",NativeHuntPage.Boards.ToString()));
   }
-  if(!mini){buttons.Add(Button("targets","Список целей","page",NativeHuntPage.Targets.ToString()));if(feedback!=null)summary+="\n"+feedback;else if(plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
+  if(!mini){buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));if(feedback!=null)summary+="\n"+feedback;else if(plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
   return new(title,summary,buttons,target?.Icon??0,target==null?null:new(plugin.Kills(target),target.NeededKills));
  }
  private NativeHuntScreen Targets(){

@@ -3,14 +3,15 @@ static class NativeNavigationChecks {
  public static void Run(Action<bool,string> check){
   NativeNavItem[] items=[new(1,0,0,"hunt"),new(2,0,1,"boards"),new(3,0,2,"settings"),new(4,1,0,"primary"),new(5,2,0,"map"),new(10,7,0,"previous",false),new(11,7,1,"next"),new(12,8,0,"back"),new(13,8,1,"close")];
   var active=new NativeHuntScreen("Target","Zone",[
-   new("primary","Pause",new("pause"),Emphasized:true),new("map","Map",new("map")),new("actions","Route",new("page"))
+   new("primary","Pause",new("pause"),Emphasized:true),new("map","Map",new("map")),new("actions","Route",new("page")),new("targets","Targets",new("page"))
   ],123,new(1,3));
   foreach(bool mini in new[]{false,true}){
    var layout=NativeHuntLayout.Build(active,NativeHuntPage.Hunt,0,30,38,mini);
-   check(layout.Size.X==(mini?360:480)&&layout.Size.Y<(mini?290:340),"Active native menus fit the compact footprint");
+   check(layout.Size.X==(mini?340:420)&&layout.Size.Y<(mini?290:340),"Active native menus fit the compact footprint");
    var map=layout.Buttons.Single(b=>b.Button.Key=="map");
    var actions=layout.Buttons.Single(b=>b.Button.Key=="actions");
    var primary=layout.Buttons.Single(b=>b.Button.Key=="primary");
+   check(primary.Rect.Size.X<=200&&(mini||primary.Row==layout.Buttons.Single(b=>b.Button.Key=="targets").Row),"Primary action uses a compact button alongside the target list");
    check(map.Row==actions.Row&&map.Rect.Position.X+map.Rect.Size.X<actions.Rect.Position.X,"Secondary hunt actions fit side by side");
    check(layout.ProgressTrack.Position.Y+layout.ProgressTrack.Size.Y<primary.Rect.Position.Y,"Hunt progress does not overlap the primary action");
    var paired=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));

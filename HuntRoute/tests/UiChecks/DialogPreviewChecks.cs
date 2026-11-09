@@ -7,7 +7,7 @@ using HuntRoute;
 internal static class DialogPreviewChecks {
     internal static unsafe void Run(string directory) {
         var offer=new ShortcutOffer(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40);
-        foreach(var sample in new[]{("pickup",new TravelDialogContent("HUNT ROUTE · КОНТРАКТЫ","Доступны новые контракты","ДОСКА","Выберите дополнение","Ежедневные и недельный отдельно.","ПОСЛЕ ВЫБОРА","Подтверждение поездки","Маршрут сохранится.","Позже: действие остаётся в сводке.",[],"Выбрать дополнение")),("next",TravelDialogContent.Next("Kozama'uka","Yak T'el","mourner")),("shortcut",TravelDialogContent.Shortcut(offer,"Amh Araeng","gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
+        foreach(var sample in new[]{("pickup",new TravelDialogContent("HUNT ROUTE · КОНТРАКТЫ","Доступны новые контракты","ДОСКА","Выберите дополнение","Ежедневные и недельный отдельно.","ПОСЛЕ ВЫБОРА","Подтверждение поездки","Маршрут сохранится.","Позже: действие остаётся в сводке.",[],"Выбрать дополнение")),("board",new TravelDialogContent("HUNT ROUTE · ДОСКА","За новыми контрактами?","ГОРОД","Old Sharlayan","Old Sharlayan · 100 гил","КОНТРАКТЫ","Endwalker","После прибытия будет поставлена метка доски.","Текущий маршрут сохраняется.",[])),("plain",TravelDialogContent.Plain("Продолжить?")),("next",TravelDialogContent.Next("Kozama'uka","Yak T'el","mourner")),("shortcut",TravelDialogContent.Shortcut(offer,"Amh Araeng","gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
             ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(520,900);io.DeltaTime=1f/60;
             io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
@@ -24,10 +24,14 @@ internal static class DialogPreviewChecks {
                     ImGui.TextColored(text.Color,text.Text);ImGui.PopTextWrapPos();
                     if(ImGui.GetItemRectMax().Y>text.Position.Y+text.Size.Y+1)throw new Exception("Dialog text exceeds its measured block");
                 }
-                ImGui.SetWindowFontScale(14f/17);var yes=new Vector2(72,layout.ButtonsY);var no=new Vector2(268,layout.ButtonsY);
-                draw.AddRectFilled(yes,yes+new Vector2(180,30),ImGui.GetColorU32(new Vector4(.25f,.31f,.48f,1)),5);
-                draw.AddRectFilled(no,no+new Vector2(180,30),ImGui.GetColorU32(new Vector4(.16f,.19f,.27f,1)),5);
-                foreach(var button in new[]{(yes,sample.Item2.ConfirmLabel),(no,sample.Item2.DeclineLabel)}) { var size=ImGui.CalcTextSize(button.Item2);ImGui.SetCursorScreenPos(button.Item1+(new Vector2(180,30)-size)/2);ImGui.TextColored(TravelDialogLayout.White,button.Item2); }
+                ImGui.SetWindowFontScale(14f/17);
+                foreach(var (rect,label,primary) in new[]{(layout.Confirm,sample.Item2.ConfirmLabel,true),(layout.Decline,sample.Item2.DeclineLabel,false)}) {
+                    var size=ImGui.CalcTextSize(label);
+                    if(size.X>rect.Size.X-16||rect.Position.Y+rect.Size.Y>layout.Height-12||rect.Position.X+rect.Size.X>layout.Width-16)
+                        throw new Exception("Dialog button exceeds its bounds: "+label);
+                    draw.AddRectFilled(rect.Position,rect.Position+rect.Size,ImGui.GetColorU32(primary?new Vector4(.25f,.31f,.48f,1):new Vector4(.16f,.19f,.27f,1)),5);
+                    ImGui.SetCursorScreenPos(rect.Position+(rect.Size-size)/2);ImGui.TextColored(TravelDialogLayout.White,label);
+                }
                 ImGui.End();ImGui.PopStyleVar();ImGui.Render();
             }
             File.WriteAllBytes(Path.Combine(directory,"font-17.rgba"),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
