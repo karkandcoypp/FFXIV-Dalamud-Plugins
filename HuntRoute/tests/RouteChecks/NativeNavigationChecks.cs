@@ -8,6 +8,13 @@ static class NativeNavigationChecks {
   foreach(bool mini in new[]{false,true}){
    var layout=NativeHuntLayout.Build(active,NativeHuntPage.Hunt,0,30,38,mini);
    check(layout.Size.X==(mini?340:420)&&layout.Size.Y<(mini?290:340),"Active native menus fit the compact footprint");
+   foreach(var texture in new System.Numerics.Vector2[]{new(256,128),new(128,256),new(512,512)}){
+    var image=layout.Portrait.FitImage(texture);
+    var end=image.Position+image.Size;
+    check(image.Position.X>=layout.Portrait.Position.X&&image.Position.Y>=layout.Portrait.Position.Y&&
+      end.X<=layout.Portrait.Position.X+layout.Portrait.Size.X&&end.Y<=layout.Portrait.Position.Y+layout.Portrait.Size.Y&&
+      (mini||end.X<layout.Size.X&&end.Y<layout.Size.Y),"Native portrait fits its allocated box and stays inside the window");
+   }
    var map=layout.Buttons.Single(b=>b.Button.Key=="map");
    var actions=layout.Buttons.Single(b=>b.Button.Key=="actions");
    var primary=layout.Buttons.Single(b=>b.Button.Key=="primary");

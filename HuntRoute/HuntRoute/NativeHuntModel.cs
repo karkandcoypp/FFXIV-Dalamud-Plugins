@@ -31,7 +31,13 @@ public static class NativeHuntNavigation {
  public static int RestoreFocus(IReadOnlyList<NativeNavLink> links,string? key){int match=links.FirstOrDefault(n=>n.Key==key).Index;return match>0?match:links.Count==0?0:links[0].Index;}
 }
 
-public readonly record struct NativeHuntRect(Vector2 Position,Vector2 Size);
+public readonly record struct NativeHuntRect(Vector2 Position,Vector2 Size){
+ public NativeHuntRect FitImage(Vector2 texture){
+  if(!float.IsFinite(texture.X)||!float.IsFinite(texture.Y)||texture.X<=0||texture.Y<=0)return new(Position,Vector2.Zero);
+  var fitted=texture*Math.Min(Size.X/texture.X,Size.Y/texture.Y);
+  return new(Position+(Size-fitted)/2,fitted);
+ }
+}
 public sealed record NativeHuntPlacement(int Slot,int Row,int Column,NativeHuntButton Button,NativeHuntRect Rect);
 public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,NativeHuntRect Summary,NativeHuntRect Portrait,NativeHuntRect ProgressLabel,NativeHuntRect ProgressTrack,NativeHuntRect PageLabel,string PageText,IReadOnlyList<NativeHuntPlacement> Buttons){
  public const int ButtonCapacity=13;
@@ -45,7 +51,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false){
   float inner=ContentWidth(mini),width=inner+2*Margin,titleY=mini?40:78;
   titleHeight=float.IsFinite(titleHeight)?Math.Clamp(titleHeight,22,110):22;
-  summaryHeight=float.IsFinite(summaryHeight)?Math.Clamp(summaryHeight,17,190):17;
+  summaryHeight=string.IsNullOrEmpty(screen.Summary)?0:float.IsFinite(summaryHeight)?Math.Clamp(summaryHeight,17,190):17;
   float summaryY=titleY+titleHeight+4;bool portrait=!mini&&screen.Icon!=0;
   float textWidth=SummaryWidth(screen,mini);
   float progressY=summaryY+summaryHeight+4;

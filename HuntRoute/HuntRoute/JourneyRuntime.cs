@@ -193,7 +193,7 @@ public sealed partial class Plugin {
   bool onlyNew=PickupOpen;
   NativeDialogs.Offer(new("travel",$"board:{board.Name}:{quote}:{Session.RunId}","К доске охоты?",()=>Ready&&(!onlyNew||CanPickup(board,false)||CanPickup(board,true))&&(CurrentTerritory==board.Territory||Price(board.Aetheryte)<=quote),
    ()=>!TravelBusy,()=>{if(CurrentTerritory!=board.Territory&&Price(board.Aetheryte)>quote)return false;if(!Teleport(board.Aetheryte))return false;Flow.Pauses|=PauseReason.Board;Flow.Status="Поездка к доске. Маршрут сохранён.";pendingJourney=CurrentTerritory==board.Territory?null:new(CurrentTerritory,board.Territory,board.Map,Now,null,true);PlaceFlag(board.Territory,board.Map,MapCoordinates.ToWorld(board.Position,Service.DataManager.GetExcelSheet<Map>().GetRow(board.Map)));PickupOpen=false;SaveJourney(true);return true;},
-   new("HUNT ROUTE · ДОСКА",CurrentTerritory==board.Territory?"К доске без телепорта":"За новыми контрактами?","ГОРОД",city,$"{aetheryte} · {quote} гил","КОНТРАКТЫ",board.Name,"После прибытия будет поставлена метка доски.","Контракты вы берёте самостоятельно. Текущий маршрут сохраняется.",[])),true);
+   new("HUNT ROUTE · ДОСКА",CurrentTerritory==board.Territory?"К доске без телепорта":"За новыми контрактами?","ГОРОД",city,$"{aetheryte} · {quote} гил","КОНТРАКТЫ",board.Name,"После прибытия будет поставлена метка доски.","",[])),true);
  }
  private unsafe string ContextKey()=> ContextProvider?.Invoke() ?? $"{Service.ObjectTable.LocalPlayer?.CurrentWorld.RowId ?? 0}:{UIState.Instance()->PublicInstance.InstanceId}:{CurrentTerritory}:{CurrentMap}";
  private void ReconcileContext(){
@@ -286,11 +286,7 @@ public sealed partial class Plugin {
    ()=>Ready&&Settings.ResetNotifications&&LoginMode()==mode,
    ()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),
    ()=>{if(mode=="taken")ResumeJourney();else PickupOpen=mode=="pickup";Open();return true;},
-   new("HUNT ROUTE · ВХОД В ИГРУ",mode=="taken"?"Продолжить охоту?":mode=="pickup"?"Начать охоту?":"Сводка охоты",
-    "СОСТОЯНИЕ",mode=="taken"?"Есть незавершённые взятые контракты":mode=="pickup"?"Доступны новые контракты":"Новых доступных целей пока нет",
-    mode=="taken"?"Начните сопровождение по уже взятым контрактам.":mode=="pickup"?"Выберите дополнение и доску охоты.":"Посмотрите выполненные, отложенные цели и время следующего сброса.",
-    "ПОСЛЕ ПОДТВЕРЖДЕНИЯ",mode=="taken"?"Продолжение маршрута":"Открытие сводки",
-    "Любой телепорт требует отдельного подтверждения.","«Позже» уберёт предложение до следующего входа. Действия останутся в сводке.",[],mode=="taken"?"Продолжить охоту":mode=="pickup"?"Выбрать дополнение":"Открыть сводку"),
+   TravelDialogContent.Login(mode),
    ()=>{loginNoticeShown=true;var now=DateTimeOffset.UtcNow;loginDailyPeriod=ResetClock.Period(now,false).ToUnixTimeSeconds();loginWeeklyPeriod=ResetClock.Period(now,true).ToUnixTimeSeconds();if(mode=="pickup"){if(Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=loginDailyPeriod;if(Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=loginWeeklyPeriod;}SaveJourney(true);}));
  }
  private void CheckResetNotice(){
@@ -301,6 +297,6 @@ public sealed partial class Plugin {
   if(!d&&!w)return;
   if(Flow.Active&&Flow.Pauses==PauseReason.None){NoticeText="Доступны новые контракты — выберите доску в сводке.";return;}
   if(TravelBusy || pendingJourney!=null || Flow.Pauses.HasFlag(PauseReason.Marker))return;
-  NativeDialogs.Offer(new("pickup",$"pickup:{character}:{(d?daily:0)}:{(w?weekly:0)}","Доступны новые контракты",()=>Ready&&Settings.ResetNotifications&&(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false))||w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true))),()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),()=>{PickupOpen=true;Open();return true;},new("HUNT ROUTE · КОНТРАКТЫ","Доступны новые контракты","ДОСКА ОХОТЫ","Выберите дополнение","Ежедневные и недельные статусы показаны отдельно.","ПОСЛЕ ВЫБОРА","Подтверждение поездки","Контракты вы берёте самостоятельно.","Текущий маршрут сохранится. «Позже» оставит действие в сводке.",[],"Выбрать дополнение"),()=>{if(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=daily;if(w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=weekly;SaveJourney(true);}));
+  NativeDialogs.Offer(new("pickup",$"pickup:{character}:{(d?daily:0)}:{(w?weekly:0)}","Доступны новые контракты",()=>Ready&&Settings.ResetNotifications&&(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false))||w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true))),()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),()=>{PickupOpen=true;Open();return true;},TravelDialogContent.Pickup(),()=>{if(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=daily;if(w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=weekly;SaveJourney(true);}));
  }
 }

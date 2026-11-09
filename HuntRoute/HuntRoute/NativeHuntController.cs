@@ -40,7 +40,7 @@ public sealed class NativeHuntController {
    if(target!=null)buttons.Add(Button("map","Карта","map",JourneyFlow.Key(target)));
    buttons.Add(Button("actions","Маршрут","page",NativeHuntPage.Actions.ToString()));
   }else{
-   int count=plugin.Mobs.Count(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m));summary=count>0?$"Незавершённых целей: {count}\nВыберите «Начать охоту» или верните отложенные цели.":"Нет взятых незавершённых целей.\nДоступность и выполнение — в разделе «Доски».";
+   int count=plugin.Mobs.Count(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m));summary=count>0?$"Незавершённых целей: {count}":"Нет незавершённых целей.";
    buttons.Add(remaining?Button("primary","Начать охоту","resume"):Button("primary","Доски охоты","page",NativeHuntPage.Boards.ToString()));
   }
   if(!mini){buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));if(feedback!=null)summary+="\n"+feedback;else if(plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
@@ -52,7 +52,7 @@ public sealed class NativeHuntController {
   if(!plugin.Flow.Active&&goals.Any(m=>!plugin.Done(m)&&!plugin.Flow.Excluded(m)))buttons.Add(Button("start","Начать охоту","resume"));
   if(plugin.Flow.Active&&plugin.Session.Target!=null)buttons.Add(Button("focus","К текущей цели","focus"));
   foreach(var goal in goals)buttons.Add(Button("goal:"+JourneyFlow.Key(goal),$"{goal.Name}"+(goal.IsEliteMark?" [B]":"")+$"\n{goal.TerritoryName} · {plugin.Kills(goal)}/{goal.NeededKills}"+(plugin.Flow.Excluded(goal)?" · отложено":""),"target",JourneyFlow.Key(goal)));
-  return new("Цели маршрута",$"Целей в списке: {goals.Length}. Выберите цель для карты, портрета и сопровождения.",buttons);
+  return new("Цели маршрута",$"Целей: {goals.Length}",buttons);
  }
  private bool MatchesExpansion(MobHuntEntry m)=>expansion==""||Plugin.Boards.Any(b=>b.Name==expansion&&(b.Daily.Contains(m.BillNumber)||b.Weekly==m.BillNumber));
  private NativeHuntScreen Filters()=>new("Фильтры целей","Фильтры меняют только список, не маршрут.",[
@@ -73,12 +73,12 @@ public sealed class NativeHuntController {
  private NativeHuntScreen BoardScreen(){
   var buttons=Plugin.Boards.Select(b=>Button("board:"+b.Name,$"{b.Name} · день: {Progress(b,false)} · неделя: {Progress(b,true)}","board",b.Name,plugin.BoardReachable(b)&&(!OnlyNewBoards||plugin.CanPickup(b,false)||plugin.CanPickup(b,true)))).ToList();
   buttons.Add(Button("boards-all",OnlyNewBoards?"Показать все доски":"Обновить статусы",OnlyNewBoards?"boards-all":"refresh"));
-  var now=DateTimeOffset.UtcNow;var day=ResetClock.Next(now,false)-now;var week=ResetClock.Next(now,true)-now;return new("Доски охоты",$"Выберите дополнение. Поездка требует подтверждения.\nСброс дня через {(int)day.TotalHours} ч {day.Minutes} мин · недели через {(int)week.TotalDays} д {week.Hours} ч",buttons);
+  var now=DateTimeOffset.UtcNow;var day=ResetClock.Next(now,false)-now;var week=ResetClock.Next(now,true)-now;return new("Доски охоты",$"Сброс дня через {(int)day.TotalHours} ч {day.Minutes} мин · недели через {(int)week.TotalDays} д {week.Hours} ч",buttons);
  }
  private string Progress(Board b,bool weekly){if(plugin.CompletionUncertain(b,weekly))return "история неизвестна";var p=plugin.CollectionProgress(b,weekly);return p.AllCompleted?"выполнено":p.Total==0?"не открыто":p.Taken>0?$"{p.Taken}/{p.Total} взято":plugin.CanPickup(b,weekly)?"можно взять":p.Completed>0?$"{p.Completed}/{p.Total} выполнено":"нет новых";}
  private NativeHuntScreen Settings(){
   var s=plugin.Settings;string On(bool v)=>v?"Вкл":"Выкл";
-  return new("Настройки","Выберите пункт для переключения. Дополнительные параметры — на следующей странице.",[
+  return new("Настройки","",[
    Button("mini",$"Минипанель: {On(s.Mini)}","toggle","mini",!plugin.PersistenceBlocked),Button("reset",$"Охота при входе и сбросе: {On(s.ResetNotifications)}","toggle","reset",!plugin.PersistenceBlocked),Button("elite",$"Подсветка элиты: {On(s.WorldMarkers)}","toggle","elite",!plugin.PersistenceBlocked),Button("ordinary",$"Подсветка обычных целей: {On(s.OrdinaryWorldMarkers)}","toggle","ordinary",!plugin.PersistenceBlocked),
    Button("elite-sound",$"Звук элиты: {On(s.EliteSound)}","toggle","elite-sound",!plugin.PersistenceBlocked),Button("next-sound",$"Звук следующей зоны: {On(s.NextZoneSound)}","toggle","next-sound",!plugin.PersistenceBlocked),Button("advanced","Дальности, телепорты и обслуживание","page",NativeHuntPage.Advanced.ToString())]);
  }
@@ -86,10 +86,10 @@ public sealed class NativeHuntController {
   var s=plugin.Settings;var buttons=new List<NativeHuntButton>{Button("shortcuts",$"Сокращение перелётов: {(s.Shortcuts?"Вкл":"Выкл")}","toggle","shortcuts",!plugin.PersistenceBlocked)};
   foreach(string key in new[]{"elite-distance","ordinary-distance","gil","seconds","percent"}){var (label,value)=NumberValue(key);buttons.Add(Button("number:"+key,$"{label}: {value}","edit-number",key,!plugin.PersistenceBlocked));}
   buttons.Add(Button("refresh","Обновить данные","refresh"));buttons.Add(Button("retry-save","Повторить сохранение","retry-save"));buttons.Add(Button("export","Сохранить диагностику локально","export"));buttons.Add(Button("classic","Резервное окно мыши","classic"));
-  return new("Дополнительные параметры",feedback??"Выберите значение для настройки. Лимит гил 0 — только бесплатные телепорты.",buttons);
+  return new("Дополнительные параметры",feedback??"Лимит 0 гил разрешает только бесплатные телепорты.",buttons);
  }
  private (string Label,string Value) NumberValue(string key){var s=plugin.Settings;return key switch{"elite-distance"=>("Дальность элиты",s.WorldDistance+" м"),"ordinary-distance"=>("Дальность обычных целей",s.OrdinaryWorldDistance+" м"),"gil"=>("Лимит гил",s.MaxGil.ToString()),"seconds"=>("Экономия времени",$"{s.MinSeconds:F1} с"),"percent"=>("Экономия пути",s.MinPercent+" %"),_=>("Параметр","")};}
- private NativeHuntScreen Number(){var (label,value)=NumberValue(numberKey);return new(label,$"Текущее значение: {value}\nИзменения сохраняются сразу.",new[]{-50,-10,-1,1,10,50}.Select(d=>Button("step:"+d,(d<0?"Уменьшить на ":"Увеличить на ")+(numberKey=="seconds"?$"{Math.Abs(d)/10f:F1} с":Math.Abs(d).ToString()),"step",numberKey,!plugin.PersistenceBlocked,d)).ToArray());}
+ private NativeHuntScreen Number(){var (label,value)=NumberValue(numberKey);return new(label,$"{value}",new[]{-50,-10,-1,1,10,50}.Select(d=>Button("step:"+d,(d<0?"Уменьшить на ":"Увеличить на ")+(numberKey=="seconds"?$"{Math.Abs(d)/10f:F1} с":Math.Abs(d).ToString()),"step",numberKey,!plugin.PersistenceBlocked,d)).ToArray());}
  private NativeHuntScreen Actions(){
   var buttons=new List<NativeHuntButton>();
   if(plugin.Flow.Active){buttons.Add(Button("resume","Продолжить / вернуть метку","resume"));buttons.Add(Button("pause","Пауза маршрута","pause"));buttons.Add(Button("stop","Остановить маршрут","stop"));}

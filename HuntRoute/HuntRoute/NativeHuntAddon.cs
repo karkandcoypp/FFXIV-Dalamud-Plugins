@@ -34,7 +34,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(mini)native->DisableFocusOnShow=true;
   heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route",TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(heading);
   summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=16,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(summary);
-  portrait=new IconImageNode{IsVisible=false};AddNode(portrait);
+  portrait=new IconImageNode{FitTexture=true,IsVisible=false};AddNode(portrait);
   progressLabel=new TextNode{FontSize=NativeHuntLayout.BodyFont,TextColor=new(.68f,.88f,.80f,1)};AddNode(progressLabel);
   progressTrack=new ColorImageNode{Color=new(.24f,.27f,.28f,1)};AddNode(progressTrack);
   progressFill=new ColorImageNode{Color=new(.38f,.76f,.64f,1)};AddNode(progressFill);
@@ -86,10 +86,15 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    progressTrack.Size=layout.ProgressTrack.Size;
    progressFill.Size=new(layout.ProgressTrack.Size.X*progress.Fraction,layout.ProgressTrack.Size.Y);
   }
-  portrait.Position=layout.Portrait.Position;
   if(hasIcon&&icon!=screen.Icon){try{portrait.IconId=screen.Icon;icon=screen.Icon;}catch(Exception e){icon=screen.Icon;Service.PluginLog.Debug(e,"Портрет нативной цели недоступен");hasIcon=false;}}
-  portrait.IsVisible=hasIcon&&portrait.IsTextureReady;
-  if(portrait.IsVisible){var texture=portrait.ActualTextureSize;if(texture.X>0&&texture.Y>0){portrait.TextureSize=texture;portrait.Size=texture*Math.Min(layout.Portrait.Size.X/texture.X,layout.Portrait.Size.Y/texture.Y);}}
+  var texture=hasIcon&&portrait.IsTextureReady?portrait.ActualTextureSize:Vector2.Zero;
+  var image=layout.Portrait.FitImage(texture);
+  portrait.IsVisible=image.Size.X>0&&image.Size.Y>0;
+  if(portrait.IsVisible){
+   portrait.TextureSize=texture;
+   portrait.Position=image.Position;
+   portrait.Size=image.Size;
+  }
   pageLabel.IsVisible=layout.PageText.Length>0;pageLabel.Position=layout.PageLabel.Position;pageLabel.String=layout.PageText;
   string identity=$"{controller.Page}:{string.Join('|',layout.Buttons.Select(b=>b.Button.Key))}";
   bool changed=screenIdentity!=identity;screenIdentity=identity;

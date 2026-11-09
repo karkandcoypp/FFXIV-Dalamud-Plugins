@@ -80,7 +80,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         }
         // Backgrounds are attached first so they cannot cover text or interactive buttons.
         var backgrounds=new List<ColorImageNode>();
-        for(int i=0;i<content.Metrics.Length+4;i++) { var panel=new ColorImageNode();backgrounds.Add(panel);AddNode(panel); }
+        for(int i=0;i<content.Metrics.Length+(content.HasSubject?4:3);i++) { var panel=new ColorImageNode();backgrounds.Add(panel);AddNode(panel); }
         var textNodes=new List<TextNode>();
         var layout=TravelDialogLayout.Build(content,(text,width,font)=> {
             var node=new TextNode { Size=new Vector2(width,4096),FontSize=font,LineSpacing=font+3,

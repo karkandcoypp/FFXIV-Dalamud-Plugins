@@ -7,6 +7,15 @@ public sealed record DialogMetric(string Label,string Value,bool Highlight=false
 public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null) {
     public string ConfirmLabel => ActionLabel ?? "Телепорт";
     public string DeclineLabel => "Позже";
+    public static TravelDialogContent Login(string mode) => mode switch {
+        "taken"=>Notice("Продолжить охоту?","Продолжить"),
+        "pickup"=>Pickup(),
+        _=>Notice("Открыть сводку охоты?","Открыть","Новых контрактов пока нет.")
+    };
+    public static TravelDialogContent Pickup() => Notice("Доступны новые контракты","К доскам");
+    private static TravelDialogContent Notice(string title,string action,string context="") =>
+        new("HUNT ROUTE",title,"","",context,"","","","",[],action);
+    public bool HasSubject => Subject.Length>0 || Detail.Length>0;
     public static TravelDialogContent Next(string from,string zone,string target) => new(
         "СЛЕДУЮЩАЯ ЗОНА","Продолжить охоту?","КУДА",zone,
         "Завершены цели: "+from,"ПЕРВАЯ ЦЕЛЬ",target,"Метка появится после прибытия.",
@@ -45,11 +54,13 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             y+=Text(destination,left,y,inner,14,White)+2;
         }
         if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,left,y,inner,12,Mint)+6;
-        float cardTop=y;y+=8;
-        string subject=string.IsNullOrEmpty(content.SubjectLabel)?content.Subject:$"{content.SubjectLabel} · {content.Subject}";
-        y+=Text(subject,left+10,y,inner-20,13,White);
-        if(!string.IsNullOrEmpty(content.Detail)) y+=4+Text(content.Detail,left+10,y+4,inner-20,12,Muted);
-        y+=8;panels.Add(new(new(left,cardTop),new(inner,y-cardTop),new(.10f,.125f,.18f,1)));y+=8;
+        if(content.HasSubject) {
+            float cardTop=y;y+=8;
+            string subject=string.IsNullOrEmpty(content.SubjectLabel)?content.Subject:$"{content.SubjectLabel} · {content.Subject}";
+            y+=Text(subject,left+10,y,inner-20,13,White);
+            if(!string.IsNullOrEmpty(content.Detail)) y+=4+Text(content.Detail,left+10,y+4,inner-20,12,Muted);
+            y+=8;panels.Add(new(new(left,cardTop),new(inner,y-cardTop),new(.10f,.125f,.18f,1)));y+=8;
+        }
         if(content.Metrics.Length>0) {
             float cardWidth=(inner-(content.Metrics.Length-1)*8)/content.Metrics.Length,rowTop=y,rowHeight=0;
             for(int i=0;i<content.Metrics.Length;i++) {
