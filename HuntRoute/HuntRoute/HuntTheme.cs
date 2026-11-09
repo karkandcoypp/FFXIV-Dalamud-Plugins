@@ -11,7 +11,7 @@ internal static class HuntTheme {
     internal static readonly Vector4 Selected=new(.17f,.23f,.25f,1);
     internal static readonly Vector4 Gold=new(.95f,.77f,.46f,1);
     private static readonly (ImGuiCol Slot,Vector4 Color)[] Colors=[
-        (ImGuiCol.WindowBg,new(.045f,.055f,.065f,1)),(ImGuiCol.ChildBg,Surface),
+        (ImGuiCol.ChildBg,Surface),
         (ImGuiCol.Text,new(.91f,.94f,.99f,1)),(ImGuiCol.TextDisabled,Muted),
         (ImGuiCol.Border,new(.16f,.19f,.21f,1)),(ImGuiCol.Separator,new(.16f,.19f,.21f,1)),
         (ImGuiCol.Button,new(.13f,.17f,.19f,1)),(ImGuiCol.ButtonHovered,new(.20f,.26f,.28f,1)),(ImGuiCol.ButtonActive,new(.24f,.32f,.34f,1)),
@@ -23,7 +23,6 @@ internal static class HuntTheme {
         (ImGuiCol.TableRowBg,new(.08f,.095f,.135f,1)),(ImGuiCol.TableRowBgAlt,new(.10f,.12f,.17f,1))
     ];
     internal static void Push() {
-        ImGui.SetNextWindowBgAlpha(1);
         foreach(var (slot,color) in Colors) ImGui.PushStyleColor(slot,color);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,new Vector2(16,14));
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding,new Vector2(9,5));
