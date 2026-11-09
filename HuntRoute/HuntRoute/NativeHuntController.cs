@@ -79,7 +79,7 @@ public sealed class NativeHuntController {
    return Button("board:"+b.Name,row.Label,"board",b.Name,plugin.BoardReachable(b)&&(!OnlyNewBoards||plugin.CanPickup(b,false)||plugin.CanPickup(b,true))) with {Board=row};
   }).ToList();
   buttons.Add(Button("boards-all",OnlyNewBoards?"Показать все доски":"Обновить статусы",OnlyNewBoards?"boards-all":"refresh"));
-  var now=DateTimeOffset.UtcNow;var day=ResetClock.Next(now,false)-now;var week=ResetClock.Next(now,true)-now;var weekly=week.Days>0?$"{week.Days} д {week.Hours} ч":$"{week.Hours} ч {week.Minutes} мин"; return new("Доски охоты",$"Сброс · день {(int)day.TotalHours} ч {day.Minutes} мин · неделя {weekly}",buttons);
+  var now=DateTimeOffset.UtcNow;var day=ResetClock.Next(now,false)-now;var week=ResetClock.Next(now,true)-now;var weekly=week.Days>0?$"{week.Days} д {week.Hours} ч":$"{week.Hours} ч {week.Minutes} мин"; return new("Доски охоты",$"Ежедневный сброс через {(int)day.TotalHours} ч {day.Minutes} мин\nЕженедельный сброс через {weekly}",buttons);
  }
  private NativeBoardStatus Progress(Board b,bool weekly){
   if(plugin.CompletionUncertain(b,weekly))return new("неизвестно");

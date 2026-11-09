@@ -10,7 +10,8 @@ public sealed record NativeHuntAction(string Kind,string Argument="",int Delta=0
 public sealed record NativeHuntButton(string Key,string Label,NativeHuntAction Action,bool Enabled=true,bool Emphasized=false,NativeBoardRow? Board=null,Vector4? LabelColor=null);
 public sealed record NativeBoardStatus(string Label,Vector4? Color=null);
 public sealed record NativeBoardRow(string Name,NativeBoardStatus Daily,NativeBoardStatus Weekly){
- public string Label=>$"{Name}\nДень: {Daily.Label} · Неделя: {Weekly.Label}";
+ public const string DailyPrefix="Ежедневные: ", WeeklyPrefix="Еженедельный: ";
+ public string Label=>$"{Name}\n{DailyPrefix}{Daily.Label}\n{WeeklyPrefix}{Weekly.Label}";
 }
 public sealed record NativeHuntScreen(string Title,string Summary,IReadOnlyList<NativeHuntButton> Buttons,uint Icon=0,NativeHuntProgress? Progress=null,Vector4? SummaryColor=null);
 public static class NativeHuntColors {
@@ -82,7 +83,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   for(int i=0;i<visible.Length;i++){
    var button=visible[i];
    bool pair=(mini||view==NativeHuntPage.Hunt)&&(!mini||button.Key!="primary")&&i+1<visible.Length&&IsSecondary(button)&&IsSecondary(visible[i+1]);
-   float h=button.Board!=null?44:button.Label.Length>54?56:button.Label.Contains('\n')||button.Label.Length>40?44:ActionHeight;
+   float h=button.Board!=null?64:button.Label.Length>54?56:button.Label.Contains('\n')||button.Label.Length>40?44:ActionHeight;
    float CompactWidth(NativeHuntButton item)=>item.Label.Length>13?LongActionWidth:ActionWidth;
    float first=button.Board!=null?Math.Min(inner,336)
     :((mini||view==NativeHuntPage.Hunt)&&IsSecondary(button))||button.Key=="boards-all"?CompactWidth(button):inner;

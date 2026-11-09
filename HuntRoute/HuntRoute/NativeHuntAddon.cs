@@ -71,9 +71,9 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    builder.Append(status.Label);
    if(status.Color.HasValue)builder.PopColor();
   }
-  builder.Append(row.Name+"\nДень: ");
+  builder.Append(row.Name+"\n"+NativeBoardRow.DailyPrefix);
   Status(row.Daily);
-  builder.Append(" · Неделя: ");
+  builder.Append("\n"+NativeBoardRow.WeeklyPrefix);
   Status(row.Weekly);
   button.String=builder.ToReadOnlySeString();
  }

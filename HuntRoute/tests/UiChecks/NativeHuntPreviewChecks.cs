@@ -46,13 +46,17 @@ internal static class NativeHuntPreviewChecks {
      if(entry.Button.Board is {} row){
       Text(row.Name,new(r.Position+new Vector2(16,4),new(r.Size.X-32,18)),font,Vector4.One);
       ImGui.SetWindowFontScale(font/17f);
-      float x=r.Position.X+16;
-      foreach(var (part,color) in new[]{("День: ",Vector4.One),(row.Daily.Label,row.Daily.Color??Vector4.One),(" · Неделя: ",Vector4.One),(row.Weekly.Label,row.Weekly.Color??Vector4.One)}){
-       float partWidth=ImGui.CalcTextSize(part).X;
-       Text(part,new(new(x,r.Position.Y+21),new(partWidth+2,20)),font,color);
-       x+=partWidth;
+      void StatusLine(string prefix,NativeBoardStatus status,float y){
+       float x=r.Position.X+16;
+       float prefixWidth=ImGui.CalcTextSize(prefix).X;
+       float statusWidth=ImGui.CalcTextSize(status.Label).X;
+       if(x+prefixWidth+statusWidth>r.Position.X+r.Size.X-16||y+18>r.Position.Y+r.Size.Y-4)
+        throw new Exception("Board status line exceeds its button");
+       Text(prefix,new(new(x,y),new(prefixWidth+2,18)),font,Vector4.One);
+       Text(status.Label,new(new(x+prefixWidth,y),new(statusWidth+2,18)),font,status.Color??Vector4.One);
       }
-      if(x>r.Position.X+r.Size.X-8)throw new Exception("Board status line exceeds its button");
+      StatusLine(NativeBoardRow.DailyPrefix,row.Daily,r.Position.Y+22);
+      StatusLine(NativeBoardRow.WeeklyPrefix,row.Weekly,r.Position.Y+40);
       continue;
      }
      ImGui.SetWindowFontScale(font/17f);
