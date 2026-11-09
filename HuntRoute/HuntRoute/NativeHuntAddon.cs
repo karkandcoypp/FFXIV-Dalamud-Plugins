@@ -17,7 +17,8 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  private string?[] keys=new string?[NativeHuntLayout.ButtonCapacity];
  private NativeHuntAction?[] commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];
  private TextNode? heading,summary,pageLabel,progressLabel;
- private ColorImageNode? progressTrack,progressFill,tableFocus;
+ private ColorImageNode? progressTrack,progressFill;
+ private NativeFocusOutline? focusOutline;
  private readonly TextNode?[] tableCells=new TextNode?[NativeHuntLayout.ButtonCapacity*3];
  private IconImageNode? portrait;
  private IReadOnlyList<NativeNavLink> links=[];
@@ -45,7 +46,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   progressTrack=new ColorImageNode{Color=new(.24f,.27f,.28f,1)};AddNode(progressTrack);
   progressFill=new ColorImageNode{Color=new(.38f,.76f,.64f,1)};AddNode(progressFill);
   pageLabel=new TextNode{Size=new(240,24),FontSize=NativeHuntLayout.BodyFont};AddNode(pageLabel);
-  tableFocus=new ColorImageNode{Color=new(.36f,.52f,.72f,.35f),IsVisible=false};AddNode(tableFocus);
+
   for(int i=0;i<buttons.Length;i++){
    int slot=i;var button=new TextButtonNode{NavIndex=i+1,OnClick=()=>Clicked(slot)};
    button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.LabelNode.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);
@@ -59,6 +60,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    var cell=new TextNode{FontSize=NativeHuntLayout.ButtonFont,IsVisible=false};
    cell.AddTextFlags(TextFlags.Ellipsis);tableCells[i]=cell;AddNode(cell);
   }
+  focusOutline=new NativeFocusOutline(node=>AddNode(node));
   screenIdentity=null;keys=new string?[NativeHuntLayout.ButtonCapacity];commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];nextUpdate=0;focusRequested=!mini;focusFirstBody=false;icon=0;titleText=summaryText=null;Array.Clear(buttonText);
   Refresh(native);
  }
@@ -68,7 +70,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(focusRequested&&IsOpen&&!modal()){int index=NativeHuntNavigation.RestoreFocus(links,focusedKey);if(index>0){if(checks[index-1] is {IsVisible:true} check)check.SetFocus();else buttons[index-1]?.SetFocus();}focusRequested=false;}
  }
  protected override void OnHide(AtkUnitBase* native)=>closed();
- protected override void OnFinalize(AtkUnitBase* native){Array.Clear(buttons);Array.Clear(checks);Array.Clear(tableCells);tableFocus=null;heading=null;summary=null;portrait=null;pageLabel=progressLabel=null;progressTrack=progressFill=null;links=[];}
+ protected override void OnFinalize(AtkUnitBase* native){Array.Clear(buttons);Array.Clear(checks);Array.Clear(tableCells);focusOutline=null;heading=null;summary=null;portrait=null;pageLabel=progressLabel=null;progressTrack=progressFill=null;links=[];}
  private void Clicked(int slot){
   if(modal()||slot<0||slot>=buttons.Length||!(checks[slot] is {IsVisible:true} check?check.IsEnabled:buttons[slot] is {IsVisible:true,IsEnabled:true})||commands[slot] is not {} command)return;
   focusedKey=keys[slot];
@@ -87,11 +89,12 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   string title=NativeHuntLayout.FitLabel(screen.Title,110),description=NativeHuntLayout.FitLabel(screen.Summary,420);
   if(titleText!=title){heading.String=title;titleText=title;}
   if(summaryText!=description){summary.String=description;summaryText=description;}
+  summary.FontSize=NativeHuntLayout.SummaryFont(controller.Page,mini);
+  summary.LineSpacing=summary.FontSize+3;
   heading.Size=new(inner,110);summary.Size=new(NativeHuntLayout.SummaryWidth(screen,mini),200);
   var layout=NativeHuntLayout.Build(screen,controller.Page,controller.Offset,heading.GetTextDrawSize(considerScale:false).Y,summary.GetTextDrawSize(considerScale:false).Y,mini);
   heading.TextColor=screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One;
   summary.TextColor=screen.SummaryColor??NativeHuntColors.Muted;
-  heading.AlignmentType=!mini&&controller.Page==NativeHuntPage.Settings?AlignmentType.Center:AlignmentType.Left;
   heading.Position=layout.Heading.Position;heading.Size=layout.Heading.Size;
   summary.Position=layout.Summary.Position;summary.Size=layout.Summary.Size;
   var progress=screen.Progress;
@@ -137,6 +140,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
     if(button.Position!=placement.Rect.Position)button.Position=placement.Rect.Position;
     if(button.Size!=placement.Rect.Size){button.Size=placement.Rect.Size;buttonText[slot]=null;}
     button.LabelNode.X=8;button.LabelNode.Width=button.Width-16;
+    button.BackgroundNode.Color=spec.Key=="primary"?NativeHuntColors.PrimarySurface:Vector4.One;
     button.LabelNode.TextColor=spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One);
     if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.String=spec.Board!=null||spec.Goal!=null?"":spec.Label;if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=18;}buttonText[slot]=spec.Label;}
     button.IsVisible=true;button.IsEnabled=spec.Enabled;
@@ -151,18 +155,40 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    node.IsVisible=i<layout.TableText.Count;
    if(!node.IsVisible)continue;
    var cell=layout.TableText[i];
-   node.Position=cell.Rect.Position;node.Size=cell.Rect.Size;node.TextColor=cell.Color;
+   node.Position=cell.Rect.Position;node.Size=cell.Rect.Size;node.TextColor=cell.Color;node.FontSize=cell.Font;
    if(node.String.ToString()!=cell.Label)node.String=cell.Label;
   }
-  var focusedRow=layout.Buttons.FirstOrDefault(p=>(p.Button.Board!=null||p.Button.Goal!=null)&&IsFocused(Control(p.Slot),global));
-  if(tableFocus!=null){
-   tableFocus.IsVisible=focusedRow!=null;
-   if(focusedRow!=null){tableFocus.Position=focusedRow.Rect.Position;tableFocus.Size=focusedRow.Rect.Size;}
-  }
+  var focused=layout.Buttons.FirstOrDefault(p=>p.Button.Enabled&&IsFocused(Control(p.Slot),global));
+  focusOutline?.Show(focused?.Rect);
   links=NativeHuntNavigation.Build(items);foreach(var link in links){var b=Control(link.Index-1)!;b.NavIndex=link.Index;b.NavUp=link.Up;b.NavDown=link.Down;b.NavLeft=link.Left;b.NavRight=link.Right;}
   if(focusedKey==null&&controller.Page==NativeHuntPage.Hunt&&links.Any(n=>n.Key=="primary"))focusedKey="primary";
   if(focusFirstBody){focusedKey=items.FirstOrDefault(n=>n.Row is >0 and <=6&&n.Enabled).Key;focusFirstBody=false;}
   if(ownsFocus&&(changed||links.All(n=>n.Key!=focusedKey)))focusRequested=true;
   if(Size!=layout.Size)SetWindowSize(layout.Size);
+ }
+}
+
+
+// Shared border for native controls. It leaves the control's surface and text visible.
+internal sealed class NativeFocusOutline {
+ private readonly ColorImageNode[] edges=new ColorImageNode[4];
+ internal NativeFocusOutline(Action<ColorImageNode> attach){
+  for(int i=0;i<edges.Length;i++){
+   var edge=new ColorImageNode{Color=NativeHuntColors.Focus,IsVisible=false};
+   edges[i]=edge;attach(edge);
+  }
+ }
+ internal void Show(NativeHuntRect? rect){
+  foreach(var edge in edges)edge.IsVisible=rect.HasValue;
+  if(rect is not {} box)return;
+  const float stroke=2;
+  var p=box.Position;var s=box.Size;
+  Place(0,p,new(s.X,stroke));
+  Place(1,p+new Vector2(0,s.Y-stroke),new(s.X,stroke));
+  Place(2,p,new(stroke,s.Y));
+  Place(3,p+new Vector2(s.X-stroke,0),new(stroke,s.Y));
+ }
+ private void Place(int index,Vector2 position,Vector2 size){
+  edges[index].Position=position;edges[index].Size=size;
  }
 }

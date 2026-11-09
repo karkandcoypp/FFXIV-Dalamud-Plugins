@@ -69,7 +69,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             for(int i=0;i<content.Metrics.Length;i++) {
                 var metric=content.Metrics[i];float x=left+i*(cardWidth+8),my=y+4;
                 my+=Text(metric.Label,x,my,cardWidth,13,Muted)+2;
-                my+=Text(metric.Value,x,my,cardWidth,NativeHuntLayout.BodyFont,metric.Highlight?Mint:White)+4;
+                my+=Text(metric.Value,x,my,cardWidth,metric.Highlight?NativeHuntLayout.TitleFont:NativeHuntLayout.BodyFont,metric.Highlight?Mint:White)+4;
                 rowHeight=Math.Max(rowHeight,my-y);
             }
             y+=rowHeight+4;

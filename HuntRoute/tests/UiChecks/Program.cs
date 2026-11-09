@@ -100,6 +100,7 @@ class Program {
    boardStates[tier]=new(true,false,1,1,true);
   }
   Set(plugin,"BillStates",boardStates);Set(plugin,"completionHistory",boardHistory);
+  Set(plugin,"CurrentTerritory",418u); // An unlocked-by-location board can receive focus in the preview.
   NativeHuntPreviewChecks.Run(directory,plugin);
  }
 }

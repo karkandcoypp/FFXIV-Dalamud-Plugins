@@ -73,7 +73,8 @@ internal sealed class NativeDialogService : IDisposable {
 internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content,Func<bool> ready,Action<bool> answer) : NativeAddon {
     private bool answered;
     private Vector2 measuredSize;
-    private TextButtonNode? yesButton;
+    private TextButtonNode? yesButton,noButton;
+    private NativeFocusOutline? focusOutline;
     protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values) {
         if(WindowNode is WindowNode window) {
             window.SubtitleNode.IsVisible=false;window.DividingLineNode.IsVisible=false;
@@ -89,16 +90,19 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color; }
         yesButton=new TextButtonNode { Position=layout.Confirm.Position,Size=layout.Confirm.Size,String=content.ConfirmLabel,
             NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true,true) };
+        yesButton.BackgroundNode.Color=NativeHuntColors.PrimarySurface;
+        yesButton.LabelNode.TextColor=NativeHuntColors.Attention;
         yesButton.LabelNode.FontSize=NativeHuntLayout.ButtonFont;
-        var no=new TextButtonNode { Position=layout.Decline.Position,Size=layout.Decline.Size,String=content.DeclineLabel,
+        var no=noButton=new TextButtonNode { Position=layout.Decline.Position,Size=layout.Decline.Size,String=content.DeclineLabel,
             NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false,true) };
         no.LabelNode.FontSize=NativeHuntLayout.ButtonFont;
         yesButton.LabelNode.X=no.LabelNode.X=8;
         yesButton.LabelNode.Width=yesButton.Width-16;no.LabelNode.Width=no.Width-16;
-        AddNode(yesButton);AddNode(no);measuredSize=new(layout.Width,layout.Height);SetWindowSize(measuredSize);
-        native->FocusNode=no;
+        AddNode(yesButton);AddNode(no);focusOutline=new NativeFocusOutline(node=>AddNode(node));measuredSize=new(layout.Width,layout.Height);SetWindowSize(measuredSize);
+        native->FocusNode=no.FocusNode;
     }
     protected override void OnShow(AtkUnitBase* native) {
+        noButton?.SetFocus();
         // Center the measured window after setup, accounting for the game's UI scale.
         var viewport=(Vector2)AtkStage.Instance()->ScreenSize;
         if(viewport.X<=16||viewport.Y<=16)return;
@@ -109,7 +113,14 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         var origin=(viewport-measuredSize*fitted)/2;
         native->SetPosition((short)origin.X,(short)origin.Y);
     }
-    protected override void OnUpdate(AtkUnitBase* native) { if(!answered && yesButton!=null) yesButton.IsEnabled=ready(); }
+    protected override void OnUpdate(AtkUnitBase* native) {
+        if(answered||yesButton==null||noButton==null)return;
+        yesButton.IsEnabled=ready();
+        var focus=AtkStage.Instance()->AtkInputManager->FocusedNode;
+        bool Focused(TextButtonNode button)=>button.IsEnabled&&focus!=null&&(focus==(AtkResNode*)button||focus==(AtkResNode*)button.FocusNode);
+        var selected=Focused(yesButton)?yesButton:Focused(noButton)?noButton:null;
+        focusOutline?.Show(selected==null?null:new(selected.Position,selected.Size));
+    }
     protected override void OnHide(AtkUnitBase* native)=>Complete(false,false);
     protected override void OnFinalize(AtkUnitBase* native)=>Complete(false,false);
     private void Complete(bool yes,bool close) {

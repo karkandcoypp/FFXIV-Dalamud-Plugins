@@ -13,6 +13,7 @@ public sealed record NativeBoardRow(string Name,NativeBoardStatus Daily,NativeBo
 public sealed record NativeGoalRow(string Zone,string Name,string Count);
 public sealed record NativeHuntScreen(string Title,string Summary,IReadOnlyList<NativeHuntButton> Buttons,uint Icon=0,NativeHuntProgress? Progress=null,Vector4? SummaryColor=null);
 public static class NativeHuntColors {
+ public static readonly Vector4 Focus=new(.80f,.92f,1,1), PrimarySurface=new(.65f,.81f,1,1);
  public static readonly Vector4 Ready=new(.50f,1,.64f,1), Attention=new(1,.83f,.48f,1), Tracking=new(.62f,.84f,1,1), Muted=new(.78f,.81f,.85f,1);
 }
 public sealed record NativeHuntProgress(int Kills,uint Required){
@@ -45,7 +46,7 @@ public readonly record struct NativeHuntRect(Vector2 Position,Vector2 Size){
  }
 }
 public sealed record NativeHuntPlacement(int Slot,int Row,int Column,NativeHuntButton Button,NativeHuntRect Rect);
-public sealed record NativeHuntText(string Label,NativeHuntRect Rect,Vector4 Color);
+public sealed record NativeHuntText(string Label,NativeHuntRect Rect,Vector4 Color,byte Font);
 public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,NativeHuntRect Summary,NativeHuntRect Portrait,NativeHuntRect ProgressLabel,NativeHuntRect ProgressTrack,NativeHuntRect PageLabel,string PageText,IReadOnlyList<NativeHuntPlacement> Buttons,IReadOnlyList<NativeHuntText> TableText){
  public const int ButtonCapacity=13;
  private const float Margin=16,Gap=6;
@@ -54,6 +55,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  // Axis typography with slightly larger labels for legibility.
  public const byte TitleFont=18, BodyFont=15, ButtonFont=14;
  public static float ContentWidth(bool mini)=>(mini?300:420)-2*Margin;
+ public static byte SummaryFont(NativeHuntPage view,bool mini)=>!mini&&view==NativeHuntPage.Boards?(byte)17:BodyFont;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Goal==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;
  public static float ButtonWidth(string label)=>label.Length<=11?ActionWidth:LongActionWidth;
@@ -83,15 +85,15 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   bool settingsList=view==NativeHuntPage.Settings&&!mini;
   if(!mini){
    const float tabWidth=ActionWidth;
-   float tabsX=(width-3*tabWidth-2*Gap)/2;
+   float tabsX=Margin;
    Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),tabsX,37,tabWidth,ActionHeight);
    Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),tabsX+tabWidth+Gap,37,tabWidth,ActionHeight);
    Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),tabsX+2*(tabWidth+Gap),37,tabWidth,ActionHeight);
   }
   float controlWidth=mini?inner:4*ActionWidth+3*Gap;
-  float controlX=(width-controlWidth)/2;
+  float controlX=Margin;
   var tableText=new List<NativeHuntText>();
-  void Cell(string label,float x,float y,float w,Vector4 color)=>tableText.Add(new(FitLabel(label,46),new(new(x,y),new(w,21)),color));
+  void Cell(string label,float x,float y,float w,Vector4 color,byte font=ButtonFont)=>tableText.Add(new(FitLabel(label,46),new(new(x,y),new(w,21)),color,font));
   string? lastZone=null;
   int rows=0;
   float bottom=bodyY;
@@ -107,8 +109,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     break;
    }
    if(huntStrip&&i==0){
-    float stripWidth=visible.Take(3).Sum(CompactWidth)+2*Gap;
-    float x=(width-stripWidth)/2;
+    float x=Margin;
     rows++;
     for(int column=0;column<3;column++){
      float w=CompactWidth(visible[column]);
@@ -120,10 +121,10 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
    }
    if(button.Board is {} board){
     if(i==0){
-     Cell("Дополнение",Margin+8,bottom,110,NativeHuntColors.Muted);
-     Cell("Ежедневные",Margin+130,bottom,114,NativeHuntColors.Muted);
-     Cell("Еженедельный",Margin+254,bottom,126,NativeHuntColors.Muted);
-     bottom+=22;
+     Cell("Дополнение",Margin+8,bottom,110,NativeHuntColors.Muted,16);
+     Cell("Ежедневные",Margin+130,bottom,114,NativeHuntColors.Muted,16);
+     Cell("Еженедельный",Margin+254,bottom,126,NativeHuntColors.Muted,16);
+     bottom+=25;
     }
     Set(i+3,++rows,0,button,Margin,bottom,inner,28);
     Cell(board.Name,Margin+8,bottom+5,116,NativeHuntColors.Tracking);
@@ -150,7 +151,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     continue;
    }
    float gridWidth=mini?3*ActionWidth+2*Gap:controlWidth;
-   float gridX=(width-gridWidth)/2;
+   float gridX=controlX;
    if(!button.Label.Contains('\n')&&button.Label.Length<=25){
     int count=0;
     float used=0;
@@ -184,7 +185,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   return new(new(width,footer+(mini?4:36)),new(new(Margin,titleY),new(inner,titleHeight)),
    new(new(Margin,summaryY),new(textWidth,summaryHeight)),new(new(width-Margin-PortraitSize,summaryY),new(PortraitSize,PortraitSize)),
    new(new(Margin,progressY),new(textWidth,18)),new(new(Margin,progressY+19),new(textWidth,mini?0:5)),
-   new(new((width-74)/2,bottom+6),new(74,22)),
+   new(new(controlX+(controlWidth-74)/2,bottom+6),new(74,22)),
    pager?$"Стр. {page+1} / {pageCount}":"",buttons,tableText);
  }
 }

@@ -29,8 +29,9 @@ internal static class DialogPreviewChecks {
                     var size=ImGui.CalcTextSize(label);
                     if(size.X>rect.Size.X-16||rect.Position.Y+rect.Size.Y>layout.Height-12||rect.Position.X+rect.Size.X>layout.Width-16)
                         throw new Exception("Dialog button exceeds its bounds: "+label);
-                    draw.AddRectFilled(rect.Position,rect.Position+rect.Size,ImGui.GetColorU32(primary?new Vector4(.36f,.36f,.36f,1):new Vector4(.31f,.31f,.31f,1)),5);
-                    ImGui.SetCursorScreenPos(rect.Position+(rect.Size-size)/2);ImGui.TextColored(TravelDialogLayout.White,label);
+                    draw.AddRectFilled(rect.Position,rect.Position+rect.Size,ImGui.GetColorU32(primary?new Vector4(.26f,.38f,.49f,1):new Vector4(.31f,.31f,.31f,1)),5);
+                    ImGui.SetCursorScreenPos(rect.Position+(rect.Size-size)/2);ImGui.TextColored(primary?NativeHuntColors.Attention:TravelDialogLayout.White,label);
+                    if(!primary)draw.AddRect(rect.Position+Vector2.One,rect.Position+rect.Size-Vector2.One,ImGui.GetColorU32(NativeHuntColors.Focus),0,0,2);
                 }
                 ImGui.End();ImGui.PopStyleVar();ImGui.Render();
             }
