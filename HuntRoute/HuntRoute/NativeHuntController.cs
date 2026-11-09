@@ -19,7 +19,7 @@ public sealed class NativeHuntController {
  public void Boards(bool onlyNew){Navigate(NativeHuntPage.Boards);OnlyNewBoards=onlyNew;}
  public void FocusGoal(){selected=plugin.Session.Target is {} m?JourneyFlow.Key(m):null;Navigate(NativeHuntPage.Target);}
  public void Turn(int delta,int count)=>Offset=NativeHuntNavigation.ClampPage(Offset+delta,count);
- private static NativeHuntButton Button(string key,string label,string kind,string argument="",bool enabled=true,int delta=0)=>new(key,label,new(kind,argument,delta),enabled);
+ private static NativeHuntButton Button(string key,string label,string kind,string argument="",bool enabled=true,int delta=0)=>new(key,label,new(kind,argument,delta),enabled,key is "primary" or "track" or "start");
  public NativeHuntScreen Build(bool mini=false){
   if(!plugin.Ready)return new("Hunt Route",plugin.Error??"Данные персонажа загружаются.",[Button("refresh","Обновить данные","refresh")]);
   var errors=new[]{plugin.JourneySaveError,plugin.SettingsSaveError,plugin.HistorySaveError}.Where(s=>s!=null).ToArray();
@@ -30,26 +30,28 @@ public sealed class NativeHuntController {
  private NativeHuntScreen Hunt(bool mini){
   var buttons=new List<NativeHuntButton>();var target=plugin.Session.Phase==RoutePhase.NextZone?plugin.Session.Suggested:plugin.Session.Target;
   bool remaining=plugin.Mobs.Any(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m)&&!plugin.Flow.Excluded(m));
-  string summary;
+  string title="Охота",summary;
   if(plugin.Flow.Active){
-   summary=$"{target?.Name??"Цель выбирается"}\n{target?.TerritoryName}\n"+(target==null?"":$"{plugin.Kills(target)}/{target.NeededKills} · ")+(plugin.Flow.Pauses!=PauseReason.None?plugin.Flow.Status:plugin.Session.Phase==RoutePhase.AwaitingTravel?"Подтвердите телепорт":plugin.Session.Phase==RoutePhase.NextZone?"Зона завершена":target is {IsEliteMark:true}?plugin.Search.AwaitingCredit?"Проверяем зачёт":plugin.Search.Lost?"Последняя позиция элиты":plugin.Search.ActorId!=null?"Элита обнаружена":$"Поиск элиты · круг {Math.Max(1,plugin.Search.Round)}":plugin.LocationLabel);
+   title=target?.Name??"Маршрут охоты";
+   string status=(plugin.Flow.Pauses!=PauseReason.None?plugin.Flow.Status:plugin.Session.Phase==RoutePhase.AwaitingTravel?"Подтвердите телепорт":plugin.Session.Phase==RoutePhase.NextZone?"Зона завершена":target is {IsEliteMark:true}?plugin.Search.AwaitingCredit?"Проверяем зачёт":plugin.Search.Lost?"Последняя позиция элиты":plugin.Search.ActorId!=null?"Элита обнаружена":$"Поиск элиты · круг {Math.Max(1,plugin.Search.Round)}":plugin.LocationLabel);
+   summary=target==null?status:$"{target.TerritoryName} · {(target.IsEliteMark?"Недельная цель":"Ежедневная цель")}\n{status}";
    string kind=plugin.Flow.Pauses!=PauseReason.None?"resume":plugin.Session.Phase==RoutePhase.AwaitingTravel?"planned":plugin.Session.Phase==RoutePhase.NextZone?"next":"pause";
    buttons.Add(Button("primary",kind is "planned" or "next"?"Телепортироваться":kind=="pause"?"Пауза":"Продолжить охоту",kind));
    if(target!=null)buttons.Add(Button("map","Карта цели","map",JourneyFlow.Key(target)));
-   buttons.Add(Button("actions","Действия маршрута","page",NativeHuntPage.Actions.ToString()));
+   buttons.Add(Button("actions","Маршрут","page",NativeHuntPage.Actions.ToString()));
   }else{
    int count=plugin.Mobs.Count(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m));summary=count>0?$"Незавершённых целей: {count}\nВыберите «Начать охоту» или верните отложенные цели.":"Нет взятых незавершённых целей.\nДоступность и выполнение — в разделе «Доски».";
    buttons.Add(remaining?Button("primary","Начать охоту","resume"):Button("primary","Доски охоты","page",NativeHuntPage.Boards.ToString()));
   }
-  if(!mini){buttons.Add(Button("targets","Все цели маршрута","page",NativeHuntPage.Targets.ToString()));if(feedback!=null)summary+="\n"+feedback;else if(plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
-  return new("Охота",summary,buttons,target?.Icon??0);
+  if(!mini){buttons.Add(Button("targets","Список целей","page",NativeHuntPage.Targets.ToString()));if(feedback!=null)summary+="\n"+feedback;else if(plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
+  return new(title,summary,buttons,target?.Icon??0,target==null?null:new(plugin.Kills(target),target.NeededKills));
  }
  private NativeHuntScreen Targets(){
   var goals=plugin.Routes.SelectMany(r=>r.Mobs).Where(m=>Plugin.AllTiers.Contains(m.BillNumber)&&MatchesExpansion(m)&&(zone==""||m.TerritoryName==zone)&&(!plugin.HideDone||!plugin.Done(m))&&(!DeferredOnly||plugin.Flow.Excluded(m)||plugin.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m)))).DistinctBy(JourneyFlow.Key).ToArray();
   var buttons=new List<NativeHuntButton>{Button("filters","Фильтры целей","page",NativeHuntPage.Filters.ToString())};
   if(!plugin.Flow.Active&&goals.Any(m=>!plugin.Done(m)&&!plugin.Flow.Excluded(m)))buttons.Add(Button("start","Начать охоту","resume"));
   if(plugin.Flow.Active&&plugin.Session.Target!=null)buttons.Add(Button("focus","К текущей цели","focus"));
-  foreach(var goal in goals)buttons.Add(Button("goal:"+JourneyFlow.Key(goal),$"{plugin.Kills(goal)}/{goal.NeededKills} · "+(goal.IsEliteMark?"[B] ":"")+goal.Name+$" · {goal.TerritoryName}"+(plugin.Flow.Excluded(goal)?" · отложено":""),"target",JourneyFlow.Key(goal)));
+  foreach(var goal in goals)buttons.Add(Button("goal:"+JourneyFlow.Key(goal),$"{goal.Name}"+(goal.IsEliteMark?" [B]":"")+$"\n{goal.TerritoryName} · {plugin.Kills(goal)}/{goal.NeededKills}"+(plugin.Flow.Excluded(goal)?" · отложено":""),"target",JourneyFlow.Key(goal)));
   return new("Цели маршрута",$"Целей в списке: {goals.Length}. Выберите цель для карты, портрета и сопровождения.",buttons);
  }
  private bool MatchesExpansion(MobHuntEntry m)=>expansion==""||Plugin.Boards.Any(b=>b.Name==expansion&&(b.Daily.Contains(m.BillNumber)||b.Weekly==m.BillNumber));
@@ -61,12 +63,12 @@ public sealed class NativeHuntController {
  private NativeHuntScreen Target(){
   var goal=plugin.Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==selected);
   if(goal==null)return new("Цель недоступна","Контракт изменился или завершён.",[Button("targets","К списку целей","page",NativeHuntPage.Targets.ToString())]);
-  bool excluded=plugin.Flow.Excluded(goal);string summary=$"{goal.TerritoryName}\n{plugin.Kills(goal)}/{goal.NeededKills}";
+  bool excluded=plugin.Flow.Excluded(goal);string summary=goal.TerritoryName??"";
   if(plugin.Flow.Unavailable.TryGetValue(JourneyFlow.Key(goal),out var reason))summary+="\n"+reason;
   if(excluded)summary+="\nОтложено; выполненным не считается.";
   var buttons=new List<NativeHuntButton>{Button("track","Сопровождать эту цель","track",selected!,!excluded&&!plugin.Done(goal)),Button("map","Карта","map",selected!),Button("defer",excluded?"Вернуть в маршрут":"Отложить цель",excluded?"restore":"defer",selected!)};
   if(!excluded)buttons.Add(Button("defer-zone","Отложить зону","defer-zone",selected!));
-  buttons.Add(Button("targets","К списку целей","page",NativeHuntPage.Targets.ToString()));return new(goal.Name??"Цель",summary,buttons,goal.Icon);
+  buttons.Add(Button("targets","К списку целей","page",NativeHuntPage.Targets.ToString()));return new(goal.Name??"Цель",summary,buttons,goal.Icon,new(plugin.Kills(goal),goal.NeededKills));
  }
  private NativeHuntScreen BoardScreen(){
   var buttons=Plugin.Boards.Select(b=>Button("board:"+b.Name,$"{b.Name} · день: {Progress(b,false)} · неделя: {Progress(b,true)}","board",b.Name,plugin.BoardReachable(b)&&(!OnlyNewBoards||plugin.CanPickup(b,false)||plugin.CanPickup(b,true)))).ToList();

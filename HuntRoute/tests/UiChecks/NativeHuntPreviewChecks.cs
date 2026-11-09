@@ -10,6 +10,12 @@ internal static class NativeHuntPreviewChecks {
   var samples=new List<(string Name,NativeHuntPage Page,NativeHuntScreen Screen,bool Mini,int Offset)>();
   foreach(var page in Enum.GetValues<NativeHuntPage>()){controller.Navigate(page);samples.Add((page.ToString(),page,controller.Build(),false,0));}
   samples.Add(("mini",NativeHuntPage.Hunt,controller.Build(true),true,0));
+  var active=new NativeHuntScreen("Swampmonk","Kozama’uka · Ежедневная цель\nМетка поставлена на карте",[
+   new("primary","Пауза",new("pause"),Emphasized:true),new("map","Карта цели",new("map")),
+   new("actions","Маршрут",new("page")),new("targets","Список целей",new("page"))
+  ],123,new(1,3));
+  samples.Add(("active",NativeHuntPage.Hunt,active,false,0));
+  samples.Add(("active-mini",NativeHuntPage.Hunt,active,true,0));
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,123),false,1));
   foreach(var sample in samples){
@@ -28,11 +34,17 @@ internal static class NativeHuntPreviewChecks {
     void Text(string value,NativeHuntRect rect,float font,Vector4 color){ImGui.SetWindowFontScale(font/17f);ImGui.SetCursorScreenPos(rect.Position);ImGui.PushTextWrapPos(rect.Position.X+rect.Size.X);ImGui.TextColored(color,value);ImGui.PopTextWrapPos();if(ImGui.GetItemRectMax().Y>rect.Position.Y+rect.Size.Y+2)throw new Exception("Native preview label exceeds block: "+sample.Name);}
     Text(title,layout.Heading,20,new(.96f,.90f,.75f,1));Text(summary,layout.Summary,15,new(.9f,.9f,.9f,1));
     if(!sample.Mini&&sample.Screen.Icon!=0)draw.AddRectFilled(layout.Portrait.Position,layout.Portrait.Position+layout.Portrait.Size,0xff3b3631,6);
+    if(sample.Screen.Progress is {} progress){
+     var r=layout.ProgressTrack;
+     Text(progress.Label,layout.ProgressLabel,14,new(.68f,.88f,.80f,1));
+     draw.AddRectFilled(r.Position,r.Position+r.Size,0xff47453d,3);
+     draw.AddRectFilled(r.Position,r.Position+new Vector2(r.Size.X*progress.Fraction,r.Size.Y),0xffa3c261,3);
+    }
     if(layout.PageText.Length>0)Text(layout.PageText,layout.PageLabel,14,new(.9f,.9f,.9f,1));
     foreach(var entry in layout.Buttons){
      var r=entry.Rect;draw.AddRectFilled(r.Position,r.Position+r.Size,entry.Button.Enabled?0xff534a3a:0xff35312d,5);
-     float font=Height(entry.Button.Label,r.Size.X-32,16)>r.Size.Y-8?14:16;
-     Text(entry.Button.Label,new(r.Position+new Vector2(16,4),r.Size-new Vector2(32,8)),font,entry.Button.Enabled?new(1,.96f,.85f,1):new(.62f,.62f,.62f,1));
+     float font=entry.Button.Label.Contains('\n')||Height(entry.Button.Label,r.Size.X-32,16)>r.Size.Y-8?14:16;
+     Text(entry.Button.Label,new(r.Position+new Vector2(16,4),r.Size-new Vector2(32,8)),font,entry.Button.Enabled?(entry.Button.Emphasized?new(1,.85f,.55f,1):Vector4.One):new(.62f,.62f,.62f,1));
     }
     ImGui.End();ImGui.Render();
    }

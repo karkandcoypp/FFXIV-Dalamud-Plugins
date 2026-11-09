@@ -2,6 +2,20 @@ using HuntRoute;
 static class NativeNavigationChecks {
  public static void Run(Action<bool,string> check){
   NativeNavItem[] items=[new(1,0,0,"hunt"),new(2,0,1,"boards"),new(3,0,2,"settings"),new(4,1,0,"primary"),new(5,2,0,"map"),new(10,7,0,"previous",false),new(11,7,1,"next"),new(12,8,0,"back"),new(13,8,1,"close")];
+  var active=new NativeHuntScreen("Target","Zone",[
+   new("primary","Pause",new("pause"),Emphasized:true),new("map","Map",new("map")),new("actions","Route",new("page"))
+  ],123,new(1,3));
+  foreach(bool mini in new[]{false,true}){
+   var layout=NativeHuntLayout.Build(active,NativeHuntPage.Hunt,0,30,38,mini);
+   var map=layout.Buttons.Single(b=>b.Button.Key=="map");
+   var actions=layout.Buttons.Single(b=>b.Button.Key=="actions");
+   var primary=layout.Buttons.Single(b=>b.Button.Key=="primary");
+   check(map.Row==actions.Row&&map.Rect.Position.X+map.Rect.Size.X<actions.Rect.Position.X,"Secondary hunt actions fit side by side");
+   check(layout.ProgressTrack.Position.Y+layout.ProgressTrack.Size.Y<primary.Rect.Position.Y,"Hunt progress does not overlap the primary action");
+   var paired=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+   check(paired.Single(n=>n.Index==map.Slot+1).Right==actions.Slot+1,"D-pad right moves from Map to Route");
+  }
+  check(active.Progress!.Fraction==1f/3&&new NativeHuntProgress(5,3).Fraction==1&&new NativeHuntProgress(0,0).Fraction==0,"Progress fill clamps its endpoints");
   var graph=NativeHuntNavigation.Build(items);check(graph.Length==8&&graph.All(n=>n.Index!=10),"Disabled native pager omitted from focus graph");
   check(graph.Single(n=>n.Index==2).Right==3&&graph.Single(n=>n.Index==3).Right==1,"Native tabs navigate horizontally and wrap");
   check(graph.Single(n=>n.Index==3).Down==4&&graph.Single(n=>n.Index==5).Down==11,"Vertical navigation reaches content/pager without landing on disabled nodes");
