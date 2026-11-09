@@ -6,7 +6,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit.BaseTypes;
 using KamiToolKit.BaseTypes.ComponentNode;
 using KamiToolKit.Nodes;
-using Lumina.Text;
+
 namespace HuntRoute;
 
 internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Action<NativeHuntAction> execute,Action closed,Func<bool> modal,bool mini=false):NativeAddon {
@@ -17,7 +17,8 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  private string?[] keys=new string?[NativeHuntLayout.ButtonCapacity];
  private NativeHuntAction?[] commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];
  private TextNode? heading,summary,pageLabel,progressLabel;
- private ColorImageNode? progressTrack,progressFill;
+ private ColorImageNode? progressTrack,progressFill,tableFocus;
+ private readonly TextNode?[] tableCells=new TextNode?[NativeHuntLayout.ButtonCapacity*3];
  private IconImageNode? portrait;
  private IReadOnlyList<NativeNavLink> links=[];
  private bool focusRequested,focusFirstBody;
@@ -44,6 +45,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   progressTrack=new ColorImageNode{Color=new(.24f,.27f,.28f,1)};AddNode(progressTrack);
   progressFill=new ColorImageNode{Color=new(.38f,.76f,.64f,1)};AddNode(progressFill);
   pageLabel=new TextNode{Size=new(240,24),FontSize=NativeHuntLayout.BodyFont};AddNode(pageLabel);
+  tableFocus=new ColorImageNode{Color=new(.36f,.52f,.72f,.35f),IsVisible=false};AddNode(tableFocus);
   for(int i=0;i<buttons.Length;i++){
    int slot=i;var button=new TextButtonNode{NavIndex=i+1,OnClick=()=>Clicked(slot)};
    button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.LabelNode.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);
@@ -52,6 +54,10 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
     var check=new CheckboxNode{NavIndex=i+1,DisableAutoResize=true,IsVisible=false,OnClick=_=>Clicked(slot)};
     checks[i]=check;AddNode(check);
    }
+  }
+  for(int i=0;i<tableCells.Length;i++){
+   var cell=new TextNode{FontSize=NativeHuntLayout.ButtonFont,IsVisible=false};
+   cell.AddTextFlags(TextFlags.Ellipsis);tableCells[i]=cell;AddNode(cell);
   }
   screenIdentity=null;keys=new string?[NativeHuntLayout.ButtonCapacity];commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];nextUpdate=0;focusRequested=!mini;focusFirstBody=false;icon=0;titleText=summaryText=null;Array.Clear(buttonText);
   Refresh(native);
@@ -62,7 +68,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(focusRequested&&IsOpen&&!modal()){int index=NativeHuntNavigation.RestoreFocus(links,focusedKey);if(index>0){if(checks[index-1] is {IsVisible:true} check)check.SetFocus();else buttons[index-1]?.SetFocus();}focusRequested=false;}
  }
  protected override void OnHide(AtkUnitBase* native)=>closed();
- protected override void OnFinalize(AtkUnitBase* native){Array.Clear(buttons);Array.Clear(checks);heading=null;summary=null;portrait=null;pageLabel=progressLabel=null;progressTrack=progressFill=null;links=[];}
+ protected override void OnFinalize(AtkUnitBase* native){Array.Clear(buttons);Array.Clear(checks);Array.Clear(tableCells);tableFocus=null;heading=null;summary=null;portrait=null;pageLabel=progressLabel=null;progressTrack=progressFill=null;links=[];}
  private void Clicked(int slot){
   if(modal()||slot<0||slot>=buttons.Length||!(checks[slot] is {IsVisible:true} check?check.IsEnabled:buttons[slot] is {IsVisible:true,IsEnabled:true})||commands[slot] is not {} command)return;
   focusedKey=keys[slot];
@@ -70,21 +76,6 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   else if(command.Kind=="close")Close();
   else execute(command);
   nextUpdate=0;
- }
- private static void SetLabel(TextButtonNode button,NativeHuntButton spec){
-  if(spec.Board is not {} row){button.String=spec.Label;return;}
-  var builder=new SeStringBuilder();
-  void Status(NativeBoardStatus status){
-   if(status.Color is {} color)builder.PushColorRgba(color);
-   builder.Append(status.Label);
-   if(status.Color.HasValue)builder.PopColor();
-  }
-  builder.PushColorRgba(NativeHuntColors.Tracking).Append(row.Name).PopColor();
-  builder.Append("\n"+NativeBoardRow.DailyPrefix);
-  Status(row.Daily);
-  builder.Append("\n"+NativeBoardRow.WeeklyPrefix);
-  Status(row.Weekly);
-  button.String=builder.ToReadOnlySeString();
  }
  private void Refresh(AtkUnitBase* native){
   if(heading==null||summary==null||portrait==null||pageLabel==null||progressLabel==null||progressTrack==null||progressFill==null)return;
@@ -104,8 +95,9 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   heading.Position=layout.Heading.Position;heading.Size=layout.Heading.Size;
   summary.Position=layout.Summary.Position;summary.Size=layout.Summary.Size;
   var progress=screen.Progress;
-  progressLabel.IsVisible=progressTrack.IsVisible=progress!=null;
-  progressFill.IsVisible=progress is {Fraction:>0};
+  progressLabel.IsVisible=progress!=null;
+  progressTrack.IsVisible=!mini&&progress!=null;
+  progressFill.IsVisible=!mini&&progress is {Fraction:>0};
   if(progress!=null){
    progressLabel.TextColor=progress.Fraction>=1?NativeHuntColors.Ready:Vector4.One;
    progressLabel.Position=layout.ProgressLabel.Position;progressLabel.Size=layout.ProgressLabel.Size;
@@ -144,15 +136,29 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
     if(checks[slot] is {} hidden)hidden.IsVisible=false;
     if(button.Position!=placement.Rect.Position)button.Position=placement.Rect.Position;
     if(button.Size!=placement.Rect.Size){button.Size=placement.Rect.Size;buttonText[slot]=null;}
+    button.LabelNode.X=8;button.LabelNode.Width=button.Width-16;
     button.LabelNode.TextColor=spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One);
-    if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;SetLabel(button,spec);if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=18;}buttonText[slot]=spec.Label;}
+    if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.String=spec.Board!=null||spec.Goal!=null?"":spec.Label;if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=18;}buttonText[slot]=spec.Label;}
     button.IsVisible=true;button.IsEnabled=spec.Enabled;
-    button.BackgroundNode.IsVisible=spec.Board==null;
+    button.BackgroundNode.IsVisible=spec.Board==null&&spec.Goal==null;
     button.LabelNode.AlignmentType=spec.Board==null?AlignmentType.Center:AlignmentType.Left;
    }
    keys[slot]=spec.Key;commands[slot]=spec.Action;items.Add(new(slot+1,placement.Row,placement.Column,spec.Key,spec.Enabled));
   }
   for(int i=0;i<buttons.Length;i++)if(!used[i]){buttons[i]!.IsVisible=false;if(checks[i] is {} check)check.IsVisible=false;keys[i]=null;commands[i]=null;}
+  for(int i=0;i<tableCells.Length;i++){
+   var node=tableCells[i]!;
+   node.IsVisible=i<layout.TableText.Count;
+   if(!node.IsVisible)continue;
+   var cell=layout.TableText[i];
+   node.Position=cell.Rect.Position;node.Size=cell.Rect.Size;node.TextColor=cell.Color;
+   if(node.String.ToString()!=cell.Label)node.String=cell.Label;
+  }
+  var focusedRow=layout.Buttons.FirstOrDefault(p=>(p.Button.Board!=null||p.Button.Goal!=null)&&IsFocused(Control(p.Slot),global));
+  if(tableFocus!=null){
+   tableFocus.IsVisible=focusedRow!=null;
+   if(focusedRow!=null){tableFocus.Position=focusedRow.Rect.Position;tableFocus.Size=focusedRow.Rect.Size;}
+  }
   links=NativeHuntNavigation.Build(items);foreach(var link in links){var b=Control(link.Index-1)!;b.NavIndex=link.Index;b.NavUp=link.Up;b.NavDown=link.Down;b.NavLeft=link.Left;b.NavRight=link.Right;}
   if(focusedKey==null&&controller.Page==NativeHuntPage.Hunt&&links.Any(n=>n.Key=="primary"))focusedKey="primary";
   if(focusFirstBody){focusedKey=items.FirstOrDefault(n=>n.Row is >0 and <=6&&n.Enabled).Key;focusFirstBody=false;}

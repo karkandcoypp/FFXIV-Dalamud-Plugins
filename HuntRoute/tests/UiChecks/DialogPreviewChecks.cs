@@ -27,7 +27,7 @@ internal static class DialogPreviewChecks {
                 ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);
                 foreach(var (rect,label,primary) in new[]{(layout.Confirm,sample.Item2.ConfirmLabel,true),(layout.Decline,sample.Item2.DeclineLabel,false)}) {
                     var size=ImGui.CalcTextSize(label);
-                    if(size.X>rect.Size.X-32||rect.Position.Y+rect.Size.Y>layout.Height-12||rect.Position.X+rect.Size.X>layout.Width-16)
+                    if(size.X>rect.Size.X-16||rect.Position.Y+rect.Size.Y>layout.Height-12||rect.Position.X+rect.Size.X>layout.Width-16)
                         throw new Exception("Dialog button exceeds its bounds: "+label);
                     draw.AddRectFilled(rect.Position,rect.Position+rect.Size,ImGui.GetColorU32(primary?new Vector4(.36f,.36f,.36f,1):new Vector4(.31f,.31f,.31f,1)),5);
                     ImGui.SetCursorScreenPos(rect.Position+(rect.Size-size)/2);ImGui.TextColored(TravelDialogLayout.White,label);

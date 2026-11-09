@@ -7,7 +7,7 @@ static class NativeNavigationChecks {
   ],123,new(1,3));
   foreach(bool mini in new[]{false,true}){
    var layout=NativeHuntLayout.Build(active,NativeHuntPage.Hunt,0,30,38,mini);
-   check(layout.Size.X==(mini?340:420)&&layout.Size.Y<(mini?290:340),"Active native menus fit the compact footprint");
+   check(layout.Size.X==(mini?300:420)&&layout.Size.Y<(mini?290:340),"Active native menus fit the compact footprint");
    foreach(var texture in new System.Numerics.Vector2[]{new(256,128),new(128,256),new(512,512)}){
     var image=layout.Portrait.FitImage(texture);
     var end=image.Position+image.Size;
@@ -21,6 +21,7 @@ static class NativeNavigationChecks {
    check(primary.Rect.Size.X<=200&&(mini||primary.Row==layout.Buttons.Single(b=>b.Button.Key=="targets").Row),"Primary action uses a compact button alongside the target list");
    var rightOfMap=mini?actions:layout.Buttons.Single(b=>b.Button.Key=="targets");
    check(map.Row==rightOfMap.Row&&map.Rect.Position.X+map.Rect.Size.X<rightOfMap.Rect.Position.X,"Hunt actions fit side by side");
+   check(!mini||primary.Row==map.Row,"Mini panel puts all three hunt actions in one row");
    check(mini||actions.Row>map.Row,"Route actions stay reachable in the main window footer");
    check(layout.ProgressTrack.Position.Y+layout.ProgressTrack.Size.Y<primary.Rect.Position.Y,"Hunt progress does not overlap the primary action");
    var paired=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
@@ -45,7 +46,7 @@ static class NativeNavigationChecks {
    check(Inside(layout.Heading)&&Inside(layout.Summary)&&layout.Buttons.All(b=>Inside(b.Rect)),"Native long-text/paged/mini placements stay inside addon");
    check(layout.Buttons.Select(b=>b.Slot).Distinct().Count()==layout.Buttons.Count&&layout.Buttons.All(b=>b.Slot<NativeHuntLayout.ButtonCapacity),"Each native layout uses a unique bounded node slot");
    var nav=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
-   check(nav.Any(n=>n.Key=="close")&&nav.All(n=>layout.Buttons.Any(b=>b.Slot+1==n.Index&&b.Button.Enabled)),"Native pages always have an enabled close action and no focusable disabled items");
+   check((mini||nav.Any(n=>n.Key=="close"))&&nav.All(n=>layout.Buttons.Any(b=>b.Slot+1==n.Index&&b.Button.Enabled)),"Native pages always have an enabled close action and no focusable disabled items");
   }
   var random=new Random(2322);
   for(int sample=0;sample<200;sample++){

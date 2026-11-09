@@ -41,8 +41,8 @@ internal static class NativeHuntPreviewChecks {
     if(sample.Screen.Progress is {} progress){
      var r=layout.ProgressTrack;
      Text(progress.Label,layout.ProgressLabel,NativeHuntLayout.BodyFont,new(.68f,.88f,.80f,1));
-     draw.AddRectFilled(r.Position,r.Position+r.Size,0xff47453d,3);
-     draw.AddRectFilled(r.Position,r.Position+new Vector2(r.Size.X*progress.Fraction,r.Size.Y),0xffa3c261,3);
+     if(r.Size.Y>0)draw.AddRectFilled(r.Position,r.Position+r.Size,0xff47453d,3);
+     if(r.Size.Y>0)draw.AddRectFilled(r.Position,r.Position+new Vector2(r.Size.X*progress.Fraction,r.Size.Y),0xffa3c261,3);
     }
     if(layout.PageText.Length>0)Text(layout.PageText,Center(layout.PageText,layout.PageLabel,14),14,new(.9f,.9f,.9f,1));
     foreach(var entry in layout.Buttons){
@@ -57,29 +57,23 @@ internal static class NativeHuntPreviewChecks {
       Text(entry.Button.Label,new(r.Position+new Vector2(8,2),new(r.Size.X-40,22)),NativeHuntLayout.BodyFont,Vector4.One);
       continue;
      }
-     if(entry.Button.Board==null)draw.AddRectFilled(r.Position,r.Position+r.Size,entry.Button.Enabled?0xff534a3a:0xff35312d,5);
-
-     float font=entry.Button.Label.Contains('\n')||Height(entry.Button.Label,r.Size.X-32,NativeHuntLayout.ButtonFont)>r.Size.Y-8?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;
-     if(entry.Button.Board is {} row){
-      Text(row.Name,new(r.Position+new Vector2(16,4),new(r.Size.X-32,18)),font,NativeHuntColors.Tracking);
-      ImGui.SetWindowFontScale(font/17f);
-      void StatusLine(string prefix,NativeBoardStatus status,float y){
-       float x=r.Position.X+16;
-       float prefixWidth=ImGui.CalcTextSize(prefix).X;
-       float statusWidth=ImGui.CalcTextSize(status.Label).X;
-       if(x+prefixWidth+statusWidth>r.Position.X+r.Size.X-16||y+18>r.Position.Y+r.Size.Y-4)
-        throw new Exception("Board status line exceeds its button");
-       Text(prefix,new(new(x,y),new(prefixWidth+2,18)),font,Vector4.One);
-       Text(status.Label,new(new(x+prefixWidth,y),new(statusWidth+2,18)),font,status.Color??Vector4.One);
-      }
-      StatusLine(NativeBoardRow.DailyPrefix,row.Daily,r.Position.Y+22);
-      StatusLine(NativeBoardRow.WeeklyPrefix,row.Weekly,r.Position.Y+38);
+     if(entry.Button.Board!=null||entry.Button.Goal!=null){
+      if(entry==layout.Buttons.FirstOrDefault(b=>b.Button.Board!=null||b.Button.Goal!=null))
+       draw.AddRectFilled(r.Position,r.Position+r.Size,ImGui.GetColorU32(new Vector4(.36f,.52f,.72f,.35f)),4);
       continue;
      }
+     draw.AddRectFilled(r.Position,r.Position+r.Size,entry.Button.Enabled?0xff534a3a:0xff35312d,5);
+     float font=entry.Button.Label.Contains('\n')||Height(entry.Button.Label,r.Size.X-16,NativeHuntLayout.ButtonFont)>r.Size.Y-8?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;
      ImGui.SetWindowFontScale(font/17f);
      var textSize=ImGui.CalcTextSize(entry.Button.Label);
-     float inset=entry.Button.Label.Contains('\n')?16:Math.Max(16,(r.Size.X-textSize.X)/2);
+     float inset=entry.Button.Label.Contains('\n')?8:Math.Max(8,(r.Size.X-textSize.X)/2);
      Text(entry.Button.Label,new(r.Position+new Vector2(inset,4),new(r.Size.X-inset-8,r.Size.Y-8)),font,entry.Button.Enabled?(entry.Button.Emphasized?new(1,.85f,.55f,1):Vector4.One):new(.62f,.62f,.62f,1));
+    }
+    foreach(var cell in layout.TableText){
+     ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);
+     if(ImGui.CalcTextSize(cell.Label).X>cell.Rect.Size.X&&sample.Page==NativeHuntPage.Boards)
+      throw new Exception("Board cell label exceeds its column: "+cell.Label);
+     Text(cell.Label,cell.Rect,NativeHuntLayout.ButtonFont,cell.Color);
     }
     ImGui.End();ImGui.Render();
    }

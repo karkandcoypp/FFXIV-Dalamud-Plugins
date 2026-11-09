@@ -71,10 +71,10 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         }
         if(!string.IsNullOrEmpty(content.Footer)) y+=Text(content.Footer,left,y,inner,12,Muted)+8;
         const float buttonHeight=NativeHuntLayout.ActionHeight;
-        float confirmWidth=content.ConfirmLabel.Length>13?NativeHuntLayout.LongActionWidth:NativeHuntLayout.ActionWidth;
+        float confirmWidth=NativeHuntLayout.ButtonWidth(content.ConfirmLabel);
         float buttonsY=y+8,heightTotal=buttonsY+buttonHeight+14;
         var confirm=new DialogButton(new(left,buttonsY),new(confirmWidth,buttonHeight));
-        var decline=new DialogButton(new(left+confirmWidth+6,buttonsY),new(94,buttonHeight));
+        var decline=new DialogButton(new(left+confirmWidth+6,buttonsY),new(NativeHuntLayout.ActionWidth,buttonHeight));
         return new(width,heightTotal,confirm,decline,texts);
     }
 }
