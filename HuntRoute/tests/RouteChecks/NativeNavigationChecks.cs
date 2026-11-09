@@ -7,6 +7,7 @@ static class NativeNavigationChecks {
   ],123,new(1,3));
   foreach(bool mini in new[]{false,true}){
    var layout=NativeHuntLayout.Build(active,NativeHuntPage.Hunt,0,30,38,mini);
+   check(layout.Size.X==(mini?360:480)&&layout.Size.Y<(mini?290:340),"Active native menus fit the compact footprint");
    var map=layout.Buttons.Single(b=>b.Button.Key=="map");
    var actions=layout.Buttons.Single(b=>b.Button.Key=="actions");
    var primary=layout.Buttons.Single(b=>b.Button.Key=="primary");

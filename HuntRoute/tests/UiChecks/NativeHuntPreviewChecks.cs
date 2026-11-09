@@ -25,13 +25,13 @@ internal static class NativeHuntPreviewChecks {
    string title=NativeHuntLayout.FitLabel(sample.Screen.Title,110),summary=NativeHuntLayout.FitLabel(sample.Screen.Summary,420);
    ImGui.NewFrame();ImGui.Begin("measure");
    float Height(string value,float width,float font){ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(value,false,width).Y+4;}
-   float width=sample.Mini?412:592;
-   var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,width,20),Height(summary,!sample.Mini&&sample.Screen.Icon!=0?456:width,15),sample.Mini);
+   float width=NativeHuntLayout.ContentWidth(sample.Mini);
+   var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,width,20),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),15),sample.Mini);
    ImGui.End();ImGui.EndFrame();io.DisplaySize=layout.Size;
    for(int frame=0;frame<3;frame++){
     ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(layout.Size);ImGui.Begin("Native layout preview",ImGuiWindowFlags.NoDecoration|ImGuiWindowFlags.NoSavedSettings);
     var draw=ImGui.GetWindowDrawList();draw.AddRectFilled(Vector2.Zero,layout.Size,0xff231f1b,10);
-    void Text(string value,NativeHuntRect rect,float font,Vector4 color){ImGui.SetWindowFontScale(font/17f);ImGui.SetCursorScreenPos(rect.Position);ImGui.PushTextWrapPos(rect.Position.X+rect.Size.X);ImGui.TextColored(color,value);ImGui.PopTextWrapPos();if(ImGui.GetItemRectMax().Y>rect.Position.Y+rect.Size.Y+2)throw new Exception("Native preview label exceeds block: "+sample.Name);}
+    void Text(string value,NativeHuntRect rect,float font,Vector4 color){ImGui.SetWindowFontScale(font/17f);ImGui.SetCursorScreenPos(rect.Position);ImGui.PushTextWrapPos(rect.Position.X+rect.Size.X);ImGui.TextColored(color,value);ImGui.PopTextWrapPos();if(ImGui.GetItemRectMax().Y>rect.Position.Y+rect.Size.Y+2)throw new Exception("Native preview label exceeds block: "+sample.Name+" / "+value);}
     Text(title,layout.Heading,20,new(.96f,.90f,.75f,1));Text(summary,layout.Summary,15,new(.9f,.9f,.9f,1));
     if(!sample.Mini&&sample.Screen.Icon!=0)draw.AddRectFilled(layout.Portrait.Position,layout.Portrait.Position+layout.Portrait.Size,0xff3b3631,6);
     if(sample.Screen.Progress is {} progress){

@@ -32,15 +32,15 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values){
   if(WindowNode is WindowNode window){window.ShowConfigButton=false;window.ShowHelpButton=false;}
   if(mini)native->DisableFocusOnShow=true;
-  heading=new TextNode{Position=new(24,90),Size=new(592,30),FontSize=20,String="Hunt Route",TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(heading);
-  summary=new TextNode{Position=new(24,128),Size=new(592,110),FontSize=15,LineSpacing=19,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(summary);
-  portrait=new IconImageNode{Position=new(496,128),Size=new(112,112),IsVisible=false};AddNode(portrait);
+  heading=new TextNode{FontSize=20,String="Hunt Route",TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(heading);
+  summary=new TextNode{FontSize=15,LineSpacing=19,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(summary);
+  portrait=new IconImageNode{IsVisible=false};AddNode(portrait);
   progressLabel=new TextNode{FontSize=14,TextColor=new(.68f,.88f,.80f,1)};AddNode(progressLabel);
   progressTrack=new ColorImageNode{Color=new(.24f,.27f,.28f,1)};AddNode(progressTrack);
   progressFill=new ColorImageNode{Color=new(.38f,.76f,.64f,1)};AddNode(progressFill);
   pageLabel=new TextNode{Size=new(240,24),FontSize=14};AddNode(pageLabel);
   for(int i=0;i<buttons.Length;i++){
-   int slot=i;var button=new TextButtonNode{Size=new(592,40),NavIndex=i+1,OnClick=()=>Clicked(slot)};
+   int slot=i;var button=new TextButtonNode{NavIndex=i+1,OnClick=()=>Clicked(slot)};
    button.LabelNode.FontSize=16;button.LabelNode.LineSpacing=18;button.LabelNode.TextFlags=TextFlags.WordWrap|TextFlags.MultiLine;
    buttons[i]=button;AddNode(button);
   }
@@ -68,11 +68,11 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   bool ownsFocus=false;var global=AtkStage.Instance()->AtkInputManager->FocusedNode;
   for(int i=0;i<buttons.Length;i++)if(buttons[i] is {} b&&(global==(AtkResNode*)b||global==(AtkResNode*)b.FocusNode)){focusedKey=keys[i];ownsFocus=true;}
   var screen=controller.Build(mini);
-  bool hasIcon=!mini&&screen.Icon!=0;float inner=mini?412:592;
+  bool hasIcon=!mini&&screen.Icon!=0;float inner=NativeHuntLayout.ContentWidth(mini);
   string title=NativeHuntLayout.FitLabel(screen.Title,110),description=NativeHuntLayout.FitLabel(screen.Summary,420);
   if(titleText!=title){heading.String=title;titleText=title;}
   if(summaryText!=description){summary.String=description;summaryText=description;}
-  heading.Size=new(inner,80);summary.Size=new(hasIcon?456:inner,200);
+  heading.Size=new(inner,110);summary.Size=new(NativeHuntLayout.SummaryWidth(screen,mini),200);
   var layout=NativeHuntLayout.Build(screen,controller.Page,controller.Offset,heading.GetTextDrawSize(considerScale:false).Y,summary.GetTextDrawSize(considerScale:false).Y,mini);
   heading.Position=layout.Heading.Position;heading.Size=layout.Heading.Size;
   summary.Position=layout.Summary.Position;summary.Size=layout.Summary.Size;
@@ -89,7 +89,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   portrait.Position=layout.Portrait.Position;
   if(hasIcon&&icon!=screen.Icon){try{portrait.IconId=screen.Icon;icon=screen.Icon;}catch(Exception e){icon=screen.Icon;Service.PluginLog.Debug(e,"Портрет нативной цели недоступен");hasIcon=false;}}
   portrait.IsVisible=hasIcon&&portrait.IsTextureReady;
-  if(portrait.IsVisible){var texture=portrait.ActualTextureSize;if(texture.X>0&&texture.Y>0){portrait.TextureSize=texture;portrait.Size=texture*Math.Min(112/texture.X,112/texture.Y);}}
+  if(portrait.IsVisible){var texture=portrait.ActualTextureSize;if(texture.X>0&&texture.Y>0){portrait.TextureSize=texture;portrait.Size=texture*Math.Min(layout.Portrait.Size.X/texture.X,layout.Portrait.Size.Y/texture.Y);}}
   pageLabel.IsVisible=layout.PageText.Length>0;pageLabel.Position=layout.PageLabel.Position;pageLabel.String=layout.PageText;
   string identity=$"{controller.Page}:{string.Join('|',layout.Buttons.Select(b=>b.Button.Key))}";
   bool changed=screenIdentity!=identity;screenIdentity=identity;
