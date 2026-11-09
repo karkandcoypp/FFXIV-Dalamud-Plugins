@@ -118,6 +118,7 @@ public sealed partial class Plugin : IDalamudPlugin {
             nextScan=now+1000;
 
             if (character != Service.Player.ContentId) { if(character!=0)SaveJourney(true);NativeDialogs.CancelAll();character = Service.Player.ContentId; signature = ""; routeSignature=""; nextTeleportAllowed=0; Elite.Selected=null; Session.Stop(); LoadJourney(); NextZone.Sync(); Shortcut.Sync(); }
+            if(!RecoverJourneyStore()){Ready=false;Error=JourneySaveError;return;}
             var hunt = MobHunt.Instance(); if (hunt == null) { Ready=false; return; }
             for(byte bill=0;bill<22;bill++){
                 var kills=new int[5];for(byte mob=0;mob<5;mob++)kills[mob]=hunt->GetKillCount(bill,mob);
@@ -343,10 +344,14 @@ public sealed partial class Plugin : IDalamudPlugin {
         if(Flow.Active && !FlightKnown())return null;
         if(!Settings.Shortcuts || !NavigationAllowed || !Ready || Session.Phase!=RoutePhase.Following || Session.Target is not {} target
             || Service.ClientState.TerritoryType!=target.TerritoryType || Service.ClientState.MapId!=target.MapId
-            || Service.ObjectTable.LocalPlayer is not {} player || Done(target)
-            || !Location.Database.TryGetValue(target.MobHuntId,out var position)) return null;
+            || Service.ObjectTable.LocalPlayer is not {} player || Done(target)) return null;
         var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(target.MapId);
-        var destination=MapCoordinates.ToWorld(position.Coordinate,map);
+        string key=JourneyFlow.Key(target);
+        Vector2 destination;
+        if(!target.IsEliteMark&&ordinaryActor!=null&&ordinaryKind==key&&ordinaryPosition is {} tracked)destination=tracked;
+        else if(livePositions.TryGetValue(key,out var live))destination=live;
+        else if(Location.Database.TryGetValue(target.MobHuntId,out var position))destination=MapCoordinates.ToWorld(position.Coordinate,map);
+        else return null;
         var here=new Vector2(player.Position.X,player.Position.Z);
 
         var prices=Service.Aetherytes.GroupBy(a=>a.AetheryteId).ToDictionary(g=>g.Key,g=>g.Min(a=>a.GilCost));

@@ -29,6 +29,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  private string? screenIdentity;
  private uint icon;
  private long nextUpdate;
+ private float requestedScale;
  internal void RequestFocus()=>focusRequested=true;
  internal bool OwnsFocus(){
   if(!IsOpen)return false;var node=AtkStage.Instance()->AtkInputManager->FocusedNode;if(node==null)return false;
@@ -61,10 +62,23 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    cell.AddTextFlags(TextFlags.Ellipsis);tableCells[i]=cell;AddNode(cell);
   }
   focusOutline=new NativeFocusOutline(node=>AddNode(node));
-  screenIdentity=null;keys=new string?[NativeHuntLayout.ButtonCapacity];commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];nextUpdate=0;focusRequested=!mini;focusFirstBody=false;icon=0;titleText=summaryText=null;Array.Clear(buttonText);
+  requestedScale=0;screenIdentity=null;keys=new string?[NativeHuntLayout.ButtonCapacity];commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];nextUpdate=0;focusRequested=!mini;focusFirstBody=false;icon=0;titleText=summaryText=null;Array.Clear(buttonText);
   Refresh(native);
  }
- protected override void OnShow(AtkUnitBase* native){if(!mini)focusRequested=true;}
+ protected override void OnShow(AtkUnitBase* native){
+  requestedScale=native->GetScale();
+  FitViewport(native);
+  if(!mini)focusRequested=true;
+ }
+ private void FitViewport(AtkUnitBase* native){
+  if(requestedScale<=0)return;
+  var viewport=(Vector2)AtkStage.Instance()->ScreenSize;
+  if(viewport.X<=16||viewport.Y<=16)return;
+  float fitted=TravelDialogLayout.FitScale(Size,viewport,requestedScale);
+  if(native->GetScale()!=fitted)native->SetScale(fitted,true);
+  var position=TravelDialogLayout.ClampPosition(new(native->X,native->Y),Size*fitted,viewport);
+  if(native->X!=(short)position.X||native->Y!=(short)position.Y)native->SetPosition((short)position.X,(short)position.Y);
+ }
  protected override void OnUpdate(AtkUnitBase* native){
   if(Environment.TickCount64>=nextUpdate){nextUpdate=Environment.TickCount64+200;Refresh(native);}
   if(focusRequested&&IsOpen&&!modal()){int index=NativeHuntNavigation.RestoreFocus(links,focusedKey);if(index>0){if(checks[index-1] is {IsVisible:true} check)check.SetFocus();else buttons[index-1]?.SetFocus();}focusRequested=false;}
@@ -140,7 +154,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
     if(button.Position!=placement.Rect.Position)button.Position=placement.Rect.Position;
     if(button.Size!=placement.Rect.Size){button.Size=placement.Rect.Size;buttonText[slot]=null;}
     button.LabelNode.X=8;button.LabelNode.Width=button.Width-16;
-    button.BackgroundNode.Color=spec.Key=="primary"?NativeHuntColors.PrimarySurface:Vector4.One;
+    button.BackgroundNode.Color=spec.Key=="primary"&&spec.Emphasized?NativeHuntColors.PrimarySurface:Vector4.One;
     button.LabelNode.TextColor=spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One);
     if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.String=spec.Board!=null||spec.Goal!=null?"":spec.Label;if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=18;}buttonText[slot]=spec.Label;}
     button.IsVisible=true;button.IsEnabled=spec.Enabled;
@@ -165,6 +179,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(focusFirstBody){focusedKey=items.FirstOrDefault(n=>n.Row is >0 and <=6&&n.Enabled).Key;focusFirstBody=false;}
   if(ownsFocus&&(changed||links.All(n=>n.Key!=focusedKey)))focusRequested=true;
   if(Size!=layout.Size)SetWindowSize(layout.Size);
+  FitViewport(native);
  }
 }
 

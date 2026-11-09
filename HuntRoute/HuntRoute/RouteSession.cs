@@ -67,10 +67,10 @@ public sealed class RouteSession {
 }
 
 public sealed class NextZoneNotice {
-    private (uint Run,uint From,uint To)? announced;
-    public bool ShouldOpen(RouteSession session) {
+    private (uint Run,uint From,string Target,uint Entry,uint Price)? announced;
+    public bool ShouldOpen(RouteSession session,uint entry=0,uint price=0) {
         if(session.Phase!=RoutePhase.NextZone || session.Target==null || session.Suggested==null) return false;
-        var key=(session.RunId,session.Target.TerritoryType,session.Suggested.TerritoryType);
+        var key=(session.RunId,session.Target.TerritoryType,JourneyFlow.Key(session.Suggested),entry,price);
         if(announced==key) return false;
         announced=key; return true;
     }

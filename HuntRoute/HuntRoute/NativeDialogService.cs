@@ -34,7 +34,7 @@ internal sealed class NativeDialogService : IDisposable {
         if(addon!=null) return;
         bool available=Service.GameGui.GetAddonByName("SelectYesno").IsNull
             && Service.GameGui.GetAddonByName("HuntRouteConfirm").IsNull;
-        var request=queue.Activate(available);
+        var request=queue.Activate(available,Environment.TickCount64);
         if(request==null) return;
         try {
             addon=new NativeConfirmationAddon(request.Presentation ?? TravelDialogContent.Plain(request.Text),request.Ready,yes=>Answered(request.Key,yes)) {
@@ -44,7 +44,7 @@ internal sealed class NativeDialogService : IDisposable {
             addon.Open();request.OnShown?.Invoke();
         } catch(Exception e) {
             addon?.CloseQuietly();addon=null;
-            queue.Resolve(request.Key,false);queue.Retry(request);
+            queue.Resolve(request.Key,false);queue.RetryOpen(request,Environment.TickCount64);
             Service.PluginLog.Error(e,"Не удалось открыть игровой диалог Hunt Route");
         }
     }

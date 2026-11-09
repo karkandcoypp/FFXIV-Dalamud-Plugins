@@ -15,7 +15,7 @@ class Program {
   NativeLibrary.SetDllImportResolver(typeof(ImGui).Assembly,(n,_,_)=>NativeLibrary.Load(Path.Combine(home,n+".dll")));
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
   Set(plugin,"Search",new EliteSearch()); Set(plugin,"Session",new RouteSession()); Set(plugin,"CurrentTerritory",999u); Set(plugin,"HideDone",true); Set(plugin,"Ready",true); Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>()); Set(plugin,"BillStates",Enumerable.Range(0,22).Select(i=>(byte)i).ToDictionary(i=>i,i=>new BillState(true,i is 1 or 2 or 3 or 5,1,1,false)));
-  var mobs=new List<MobHuntEntry>{new(){Name="Archaeornis",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=0,MobHuntId=3481,NeededKills=3,TerritoryType=397},new(){Name="Wooly Yak",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=1,MobHuntId=3479,NeededKills=2,TerritoryType=397},new(){Name="Alteci",TerritoryName="Coerthas Western Highlands",BillNumber=5,MobIndex=0,MobHuntId=4350,NeededKills=1,IsEliteMark=true,TerritoryType=397}};
+  var mobs=new List<MobHuntEntry>{new(){Name="Archaeornis",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=0,MobHuntId=3481,Icon=84292,NeededKills=3,TerritoryType=397},new(){Name="Wooly Yak",TerritoryName="Coerthas Western Highlands",BillNumber=1,MobIndex=1,MobHuntId=3479,NeededKills=2,TerritoryType=397},new(){Name="Alteci",TerritoryName="Coerthas Western Highlands",BillNumber=5,MobIndex=0,MobHuntId=4350,NeededKills=1,IsEliteMark=true,TerritoryType=397}};
   Set(plugin,"Mobs",mobs); Set(plugin,"Routes",new List<ZoneRoute>{new("Coerthas Western Highlands",mobs,new(71,"Falcon's Nest",new(32,36))),new("The Sea of Clouds",mobs,new(73,"Camp Cloudtop",new(16,37))),new("The Dravanian Forelands",mobs,new(76,"Tailfeather",new(31,23)))});
   string directory=Path.GetFullPath(args[0]);Directory.CreateDirectory(directory);
   foreach(var sample in new[]{(520,430,17f,"normal"),(620,500,17f,"following"),(620,500,17f,"next"),(800,620,17f,"normal"),(1180,800,20f,"normal"),(520,430,17f,"completed"),(800,620,17f,"completed"),(520,430,20f,"completed-large"),(520,430,20f,"normal-large"),(520,430,17f,"settings"),(520,430,20f,"selected"),(620,500,17f,"elite"),(360,260,17f,"mini"),(360,360,20f,"mini-elite"),(520,430,20f,"settings-large"),(520,430,17f,"no-bills"),(520,430,17f,"deferred"),(520,430,17f,"unavailable"),(520,430,20f,"save-error"),(520,430,17f,"loading"),(400,340,17f,"normal"),(400,420,20f,"following"),(400,420,20f,"next"),(400,480,20f,"boards"),(620,620,17f,"boards-complete"),(400,480,20f,"targets"),(400,480,20f,"targets-selected"),(400,480,20f,"settings"),(300,280,20f,"mini-elite"),(400,480,20f,"paused"),(400,500,26f,"following"),(300,360,26f,"mini-elite"),(400,500,26f,"boards"),(400,480,20f,"boards-request"),(400,480,20f,"focus-request"),(400,480,20f,"settings-ordinary-only"),(400,480,20f,"settings-ordinary-off"),(400,560,20f,"settings-ranges"),(400,460,20f,"planned-travel"),(400,460,20f,"inactive-stale"),(400,460,20f,"stale-unavailable")}) {
@@ -65,16 +65,25 @@ class Program {
    if(sample.Item4=="stale-unavailable"){flow.Active=false;foreach(var mob in mobs)flow.Unavailable[JourneyFlow.Key(mob)]="Old unavailable cache";}
    string Journey()=>JsonSerializer.Serialize(new{session.RunId,session.Phase,Target=session.Target==null?null:JourneyFlow.Key(session.Target),flow.Active,flow.Pauses,flow.Manual,Deferred=flow.Deferred.Order().ToArray(),Zones=flow.Zones.Order().ToArray(),Kills=((Dictionary<(byte,byte),int>)typeof(Plugin).GetField("KillCounts",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!).OrderBy(p=>p.Key).Select(p=>$"{p.Key}:{p.Value}").ToArray(),Search=search.Capture(),search.ActorId});
    string before=Journey();float overflow=0;
-   for(int frame=0;frame<3;frame++) { ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);window.PreDraw();ImGui.Begin(sample.Item4=="offer"?"Продолжить охоту?":"Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove|(sample.Item4.StartsWith("mini")?ImGuiWindowFlags.None:window.Flags));if(sample.Item4.StartsWith("mini"))typeof(HuntWindow).GetMethod("DrawSession",BindingFlags.NonPublic|BindingFlags.Static)!.Invoke(null,new object[]{plugin});else {if(sample.Item4=="settings-ranges")ImGui.GetStateStorage().SetInt(ImGui.GetID("Дальность подсветки"),1);window.Draw();}overflow=Math.Max(overflow,ImGui.GetScrollMaxX());ImGui.End();window.PostDraw();ImGui.Render(); }
-   File.WriteAllBytes(Path.Combine(directory,$"font-{sample.Item3}.rgba"),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
+   for(int frame=0;frame<5;frame++) {
+    for(int page=0;page<io.Fonts.Textures.Size;page++)io.Fonts.SetTexID(page,new ImTextureID((ulong)page+1));
+    ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);window.PreDraw();ImGui.Begin(sample.Item4=="offer"?"Продолжить охоту?":"Hunt Route",ImGuiWindowFlags.NoResize|ImGuiWindowFlags.NoMove|(sample.Item4.StartsWith("mini")?ImGuiWindowFlags.None:window.Flags));if(sample.Item4.StartsWith("mini"))typeof(HuntWindow).GetMethod("DrawSession",BindingFlags.NonPublic|BindingFlags.Static)!.Invoke(null,new object[]{plugin});else {if(sample.Item4=="settings-ranges")ImGui.GetStateStorage().SetInt(ImGui.GetID("Дальность подсветки"),1);window.Draw();}overflow=Math.Max(overflow,ImGui.GetScrollMaxX());ImGui.End();window.PostDraw();ImGui.Render(); }
+   string sampleName=$"huntroute-{sample.Item1}x{sample.Item2}-{sample.Item4}";
+   var atlases=new Dictionary<ulong,string>();
+   for(int page=0;page<io.Fonts.Textures.Size;page++){
+    string atlas=$"{sampleName}-{page}.rgba";
+    io.Fonts.GetTexDataAsRGBA32(page,&pixels,&tw,&th);
+    File.WriteAllBytes(Path.Combine(directory,atlas),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
+    atlases.Add((ulong)page+1,atlas);
+   }
    var draw=ImGui.GetDrawData();var lists=new List<object>();
    for(int i=0;i<draw.CmdListsCount;i++) { var list=new ImDrawListPtr(draw.CmdLists[i]);var vertices=new List<double[]>();var indices=new List<ushort>();var commands=new List<object>();
     for(int n=0;n<list.VtxBuffer.Size;n++){var v=list.VtxBuffer[n];vertices.Add([v.Pos.X,v.Pos.Y,v.Uv.X,v.Uv.Y,v.Col]);}
     for(int n=0;n<list.IdxBuffer.Size;n++)indices.Add(list.IdxBuffer[n]);
-    for(int n=0;n<list.CmdBuffer.Size;n++){var c=list.CmdBuffer[n];commands.Add(new{Clip=new[]{c.ClipRect.X,c.ClipRect.Y,c.ClipRect.Z,c.ClipRect.W},Count=c.ElemCount,Offset=c.IdxOffset,VertexOffset=c.VtxOffset});}
+    for(int n=0;n<list.CmdBuffer.Size;n++){var c=list.CmdBuffer[n];commands.Add(new{Clip=new[]{c.ClipRect.X,c.ClipRect.Y,c.ClipRect.Z,c.ClipRect.W},Count=c.ElemCount,Offset=c.IdxOffset,VertexOffset=c.VtxOffset,Texture=c.TextureId.Handle});}
     lists.Add(new{Vertices=vertices,Indices=indices,Commands=commands});
    }
-   File.WriteAllText(Path.Combine(directory,$"huntroute-{sample.Item1}x{sample.Item2}-{sample.Item4}.json"),JsonSerializer.Serialize(new{Width=sample.Item1,Height=sample.Item2,Font=sample.Item3,TextureWidth=tw,TextureHeight=th,Lists=lists}));
+   File.WriteAllText(Path.Combine(directory,sampleName+".json"),JsonSerializer.Serialize(new{Width=sample.Item1,Height=sample.Item2,Font=sample.Item3,Atlases=atlases,TextureWidth=tw,TextureHeight=th,Lists=lists}));
    var actualPage=(HuntPage)typeof(HuntWindow).GetField("page",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(window)!;
    if(sample.Item4=="boards-request"&&actualPage!=HuntPage.Boards)throw new Exception("Board selection request did not navigate to boards");
    if(sample.Item4=="focus-request"&&actualPage!=HuntPage.Targets)throw new Exception("Explicit focus did not reveal target list");
@@ -86,7 +95,8 @@ class Program {
   DialogPreviewChecks.Run(directory);
   WorldMarkerPreviewChecks.Run(directory);
   var nativeFlow=(JourneyFlow)typeof(Plugin).GetProperty("Flow",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!;
-  nativeFlow.Stop();nativeFlow.Active=true;
+  nativeFlow.Stop();nativeFlow.Unavailable.Clear();nativeFlow.Active=true;nativeFlow.Status="Сопровождение активно";
+
   var nativeSession=new RouteSession();nativeSession.Start(mobs[0],[1,2,3]);
   nativeSession.Tick(mobs,_=>false,_=>true,mobs[0].TerritoryType);
   Set(plugin,"Session",nativeSession);

@@ -7,7 +7,12 @@ from PIL import Image
 for path in Path(sys.argv[1]).glob('huntroute-*.json'):
     data = json.loads(path.read_text())
     width, height = data['Width'], data['Height']
-    texture = np.fromfile(path.parent / f"font-{data['Font']}.rgba", dtype=np.uint8).reshape(data['TextureHeight'], data['TextureWidth'], 4).astype(float)/255
+    atlas_files = data.get("Atlases") or {"1": data.get("Atlas") or f"font-{data['Font']}.rgba"}
+    textures = {
+        key: np.fromfile(path.parent / filename, dtype=np.uint8)
+        .reshape(data['TextureHeight'], data['TextureWidth'], 4).astype(float) / 255
+        for key, filename in atlas_files.items()
+    }
     target = np.zeros((height, width, 3),dtype=float)
     for draw in data['Lists']:
         vertices = np.array(draw['Vertices'])
@@ -15,6 +20,7 @@ for path in Path(sys.argv[1]).glob('huntroute-*.json'):
         packed = vertices[:,4].astype(np.uint32)
         colors = np.stack([(packed >> shift)&255 for shift in (0,8,16,24)],axis=1)/255.
         for command in draw['Commands']:
+            texture = textures[str(command.get('Texture', 1))]
             x0,y0,x1,y1=command['Clip']
             for at in range(command['Offset'],command['Offset']+command['Count'],3):
                 ids=indices[at:at+3]+command['VertexOffset']
@@ -38,5 +44,15 @@ for path in Path(sys.argv[1]).glob('huntroute-*.json'):
                 dest=target[top:bottom,left:right]
                 alpha=source[:,3:4]
                 dest[mask]=source[:,:3]*alpha+dest[mask]*(1-alpha)
-    Image.fromarray(np.clip(target*255,0,255).astype(np.uint8)).save(path.with_suffix('.png'))
+    image = Image.fromarray(np.clip(target*255,0,255).astype(np.uint8))
+    portrait = data.get('Portrait')
+    if portrait:
+        portrait_path = path.parent / f"portrait-{portrait['Icon']}.png"
+        if portrait_path.is_file():
+            icon = Image.open(portrait_path).convert('RGBA')
+            icon.thumbnail((int(portrait['W']), int(portrait['H'])), Image.Resampling.LANCZOS)
+            x = round(portrait['X'] + (portrait['W'] - icon.width) / 2)
+            y = round(portrait['Y'] + (portrait['H'] - icon.height) / 2)
+            image.paste(icon, (x, y), icon)
+    image.save(path.with_suffix('.png'))
     print(path.with_suffix('.png'))

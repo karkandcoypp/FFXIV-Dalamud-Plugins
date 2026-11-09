@@ -8,7 +8,7 @@ internal static class NativeHuntPreviewChecks {
  internal static unsafe void Run(string directory,Plugin plugin){
   var controller=new NativeHuntController(plugin);
   var samples=new List<(string Name,NativeHuntPage Page,NativeHuntScreen Screen,bool Mini,int Offset)>();
-  foreach(var page in Enum.GetValues<NativeHuntPage>()){controller.Navigate(page);samples.Add((page.ToString(),page,controller.Build(),false,0));}
+  foreach(var page in Enum.GetValues<NativeHuntPage>()){if(page==NativeHuntPage.Target)controller.FocusGoal();else controller.Navigate(page);samples.Add((page.ToString(),page,controller.Build(),false,0));}
   samples.Add(("mini",NativeHuntPage.Hunt,controller.Build(true),true,0));
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,123),false,1));
@@ -59,7 +59,7 @@ internal static class NativeHuntPreviewChecks {
       continue;
      }
      if(entry.Button.Board!=null||entry.Button.Goal!=null)continue;
-     draw.AddRectFilled(r.Position,r.Position+r.Size,entry.Button.Key=="primary"?0xff795f44:entry.Button.Enabled?0xff534a3a:0xff35312d,5);
+     draw.AddRectFilled(r.Position,r.Position+r.Size,entry.Button.Key=="primary"&&entry.Button.Emphasized?0xff795f44:entry.Button.Enabled?0xff534a3a:0xff35312d,5);
      float font=entry.Button.Label.Contains('\n')||Height(entry.Button.Label,r.Size.X-16,NativeHuntLayout.ButtonFont)>r.Size.Y-8?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;
      ImGui.SetWindowFontScale(font/17f);
      var textSize=ImGui.CalcTextSize(entry.Button.Label);
@@ -78,7 +78,9 @@ internal static class NativeHuntPreviewChecks {
     }
     ImGui.End();ImGui.Render();
    }
-   File.WriteAllBytes(Path.Combine(directory,"font-17.rgba"),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
+   string atlas=$"huntroute-native-{sample.Name}.rgba";
+   io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);
+   File.WriteAllBytes(Path.Combine(directory,atlas),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
    var data=ImGui.GetDrawData();var lists=new List<object>();
    for(int i=0;i<data.CmdListsCount;i++){
     var list=new ImDrawListPtr(data.CmdLists[i]);var vertices=new List<double[]>();var indices=new List<ushort>();var commands=new List<object>();
@@ -87,7 +89,7 @@ internal static class NativeHuntPreviewChecks {
     for(int n=0;n<list.CmdBuffer.Size;n++){var c=list.CmdBuffer[n];commands.Add(new{Clip=new[]{c.ClipRect.X,c.ClipRect.Y,c.ClipRect.Z,c.ClipRect.W},Count=c.ElemCount,Offset=c.IdxOffset,VertexOffset=c.VtxOffset});}
     lists.Add(new{Vertices=vertices,Indices=indices,Commands=commands});
    }
-   File.WriteAllText(Path.Combine(directory,$"huntroute-native-{sample.Name}.json"),JsonSerializer.Serialize(new{Width=(int)layout.Size.X,Height=(int)layout.Size.Y,Font=17,TextureWidth=tw,TextureHeight=th,Lists=lists}));
+   File.WriteAllText(Path.Combine(directory,$"huntroute-native-{sample.Name}.json"),JsonSerializer.Serialize(new{Width=(int)layout.Size.X,Height=(int)layout.Size.Y,Font=17,Atlas=atlas,Portrait=!sample.Mini&&sample.Screen.Icon!=0?new{Icon=sample.Screen.Icon,X=layout.Portrait.Position.X,Y=layout.Portrait.Position.Y,W=layout.Portrait.Size.X,H=layout.Portrait.Size.Y}:null,TextureWidth=tw,TextureHeight=th,Lists=lists}));
    ImGui.DestroyContext();Console.WriteLine("PASS native Hunt Route layout "+sample.Name);
   }
  }

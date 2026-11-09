@@ -15,10 +15,11 @@ class AssetTests(unittest.TestCase):
             root=Path(directory); manifest=root/'plugin.json'; archive=root/'EorzeaEventTracker.zip'
             doc={'InternalName':'EorzeaEventTracker','AssemblyVersion':'1.2.3.0','DalamudApiLevel':15}
             manifest.write_text(json.dumps(doc),encoding='utf8')
-            with zipfile.ZipFile(archive,'w') as z:z.writestr('EorzeaEventTracker.json',json.dumps(doc));z.writestr('EorzeaEventTracker.dll',b'MZ-test')
+            dll=bytearray(90);dll[:2]=b'MZ';dll[60]=64;dll[64:68]=b'PE\0\0';dll[87]=0x20;dll[88:90]=b'\x0b\x02'
+            with zipfile.ZipFile(archive,'w') as z:z.writestr('EorzeaEventTracker.json',json.dumps(doc));z.writestr('EorzeaEventTracker.dll',dll)
             remote=root/'remote.zip'
             if scenario=='bad':doc['AssemblyVersion']='9.0.0.0'
-            with zipfile.ZipFile(remote,'w') as z:z.writestr('EorzeaEventTracker.json',json.dumps(doc));z.writestr('EorzeaEventTracker.dll',b'MZ-test')
+            with zipfile.ZipFile(remote,'w') as z:z.writestr('EorzeaEventTracker.json',json.dumps(doc));z.writestr('EorzeaEventTracker.dll',dll)
             script=root/'run.ps1';log=root/'calls.jsonl'
             script.write_text('''$ErrorActionPreference='Stop'
 function global:gh {

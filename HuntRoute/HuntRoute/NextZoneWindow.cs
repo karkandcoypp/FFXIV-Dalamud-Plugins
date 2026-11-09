@@ -7,11 +7,11 @@ public sealed class NextZoneWindow(Plugin plugin) {
         if(!plugin.NavigationAllowed || session.Phase!=RoutePhase.NextZone || session.Suggested is not {} next || session.Target is not {} from) {
             plugin.NativeDialogs.Cancel("next");return;
         }
-        if(!notice.ShouldOpen(session)) return;
         uint run=session.RunId,zone=next.TerritoryType;string targetKey=JourneyFlow.Key(next);
         var entry=plugin.Flow.Active?plugin.EntryFor(next):null;uint quote=entry==null?0:plugin.Price(entry.Id);
+        if(!notice.ShouldOpen(session,entry?.Id??0,quote))return;
         plugin.NextOffered();
-        plugin.NativeDialogs.Offer(new("next",$"next:{run}:{from.TerritoryType}:{zone}",
+        plugin.NativeDialogs.Offer(new("next",$"next:{run}:{from.TerritoryType}:{targetKey}:{entry?.Id??0}:{quote}",
             $"Цели маршрута в зоне {from.TerritoryName} выполнены.\n\nСледующая зона: {next.TerritoryName}\nПервая цель: {next.Name}\n\nТелепортироваться и продолжить охоту?",
             ()=>plugin.Ready && (!plugin.Flow.Active||plugin.Eligible(next)) && session.RunId==run && session.Phase==RoutePhase.NextZone && session.Suggested?.TerritoryType==zone && JourneyFlow.Key(session.Suggested)==targetKey && (entry==null || plugin.EntryFor(next)?.Id==entry.Id && plugin.Price(entry.Id)<=quote),
             ()=>!plugin.TravelBusy && plugin.NavigationAllowed,

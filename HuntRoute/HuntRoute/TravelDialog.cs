@@ -41,6 +41,9 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         if(viewport.X<=16||viewport.Y<=16)return requested;
         return Math.Min(requested,Math.Min((viewport.X-16)/size.X,(viewport.Y-16)/size.Y));
     }
+    public static Vector2 ClampPosition(Vector2 origin,Vector2 size,Vector2 viewport) =>
+        Vector2.Clamp(origin,Vector2.Zero,Vector2.Max(Vector2.Zero,viewport-size));
+
     public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure) {
         const float width=DialogWidth,left=18,inner=width-2*left;
         var texts=new List<DialogText>();

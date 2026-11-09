@@ -4,8 +4,23 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import tempfile
+import struct
 import zipfile
 from update_repository import update
+
+
+def require_dll(package, name):
+    with package.open(name) as stream:
+        dos = stream.read(64)
+        if len(dos) != 64 or dos[:2] != b'MZ':
+            raise ValueError('Invalid DLL: ' + name)
+        offset = struct.unpack_from('<I', dos, 60)[0]
+        if not 64 <= offset <= package.getinfo(name).file_size - 26:
+            raise ValueError('Invalid PE offset: ' + name)
+        stream.seek(offset)
+        pe = stream.read(26)
+        if pe[:4] != b'PE\0\0' or not struct.unpack_from('<H', pe, 22)[0] & 0x2000 or pe[24:26] not in (b'\x0b\x01', b'\x0b\x02'):
+            raise ValueError('Invalid PE DLL header: ' + name)
 
 
 def verify(archive, manifest, repository, tag, index=None):
@@ -26,12 +41,15 @@ def verify(archive, manifest, repository, tag, index=None):
         for key in ('InternalName', 'AssemblyVersion', 'DalamudApiLevel'):
             if actual.get(key) != expected.get(key):
                 raise ValueError('Package manifest mismatch: ' + key)
-        if not actual.get('DalamudApiLevel') or not package.read(name + '.dll').startswith(b'MZ'):
-            raise ValueError('Missing plugin DLL/API')
+        if not actual.get('DalamudApiLevel'):
+            raise ValueError('Missing plugin API')
+        require_dll(package, name + '.dll')
+        if name == 'HuntRoute':
+            require_dll(package, 'KamiToolKit.dll')
     if index:
         entries = json.loads(Path(index).read_text(encoding='utf-8-sig'))
         own = [e for e in entries if e.get('InternalName') == name]
-        if len(own) != 1 or any(own[0].get(k) != entry[k] for k in ('AssemblyVersion', 'DownloadLinkInstall', 'DownloadLinkUpdate', 'DownloadLinkTesting')):
+        if len(own) != 1 or any(own[0].get(k) != entry[k] for k in ('AssemblyVersion', 'DalamudApiLevel', 'DownloadLinkInstall', 'DownloadLinkUpdate', 'DownloadLinkTesting')):
             raise ValueError('Package / repository index mismatch')
     print('PASS: ' + name + ' ' + expected['AssemblyVersion'] + ' ZIP, manifest, DLL and index; SHA256 ' + hashlib.sha256(Path(archive).read_bytes()).hexdigest())
 

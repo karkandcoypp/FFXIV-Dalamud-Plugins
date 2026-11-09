@@ -35,7 +35,7 @@ public sealed partial class HuntWindow {
   float primaryWidth=Math.Max(60,ImGui.GetContentRegionAvail().X-mapWidth-moreWidth-16);
   bool stacked=ImGui.CalcTextSize(action).X+18>primaryWidth;
   if(stacked){primaryWidth=ImGui.GetContentRegionAvail().X;mapWidth=moreWidth=(primaryWidth-8)/2;}
-  if(HuntTheme.Primary(action,new(primaryWidth,32))){if(p.Flow.Pauses!=PauseReason.None)p.ResumeJourney();else if(planned)p.OfferPlannedTravel();else if(next)p.OfferNext();else p.TogglePause();}
+  if(action=="Пауза"?ImGui.Button(action,new(primaryWidth,32)):HuntTheme.Primary(action,new(primaryWidth,32))){if(p.Flow.Pauses!=PauseReason.None)p.ResumeJourney();else if(planned)p.OfferPlannedTravel();else if(next)p.OfferNext();else p.TogglePause();}
   if(!stacked)ImGui.SameLine();ImGui.BeginDisabled(target==null);
   if(ImGui.Button("Карта",new(mapWidth,32))&&target!=null)p.ShowMap(target);ImGui.EndDisabled();
   ImGui.SameLine();if(ImGui.Button("Ещё",new(moreWidth,32)))ImGui.OpenPopup("journey-actions");

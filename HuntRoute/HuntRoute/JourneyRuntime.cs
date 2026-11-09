@@ -63,6 +63,22 @@ public sealed partial class Plugin {
   try{store=HuntStore.Load(stateFile);}catch(Exception e){stateLoadPending=true;store=new();Service.PluginLog.Error(e,"Не удалось прочитать состояние маршрута");NoticeText="Сохранение маршрута недоступно; история контрактов хранится отдельно.";}
   try{settingsStore=HuntSettingsFile.Load(settingsFile,Store.Settings);if(settingsStore.Recovered)NoticeText="Настройки восстановлены; история выполнения и маршруты хранятся отдельно.";}catch(Exception e){settingsLoadPending=true;SettingsSaveError="Настройки временно недоступны. Исходный файл сохранён.";Service.PluginLog.Error(e,"Чтение настроек");}
  }
+ private bool RecoverJourneyStore(){
+  if(!stateLoadPending)return true;
+  try{store=HuntStore.Load(stateFile!);}
+  catch(Exception e){
+   nextScan=Now+10000;
+   JourneySaveError="Не удалось прочитать сохранение маршрута. Повторим чтение.";
+   Service.PluginLog.Debug(e,"Повторное чтение маршрута");
+   return false;
+  }
+  stateLoadPending=false;
+  JourneySaveError=null;
+  signature=routeSignature=lastSaved="";
+  Session.Stop();
+  LoadJourney();
+  return true;
+ }
  private void LoadJourney(){
   loginNoticeShown=false;loginDailyPeriod=0;loginWeeklyPeriod=0;
   billGuard=new();uncertainBills.Clear();unreadBills.Clear();KillCounts=new();BillStates=new();Mobs=new();Routes=new();
@@ -80,11 +96,10 @@ public sealed partial class Plugin {
  }
  internal void SaveJourney(bool force=false){
   SaveSettings(force);
-  if(stateFile==null || character==0 || (!force && Now<nextStateSave))return;
+  if(stateLoadPending || stateFile==null || character==0 || (!force && Now<nextStateSave))return;
   var s=CharacterSave;s.Context=context;s.Active=Flow.Active;s.Manual=Flow.Manual;s.Target=Session.Target is {} t?JourneyFlow.Key(t):Flow.RestoreTarget;
   s.Deferred=Flow.Deferred.ToHashSet();s.Zones=Flow.Zones.ToHashSet();s.LongNotified=Flow.LongNotified.ToHashSet();
   if(!Flow.Restored){s.SearchTarget=searchKey;s.Search=Session.Target is {IsEliteMark:true} currentSearch&&searchKey==SearchIdentity(currentSearch)?Search.Capture():null;}
-  if(stateLoadPending){try{var recovered=HuntStore.Load(stateFile);recovered.Characters[character]=s;store=recovered;stateLoadPending=false;}catch(Exception e){nextStateSave=Now+10000;JourneySaveError="Сохранение маршрута временно недоступно. Исходный файл не перезаписан.";Service.PluginLog.Debug(e,"Повторное чтение маршрута");return;}}
   string value=JsonSerializer.Serialize(Store,new JsonSerializerOptions{IncludeFields=true});
   if(!force && value==lastSaved&&JourneySaveError==null)return;
   try{Store.Save(stateFile);lastSaved=value;nextStateSave=Now+2000;JourneySaveError=null;}catch(Exception e){nextStateSave=Now+10000;JourneySaveError="Не удалось сохранить маршрут: после перезапуска изменения могут пропасть.";Service.PluginLog.Error(e,"Сохранение маршрута");}

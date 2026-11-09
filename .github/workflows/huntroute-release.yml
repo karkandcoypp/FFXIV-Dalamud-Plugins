@@ -57,6 +57,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Map-check harness build failed' }
           dotnet run --project HuntRoute/tests/UiChecks/UiChecks.csproj -c Release -- "$env:RUNNER_TEMP/HuntRoute-ui"
           if ($LASTEXITCODE -ne 0) { throw 'UI layout checks failed' }
+          python -m pip install numpy pillow
+          if ($LASTEXITCODE -ne 0) { throw 'UI renderer dependencies failed' }
+          python HuntRoute/tests/UiChecks/render.py "$env:RUNNER_TEMP/HuntRoute-ui"
+          if ($LASTEXITCODE -ne 0) { throw 'UI image rendering failed' }
           $output = 'HuntRoute/HuntRoute/bin/Release'
           Copy-Item "$output/HuntRoute/latest.zip" "$env:RUNNER_TEMP/HuntRoute.zip"
           Copy-Item "$output/HuntRoute.json" "$env:RUNNER_TEMP/HuntRoute.json"

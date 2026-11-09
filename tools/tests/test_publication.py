@@ -84,9 +84,23 @@ class PublicationTests(unittest.TestCase):
             with self.subTest(plugin=name),TemporaryDirectory() as directory:
                 root=Path(directory);manifest=root/'plugin.json';archive=root/'plugin.zip';index=root/'pluginmaster.json'
                 doc={'InternalName':name,'AssemblyVersion':'1.2.3.0','DalamudApiLevel':15};manifest.write_text(json.dumps(doc),encoding='utf8');index.write_text('[]',encoding='utf8')
-                with zipfile.ZipFile(archive,'w') as z:z.writestr(name+'.json',json.dumps(doc));z.writestr(name+'.dll',b'MZ-test')
+                dll=bytearray(90);dll[:2]=b'MZ';dll[60]=64;dll[64:68]=b'PE\0\0';dll[87]=0x20;dll[88:90]=b'\x0b\x02'
+                def package(plugin_dll=dll, toolkit=True):
+                    with zipfile.ZipFile(archive,'w') as z:
+                        z.writestr(name+'.json',json.dumps(doc));z.writestr(name+'.dll',plugin_dll)
+                        if name=='HuntRoute' and toolkit:z.writestr('KamiToolKit.dll',dll)
+                package()
                 update(index,manifest,'owner/plugins',tag);verify(archive,manifest,'owner/plugins',tag,index)
                 with self.assertRaises(ValueError):verify(archive,manifest,'owner/plugins',tag+'-wrong',index)
+                package(b'MZ')
+                with self.assertRaises(ValueError):verify(archive,manifest,'owner/plugins',tag,index)
+                if name=='HuntRoute':
+                    package(toolkit=False)
+                    with self.assertRaises(KeyError):verify(archive,manifest,'owner/plugins',tag,index)
+                package()
+                entries=json.loads(index.read_text(encoding='utf8'));entries[0]['DalamudApiLevel']=999
+                index.write_text(json.dumps(entries),encoding='utf8')
+                with self.assertRaises(ValueError):verify(archive,manifest,'owner/plugins',tag,index)
                 doc['AssemblyVersion']='1.2.4.0';manifest.write_text(json.dumps(doc),encoding='utf8')
                 with self.assertRaises(ValueError):verify(archive,manifest,'owner/plugins',tag.replace('1.2.3','1.2.4'))
 

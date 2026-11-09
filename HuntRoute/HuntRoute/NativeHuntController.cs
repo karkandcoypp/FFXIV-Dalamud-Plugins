@@ -19,7 +19,7 @@ public sealed class NativeHuntController {
  public void Boards(bool onlyNew){Navigate(NativeHuntPage.Boards);OnlyNewBoards=onlyNew;}
  public void FocusGoal(){selected=plugin.Session.Target is {} m?JourneyFlow.Key(m):null;Navigate(NativeHuntPage.Target);}
  public void Turn(int delta,int count)=>Offset=NativeHuntNavigation.ClampPage(Offset+delta,count);
- private static NativeHuntButton Button(string key,string label,string kind,string argument="",bool enabled=true,int delta=0)=>new(key,label,new(kind,argument,delta),enabled,key is "primary" or "track" or "start");
+ private static NativeHuntButton Button(string key,string label,string kind,string argument="",bool enabled=true,int delta=0)=>new(key,label,new(kind,argument,delta),enabled,kind!="pause"&&(key is "primary" or "track" or "start"));
  public NativeHuntScreen Build(bool mini=false){
   if(!plugin.Ready)return new("Hunt Route",plugin.Error??"Данные персонажа загружаются.",[Button("refresh","Обновить данные","refresh")]);
   var errors=new[]{plugin.JourneySaveError,plugin.SettingsSaveError,plugin.HistorySaveError}.Where(s=>s!=null).ToArray();
@@ -116,11 +116,14 @@ public sealed class NativeHuntController {
  private NativeHuntScreen Number(){var (label,value)=NumberValue(numberKey);return new(label,$"{value}",new[]{-1,1,-10,10,-50,50}.Select(d=>Button("step:"+d,(d<0?"-":"+")+(numberKey=="seconds"?$"{Math.Abs(d)/10f:F1} с":Math.Abs(d).ToString()),"step",numberKey,!plugin.PersistenceBlocked,d)).ToArray());}
  private NativeHuntScreen Actions(){
   var buttons=new List<NativeHuntButton>();
-  if(plugin.Flow.Active){buttons.Add(Button("resume","Продолжить маршрут","resume"));buttons.Add(Button("pause","Пауза маршрута","pause"));buttons.Add(Button("stop","Остановить маршрут","stop"));}
+  if(plugin.Flow.Active){buttons.Add(Button("resume","Продолжить маршрут","resume"));if(!plugin.Flow.Pauses.HasFlag(PauseReason.User))buttons.Add(Button("pause","Пауза маршрута","pause"));buttons.Add(Button("stop","Остановить маршрут","stop"));}
   if(plugin.Flow.Manual!=null)buttons.Add(Button("auto","Вернуться в авторежим","auto"));
   if(plugin.Search.Lost&&!plugin.Search.AwaitingCredit)buttons.Add(Button("release","Снять закрепление элиты","release"));
   if(plugin.Session.Target!=null)buttons.Add(Button("focus","К цели","focus"));
-  buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));return new("Действия маршрута",feedback??plugin.Flow.Status,buttons);
+  buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));string status=plugin.Flow.Active&&plugin.Flow.Pauses==PauseReason.None
+   ?plugin.Session.Phase switch {RoutePhase.AwaitingTravel or RoutePhase.NextZone=>"Ожидается подтверждение перехода",RoutePhase.WaitingForZone=>"Ожидается прибытие",_=>"Сопровождение активно"}
+   :plugin.Flow.Status;
+  return new("Действия маршрута",status,buttons);
  }
  public void Execute(NativeHuntAction action){
   var goal=plugin.Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==action.Argument);
@@ -129,7 +132,7 @@ public sealed class NativeHuntController {
    case "target":if(goal!=null){selected=action.Argument;plugin.Selected=selected;Navigate(NativeHuntPage.Target);}break;
    case "focus":FocusGoal();break;
    case "resume":plugin.ResumeJourney();feedback=plugin.NoticeText??plugin.Flow.Status;Navigate(NativeHuntPage.Hunt);break;
-   case "pause":plugin.TogglePause();break;case "stop":plugin.StopJourney();Navigate(NativeHuntPage.Hunt);break;
+   case "pause":if(!plugin.Flow.Pauses.HasFlag(PauseReason.User))plugin.TogglePause();break;case "stop":plugin.StopJourney();Navigate(NativeHuntPage.Hunt);break;
    case "planned":plugin.OfferPlannedTravel();break;case "next":plugin.OfferNext();break;
    case "map":if(goal!=null)plugin.ShowMap(goal);break;case "track":if(goal!=null){plugin.Track(goal);Navigate(NativeHuntPage.Hunt);}break;
    case "defer":if(goal!=null)plugin.Defer(goal);break;case "defer-zone":if(goal!=null)plugin.Defer(goal,true);break;case "restore":if(goal!=null)plugin.RestoreDeferred(goal);break;

@@ -90,6 +90,21 @@ static class JourneyRuntimeChecks {
    Set(plugin,"stateFile",file);flow.Active=true;Call(plugin,"SaveJourney",true);
    var copy=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));Set(copy,"store",HuntStore.Load(file));Set(copy,"character",123UL);Set(copy,"Session",new RouteSession());Set(copy,"Search",new EliteSearch());Call(copy,"LoadJourney");
    var recovered=Get<JourneyFlow>(copy,"Flow");Check(recovered.Active&&recovered.Pauses==PauseReason.Restored&&!recovered.CanNavigate,"Real route save/load restores on pause with no transport or marker calls");
+   var durable=HuntStore.Load(file);
+   durable.Characters[123].Deferred.Add("saved-deferred");durable.Characters[123].DailyNotice=42;
+   durable.Characters[123].Contracts[1]=new(){Generation=7};
+   durable.Characters[124]=new(){WeeklyNotice=99};
+   durable.Save(file);
+   Set(copy,"store",new HuntStore());Set(copy,"stateFile",file);Set(copy,"stateLoadPending",true);Call(copy,"LoadJourney");
+   using(var locked=File.Open(file,FileMode.Open,FileAccess.Read,FileShare.None)){
+    Check(!(bool)Call(copy,"RecoverJourneyStore")!,"Unreadable route store stays pending");
+    Call(copy,"SaveJourney",true);
+   }
+   Check(HuntStore.Load(file).Characters[123].DailyNotice==42,"Saving while read is pending does not replace the file");
+   Check((bool)Call(copy,"RecoverJourneyStore")!&&Get<JourneyFlow>(copy,"Flow").Pauses==PauseReason.Restored,"Recovery reloads the saved route on pause");
+   Call(copy,"SaveJourney",true);
+   var saved=HuntStore.Load(file);
+   Check(saved.Characters[123].Deferred.Contains("saved-deferred")&&saved.Characters[123].DailyNotice==42&&saved.Characters[123].Contracts[1].Generation==7&&saved.Characters[124].WeeklyNotice==99,"Recovery preserves both characters, contract identity and notices");
   }finally{foreach(var fileName in Directory.GetFiles(folder))File.Delete(fileName);Directory.Delete(folder);Set(plugin,"stateFile",null);}
   // A marker write failure is a different pause from temporarily unavailable goals.
   flow.Active=true;flow.Pauses=PauseReason.None;territory=397;mapId=a.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);counts.Clear();session.Retarget(newOrder);
@@ -135,6 +150,10 @@ static class JourneyRuntimeChecks {
   Set(plugin,"pendingJourney",null);Set(plugin,"nextTeleportAllowed",0L);flow.Pauses=PauseReason.None;territory=397;mapId=a.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);session.Retarget(a);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,c,elite});counts.Clear();
   var anchor=MapCoordinates.ToWorld(Location.Database[a.MobHuntId].Coordinate,game.Excel.GetSheet<Map>().GetRow(a.MapId));position=new(anchor.X+5000,0,anchor.Y);
   var shortcut=(ShortcutOffer?)Call(plugin,"FindShortcut");Check(shortcut!=null,$"Long-flight regression fixture has a valid shortcut: phase={session.Phase}, pause={flow.Pauses}, ready={Get<bool>(plugin,"Ready")}, settings={store.Settings.Shortcuts}, overhead={Get<ShortcutTiming>(plugin,"Timing").OverheadSeconds}, point={position}, anchor={anchor}, entries={alternatives.Count}");queue.Clear();Call(Get<ShortcutWindow>(plugin,"Shortcut"),"Sync");request=queue.Activate(true);Check(request?.Owner=="shortcut","Shortcut controller queues reviewed proposal");
+  Set(plugin,"ordinaryActor",(ulong?)777UL);Set(plugin,"ordinaryKind",JourneyFlow.Key(a));
+  Set(plugin,"ordinaryPosition",(Vector2?)new Vector2(position.X,position.Z));
+  Check(Call(plugin,"FindShortcut")==null,"A live tracked mob at the player cancels the otherwise beneficial static-anchor shortcut");
+  Set(plugin,"ordinaryActor",null);Set(plugin,"ordinaryKind",null);Set(plugin,"ordinaryPosition",null);
   var replacement=new MobHuntEntry{Name=a.Name,BillNumber=a.BillNumber,OrderId=a.OrderId,Generation=a.Generation+1,MobIndex=a.MobIndex,MobHuntId=a.MobHuntId,MapId=a.MapId,TerritoryType=a.TerritoryType,NeededKills=1};session.Retarget(replacement);
   Check(!request!.Valid(),"Same mob in a new contract generation invalidates open shortcut dialog");Service.Chat=Proxy<IChatGui>((_,_)=>null);int beforeStale=ports;
   Check(!(bool)Call(plugin,"AcceptShortcut",shortcut)!&&ports==beforeStale,"Stale shortcut acceptance cannot submit teleport for a replacement contract");queue.Clear();position=Vector3.Zero;
@@ -230,6 +249,12 @@ static class JourneyRuntimeChecks {
   uint filterRun=session.RunId;nativeUi.Execute(new("filter-expansion","Stormblood"));nativeUi.Navigate(NativeHuntPage.Targets);
   Check(nativeUi.Build().Buttons.All(bu=>bu.Action.Kind!="target")&&session.RunId==filterRun,"Native expansion filter hides only rows and leaves hunt running");
   nativeUi.Execute(new("filter-reset"));Check(nativeUi.Build().Buttons.Any(bu=>bu.Action.Kind=="target"),"Native filter reset restores existing goal list");
+  bool activeBeforePauseCheck=flow.Active;var pausesBeforePauseCheck=flow.Pauses;
+  flow.Active=true;flow.Pauses=PauseReason.User;nativeUi.Navigate(NativeHuntPage.Actions);
+  Check(nativeUi.Build().Buttons.All(bu=>bu.Key!="pause"),"Paused route hides the pause command");
+  nativeUi.Execute(new("pause"));
+  Check(flow.Pauses.HasFlag(PauseReason.User),"A stale pause command cannot resume hunting");
+  flow.Active=activeBeforePauseCheck;flow.Pauses=pausesBeforePauseCheck;
   var settingsBefore=store.Settings.WorldMarkers;nativeUi.Execute(new("toggle","ordinary"));Check(!store.Settings.OrdinaryWorldMarkers&&store.Settings.WorldMarkers==settingsBefore,"Native ordinary overlay switch remains independent from elite overlay");nativeUi.Execute(new("toggle","ordinary"));
   nativeUi.Execute(new("step","ordinary-distance",-10000));Check(store.Settings.OrdinaryWorldDistance==50,"Native distance controls clamp to valid minimum");nativeUi.Execute(new("step","ordinary-distance",10000));Check(store.Settings.OrdinaryWorldDistance==500,"Native distance controls clamp to valid maximum");
   nativeUi.Execute(new("step","gil",-10000));Check(store.Settings.MaxGil==0,"Native gil editor supports free-only shortcuts");

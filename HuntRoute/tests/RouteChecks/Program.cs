@@ -98,6 +98,10 @@ Check(notice.ShouldOpen(completion),"Open next-zone offer immediately, independe
 Check(!notice.ShouldOpen(completion),"Do not reopen dismissed offer on every tick");
 completion.Tick(new[]{targetC},m=>m.TerritoryType==397,_=>true,397);
 Check(!notice.ShouldOpen(completion),"Unchanged next-zone state does not repeat offer");
+var sameZoneReplacement=new MobHuntEntry{BillNumber=targetC.BillNumber,MobIndex=targetC.MobIndex,Generation=targetC.Generation+1,TerritoryType=targetC.TerritoryType};
+completion.Suggest(sameZoneReplacement);
+Check(notice.ShouldOpen(completion,70,100)&&!notice.ShouldOpen(completion,70,100),"Replacement contract in the same zone gets exactly one new proposal");
+Check(notice.ShouldOpen(completion,71,100),"Changed destination aetheryte can replace the proposal");
 completion.Start(targetA,new byte[]{1});completion.Tick(ordered,m=>m.TerritoryType==397,_=>true,397);
 Check(notice.ShouldOpen(completion),"A new route run can offer the same zone again");
 completion.Stop();Check(!notice.ShouldOpen(completion),"Do not offer a teleport after route stop");
@@ -343,6 +347,19 @@ foreach(string mode in new[]{"taken","pickup","summary"}) {
  Check(!loginPresentation.HasSubject&&loginPresentation.Footer.Length==0&&layout.Texts.Count<=3&&layout.Height<175,"Login dialog keeps only title, optional status and actions");
 }
 try { TravelDialogLayout.Build(nextDialog,(_,_,_)=>float.NaN);throw new Exception("Invalid measurement accepted"); }catch(ArgumentException){checks++;}
+var retryQueue=new ConfirmationQueue();
+var broken=new ConfirmationRequest("travel","broken","",()=>true,()=>true,()=>true);
+var independent=new ConfirmationRequest("pickup","independent","",()=>true,()=>true,()=>true);
+retryQueue.Offer(broken);
+Check(retryQueue.Activate(true,100)==broken,"Failed dialog regression starts with travel");
+retryQueue.Resolve(broken.Key,false);retryQueue.RetryOpen(broken,100);retryQueue.Offer(independent);
+Check(retryQueue.Activate(true,101)==independent,"Cooling down a failed dialog leaves lower-priority notices available");
+retryQueue.Resolve(independent.Key,false);
+Check(retryQueue.Activate(true,10099)==null&&retryQueue.Activate(true,10100)==broken,"Failed dialog retries only after the cooldown");
+var tallSize=new Vector2(420,672);var smallViewport=new Vector2(1280,720);
+float tallScale=TravelDialogLayout.FitScale(tallSize,smallViewport,1.25f);
+var tallPosition=TravelDialogLayout.ClampPosition(new(200,200),tallSize*tallScale,smallViewport);
+Check(tallScale<1.25f&&tallPosition.Y+tallSize.Y*tallScale<=smallViewport.Y,"Tall native window fits and is clamped into a short viewport");
 var presentedQueue=new ConfirmationQueue();int presentedAccepted=0;
 var presented=new ConfirmationRequest("next","presented","Legacy text",()=>true,()=>true,()=>{presentedAccepted++;return true;},nextDialog);
 presentedQueue.Offer(presented);var activePresentation=presentedQueue.Activate(true);
