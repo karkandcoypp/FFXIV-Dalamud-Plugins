@@ -19,11 +19,18 @@ static class NativeNavigationChecks {
    var actions=layout.Buttons.Single(b=>b.Button.Key=="actions");
    var primary=layout.Buttons.Single(b=>b.Button.Key=="primary");
    check(primary.Rect.Size.X<=200&&(mini||primary.Row==layout.Buttons.Single(b=>b.Button.Key=="targets").Row),"Primary action uses a compact button alongside the target list");
-   check(map.Row==actions.Row&&map.Rect.Position.X+map.Rect.Size.X<actions.Rect.Position.X,"Secondary hunt actions fit side by side");
+   var rightOfMap=mini?actions:layout.Buttons.Single(b=>b.Button.Key=="targets");
+   check(map.Row==rightOfMap.Row&&map.Rect.Position.X+map.Rect.Size.X<rightOfMap.Rect.Position.X,"Hunt actions fit side by side");
+   check(mini||actions.Row>map.Row,"Route actions stay reachable in the main window footer");
    check(layout.ProgressTrack.Position.Y+layout.ProgressTrack.Size.Y<primary.Rect.Position.Y,"Hunt progress does not overlap the primary action");
    var paired=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
-   check(paired.Single(n=>n.Index==map.Slot+1).Right==actions.Slot+1,"D-pad right moves from Map to Route");
+   check(paired.Single(n=>n.Index==map.Slot+1).Right==rightOfMap.Slot+1,"D-pad right moves from Map to the adjacent action");
   }
+  var settings=new NativeHuntScreen("Settings","",Enumerable.Range(0,6).Select(i=>new NativeHuntButton($"toggle:{i}","Setting",new("toggle"),Checked:i%2==0)).ToArray());
+  var settingsLayout=NativeHuntLayout.Build(settings,NativeHuntPage.Settings,0,30,0);
+  var settingLinks=NativeHuntNavigation.Build(settingsLayout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+  check(settingsLayout.Buttons.Count(b=>b.Button.Checked.HasValue)==6&&settingsLayout.PageText=="","All six checkboxes fit on one settings screen");
+  check(settingLinks.Single(n=>n.Key=="toggle:5").Down==settingLinks.Single(n=>n.Key=="advanced").Index,"Last checkbox navigates down to advanced settings");
   check(active.Progress!.Fraction==1f/3&&new NativeHuntProgress(5,3).Fraction==1&&new NativeHuntProgress(0,0).Fraction==0,"Progress fill clamps its endpoints");
   var graph=NativeHuntNavigation.Build(items);check(graph.Length==8&&graph.All(n=>n.Index!=10),"Disabled native pager omitted from focus graph");
   check(graph.Single(n=>n.Index==2).Right==3&&graph.Single(n=>n.Index==3).Right==1,"Native tabs navigate horizontally and wrap");

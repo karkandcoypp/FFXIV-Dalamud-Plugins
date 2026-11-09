@@ -7,7 +7,7 @@ namespace HuntRoute;
 
 public enum NativeHuntPage { Hunt,Targets,Boards,Settings,Target,Actions,Advanced,Filters,Expansions,Zones,Number }
 public sealed record NativeHuntAction(string Kind,string Argument="",int Delta=0);
-public sealed record NativeHuntButton(string Key,string Label,NativeHuntAction Action,bool Enabled=true,bool Emphasized=false,NativeBoardRow? Board=null,Vector4? LabelColor=null);
+public sealed record NativeHuntButton(string Key,string Label,NativeHuntAction Action,bool Enabled=true,bool Emphasized=false,NativeBoardRow? Board=null,Vector4? LabelColor=null,bool? Checked=null);
 public sealed record NativeBoardStatus(string Label,Vector4? Color=null);
 public sealed record NativeBoardRow(string Name,NativeBoardStatus Daily,NativeBoardStatus Weekly){
  public const string DailyPrefix="Ежедневные: ", WeeklyPrefix="Еженедельный: ";
@@ -56,7 +56,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  public const byte TitleFont=18, BodyFont=14, ButtonFont=12;
  public static float ContentWidth(bool mini)=>(mini?340:420)-2*Margin;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
- private static bool IsSecondary(NativeHuntButton button)=>button.Key is "primary" or "map" or "actions" or "targets" or "message";
+ private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;
+ private static float CompactWidth(NativeHuntButton button)=>button.Label.Length switch {<=13=>ActionWidth,<=19=>LongActionWidth,_=>184};
  public static string FitLabel(string value,int length=64)=>value.Length<=length?value:string.Concat(value.EnumerateRunes().Take(length-1).Select(r=>r.ToString()))+"…";
  public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false){
   float inner=ContentWidth(mini),width=inner+2*Margin,titleY=mini?38:71;
@@ -69,39 +70,70 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   int page=mini?0:NativeHuntNavigation.ClampPage(requestedPage,screen.Buttons.Count);
   int pageCount=Math.Max(1,(screen.Buttons.Count+5)/6);
   var visible=screen.Buttons.Skip(page*6).Take(mini?3:6).ToArray();
-  if(!mini&&view==NativeHuntPage.Hunt&&visible is [{Key:"primary"},{Key:"map"},{Key:"actions"},{Key:"targets"},..])
-   (visible[1],visible[2],visible[3])=(visible[3],visible[1],visible[2]);var buttons=new List<NativeHuntPlacement>();
+  NativeHuntButton? routeAction=null;
+  bool huntStrip=!mini&&view==NativeHuntPage.Hunt&&visible is [{Key:"primary"},{Key:"map"},{Key:"actions"},{Key:"targets"},..]
+   &&visible.Take(4).Where(b=>b.Key!="actions").Sum(CompactWidth)+2*Gap<=inner;
+  if(huntStrip){
+   routeAction=visible[2];
+   visible=visible.Where(b=>b.Key!="actions").ToArray();
+  }
+  var buttons=new List<NativeHuntPlacement>();
   void Set(int slot,int row,int col,NativeHuntButton button,float x,float y,float w,float h)=>buttons.Add(new(slot,row,col,button with {Label=button.Board==null?FitLabel(button.Label):button.Label},new(new(x,y),new(w,h))));
   NativeHuntButton Page(string key,string label,NativeHuntPage p)=>new(key,label,new("page",p.ToString()),Emphasized:key.StartsWith("tab:",StringComparison.Ordinal)&&p==(view switch {NativeHuntPage.Boards=>NativeHuntPage.Boards,NativeHuntPage.Settings or NativeHuntPage.Advanced or NativeHuntPage.Number=>NativeHuntPage.Settings,_=>NativeHuntPage.Hunt}));
+  bool settingsList=view==NativeHuntPage.Settings&&!mini;
   if(!mini){
-   Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),Margin,37,84,ActionHeight);
-   Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),Margin+90,37,84,ActionHeight);
-   Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),Margin+180,37,112,ActionHeight);
+   const float tabWidth=92;
+   float tabsX=(width-3*tabWidth-2*Gap)/2;
+   Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),tabsX,37,tabWidth,ActionHeight);
+   Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),tabsX+tabWidth+Gap,37,tabWidth,ActionHeight);
+   Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),tabsX+2*(tabWidth+Gap),37,tabWidth,ActionHeight);
   }
+  float controlWidth=settingsList?320:inner;
+  float controlX=(width-controlWidth)/2;
   int rows=0;
   float bottom=bodyY;
   for(int i=0;i<visible.Length;i++){
    var button=visible[i];
-   bool pair=(mini||view==NativeHuntPage.Hunt)&&(!mini||button.Key!="primary")&&i+1<visible.Length&&IsSecondary(button)&&IsSecondary(visible[i+1]);
-   float h=button.Board!=null?64:button.Label.Length>54?56:button.Label.Contains('\n')||button.Label.Length>40?44:ActionHeight;
-   float CompactWidth(NativeHuntButton item)=>item.Label.Length>13?LongActionWidth:ActionWidth;
-   float first=button.Board!=null?Math.Min(inner,336)
-    :((mini||view==NativeHuntPage.Hunt)&&IsSecondary(button))||button.Key=="boards-all"?CompactWidth(button):inner;
+   if(huntStrip&&i==0){
+    float stripWidth=visible.Take(3).Sum(CompactWidth)+2*Gap;
+    float x=(width-stripWidth)/2;
+    rows++;
+    for(int column=0;column<3;column++){
+     float w=CompactWidth(visible[column]);
+     Set(column+3,rows,column,visible[column],x,bottom,w,ActionHeight);
+     x+=w+Gap;
+    }
+    i=2;bottom+=ActionHeight+Gap;
+    continue;
+   }
+   if(button.Checked.HasValue){
+    Set(i+3,++rows,0,button,controlX,bottom,controlWidth,24);
+    bottom+=28;
+    continue;
+   }
+   bool compact=IsCompact(button);
+   float first=button.Board!=null?Math.Min(inner,336):compact?CompactWidth(button):inner;
+   bool pair=compact&&(!mini||button.Key!="primary")&&i+1<visible.Length&&IsCompact(visible[i+1])
+    &&first+Gap+CompactWidth(visible[i+1])<=inner;
+   float h=button.Board!=null?60:button.Label.Length>54?56:button.Label.Contains('\n')||button.Label.Length>40?44:ActionHeight;
    Set(i+3,++rows,0,button,Margin,bottom,first,h);
    if(pair){i++;Set(i+3,rows,1,visible[i],Margin+first+Gap,bottom,CompactWidth(visible[i]),h);}
    bottom+=h+Gap;
   }
   bool pager=!mini&&pageCount>1;
-  const float pagerWidth=126,footerWidth=96;
-  if(pager){Set(9,7,0,new("previous","Предыдущая",new("previous",Delta:-1),page>0),Margin,bottom,pagerWidth,30);Set(10,7,1,new("next-page","Следующая",new("next-page",Delta:1),page+1<pageCount),width-Margin-pagerWidth,bottom,pagerWidth,30);}
+  const float pagerWidth=126;
+  const float footerWidth=96;
+  if(pager){Set(9,7,0,new("previous","Предыдущая",new("previous",Delta:-1),page>0),controlX,bottom,pagerWidth,30);Set(10,7,1,new("next-page","Следующая",new("next-page",Delta:1),page+1<pageCount),controlX+controlWidth-pagerWidth,bottom,pagerWidth,30);}
   float footer=bottom+(pager?38:0);
   var back=view switch {NativeHuntPage.Number=>NativeHuntPage.Advanced,NativeHuntPage.Advanced=>NativeHuntPage.Settings,NativeHuntPage.Target or NativeHuntPage.Filters=>NativeHuntPage.Targets,NativeHuntPage.Expansions or NativeHuntPage.Zones=>NativeHuntPage.Filters,_=>NativeHuntPage.Hunt};
-  if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),Margin,footer,footerWidth,ActionHeight);
-  Set(12,8,1,new("close","Закрыть",new("close")),width-Margin-footerWidth,footer,footerWidth,ActionHeight);
+  if(routeAction!=null)Set(11,8,0,routeAction,controlX,footer,96,ActionHeight);
+  else if(settingsList)Set(11,8,0,Page("advanced","Дополнительно",NativeHuntPage.Advanced),controlX,footer,132,ActionHeight);
+  else if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),controlX,footer,footerWidth,ActionHeight);
+  Set(12,8,1,new("close","Закрыть",new("close")),controlX+controlWidth-footerWidth,footer,footerWidth,ActionHeight);
   return new(new(width,footer+36),new(new(Margin,titleY),new(inner,titleHeight)),
    new(new(Margin,summaryY),new(textWidth,summaryHeight)),new(new(width-Margin-PortraitSize,summaryY),new(PortraitSize,PortraitSize)),
    new(new(Margin,progressY),new(textWidth,18)),new(new(Margin,progressY+19),new(textWidth,5)),
-   new(new(Margin+pagerWidth+Gap,bottom+6),new(inner-2*(pagerWidth+Gap),22)),
+   new(new(controlX+pagerWidth+Gap,bottom+6),new(controlWidth-2*(pagerWidth+Gap),22)),
    pager?$"Стр. {page+1} / {pageCount}":"",buttons);
  }
 }

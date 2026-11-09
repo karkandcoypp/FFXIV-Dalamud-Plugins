@@ -31,7 +31,12 @@ internal static class NativeHuntPreviewChecks {
     ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(layout.Size);ImGui.Begin("Native layout preview",ImGuiWindowFlags.NoDecoration|ImGuiWindowFlags.NoSavedSettings);
     var draw=ImGui.GetWindowDrawList();draw.AddRectFilled(Vector2.Zero,layout.Size,0xff231f1b,10);
     void Text(string value,NativeHuntRect rect,float font,Vector4 color){ImGui.SetWindowFontScale(font/17f);ImGui.SetCursorScreenPos(rect.Position);ImGui.PushTextWrapPos(rect.Position.X+rect.Size.X);ImGui.TextColored(color,value);ImGui.PopTextWrapPos();if(ImGui.GetItemRectMax().Y>rect.Position.Y+rect.Size.Y+2)throw new Exception("Native preview label exceeds block: "+sample.Name+" / "+value);}
-    Text(title,layout.Heading,NativeHuntLayout.TitleFont,sample.Screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One);if(summary.Length>0)Text(summary,layout.Summary,NativeHuntLayout.BodyFont,sample.Screen.SummaryColor??NativeHuntColors.Muted);
+    NativeHuntRect Center(string label,NativeHuntRect rect,float font){
+     ImGui.SetWindowFontScale(font/17f);
+     float inset=Math.Max(0,(rect.Size.X-ImGui.CalcTextSize(label).X)/2);
+     return new(rect.Position+new Vector2(inset,0),rect.Size-new Vector2(inset,0));
+    }
+    Text(title,sample.Page==NativeHuntPage.Settings?Center(title,layout.Heading,NativeHuntLayout.TitleFont):layout.Heading,NativeHuntLayout.TitleFont,sample.Screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One);if(summary.Length>0)Text(summary,layout.Summary,NativeHuntLayout.BodyFont,sample.Screen.SummaryColor??NativeHuntColors.Muted);
     if(!sample.Mini&&sample.Screen.Icon!=0)draw.AddRectFilled(layout.Portrait.Position,layout.Portrait.Position+layout.Portrait.Size,0xff3b3631,6);
     if(sample.Screen.Progress is {} progress){
      var r=layout.ProgressTrack;
@@ -39,12 +44,24 @@ internal static class NativeHuntPreviewChecks {
      draw.AddRectFilled(r.Position,r.Position+r.Size,0xff47453d,3);
      draw.AddRectFilled(r.Position,r.Position+new Vector2(r.Size.X*progress.Fraction,r.Size.Y),0xffa3c261,3);
     }
-    if(layout.PageText.Length>0)Text(layout.PageText,layout.PageLabel,14,new(.9f,.9f,.9f,1));
+    if(layout.PageText.Length>0)Text(layout.PageText,Center(layout.PageText,layout.PageLabel,14),14,new(.9f,.9f,.9f,1));
     foreach(var entry in layout.Buttons){
-     var r=entry.Rect;draw.AddRectFilled(r.Position,r.Position+r.Size,entry.Button.Enabled?0xff534a3a:0xff35312d,5);
+     var r=entry.Rect;
+     if(entry.Button.Checked is {} state){
+      var box=r.Position+new Vector2(r.Size.X-28,2);
+      draw.AddRect(box,box+new Vector2(20,20),0xffb0a697,3);
+      if(state){
+       draw.AddLine(box+new Vector2(4,10),box+new Vector2(8,15),ImGui.GetColorU32(NativeHuntColors.Ready),2);
+       draw.AddLine(box+new Vector2(8,15),box+new Vector2(16,5),ImGui.GetColorU32(NativeHuntColors.Ready),2);
+      }
+      Text(entry.Button.Label,new(r.Position+new Vector2(8,2),new(r.Size.X-40,22)),NativeHuntLayout.BodyFont,Vector4.One);
+      continue;
+     }
+     if(entry.Button.Board==null)draw.AddRectFilled(r.Position,r.Position+r.Size,entry.Button.Enabled?0xff534a3a:0xff35312d,5);
+
      float font=entry.Button.Label.Contains('\n')||Height(entry.Button.Label,r.Size.X-32,NativeHuntLayout.ButtonFont)>r.Size.Y-8?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;
      if(entry.Button.Board is {} row){
-      Text(row.Name,new(r.Position+new Vector2(16,4),new(r.Size.X-32,18)),font,Vector4.One);
+      Text(row.Name,new(r.Position+new Vector2(16,4),new(r.Size.X-32,18)),font,NativeHuntColors.Tracking);
       ImGui.SetWindowFontScale(font/17f);
       void StatusLine(string prefix,NativeBoardStatus status,float y){
        float x=r.Position.X+16;
@@ -56,7 +73,7 @@ internal static class NativeHuntPreviewChecks {
        Text(status.Label,new(new(x+prefixWidth,y),new(statusWidth+2,18)),font,status.Color??Vector4.One);
       }
       StatusLine(NativeBoardRow.DailyPrefix,row.Daily,r.Position.Y+22);
-      StatusLine(NativeBoardRow.WeeklyPrefix,row.Weekly,r.Position.Y+40);
+      StatusLine(NativeBoardRow.WeeklyPrefix,row.Weekly,r.Position.Y+38);
       continue;
      }
      ImGui.SetWindowFontScale(font/17f);
