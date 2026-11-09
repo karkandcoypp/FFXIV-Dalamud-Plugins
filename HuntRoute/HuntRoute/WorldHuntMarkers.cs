@@ -34,10 +34,15 @@ public static class WorldHuntMarkers {
    if(!float.IsFinite(distance)||distance>limit||!seen.Add(actor.Id))continue;
    result.Add((new(actor.Id,actor.Position,goal.Name,goal.Kills,goal.Needed,goal.Elite,false,distance),goal.Key));
   }
+  var visible=result.GroupBy(p=>p.Key).SelectMany(group=>{
+   var marker=group.First().Marker;
+   return marker.Elite?group:group.OrderBy(p=>p.Marker.Distance).ThenBy(p=>p.Marker.ActorId)
+    .Take((int)Math.Min(int.MaxValue,marker.Needed-(uint)marker.Kills));
+  }).ToArray();
   // Follow the same loaded instance as the navigator. Before it has selected an
   // instance, emphasize only the nearest candidate for its current requirement.
   ulong? highlight=currentActor??result.Where(p=>p.Key==currentKey).OrderBy(p=>p.Marker.Distance).ThenBy(p=>p.Marker.ActorId).Select(p=>(ulong?)p.Marker.ActorId).FirstOrDefault();
-  return result.Select(p=>p.Marker with {Current=p.Key==currentKey&&p.Marker.ActorId==highlight})
+  return visible.Select(p=>p.Marker with {Current=p.Key==currentKey&&p.Marker.ActorId==highlight})
    .OrderByDescending(m=>m.Current).ThenByDescending(m=>m.Elite).ThenBy(m=>m.Distance).ThenBy(m=>m.ActorId).ToArray();
  }
  private static bool Finite(Vector3 p)=>float.IsFinite(p.X)&&float.IsFinite(p.Y)&&float.IsFinite(p.Z);

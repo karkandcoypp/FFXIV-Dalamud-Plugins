@@ -21,6 +21,10 @@ static class WorldMarkerChecks {
   check((marker with {Current=false,Elite=true}).Color==marker.Color,"Elite and current styling do not override distance color");
   var far=actors[1] with {Position=new(110,0,0)};
   check(Build(npcs:[far]).Single().Color==colors[4]&&Build(npcs:[nearby,far]).Single(m=>m.ActorId==far.Id).Color==colors[4],"A far target stays red when other mobs enter or leave range");
+  WorldHuntActor[] pack=[new(90,1,new(30,0,0),false),new(91,1,new(5,0,0),false),new(92,1,new(10,0,0),false),new(93,1,new(10,0,0),false),actors[2]];
+  check(Build(npcs:pack,key:"daily",id:90).Where(m=>!m.Elite).Select(m=>m.ActorId).SequenceEqual(new ulong[]{91,92}),"Two remaining kills show the two nearest actors, even when a farther actor is tracked");
+  check(Build([ordinary with {Kills=2},elite],pack).Where(m=>!m.Elite).Single().ActorId==91,"After a credited kill only the nearest ordinary actor stays marked");
+  check(Build(npcs:pack).Any(m=>m.Elite),"Ordinary quota does not hide weekly elite markers");
   check(selected[0].Label.Contains("1/3")&&selected[0].Label.Contains("20 м")&&selected[0].Label.StartsWith("Цель"),"Ordinary label contains real count, distance and textual active-goal distinction");
   check(Build(key:"daily").Single(m=>m.Current).ActorId==10,"Before navigator instance selection only nearest current-type actor is emphasized");
   check(!Build(key:"daily",id:999).Any(m=>m.Current),"A known missing/off-range tracked instance never falsely highlights another actor");

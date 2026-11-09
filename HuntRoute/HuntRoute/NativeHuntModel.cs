@@ -7,12 +7,15 @@ namespace HuntRoute;
 
 public enum NativeHuntPage { Hunt,Targets,Boards,Settings,Target,Actions,Advanced,Filters,Expansions,Zones,Number }
 public sealed record NativeHuntAction(string Kind,string Argument="",int Delta=0);
-public sealed record NativeHuntButton(string Key,string Label,NativeHuntAction Action,bool Enabled=true,bool Emphasized=false,NativeBoardRow? Board=null);
+public sealed record NativeHuntButton(string Key,string Label,NativeHuntAction Action,bool Enabled=true,bool Emphasized=false,NativeBoardRow? Board=null,Vector4? LabelColor=null);
 public sealed record NativeBoardStatus(string Label,Vector4? Color=null);
 public sealed record NativeBoardRow(string Name,NativeBoardStatus Daily,NativeBoardStatus Weekly){
  public string Label=>$"{Name}\nДень: {Daily.Label} · Неделя: {Weekly.Label}";
 }
-public sealed record NativeHuntScreen(string Title,string Summary,IReadOnlyList<NativeHuntButton> Buttons,uint Icon=0,NativeHuntProgress? Progress=null);
+public sealed record NativeHuntScreen(string Title,string Summary,IReadOnlyList<NativeHuntButton> Buttons,uint Icon=0,NativeHuntProgress? Progress=null,Vector4? SummaryColor=null);
+public static class NativeHuntColors {
+ public static readonly Vector4 Ready=new(.50f,1,.64f,1), Attention=new(1,.83f,.48f,1), Tracking=new(.62f,.84f,1,1), Muted=new(.78f,.81f,.85f,1);
+}
 public sealed record NativeHuntProgress(int Kills,uint Required){
  public string Label=>$"Побеждено  {Kills} / {Required}";
  public float Fraction=>Required>0?Math.Clamp((float)Kills/Required,0,1):0;

@@ -89,12 +89,15 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(summaryText!=description){summary.String=description;summaryText=description;}
   heading.Size=new(inner,110);summary.Size=new(NativeHuntLayout.SummaryWidth(screen,mini),200);
   var layout=NativeHuntLayout.Build(screen,controller.Page,controller.Offset,heading.GetTextDrawSize(considerScale:false).Y,summary.GetTextDrawSize(considerScale:false).Y,mini);
+  heading.TextColor=screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One;
+  summary.TextColor=screen.SummaryColor??NativeHuntColors.Muted;
   heading.Position=layout.Heading.Position;heading.Size=layout.Heading.Size;
   summary.Position=layout.Summary.Position;summary.Size=layout.Summary.Size;
   var progress=screen.Progress;
   progressLabel.IsVisible=progressTrack.IsVisible=progress!=null;
   progressFill.IsVisible=progress is {Fraction:>0};
   if(progress!=null){
+   progressLabel.TextColor=progress.Fraction>=1?NativeHuntColors.Ready:Vector4.One;
    progressLabel.Position=layout.ProgressLabel.Position;progressLabel.Size=layout.ProgressLabel.Size;
    if(progressLabel.String.ToString()!=progress.Label)progressLabel.String=progress.Label;
    progressTrack.Position=progressFill.Position=layout.ProgressTrack.Position;
@@ -118,7 +121,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    int slot=placement.Slot;var spec=placement.Button;var button=buttons[slot]!;used[slot]=true;
    if(button.Position!=placement.Rect.Position)button.Position=placement.Rect.Position;
    if(button.Size!=placement.Rect.Size){button.Size=placement.Rect.Size;buttonText[slot]=null;}
-   button.LabelNode.TextColor=spec.Emphasized?new(1,.85f,.55f,1):Vector4.One;
+   button.LabelNode.TextColor=spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One);
    if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=16;SetLabel(button,spec);if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=16;}buttonText[slot]=spec.Label;}
    button.IsVisible=true;button.IsEnabled=spec.Enabled;
    keys[slot]=spec.Key;commands[slot]=spec.Action;items.Add(new(slot+1,placement.Row,placement.Column,spec.Key,spec.Enabled));

@@ -202,16 +202,16 @@ static class JourneyRuntimeChecks {
   objects=[Npc(100,a.MobHuntId,new(20,0,0)),Npc(106,a.MobHuntId,new(1,0,0)),Npc(101,b.MobHuntId,new(10,0,0)),Npc(102,elite.MobHuntId,new(30,0,0)),Npc(103,a.MobHuntId,new(1,0,0),true),Npc(104,999999,new(1,0,0)),Npc(105,a.MobHuntId,new(151,0,0))];
   session.Retarget(a);Set(plugin,"ordinaryActor",(ulong?)100UL);Set(plugin,"ordinaryKind",JourneyFlow.Key(a));int overlayWrites=writes,overlayPorts=ports,overlayOpens=opens;
   WorldHuntMarker[] Overlay()=>(WorldHuntMarker[])Call(plugin,"ReadWorldHuntMarkers")!;
-  Check(Overlay().Length==4&&Overlay().First().ActorId==100&&Overlay().Count(m=>m.Current)==1,"Runtime overlay labels required living instances and emphasizes navigator's exact ordinary actor");
-  Check(Overlay().First().Label.Contains("0/1"),"Runtime ordinary label uses authoritative counter");
+  Check(Overlay().Length==3&&Overlay().Any(m=>m.ActorId==106)&&Overlay().All(m=>m.ActorId!=100&&!m.Current),"Runtime overlay marks the nearest required actors even if a farther ordinary actor is tracked");
+  Check(Overlay().Single(m=>m.ActorId==106).Label.Contains("0/1"),"Runtime ordinary label uses authoritative counter");
   counts[(1,0)]=1;Check(Overlay().All(m=>m.ActorId!=100&&m.ActorId!=106),"Actual kill-count completion removes all overlays of completed requirement");counts.Clear();
-  store.Settings.WorldMarkers=false;Check(Overlay().Length==3&&Overlay().All(m=>!m.Elite),"Ordinary runtime overlay works when elite overlay disabled");store.Settings.WorldMarkers=true;
+  store.Settings.WorldMarkers=false;Check(Overlay().Length==2&&Overlay().All(m=>!m.Elite),"Ordinary runtime overlay works when elite overlay disabled");store.Settings.WorldMarkers=true;
   store.Settings.OrdinaryWorldMarkers=false;Check(Overlay().Length==1&&Overlay()[0].Elite,"Ordinary runtime toggle does not hide required elite");store.Settings.OrdinaryWorldMarkers=true;
   flow.Deferred.Add(JourneyFlow.Key(b));Check(Overlay().All(m=>m.ActorId!=101),"Runtime manual deferral removes ordinary labels without counting completion");flow.Deferred.Clear();
   Get<HashSet<byte>>(plugin,"unreadBills").Add(1);Check(Overlay().Length==1&&Overlay()[0].Elite,"Unread ordinary bill hides its labels while valid elite remains visible");Get<HashSet<byte>>(plugin,"unreadBills").Clear();
   mapId=c.MapId;Check(Overlay().Length==0,"Actual game map, not stale cached map, controls overlay eligibility");mapId=a.MapId;
   loading=true;Check(Overlay().Length==0,"World overlay hidden during loading");loading=false;cutscene=true;Check(Overlay().Length==0,"World overlay hidden during cutscenes");cutscene=false;
-  flow.Active=false;Check(Overlay().Length==4&&!Overlay().Any(m=>m.Current),"Required mobs remain labelled without starting route, with no stale active-instance emphasis");
+  flow.Active=false;Check(Overlay().Length==3&&!Overlay().Any(m=>m.Current),"Required mobs remain labelled without starting route, with no stale active-instance emphasis");
   Check(writes==overlayWrites&&ports==overlayPorts&&opens==overlayOpens&&counts.Count==0&&flow.Pauses==(PauseReason.Marker|PauseReason.User),"World overlay cannot write flags, open map, submit teleport, count kills or clear independent pauses");
   // Native gamepad presentation uses the same controller commands as the old UI.
   Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"Routes",new List<ZoneRoute>{new(a.TerritoryName!,new(){a,b,elite},null,true)});
