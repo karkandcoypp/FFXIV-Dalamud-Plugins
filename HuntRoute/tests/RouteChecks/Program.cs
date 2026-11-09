@@ -342,7 +342,7 @@ foreach(var content in new[]{nextDialog,shortcutDialog,nextDialog with {Destinat
 foreach(string mode in new[]{"taken","pickup","summary"}) {
  var loginPresentation=TravelDialogContent.Login(mode);
  var layout=TravelDialogLayout.Build(loginPresentation,MeasureDialog);
- Check(!loginPresentation.HasSubject&&loginPresentation.Footer.Length==0&&layout.Texts.Count<=3&&layout.Height<160&&layout.Panels.Count==3,"Login dialog keeps only title, optional status and actions");
+ Check(!loginPresentation.HasSubject&&loginPresentation.Footer.Length==0&&layout.Texts.Count<=3&&layout.Height<175&&layout.Panels.Count==3,"Login dialog keeps only title, optional status and actions");
 }
 try { TravelDialogLayout.Build(nextDialog,(_,_,_)=>float.NaN);throw new Exception("Invalid measurement accepted"); }catch(ArgumentException){checks++;}
 var presentedQueue=new ConfirmationQueue();int presentedAccepted=0;

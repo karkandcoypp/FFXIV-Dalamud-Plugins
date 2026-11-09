@@ -43,7 +43,7 @@ public sealed class NativeHuntController {
    if(target!=null)buttons.Add(Button("map","Карта","map",JourneyFlow.Key(target)));
    buttons.Add(Button("actions","Маршрут","page",NativeHuntPage.Actions.ToString()));
   }else{
-   int count=plugin.Mobs.Count(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m));summary=count>0?$"Незавершённых целей: {count}":"Нет незавершённых целей.";
+   int count=plugin.Mobs.Count(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m));summary=count>0?$"Осталось целей: {count}":"Нет незавершённых целей.";
    buttons.Add(remaining?Button("primary","Начать охоту","resume"):Button("primary","Доски охоты","page",NativeHuntPage.Boards.ToString()));
   }
   if(!mini){buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));if(feedback!=null)summary+="\n"+feedback;else if(plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
@@ -79,7 +79,7 @@ public sealed class NativeHuntController {
    return Button("board:"+b.Name,row.Label,"board",b.Name,plugin.BoardReachable(b)&&(!OnlyNewBoards||plugin.CanPickup(b,false)||plugin.CanPickup(b,true))) with {Board=row};
   }).ToList();
   buttons.Add(Button("boards-all",OnlyNewBoards?"Показать все доски":"Обновить статусы",OnlyNewBoards?"boards-all":"refresh"));
-  var now=DateTimeOffset.UtcNow;var day=ResetClock.Next(now,false)-now;var week=ResetClock.Next(now,true)-now;return new("Доски охоты",$"Сброс дня через {(int)day.TotalHours} ч {day.Minutes} мин · недели через {(int)week.TotalDays} д {week.Hours} ч",buttons);
+  var now=DateTimeOffset.UtcNow;var day=ResetClock.Next(now,false)-now;var week=ResetClock.Next(now,true)-now;var weekly=week.Days>0?$"{week.Days} д {week.Hours} ч":$"{week.Hours} ч {week.Minutes} мин"; return new("Доски охоты",$"Сброс · день {(int)day.TotalHours} ч {day.Minutes} мин · неделя {weekly}",buttons);
  }
  private NativeBoardStatus Progress(Board b,bool weekly){
   if(plugin.CompletionUncertain(b,weekly))return new("неизвестно");

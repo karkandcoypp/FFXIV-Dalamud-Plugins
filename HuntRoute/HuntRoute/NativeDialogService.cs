@@ -92,11 +92,11 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color; }
         yesButton=new TextButtonNode { Position=layout.Confirm.Position,Size=layout.Confirm.Size,String=content.ConfirmLabel,
             NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true,true) };
-        yesButton.LabelNode.FontSize=13;
+        yesButton.LabelNode.FontSize=NativeHuntLayout.ButtonFont;
         yesButton.BackgroundNode.Color=new Vector4(.65f,.72f,1,1);
         var no=new TextButtonNode { Position=layout.Decline.Position,Size=layout.Decline.Size,String=content.DeclineLabel,
             NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false,true) };
-        no.LabelNode.FontSize=13;
+        no.LabelNode.FontSize=NativeHuntLayout.ButtonFont;
         AddNode(yesButton);AddNode(no);measuredSize=new(layout.Width,layout.Height);SetWindowSize(measuredSize);
         native->FocusNode=no;
     }

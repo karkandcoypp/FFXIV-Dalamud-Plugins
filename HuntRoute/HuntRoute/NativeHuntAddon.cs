@@ -34,7 +34,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(WindowNode is WindowNode window){window.ShowConfigButton=false;window.ShowHelpButton=false;}
   if(mini)native->DisableFocusOnShow=true;
   heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route",TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(heading);
-  summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=16,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(summary);
+  summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=18,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(summary);
   portrait=new IconImageNode{FitTexture=true,IsVisible=false};AddNode(portrait);
   progressLabel=new TextNode{FontSize=NativeHuntLayout.BodyFont,TextColor=new(.68f,.88f,.80f,1)};AddNode(progressLabel);
   progressTrack=new ColorImageNode{Color=new(.24f,.27f,.28f,1)};AddNode(progressTrack);
@@ -42,7 +42,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   pageLabel=new TextNode{Size=new(240,24),FontSize=NativeHuntLayout.BodyFont};AddNode(pageLabel);
   for(int i=0;i<buttons.Length;i++){
    int slot=i;var button=new TextButtonNode{NavIndex=i+1,OnClick=()=>Clicked(slot)};
-   button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=16;button.LabelNode.TextFlags=TextFlags.WordWrap|TextFlags.MultiLine;
+   button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.LabelNode.TextFlags=TextFlags.WordWrap|TextFlags.MultiLine;
    buttons[i]=button;AddNode(button);
   }
   screenIdentity=null;keys=new string?[NativeHuntLayout.ButtonCapacity];commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];nextUpdate=0;focusRequested=!mini;focusFirstBody=false;icon=0;titleText=summaryText=null;Array.Clear(buttonText);
@@ -122,7 +122,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    if(button.Position!=placement.Rect.Position)button.Position=placement.Rect.Position;
    if(button.Size!=placement.Rect.Size){button.Size=placement.Rect.Size;buttonText[slot]=null;}
    button.LabelNode.TextColor=spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One);
-   if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=16;SetLabel(button,spec);if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=16;}buttonText[slot]=spec.Label;}
+   if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;SetLabel(button,spec);if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=18;}buttonText[slot]=spec.Label;}
    button.IsVisible=true;button.IsEnabled=spec.Enabled;
    keys[slot]=spec.Key;commands[slot]=spec.Action;items.Add(new(slot+1,placement.Row,placement.Column,spec.Key,spec.Enabled));
   }

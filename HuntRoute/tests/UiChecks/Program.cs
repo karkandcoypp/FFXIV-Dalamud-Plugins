@@ -85,6 +85,21 @@ class Program {
   }
   DialogPreviewChecks.Run(directory);
   WorldMarkerPreviewChecks.Run(directory);
+  var nativeFlow=(JourneyFlow)typeof(Plugin).GetProperty("Flow",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!;
+  nativeFlow.Stop();nativeFlow.Active=true;
+  var nativeSession=new RouteSession();nativeSession.Start(mobs[0],[1,2,3]);
+  nativeSession.Tick(mobs,_=>false,_=>true,mobs[0].TerritoryType);
+  Set(plugin,"Session",nativeSession);
+  Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>{{(1,0),1}});
+  var boardHistory=new CompletionHistory();
+  var boardStates=Enumerable.Range(1,21).ToDictionary(i=>(byte)i,i=>new BillState(true,i is 6 or 7 or 8,1,1,false));
+  var sampleNow=DateTimeOffset.UtcNow;
+  foreach(byte tier in new byte[]{1,2,3,5}){
+   boardHistory.Observe(111,tier,tier==5,sampleNow,new(true,true,1,1,false));
+   boardHistory.Observe(111,tier,tier==5,sampleNow,new(true,false,1,1,true));
+   boardStates[tier]=new(true,false,1,1,true);
+  }
+  Set(plugin,"BillStates",boardStates);Set(plugin,"completionHistory",boardHistory);
   NativeHuntPreviewChecks.Run(directory,plugin);
  }
 }

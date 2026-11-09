@@ -10,12 +10,6 @@ internal static class NativeHuntPreviewChecks {
   var samples=new List<(string Name,NativeHuntPage Page,NativeHuntScreen Screen,bool Mini,int Offset)>();
   foreach(var page in Enum.GetValues<NativeHuntPage>()){controller.Navigate(page);samples.Add((page.ToString(),page,controller.Build(),false,0));}
   samples.Add(("mini",NativeHuntPage.Hunt,controller.Build(true),true,0));
-  var active=new NativeHuntScreen("Swampmonk","Kozama’uka · Ежедневная цель\nМетка поставлена на карте",[
-   new("primary","Пауза",new("pause"),Emphasized:true),new("map","Карта цели",new("map")),
-   new("actions","Маршрут",new("page")),new("targets","Список целей",new("page"))
-  ],123,new(1,3));
-  samples.Add(("active",NativeHuntPage.Hunt,active,false,0));
-  samples.Add(("active-mini",NativeHuntPage.Hunt,active,true,0));
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,123),false,1));
   foreach(var sample in samples){
@@ -27,16 +21,21 @@ internal static class NativeHuntPreviewChecks {
    float Height(string value,float width,float font){ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(value,false,width).Y+4;}
    float width=NativeHuntLayout.ContentWidth(sample.Mini);
    var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,width,NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.BodyFont),sample.Mini);
+   foreach(var entry in layout.Buttons){
+    var r=entry.Rect;
+    if(r.Position.X<0||r.Position.Y<0||r.Position.X+r.Size.X>layout.Size.X||r.Position.Y+r.Size.Y>layout.Size.Y)
+     throw new Exception("Native button exceeds its window: "+entry.Button.Key);
+   }
    ImGui.End();ImGui.EndFrame();io.DisplaySize=layout.Size;
    for(int frame=0;frame<3;frame++){
     ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(layout.Size);ImGui.Begin("Native layout preview",ImGuiWindowFlags.NoDecoration|ImGuiWindowFlags.NoSavedSettings);
     var draw=ImGui.GetWindowDrawList();draw.AddRectFilled(Vector2.Zero,layout.Size,0xff231f1b,10);
     void Text(string value,NativeHuntRect rect,float font,Vector4 color){ImGui.SetWindowFontScale(font/17f);ImGui.SetCursorScreenPos(rect.Position);ImGui.PushTextWrapPos(rect.Position.X+rect.Size.X);ImGui.TextColored(color,value);ImGui.PopTextWrapPos();if(ImGui.GetItemRectMax().Y>rect.Position.Y+rect.Size.Y+2)throw new Exception("Native preview label exceeds block: "+sample.Name+" / "+value);}
-    Text(title,layout.Heading,NativeHuntLayout.TitleFont,new(.96f,.90f,.75f,1));if(summary.Length>0)Text(summary,layout.Summary,NativeHuntLayout.BodyFont,new(.9f,.9f,.9f,1));
+    Text(title,layout.Heading,NativeHuntLayout.TitleFont,sample.Screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One);if(summary.Length>0)Text(summary,layout.Summary,NativeHuntLayout.BodyFont,sample.Screen.SummaryColor??NativeHuntColors.Muted);
     if(!sample.Mini&&sample.Screen.Icon!=0)draw.AddRectFilled(layout.Portrait.Position,layout.Portrait.Position+layout.Portrait.Size,0xff3b3631,6);
     if(sample.Screen.Progress is {} progress){
      var r=layout.ProgressTrack;
-     Text(progress.Label,layout.ProgressLabel,14,new(.68f,.88f,.80f,1));
+     Text(progress.Label,layout.ProgressLabel,NativeHuntLayout.BodyFont,new(.68f,.88f,.80f,1));
      draw.AddRectFilled(r.Position,r.Position+r.Size,0xff47453d,3);
      draw.AddRectFilled(r.Position,r.Position+new Vector2(r.Size.X*progress.Fraction,r.Size.Y),0xffa3c261,3);
     }
@@ -44,7 +43,22 @@ internal static class NativeHuntPreviewChecks {
     foreach(var entry in layout.Buttons){
      var r=entry.Rect;draw.AddRectFilled(r.Position,r.Position+r.Size,entry.Button.Enabled?0xff534a3a:0xff35312d,5);
      float font=entry.Button.Label.Contains('\n')||Height(entry.Button.Label,r.Size.X-32,NativeHuntLayout.ButtonFont)>r.Size.Y-8?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;
-     Text(entry.Button.Label,new(r.Position+new Vector2(16,4),r.Size-new Vector2(32,8)),font,entry.Button.Enabled?(entry.Button.Emphasized?new(1,.85f,.55f,1):Vector4.One):new(.62f,.62f,.62f,1));
+     if(entry.Button.Board is {} row){
+      Text(row.Name,new(r.Position+new Vector2(16,4),new(r.Size.X-32,18)),font,Vector4.One);
+      ImGui.SetWindowFontScale(font/17f);
+      float x=r.Position.X+16;
+      foreach(var (part,color) in new[]{("День: ",Vector4.One),(row.Daily.Label,row.Daily.Color??Vector4.One),(" · Неделя: ",Vector4.One),(row.Weekly.Label,row.Weekly.Color??Vector4.One)}){
+       float partWidth=ImGui.CalcTextSize(part).X;
+       Text(part,new(new(x,r.Position.Y+21),new(partWidth+2,20)),font,color);
+       x+=partWidth;
+      }
+      if(x>r.Position.X+r.Size.X-8)throw new Exception("Board status line exceeds its button");
+      continue;
+     }
+     ImGui.SetWindowFontScale(font/17f);
+     var textSize=ImGui.CalcTextSize(entry.Button.Label);
+     float inset=entry.Button.Label.Contains('\n')?16:Math.Max(16,(r.Size.X-textSize.X)/2);
+     Text(entry.Button.Label,new(r.Position+new Vector2(inset,4),new(r.Size.X-inset-8,r.Size.Y-8)),font,entry.Button.Enabled?(entry.Button.Emphasized?new(1,.85f,.55f,1):Vector4.One):new(.62f,.62f,.62f,1));
     }
     ImGui.End();ImGui.Render();
    }
