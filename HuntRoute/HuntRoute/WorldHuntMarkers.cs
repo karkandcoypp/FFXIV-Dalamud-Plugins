@@ -7,9 +7,15 @@ namespace HuntRoute;
 // Value snapshots only: no game object pointers or changes to hunt state.
 public sealed record WorldHuntGoal(string Key,uint NameId,string Name,uint Territory,uint Map,bool Elite,int Kills,uint Needed,bool Known=true,bool Excluded=false);
 public readonly record struct WorldHuntActor(ulong Id,uint NameId,Vector3 Position,bool Dead);
-public sealed record WorldHuntMarker(ulong ActorId,Vector3 Position,string Name,int Kills,uint Needed,bool Elite,bool Current,float Distance){
+public sealed record WorldHuntMarker(ulong ActorId,Vector3 Position,string Name,int Kills,uint Needed,bool Elite,bool Current,float Distance,float DistanceFraction=0){
  public string Label=>(Current?"Цель · ":"")+(Elite?$"[B] {Name}":$"{Name} · {Kills}/{Needed}")+$" · {Distance:F0} м";
- public uint Color=>Current?0xffffff89:Elite?0xff88ff77:0xffdfc49e;
+ public uint Color {
+  get {
+   // ImGui packs colors as ABGR. Gold → sky blue as distance increases.
+   uint Channel(int near,int far)=>(uint)MathF.Round(near+(far-near)*DistanceFraction);
+   return 0xff000000u|(Channel(94,255)<<16)|(Channel(195,208)<<8)|Channel(255,109);
+  }
+ }
  public float Radius=>Current?9:Elite?8:5;
  public float Thickness=>Current?3:1.5f;
 }
@@ -27,10 +33,14 @@ public static class WorldHuntMarkers {
    if(!float.IsFinite(distance)||distance>limit||!seen.Add(actor.Id))continue;
    result.Add((new(actor.Id,actor.Position,goal.Name,goal.Kills,goal.Needed,goal.Elite,false,distance),goal.Key));
   }
+  if(result.Count==0)return [];
+  float nearest=result.Min(p=>p.Marker.Distance);
+  float span=result.Max(p=>p.Marker.Distance)-nearest;
   // Follow the same loaded instance as the navigator. Before it has selected an
   // instance, emphasize only the nearest candidate for its current requirement.
   ulong? highlight=currentActor??result.Where(p=>p.Key==currentKey).OrderBy(p=>p.Marker.Distance).ThenBy(p=>p.Marker.ActorId).Select(p=>(ulong?)p.Marker.ActorId).FirstOrDefault();
-  return result.Select(p=>p.Marker with {Current=p.Key==currentKey&&p.Marker.ActorId==highlight})
+  return result.Select(p=>p.Marker with {Current=p.Key==currentKey&&p.Marker.ActorId==highlight,
+    DistanceFraction=span>0?(p.Marker.Distance-nearest)/span:0})
    .OrderByDescending(m=>m.Current).ThenByDescending(m=>m.Elite).ThenBy(m=>m.Distance).ThenBy(m=>m.ActorId).ToArray();
  }
  private static bool Finite(Vector3 p)=>float.IsFinite(p.X)&&float.IsFinite(p.Y)&&float.IsFinite(p.Z);

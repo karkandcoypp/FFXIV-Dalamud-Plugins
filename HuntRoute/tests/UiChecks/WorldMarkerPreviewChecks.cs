@@ -8,14 +8,14 @@ internal static class WorldMarkerPreviewChecks {
   ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(800,450);io.DeltaTime=1f/60;
   io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
   byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
-  var current=new WorldHuntMarker(10,Vector3.Zero,"Mourner",1,3,false,true,45);
+  var current=new WorldHuntMarker(10,Vector3.Zero,"Mourner",1,3,false,true,45,13f/42);
   var ordinary=new WorldHuntMarker(11,Vector3.Zero,"Mourner",1,3,false,false,32);
-  var elite=new WorldHuntMarker(12,Vector3.Zero,"Elite",0,1,true,false,74);
+  var elite=new WorldHuntMarker(12,Vector3.Zero,"Elite",0,1,true,false,74,1);
   for(int frame=0;frame<3;frame++){
    ImGui.NewFrame();var draw=ImGui.GetBackgroundDrawList();draw.AddRectFilled(Vector2.Zero,io.DisplaySize,0xff201c18);
    int before=draw.VtxBuffer.Size;WorldHuntPainter.Draw(current,new(float.NaN,100));if(draw.VtxBuffer.Size!=before)throw new Exception("Invalid projection emitted overlay vertices");
    WorldHuntPainter.Draw(current,new(260,140));WorldHuntPainter.Draw(ordinary,new(530,245));WorldHuntPainter.Draw(elite,new(320,350));
-   if(draw.VtxBuffer.Size<=before||current.Color==ordinary.Color||current.Thickness<=ordinary.Thickness)throw new Exception("Current ordinary overlay has no distinct render treatment");
+   if(draw.VtxBuffer.Size<=before||current.Thickness<=ordinary.Thickness)throw new Exception("Current ordinary overlay has no distinct render treatment");
    ImGui.Render();
   }
   File.WriteAllBytes(Path.Combine(directory,"font-17.rgba"),new ReadOnlySpan<byte>(pixels,tw*th*4).ToArray());
