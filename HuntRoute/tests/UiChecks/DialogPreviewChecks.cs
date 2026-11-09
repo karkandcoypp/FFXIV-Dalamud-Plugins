@@ -17,8 +17,7 @@ internal static class DialogPreviewChecks {
             for(int frame=0;frame<3;frame++) {
                 ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);
                 ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,Vector2.Zero);ImGui.Begin("composition",ImGuiWindowFlags.NoDecoration|ImGuiWindowFlags.NoScrollbar|ImGuiWindowFlags.NoSavedSettings);
-                var draw=ImGui.GetWindowDrawList();draw.AddRectFilled(Vector2.Zero,io.DisplaySize,ImGui.GetColorU32(new Vector4(.13f,.15f,.20f,1)),12);
-                foreach(var panel in layout.Panels)draw.AddRectFilled(panel.Position,panel.Position+panel.Size,ImGui.GetColorU32(panel.Color));
+                var draw=ImGui.GetWindowDrawList();draw.AddRectFilled(Vector2.Zero,io.DisplaySize,ImGui.GetColorU32(new Vector4(.25f,.25f,.25f,1)),12);
                 foreach(var text in layout.Texts) {
                     ImGui.SetWindowFontScale(text.Font/17f);ImGui.SetCursorScreenPos(text.Position);ImGui.PushTextWrapPos(text.Position.X+text.Size.X);
                     ImGui.TextColored(text.Color,text.Text);ImGui.PopTextWrapPos();

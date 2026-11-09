@@ -335,14 +335,12 @@ foreach(var content in new[]{nextDialog,shortcutDialog,nextDialog with {Destinat
  float fitted=TravelDialogLayout.FitScale(dialogSize,viewport,2);
  Check(dialogSize.X*fitted<=viewport.X-15&&dialogSize.Y*fitted<=viewport.Y-15,"Scaled confirmation fits inside a short viewport");
  Check(TravelDialogLayout.FitScale(dialogSize,new(1920,1080),1)==1,"Confirmation keeps normal UI scale when it fits");
- Check(layout.Panels.Count==content.Metrics.Length+4,"Native background allocation matches shared layout");
  foreach(var text in layout.Texts)Check(text.Position.X>=16 && text.Position.Y>=32 && text.Position.X+text.Size.X<=layout.Width-16 && text.Position.Y+text.Size.Y<layout.Confirm.Position.Y,"Wrapped dialog text remains within content bounds");
- foreach(var panel in layout.Panels)Check(panel.Size.X>0 && panel.Size.Y>0 && panel.Position.X+panel.Size.X<=layout.Width && panel.Position.Y+panel.Size.Y<=layout.Height,"Dialog panels fit the window");
 }
 foreach(string mode in new[]{"taken","pickup","summary"}) {
  var loginPresentation=TravelDialogContent.Login(mode);
  var layout=TravelDialogLayout.Build(loginPresentation,MeasureDialog);
- Check(!loginPresentation.HasSubject&&loginPresentation.Footer.Length==0&&layout.Texts.Count<=3&&layout.Height<175&&layout.Panels.Count==3,"Login dialog keeps only title, optional status and actions");
+ Check(!loginPresentation.HasSubject&&loginPresentation.Footer.Length==0&&layout.Texts.Count<=3&&layout.Height<175,"Login dialog keeps only title, optional status and actions");
 }
 try { TravelDialogLayout.Build(nextDialog,(_,_,_)=>float.NaN);throw new Exception("Invalid measurement accepted"); }catch(ArgumentException){checks++;}
 var presentedQueue=new ConfirmationQueue();int presentedAccepted=0;
