@@ -36,15 +36,16 @@ public sealed record NativeHuntPlacement(int Slot,int Row,int Column,NativeHuntB
 public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,NativeHuntRect Summary,NativeHuntRect Portrait,NativeHuntRect ProgressLabel,NativeHuntRect ProgressTrack,NativeHuntRect PageLabel,string PageText,IReadOnlyList<NativeHuntPlacement> Buttons){
  public const int ButtonCapacity=13;
  private const float Margin=16,Gap=8;
- public const float PortraitSize=76;
+ public const float PortraitSize=68;
+ public const byte TitleFont=16, BodyFont=13, ButtonFont=14;
  public static float ContentWidth(bool mini)=>(mini?340:420)-2*Margin;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsSecondary(NativeHuntButton button)=>button.Key is "primary" or "map" or "actions" or "targets" or "message";
  public static string FitLabel(string value,int length=64)=>value.Length<=length?value:string.Concat(value.EnumerateRunes().Take(length-1).Select(r=>r.ToString()))+"…";
  public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false){
   float inner=ContentWidth(mini),width=inner+2*Margin,titleY=mini?40:78;
-  titleHeight=float.IsFinite(titleHeight)?Math.Clamp(titleHeight,26,110):26;
-  summaryHeight=float.IsFinite(summaryHeight)?Math.Clamp(summaryHeight,19,190):19;
+  titleHeight=float.IsFinite(titleHeight)?Math.Clamp(titleHeight,22,110):22;
+  summaryHeight=float.IsFinite(summaryHeight)?Math.Clamp(summaryHeight,17,190):17;
   float summaryY=titleY+titleHeight+4;bool portrait=!mini&&screen.Icon!=0;
   float textWidth=SummaryWidth(screen,mini);
   float progressY=summaryY+summaryHeight+4;

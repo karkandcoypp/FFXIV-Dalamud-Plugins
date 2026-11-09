@@ -24,7 +24,7 @@ internal static class DialogPreviewChecks {
                     ImGui.TextColored(text.Color,text.Text);ImGui.PopTextWrapPos();
                     if(ImGui.GetItemRectMax().Y>text.Position.Y+text.Size.Y+1)throw new Exception("Dialog text exceeds its measured block");
                 }
-                ImGui.SetWindowFontScale(14f/17);
+                ImGui.SetWindowFontScale(13f/17);
                 foreach(var (rect,label,primary) in new[]{(layout.Confirm,sample.Item2.ConfirmLabel,true),(layout.Decline,sample.Item2.DeclineLabel,false)}) {
                     var size=ImGui.CalcTextSize(label);
                     if(size.X>rect.Size.X-16||rect.Position.Y+rect.Size.Y>layout.Height-12||rect.Position.X+rect.Size.X>layout.Width-16)

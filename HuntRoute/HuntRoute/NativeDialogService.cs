@@ -83,7 +83,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         for(int i=0;i<content.Metrics.Length+4;i++) { var panel=new ColorImageNode();backgrounds.Add(panel);AddNode(panel); }
         var textNodes=new List<TextNode>();
         var layout=TravelDialogLayout.Build(content,(text,width,font)=> {
-            var node=new TextNode { Size=new Vector2(width,4096),FontSize=font,LineSpacing=font+4,
+            var node=new TextNode { Size=new Vector2(width,4096),FontSize=font,LineSpacing=font+3,
                 String=text,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine };
             textNodes.Add(node);AddNode(node);return node.GetTextDrawSize(considerScale:false).Y;
         });
@@ -91,11 +91,11 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color; }
         yesButton=new TextButtonNode { Position=layout.Confirm.Position,Size=layout.Confirm.Size,String=content.ConfirmLabel,
             NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true,true) };
-        yesButton.LabelNode.FontSize=14;
+        yesButton.LabelNode.FontSize=13;
         yesButton.BackgroundNode.Color=new Vector4(.65f,.72f,1,1);
         var no=new TextButtonNode { Position=layout.Decline.Position,Size=layout.Decline.Size,String=content.DeclineLabel,
             NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false,true) };
-        no.LabelNode.FontSize=14;
+        no.LabelNode.FontSize=13;
         AddNode(yesButton);AddNode(no);SetWindowSize(new Vector2(layout.Width,layout.Height));
         native->FocusNode=no;
     }
