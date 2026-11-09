@@ -203,6 +203,34 @@ static class JourneyRuntimeChecks {
   loading=true;Check(Overlay().Length==0,"World overlay hidden during loading");loading=false;cutscene=true;Check(Overlay().Length==0,"World overlay hidden during cutscenes");cutscene=false;
   flow.Active=false;Check(Overlay().Length==4&&!Overlay().Any(m=>m.Current),"Required mobs remain labelled without starting route, with no stale active-instance emphasis");
   Check(writes==overlayWrites&&ports==overlayPorts&&opens==overlayOpens&&counts.Count==0&&flow.Pauses==(PauseReason.Marker|PauseReason.User),"World overlay cannot write flags, open map, submit teleport, count kills or clear independent pauses");
+  // Native gamepad presentation uses the same controller commands as the old UI.
+  Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"Routes",new List<ZoneRoute>{new(a.TerritoryName!,new(){a,b,elite},null,true)});
+  var nativeUi=new NativeHuntController(plugin);int nativePorts=ports,nativeWrites=writes,nativeOpens=opens;uint nativeRun=session.RunId;var nativePauses=flow.Pauses;
+  foreach(var page in Enum.GetValues<NativeHuntPage>()){
+   nativeUi.Navigate(page);var screen=nativeUi.Build();Check(screen.Buttons.Select(b=>b.Key).Distinct().Count()==screen.Buttons.Count,"Native screen action identities stay unique: "+page);
+  }
+  Check(ports==nativePorts&&writes==nativeWrites&&opens==nativeOpens&&session.RunId==nativeRun&&flow.Pauses==nativePauses&&counts.Count==0,"Building all native views cannot navigate, cast, clear pauses or alter counters");
+  nativeUi.Navigate(NativeHuntPage.Targets);var goalButton=nativeUi.Build().Buttons.First(bu=>bu.Action.Kind=="target");nativeUi.Execute(goalButton.Action);
+  Check(nativeUi.Page==NativeHuntPage.Target&&nativeUi.Build().Buttons.Any(bu=>bu.Action.Kind=="track"),"Gamepad row selection opens explicit goal actions without starting a route");
+  objects=[];flow.Active=false;flow.Pauses=PauseReason.Board;Set(plugin,"nextTeleportAllowed",0L);nativeUi.Execute(new("resume"));
+  Check(flow.Active&&session.Phase==RoutePhase.Following&&nativeUi.Page==NativeHuntPage.Hunt&&ports==nativePorts,"Native Start resumes existing backend in current zone without teleport");
+  nativeUi.Execute(new("pause"));Check(flow.Pauses.HasFlag(PauseReason.User),"Native Pause uses independent user-pause state");
+  nativeUi.Execute(new("target",JourneyFlow.Key(b)));nativeUi.Execute(new("defer",JourneyFlow.Key(b)));Check(flow.Excluded(b)&&!(bool)Call(plugin,"Done",b)!&&nativeUi.Page==NativeHuntPage.Target,"Native deferral preserves incomplete bill and manual browsing");
+  nativeUi.Execute(new("restore",JourneyFlow.Key(b)));Check(!flow.Excluded(b),"Native return action restores deferred goal");
+  uint filterRun=session.RunId;nativeUi.Execute(new("filter-expansion","Stormblood"));nativeUi.Navigate(NativeHuntPage.Targets);
+  Check(nativeUi.Build().Buttons.All(bu=>bu.Action.Kind!="target")&&session.RunId==filterRun,"Native expansion filter hides only rows and leaves hunt running");
+  nativeUi.Execute(new("filter-reset"));Check(nativeUi.Build().Buttons.Any(bu=>bu.Action.Kind=="target"),"Native filter reset restores existing goal list");
+  var settingsBefore=store.Settings.WorldMarkers;nativeUi.Execute(new("toggle","ordinary"));Check(!store.Settings.OrdinaryWorldMarkers&&store.Settings.WorldMarkers==settingsBefore,"Native ordinary overlay switch remains independent from elite overlay");nativeUi.Execute(new("toggle","ordinary"));
+  nativeUi.Execute(new("step","ordinary-distance",-10000));Check(store.Settings.OrdinaryWorldDistance==50,"Native distance controls clamp to valid minimum");nativeUi.Execute(new("step","ordinary-distance",10000));Check(store.Settings.OrdinaryWorldDistance==500,"Native distance controls clamp to valid maximum");
+  nativeUi.Execute(new("step","gil",-10000));Check(store.Settings.MaxGil==0,"Native gil editor supports free-only shortcuts");
+  float secondsBefore=store.Settings.MinSeconds;nativeUi.Execute(new("edit-number","seconds"));nativeUi.Execute(new("step","seconds",1));Check(nativeUi.Page==NativeHuntPage.Number&&Math.Abs(store.Settings.MinSeconds-secondsBefore-.1f)<.001f,"Native numeric page adjusts fractional seconds and stays focused on value");
+  Set(plugin,"settingsLoadPending",true);nativeUi.Navigate(NativeHuntPage.Settings);Check(nativeUi.Build().Buttons.Where(bu=>bu.Action.Kind=="toggle").All(bu=>!bu.Enabled),"Native options show unavailable persistence as disabled controls");
+  bool preference=store.Settings.OrdinaryWorldMarkers;nativeUi.Execute(new("toggle","ordinary"));Check(store.Settings.OrdinaryWorldMarkers==preference,"Stale native setting command cannot overwrite unread settings");Set(plugin,"settingsLoadPending",false);
+  nativeUi.Boards(true);Set(plugin,"BillStates",new Dictionary<byte,BillState>());Check(nativeUi.Build().Buttons.Where(bu=>bu.Action.Kind=="board").All(bu=>!bu.Enabled),"Native new-board picker disables categories with no confirmed availability");
+  nativeUi.Boards(false);queue.Clear();nativePorts=ports;nativeUi.Execute(new("board","Stormblood"));request=queue.Activate(true);Check(request?.Owner=="travel"&&ports==nativePorts&&request.Presentation?.Destination==game.Excel.GetSheet<TerritoryType>().GetRow(628).PlaceName.Value.Name.ToString(),"Native board button opens correct confirmation and does not cast on selection");queue.Clear();
+  nativePorts=ports;nativeWrites=writes;Set(plugin,"Mobs",new List<MobHuntEntry>());nativeUi.Execute(goalButton.Action);nativeUi.Execute(new("track",goalButton.Action.Argument));Check(ports==nativePorts&&writes==nativeWrites,"Stale native goal selection/track command cannot act on a replacement bill");Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,elite});
+  var nativeServiceType=typeof(Plugin).Assembly.GetType("HuntRoute.NativeHuntUi")!;var nativeService=Activator.CreateInstance(nativeServiceType,BindingFlags.Instance|BindingFlags.NonPublic,null,new object[]{plugin,bridge},null)!;
+  Call(nativeService,"CloseAll");Check(flow.Active,"Closing native main/mini presentation never stops hunting");((IDisposable)nativeService).Dispose();
   // An invalid hi-res portrait must still try standard-res and never break the hunt UI.
   var picture=Proxy<Dalamud.Interface.Textures.TextureWraps.IDalamudTextureWrap>((m,_)=>m.Name switch{"get_Width"=>128,"get_Height"=>128,_=>throw new Exception(m.Name)});
   var immediate=Proxy<Dalamud.Interface.Textures.ISharedImmediateTexture>((m,_)=>m.Name=="GetWrapOrDefault"?picture:throw new Exception(m.Name));

@@ -36,6 +36,7 @@ public sealed partial class Plugin : IDalamudPlugin {
     internal readonly NextZoneWindow NextZone;
     internal readonly ShortcutWindow Shortcut;
     internal readonly NativeDialogService NativeDialogs;
+    internal NativeHuntUi? NativeMain;
     private CompletionHistory? completionHistory;
     private CompletionHistory History => completionHistory ??= new();
     private string? completionFile;
@@ -67,20 +68,25 @@ public sealed partial class Plugin : IDalamudPlugin {
         if(History.Recovered)NoticeText="История выполнения восстановлена из резервной копии. Неподтверждённые отметки не выдаются за выполненные.";
         InitializeStore();
         NativeDialogs=new(pi);
+        NativeMain=new(this,NativeDialogs);
         window = new(this); windows.AddWindow(window);
         Elite = new(this); windows.AddWindow(Elite);
         miniWindow=new(this);windows.AddWindow(miniWindow);
         NextZone=new(this);
         Shortcut=new(this);
-        Service.Commands.AddHandler("/huntroute", new CommandInfo((_, args) => { switch(args.Trim().ToLowerInvariant()){case "pause":TogglePause();break;case "resume":ResumeJourney();break;case "stop":StopJourney();break;case "mini":SetMini(!Settings.Mini);break;default:window.Toggle();break;} }) { HelpMessage = "Hunt Route: маршруты охоты и сброс контрактов" });
-        pi.UiBuilder.Draw += windows.Draw; pi.UiBuilder.Draw += Elite.DrawWorld; pi.UiBuilder.OpenMainUi += Open; pi.UiBuilder.OpenConfigUi += Open;
+        Service.Commands.AddHandler("/huntroute", new CommandInfo((_, args) => { switch(args.Trim().ToLowerInvariant()){case "pause":TogglePause();break;case "resume":ResumeJourney();break;case "stop":StopJourney();break;case "mini":SetMini(!Settings.Mini);break;case "classic":OpenClassic();break;case "settings":OpenConfig();break;default:NativeMain.Toggle();break;} }) { HelpMessage = "Hunt Route: нативное меню охоты; classic — резервное окно мыши" });
+        pi.UiBuilder.Draw += windows.Draw; pi.UiBuilder.Draw += Elite.DrawWorld; pi.UiBuilder.OpenMainUi += Open; pi.UiBuilder.OpenConfigUi += OpenConfig;
         Service.Framework.Update += Update;
         Service.ClientState.Logout += OnLogout;
         Service.ClientState.TerritoryChanged += OnTerritoryChanged;
     }
-    private void Open() => window.IsOpen = true;
+    private void Open(){if(NativeMain!=null)NativeMain.Open();else if(window!=null)window.IsOpen=true;}
+    private void OpenConfig(){if(NativeMain!=null)NativeMain.Open(NativeHuntPage.Settings);else{SettingsOpen=true;Open();}}
+    internal void OpenClassic(){NativeMain?.CloseMain();if(window!=null)window.IsOpen=true;}
+    internal void HideClassic(){if(window!=null)window.IsOpen=false;}
     internal void Refresh() { nextScan = 0; signature = ""; }
     private void OnLogout(int type,int code) {
+        NativeMain?.CloseAll();
         SaveJourney(true);
         SaveHistory(true);
         Ready=false; character=0; signature=""; routeSignature=""; nextScan=0; nextTeleportAllowed=0;
@@ -99,6 +105,7 @@ public sealed partial class Plugin : IDalamudPlugin {
             Ready=false; Search.Suspend();return;
         }
         try {
+            NativeMain?.Pump();
             long now=Now;
             if(now<nextScan) {
                 // Contract snapshots stay on the 1-second cadence; fly-by detection runs at 10 Hz.
@@ -385,8 +392,8 @@ public sealed partial class Plugin : IDalamudPlugin {
         Service.ClientState.Logout -= OnLogout;
         Service.ClientState.TerritoryChanged -= OnTerritoryChanged;
         Service.Framework.Update -= Update; Service.PluginInterface.UiBuilder.Draw -= Elite.DrawWorld; Service.PluginInterface.UiBuilder.Draw -= windows.Draw;
-        Service.PluginInterface.UiBuilder.OpenMainUi -= Open; Service.PluginInterface.UiBuilder.OpenConfigUi -= Open;
-        Service.Commands.RemoveHandler("/huntroute"); windows.RemoveAllWindows();NativeDialogs.Dispose();
+        Service.PluginInterface.UiBuilder.OpenMainUi -= Open; Service.PluginInterface.UiBuilder.OpenConfigUi -= OpenConfig;
+        Service.Commands.RemoveHandler("/huntroute"); windows.RemoveAllWindows();try{NativeMain?.Dispose();}finally{NativeDialogs.Dispose();}
     }
 }
 

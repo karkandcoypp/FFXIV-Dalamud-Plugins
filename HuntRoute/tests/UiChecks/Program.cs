@@ -85,5 +85,6 @@ class Program {
   }
   DialogPreviewChecks.Run(directory);
   WorldMarkerPreviewChecks.Run(directory);
+  NativeHuntPreviewChecks.Run(directory,plugin);
  }
 }

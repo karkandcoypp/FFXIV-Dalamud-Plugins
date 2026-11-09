@@ -120,7 +120,7 @@ public sealed class MiniWindow:Window {
  private readonly Plugin plugin;
  public MiniWindow(Plugin plugin):base("Охота###HuntRouteMini"){this.plugin=plugin;Size=new(340,190);SizeCondition=ImGuiCond.FirstUseEver;Flags=ImGuiWindowFlags.AlwaysAutoResize;SizeConstraints=new(){MinimumSize=new(300,120),MaximumSize=new(500,900)};IsOpen=true;RespectCloseHotkey=false;}
  public override void OnClose()=>plugin.SetMini(false);
- public override bool DrawConditions()=>plugin.Ready&&plugin.Settings.Mini&&plugin.Flow.Active;
+ public override bool DrawConditions()=>plugin.NativeMain?.Available!=true&&plugin.Ready&&plugin.Settings.Mini&&plugin.Flow.Active;
  public override void PreDraw()=>HuntTheme.Push();
  public override void PostDraw()=>HuntTheme.Pop();
  public override void Draw()=>HuntWindow.DrawSession(plugin);

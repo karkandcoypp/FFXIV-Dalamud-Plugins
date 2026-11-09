@@ -15,6 +15,9 @@ internal sealed class NativeDialogService : IDisposable {
     private NativeConfirmationAddon? addon;
     private bool disposed,failed;
     internal NativeDialogService(IDalamudPluginInterface pi) => initialization=KamiToolKitLibrary.InitializeAsync(pi);
+    internal bool Initialized=>initialization.IsCompletedSuccessfully;
+    internal bool InitializationFailed=>initialization.IsFaulted||initialization.IsCanceled;
+    internal bool HasDialog=>queue.Active!=null||addon!=null;
     internal string? Error=>failed?"Не удалось открыть игровое подтверждение. Маршрут сохранён; проверьте журнал Dalamud.":null;
     internal void Offer(ConfirmationRequest request,bool repeat=false) { if(disposed||queue.Active?.Key==request.Key)return;if(repeat)queue.Retry(request);else queue.Offer(request); }
     internal void CancelAll(){queue.Clear();addon?.CloseQuietly();addon=null;}

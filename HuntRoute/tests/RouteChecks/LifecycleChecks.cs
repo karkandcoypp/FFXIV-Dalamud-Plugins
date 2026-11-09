@@ -43,6 +43,7 @@ static class LifecycleChecks {
   var reload=new EliteSearch();reload.Start([new(0,0),new(200,0)]);reload.Restore(progress);check(reload.Capture().Current==progress.Current&&reload.ActorId==null,"Circle progress restores without NPC identities");
   PlanAuditChecks.Run(check);
   WorldMarkerChecks.Run(check);
+  NativeNavigationChecks.Run(check);
   Console.WriteLine("PASS actor death, delayed credit, visibility, pause, travel and persistence lifecycle");
  }
 }

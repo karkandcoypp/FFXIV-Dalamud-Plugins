@@ -1,3 +1,10 @@
+# 0.4.0
+
+- Main Hunt Route and mini panel now use native FFXIV window, text, image and button nodes via the existing KamiToolKit integration. The default `/huntroute` and plugin Open action open native UI; `/huntroute classic` opens the previous mouse UI as a fallback.
+- Controller navigation covers hunt, boards, paged goals, portraits, filters, manual priorities, deferrals, all settings and numeric editors. Directional links skip hidden/disabled actions, preserve semantic focus and keep native close/back reachable. Native confirmations still gate travel.
+- Native menu actions reuse existing hunt/board/map/settings controllers. Closing a window does not stop the route. Mini opening avoids taking focus; a Hunt Route confirmation returns focus to the originating window when possible. Passive data refresh does not take focus from the game map.
+- Added pure navigation/layout, substituted-controller and offline composition checks. Real FFXIV/gamepad focus was not exercised. Backend routes, elite/ordinary world overlays and Kugane start fix remain included.
+
 # 0.3.21
 
 - Fixed starting fresh bills from a city after finishing a previous route: the new target/run is established before teleport confirmation, so the old Finished phase cannot retire the queued request.

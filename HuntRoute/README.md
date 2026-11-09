@@ -52,7 +52,13 @@ Settings contains **Ordinary target highlighting** independently of elite highli
 
 World labels cannot detect unloaded NPCs or see across the entire map, and do not move the player or map flag.
 
-## Compact interface
+## Native gamepad menu
+
+`/huntroute` opens the native FFXIV main menu. Use the game's directional navigation and confirm/cancel bindings. **Hunt** contains the current route and controls, **All targets** leads to paged goals, filters, portraits and actions, **Boards** covers five expansions, and **Settings** includes sounds, overlays, distances and shortcut thresholds. The mini panel is native as well. Existing game confirmations still gate travel; selecting a mob only opens details. Closing the menu leaves tracking active.
+
+`/huntroute settings` opens native settings. `/huntroute classic` opens the previous mouse interface if native UI is unavailable. See [native validation](VALIDATION-0.4.0.md) for offline results and the live gamepad checklist.
+
+## Compact mouse fallback
 
 The default Hunt view contains the active target, kill count and the next action. **All targets** opens the grouped target list; clicking a name reveals explicit tracking/map/deferral controls. **Boards** contains the five-expansion completion/reset overview. **Settings** groups sound, shortcuts and maintenance separately. The **More** journey menu contains stop, manual-priority cancellation and lost-elite release.
 

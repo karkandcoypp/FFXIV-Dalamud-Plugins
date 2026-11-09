@@ -49,7 +49,7 @@ public sealed partial class Plugin {
  private bool externalTransition;
  internal string? Selected;
  internal bool FocusRequested;
- internal void FocusTarget(){if(Session.Target!=null)Selected=JourneyFlow.Key(Session.Target);FocusRequested=true;window.IsOpen=true;}
+ internal void FocusTarget(){if(Session.Target!=null)Selected=JourneyFlow.Key(Session.Target);if(NativeMain?.Available==true)NativeMain.FocusTarget();else{FocusRequested=true;if(window!=null)window.IsOpen=true;}}
  internal string? NoticeText;
  internal bool PickupOpen,SettingsOpen,DeferredOpen;
  private readonly Queue<string> journal=new();
@@ -285,7 +285,7 @@ public sealed partial class Plugin {
   NativeDialogs.Offer(new("pickup",$"login:{character}:{mode}","Начать охоту?",
    ()=>Ready&&Settings.ResetNotifications&&LoginMode()==mode,
    ()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),
-   ()=>{window.IsOpen=true;if(mode=="taken")ResumeJourney();else PickupOpen=mode=="pickup";return true;},
+   ()=>{if(mode=="taken")ResumeJourney();else PickupOpen=mode=="pickup";Open();return true;},
    new("HUNT ROUTE · ВХОД В ИГРУ",mode=="taken"?"Продолжить охоту?":mode=="pickup"?"Начать охоту?":"Сводка охоты",
     "СОСТОЯНИЕ",mode=="taken"?"Есть незавершённые взятые контракты":mode=="pickup"?"Доступны новые контракты":"Новых доступных целей пока нет",
     mode=="taken"?"Начните сопровождение по уже взятым контрактам.":mode=="pickup"?"Выберите дополнение и доску охоты.":"Посмотрите выполненные, отложенные цели и время следующего сброса.",
@@ -301,6 +301,6 @@ public sealed partial class Plugin {
   if(!d&&!w)return;
   if(Flow.Active&&Flow.Pauses==PauseReason.None){NoticeText="Доступны новые контракты — выберите доску в сводке.";return;}
   if(TravelBusy || pendingJourney!=null || Flow.Pauses.HasFlag(PauseReason.Marker))return;
-  NativeDialogs.Offer(new("pickup",$"pickup:{character}:{(d?daily:0)}:{(w?weekly:0)}","Доступны новые контракты",()=>Ready&&Settings.ResetNotifications&&(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false))||w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true))),()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),()=>{PickupOpen=true;window.IsOpen=true;return true;},new("HUNT ROUTE · КОНТРАКТЫ","Доступны новые контракты","ДОСКА ОХОТЫ","Выберите дополнение","Ежедневные и недельные статусы показаны отдельно.","ПОСЛЕ ВЫБОРА","Подтверждение поездки","Контракты вы берёте самостоятельно.","Текущий маршрут сохранится. «Позже» оставит действие в сводке.",[],"Выбрать дополнение"),()=>{if(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=daily;if(w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=weekly;SaveJourney(true);}));
+  NativeDialogs.Offer(new("pickup",$"pickup:{character}:{(d?daily:0)}:{(w?weekly:0)}","Доступны новые контракты",()=>Ready&&Settings.ResetNotifications&&(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false))||w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true))),()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),()=>{PickupOpen=true;Open();return true;},new("HUNT ROUTE · КОНТРАКТЫ","Доступны новые контракты","ДОСКА ОХОТЫ","Выберите дополнение","Ежедневные и недельные статусы показаны отдельно.","ПОСЛЕ ВЫБОРА","Подтверждение поездки","Контракты вы берёте самостоятельно.","Текущий маршрут сохранится. «Позже» оставит действие в сводке.",[],"Выбрать дополнение"),()=>{if(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=daily;if(w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=weekly;SaveJourney(true);}));
  }
 }
