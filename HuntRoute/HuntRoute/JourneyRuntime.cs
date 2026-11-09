@@ -193,7 +193,7 @@ public sealed partial class Plugin {
   bool onlyNew=PickupOpen;
   NativeDialogs.Offer(new("travel",$"board:{board.Name}:{quote}:{Session.RunId}","К доске охоты?",()=>Ready&&(!onlyNew||CanPickup(board,false)||CanPickup(board,true))&&(CurrentTerritory==board.Territory||Price(board.Aetheryte)<=quote),
    ()=>!TravelBusy,()=>{if(CurrentTerritory!=board.Territory&&Price(board.Aetheryte)>quote)return false;if(!Teleport(board.Aetheryte))return false;Flow.Pauses|=PauseReason.Board;Flow.Status="Поездка к доске. Маршрут сохранён.";pendingJourney=CurrentTerritory==board.Territory?null:new(CurrentTerritory,board.Territory,board.Map,Now,null,true);PlaceFlag(board.Territory,board.Map,MapCoordinates.ToWorld(board.Position,Service.DataManager.GetExcelSheet<Map>().GetRow(board.Map)));PickupOpen=false;SaveJourney(true);return true;},
-   new("HUNT ROUTE · ДОСКА",CurrentTerritory==board.Territory?"К доске без телепорта":"За новыми контрактами?","ГОРОД",city,$"{aetheryte} · {quote} гил","КОНТРАКТЫ",board.Name,"После прибытия будет поставлена метка доски.","",[])),true);
+   TravelDialogContent.Board(city,aetheryte,board.Name,quote,CurrentTerritory==board.Territory)),true);
  }
  private unsafe string ContextKey()=> ContextProvider?.Invoke() ?? $"{Service.ObjectTable.LocalPlayer?.CurrentWorld.RowId ?? 0}:{UIState.Instance()->PublicInstance.InstanceId}:{CurrentTerritory}:{CurrentMap}";
  private void ReconcileContext(){
