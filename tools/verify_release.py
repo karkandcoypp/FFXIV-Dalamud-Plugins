@@ -10,17 +10,68 @@ from update_repository import update
 
 
 def require_dll(package, name):
-    with package.open(name) as stream:
-        dos = stream.read(64)
-        if len(dos) != 64 or dos[:2] != b'MZ':
-            raise ValueError('Invalid DLL: ' + name)
-        offset = struct.unpack_from('<I', dos, 60)[0]
-        if not 64 <= offset <= package.getinfo(name).file_size - 26:
-            raise ValueError('Invalid PE offset: ' + name)
-        stream.seek(offset)
-        pe = stream.read(26)
-        if pe[:4] != b'PE\0\0' or not struct.unpack_from('<H', pe, 22)[0] & 0x2000 or pe[24:26] not in (b'\x0b\x01', b'\x0b\x02'):
-            raise ValueError('Invalid PE DLL header: ' + name)
+    data = package.read(name)
+
+    def need(condition):
+        if not condition:
+            raise ValueError('Invalid PE/CLR metadata: ' + name)
+
+    def u16(at):
+        return struct.unpack_from('<H', data, at)[0]
+
+    def u32(at):
+        return struct.unpack_from('<I', data, at)[0]
+
+    need(len(data) >= 64 and data[:2] == b'MZ')
+    pe = u32(60)
+    need(64 <= pe <= len(data) - 26 and data[pe:pe+4] == b'PE\0\0' and u16(pe+22) & 0x2000)
+    optional = pe + 24
+    section_count = u16(pe+6)
+    section_start = optional + u16(pe+20)
+    magic = u16(optional)
+    need(magic in (0x10b, 0x20b) and section_count > 0 and section_start + section_count*40 <= len(data))
+    directories = optional + (96 if magic == 0x10b else 112)
+    cli = directories + 14*8
+    need(cli+8 <= section_start and u32(directories-4) >= 15 and u32(cli+4) >= 72)
+    sections = [struct.unpack_from('<IIII', data, section_start+i*40+8) for i in range(section_count)]
+
+    def file_offset(rva, length):
+        for virtual_size, start, raw_size, raw in sections:
+            delta = rva - start
+            if rva and 0 <= delta and delta+length <= min(raw_size, virtual_size or raw_size) and raw+delta+length <= len(data):
+                return raw + delta
+        raise ValueError('Unmapped CLR data: ' + name)
+
+    header = file_offset(u32(cli), 72)
+    need(u32(header) >= 72)
+    size = u32(header+12)
+    need(size >= 20)
+    root = file_offset(u32(header+8), size)
+    end = root + size
+    need(data[root:root+4] == b'BSJB')
+    version_size = u32(root+12)
+    cursor = root + 16 + version_size
+    need(version_size > 0 and version_size % 4 == 0 and cursor+4 <= end)
+    count = u16(cursor+2)
+    cursor += 4
+    streams = {}
+    for _ in range(count):
+        need(cursor+9 <= end)
+        offset, length = u32(cursor), u32(cursor+4)
+        name_end = data.find(b'\0', cursor+8, min(cursor+40, end))
+        need(name_end >= 0 and offset+length <= size)
+        key = data[cursor+8:name_end]
+        need(key and key not in streams)
+        streams[key] = (root+offset, length)
+        cursor = root + ((name_end+1-root+3) & ~3)
+    need(all(at >= cursor for at, _ in streams.values()))
+    need(b'#Strings' in streams and streams[b'#Strings'][1] > 0)
+    tables, length = streams.get(b'#~', streams.get(b'#-', (0, 0)))
+    need(length >= 28)
+    valid = struct.unpack_from('<Q', data, tables+8)[0]
+    assembly = 1 << 32
+    need(valid & assembly and 24+4*valid.bit_count() <= length)
+    need(u32(tables+24+4*(valid & (assembly-1)).bit_count()) == 1)
 
 
 def verify(archive, manifest, repository, tag, index=None):

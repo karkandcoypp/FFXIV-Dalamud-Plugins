@@ -6,6 +6,7 @@ import sys
 from tempfile import TemporaryDirectory
 import unittest
 import zipfile
+from managed_fixture import managed_dll
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from publish_index import publish
@@ -84,7 +85,7 @@ class PublicationTests(unittest.TestCase):
             with self.subTest(plugin=name),TemporaryDirectory() as directory:
                 root=Path(directory);manifest=root/'plugin.json';archive=root/'plugin.zip';index=root/'pluginmaster.json'
                 doc={'InternalName':name,'AssemblyVersion':'1.2.3.0','DalamudApiLevel':15};manifest.write_text(json.dumps(doc),encoding='utf8');index.write_text('[]',encoding='utf8')
-                dll=bytearray(90);dll[:2]=b'MZ';dll[60]=64;dll[64:68]=b'PE\0\0';dll[87]=0x20;dll[88:90]=b'\x0b\x02'
+                dll=managed_dll()
                 def package(plugin_dll=dll, toolkit=True):
                     with zipfile.ZipFile(archive,'w') as z:
                         z.writestr(name+'.json',json.dumps(doc));z.writestr(name+'.dll',plugin_dll)
@@ -92,6 +93,10 @@ class PublicationTests(unittest.TestCase):
                 package()
                 update(index,manifest,'owner/plugins',tag);verify(archive,manifest,'owner/plugins',tag,index)
                 with self.assertRaises(ValueError):verify(archive,manifest,'owner/plugins',tag+'-wrong',index)
+                package(dll[:90])
+                with self.assertRaises(ValueError):verify(archive,manifest,'owner/plugins',tag,index)
+                package(dll[:640]+b'BAD!'+dll[644:])
+                with self.assertRaises(ValueError):verify(archive,manifest,'owner/plugins',tag,index)
                 package(b'MZ')
                 with self.assertRaises(ValueError):verify(archive,manifest,'owner/plugins',tag,index)
                 if name=='HuntRoute':

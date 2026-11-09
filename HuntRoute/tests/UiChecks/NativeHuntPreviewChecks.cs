@@ -5,13 +5,23 @@ using HuntRoute;
 
 // Offline check of actual native layout data; the game's Atk renderer/focus are not invoked.
 internal static class NativeHuntPreviewChecks {
- internal static unsafe void Run(string directory,Plugin plugin){
+ internal static unsafe void Run(string directory,Plugin plugin,Lumina.GameData? game){
   var controller=new NativeHuntController(plugin);
   var samples=new List<(string Name,NativeHuntPage Page,NativeHuntScreen Screen,bool Mini,int Offset)>();
   foreach(var page in Enum.GetValues<NativeHuntPage>()){if(page==NativeHuntPage.Target)controller.FocusGoal();else controller.Navigate(page);samples.Add((page.ToString(),page,controller.Build(),false,0));}
   samples.Add(("mini",NativeHuntPage.Hunt,controller.Build(true),true,0));
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
-  samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,123),false,1));
+  samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,0),false,1));
+  var portraits=new Dictionary<uint,(string File,int Width,int Height)>();
+  if(game!=null){
+   foreach(uint icon in samples.Where(s=>!s.Mini&&s.Screen.Icon!=0).Select(s=>s.Screen.Icon).Distinct()){
+    var tex=game.GetFile<Lumina.Data.Files.TexFile>($"ui/icon/{icon/1000*1000:D6}/{icon:D6}.tex")
+     ??throw new InvalidDataException($"Missing preview portrait {icon}");
+    string file=$"portrait-{icon}.bgra";
+    File.WriteAllBytes(Path.Combine(directory,file),tex.ImageData);
+    portraits.Add(icon,(file,tex.Header.Width,tex.Header.Height));
+   }
+  }
   foreach(var sample in samples){
    ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(900,1000);io.DeltaTime=1f/60;
    io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
@@ -89,7 +99,8 @@ internal static class NativeHuntPreviewChecks {
     for(int n=0;n<list.CmdBuffer.Size;n++){var c=list.CmdBuffer[n];commands.Add(new{Clip=new[]{c.ClipRect.X,c.ClipRect.Y,c.ClipRect.Z,c.ClipRect.W},Count=c.ElemCount,Offset=c.IdxOffset,VertexOffset=c.VtxOffset});}
     lists.Add(new{Vertices=vertices,Indices=indices,Commands=commands});
    }
-   File.WriteAllText(Path.Combine(directory,$"huntroute-native-{sample.Name}.json"),JsonSerializer.Serialize(new{Width=(int)layout.Size.X,Height=(int)layout.Size.Y,Font=17,Atlas=atlas,Portrait=!sample.Mini&&sample.Screen.Icon!=0?new{Icon=sample.Screen.Icon,X=layout.Portrait.Position.X,Y=layout.Portrait.Position.Y,W=layout.Portrait.Size.X,H=layout.Portrait.Size.Y}:null,TextureWidth=tw,TextureHeight=th,Lists=lists}));
+   var portrait=portraits.GetValueOrDefault(sample.Screen.Icon);
+   File.WriteAllText(Path.Combine(directory,$"huntroute-native-{sample.Name}.json"),JsonSerializer.Serialize(new{Width=(int)layout.Size.X,Height=(int)layout.Size.Y,Font=17,Atlas=atlas,Portrait=!sample.Mini&&sample.Screen.Icon!=0?new{Icon=sample.Screen.Icon,portrait.File,portrait.Width,portrait.Height,X=layout.Portrait.Position.X,Y=layout.Portrait.Position.Y,W=layout.Portrait.Size.X,H=layout.Portrait.Size.Y}:null,TextureWidth=tw,TextureHeight=th,Lists=lists}));
    ImGui.DestroyContext();Console.WriteLine("PASS native Hunt Route layout "+sample.Name);
   }
  }

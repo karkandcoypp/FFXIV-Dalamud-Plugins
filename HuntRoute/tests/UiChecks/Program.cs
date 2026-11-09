@@ -111,6 +111,6 @@ class Program {
   }
   Set(plugin,"BillStates",boardStates);Set(plugin,"completionHistory",boardHistory);
   Set(plugin,"CurrentTerritory",418u); // An unlocked-by-location board can receive focus in the preview.
-  NativeHuntPreviewChecks.Run(directory,plugin);
+  NativeHuntPreviewChecks.Run(directory,plugin,args.Length>1?new Lumina.GameData(args[1]):null);
  }
 }

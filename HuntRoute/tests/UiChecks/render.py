@@ -48,8 +48,13 @@ for path in Path(sys.argv[1]).glob('huntroute-*.json'):
     portrait = data.get('Portrait')
     if portrait:
         portrait_path = path.parent / f"portrait-{portrait['Icon']}.png"
-        if portrait_path.is_file():
+        icon = None
+        if portrait.get('File'):
+            pixels = (path.parent / portrait['File']).read_bytes()
+            icon = Image.frombytes('RGBA', (portrait['Width'], portrait['Height']), pixels, 'raw', 'BGRA')
+        elif portrait_path.is_file():
             icon = Image.open(portrait_path).convert('RGBA')
+        if icon is not None:
             icon.thumbnail((int(portrait['W']), int(portrait['H'])), Image.Resampling.LANCZOS)
             x = round(portrait['X'] + (portrait['W'] - icon.width) / 2)
             y = round(portrait['Y'] + (portrait['H'] - icon.height) / 2)

@@ -17,6 +17,7 @@ internal sealed class NativeDialogService : IDisposable {
     internal NativeDialogService(IDalamudPluginInterface pi) => initialization=KamiToolKitLibrary.InitializeAsync(pi);
     internal bool Initialized=>initialization.IsCompletedSuccessfully;
     internal bool InitializationFailed=>initialization.IsFaulted||initialization.IsCanceled;
+    internal bool WasDeclined(string key)=>queue.IsDeclined(key);
     internal bool HasDialog=>queue.Active!=null||addon!=null;
     internal string? Error=>failed?"Не удалось открыть игровое подтверждение. Маршрут сохранён; проверьте журнал Dalamud.":null;
     internal void Offer(ConfirmationRequest request,bool repeat=false) { if(disposed||queue.Active?.Key==request.Key)return;if(repeat)queue.Retry(request);else queue.Offer(request); }
@@ -30,7 +31,7 @@ internal sealed class NativeDialogService : IDisposable {
             if(!failed) { failed=true;Service.PluginLog.Error(initialization.Exception!,"Не удалось подготовить игровой диалог Hunt Route"); }
             return;
         }
-        if(queue.Active is {} current && !current.Valid()) { queue.Resolve(current.Key,false);addon?.CloseQuietly();addon=null; }
+        if(queue.Active is {} current && !current.Valid()) { queue.Resolve(current.Key,false,userResponse:false);addon?.CloseQuietly();addon=null; }
         if(addon!=null) return;
         bool available=Service.GameGui.GetAddonByName("SelectYesno").IsNull
             && Service.GameGui.GetAddonByName("HuntRouteConfirm").IsNull;
@@ -44,7 +45,7 @@ internal sealed class NativeDialogService : IDisposable {
             addon.Open();request.OnShown?.Invoke();
         } catch(Exception e) {
             addon?.CloseQuietly();addon=null;
-            queue.Resolve(request.Key,false);queue.RetryOpen(request,Environment.TickCount64);
+            queue.Resolve(request.Key,false,userResponse:false);queue.RetryOpen(request,Environment.TickCount64);
             Service.PluginLog.Error(e,"Не удалось открыть игровой диалог Hunt Route");
         }
     }
