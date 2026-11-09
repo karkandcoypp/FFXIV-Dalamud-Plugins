@@ -33,8 +33,8 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values){
   if(WindowNode is WindowNode window){window.ShowConfigButton=false;window.ShowHelpButton=false;}
   if(mini)native->DisableFocusOnShow=true;
-  heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route",TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(heading);
-  summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=18,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine};AddNode(summary);
+  heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route"};heading.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddNode(heading);
+  summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=18};summary.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddNode(summary);
   portrait=new IconImageNode{FitTexture=true,IsVisible=false};AddNode(portrait);
   progressLabel=new TextNode{FontSize=NativeHuntLayout.BodyFont,TextColor=new(.68f,.88f,.80f,1)};AddNode(progressLabel);
   progressTrack=new ColorImageNode{Color=new(.24f,.27f,.28f,1)};AddNode(progressTrack);
@@ -42,7 +42,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   pageLabel=new TextNode{Size=new(240,24),FontSize=NativeHuntLayout.BodyFont};AddNode(pageLabel);
   for(int i=0;i<buttons.Length;i++){
    int slot=i;var button=new TextButtonNode{NavIndex=i+1,OnClick=()=>Clicked(slot)};
-   button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.LabelNode.TextFlags=TextFlags.WordWrap|TextFlags.MultiLine;
+   button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.LabelNode.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);
    buttons[i]=button;AddNode(button);
   }
   screenIdentity=null;keys=new string?[NativeHuntLayout.ButtonCapacity];commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];nextUpdate=0;focusRequested=!mini;focusFirstBody=false;icon=0;titleText=summaryText=null;Array.Clear(buttonText);

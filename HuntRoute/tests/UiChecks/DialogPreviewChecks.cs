@@ -18,6 +18,7 @@ internal static class DialogPreviewChecks {
                 ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);
                 ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding,Vector2.Zero);ImGui.Begin("composition",ImGuiWindowFlags.NoDecoration|ImGuiWindowFlags.NoScrollbar|ImGuiWindowFlags.NoSavedSettings);
                 var draw=ImGui.GetWindowDrawList();draw.AddRectFilled(Vector2.Zero,io.DisplaySize,ImGui.GetColorU32(new Vector4(.25f,.25f,.25f,1)),12);
+                ImGui.SetWindowFontScale(14f/17);ImGui.SetCursorScreenPos(new(18,9));ImGui.TextColored(TravelDialogLayout.White,"Hunt Route");
                 foreach(var text in layout.Texts) {
                     ImGui.SetWindowFontScale(text.Font/17f);ImGui.SetCursorScreenPos(text.Position);ImGui.PushTextWrapPos(text.Position.X+text.Size.X);
                     ImGui.TextColored(text.Color,text.Text);ImGui.PopTextWrapPos();
@@ -28,7 +29,7 @@ internal static class DialogPreviewChecks {
                     var size=ImGui.CalcTextSize(label);
                     if(size.X>rect.Size.X-32||rect.Position.Y+rect.Size.Y>layout.Height-12||rect.Position.X+rect.Size.X>layout.Width-16)
                         throw new Exception("Dialog button exceeds its bounds: "+label);
-                    draw.AddRectFilled(rect.Position,rect.Position+rect.Size,ImGui.GetColorU32(primary?new Vector4(.25f,.31f,.48f,1):new Vector4(.16f,.19f,.27f,1)),5);
+                    draw.AddRectFilled(rect.Position,rect.Position+rect.Size,ImGui.GetColorU32(primary?new Vector4(.36f,.36f,.36f,1):new Vector4(.31f,.31f,.31f,1)),5);
                     ImGui.SetCursorScreenPos(rect.Position+(rect.Size-size)/2);ImGui.TextColored(TravelDialogLayout.White,label);
                 }
                 ImGui.End();ImGui.PopStyleVar();ImGui.Render();

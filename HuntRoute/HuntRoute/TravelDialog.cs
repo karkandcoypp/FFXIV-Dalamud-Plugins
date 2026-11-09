@@ -31,7 +31,7 @@ public sealed record DialogText(string Text,Vector2 Position,Vector2 Size,uint F
 public sealed record DialogButton(Vector2 Position,Vector2 Size);
 public sealed record TravelDialogLayout(float Width,float Height,DialogButton Confirm,DialogButton Decline,List<DialogText> Texts) {
     public static readonly Vector4 Brand=new(.72f,.83f,1,1),Mint=new(.55f,.96f,.80f,1),Muted=new(.83f,.86f,.91f,1),White=new(.94f,.96f,1,1);
-    public const float DialogWidth=380;
+    public const float DialogWidth=400;
     public static float FitScale(Vector2 size,Vector2 viewport,float requested) {
         if(!float.IsFinite(requested)||requested<=0)requested=1;
         if(viewport.X<=16||viewport.Y<=16)return requested;

@@ -38,7 +38,7 @@ internal sealed class NativeDialogService : IDisposable {
         if(request==null) return;
         try {
             addon=new NativeConfirmationAddon(request.Presentation ?? TravelDialogContent.Plain(request.Text),request.Ready,yes=>Answered(request.Key,yes)) {
-                InternalName="HuntRouteConfirm",Title=string.Empty,Size=new Vector2(TravelDialogLayout.DialogWidth,180),
+                InternalName="HuntRouteConfirm",Title="Hunt Route",Size=new Vector2(TravelDialogLayout.DialogWidth,180),
                 RememberClosePosition=false,EnableContextMenu=false,DisableClamping=false
             };
             addon.Open();request.OnShown?.Invoke();
@@ -76,20 +76,20 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     private TextButtonNode? yesButton;
     protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values) {
         if(WindowNode is WindowNode window) {
-            window.TitleNode.IsVisible=false;window.SubtitleNode.IsVisible=false;window.DividingLineNode.IsVisible=false;
+            window.SubtitleNode.IsVisible=false;window.DividingLineNode.IsVisible=false;
             window.ShowConfigButton=false;window.ShowHelpButton=false;
         }
         var textNodes=new List<TextNode>();
         var layout=TravelDialogLayout.Build(content,(text,width,font)=> {
             var node=new TextNode { Size=new Vector2(width,4096),FontSize=font,LineSpacing=font+3,
-                String=text,TextFlags=TextFlags.WordWrap|TextFlags.MultiLine };
+                String=text };
+            node.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);
             textNodes.Add(node);AddNode(node);return node.GetTextDrawSize(considerScale:false).Y;
         });
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color; }
         yesButton=new TextButtonNode { Position=layout.Confirm.Position,Size=layout.Confirm.Size,String=content.ConfirmLabel,
             NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true,true) };
         yesButton.LabelNode.FontSize=NativeHuntLayout.ButtonFont;
-        yesButton.BackgroundNode.Color=new Vector4(.65f,.72f,1,1);
         var no=new TextButtonNode { Position=layout.Decline.Position,Size=layout.Decline.Size,String=content.DeclineLabel,
             NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false,true) };
         no.LabelNode.FontSize=NativeHuntLayout.ButtonFont;

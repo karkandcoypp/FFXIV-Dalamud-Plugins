@@ -51,7 +51,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  private const float Margin=16,Gap=6;
  public const float ActionHeight=28, ActionWidth=112, LongActionWidth=164;
  public const float PortraitSize=68;
- public const byte TitleFont=18, BodyFont=15, ButtonFont=16;
+ // Axis sizes from the stock MobHunt text and ButtonA component.
+ public const byte TitleFont=18, BodyFont=14, ButtonFont=12;
  public static float ContentWidth(bool mini)=>(mini?340:420)-2*Margin;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsSecondary(NativeHuntButton button)=>button.Key is "primary" or "map" or "actions" or "targets" or "message";
@@ -72,9 +73,9 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   void Set(int slot,int row,int col,NativeHuntButton button,float x,float y,float w,float h)=>buttons.Add(new(slot,row,col,button with {Label=button.Board==null?FitLabel(button.Label):button.Label},new(new(x,y),new(w,h))));
   NativeHuntButton Page(string key,string label,NativeHuntPage p)=>new(key,label,new("page",p.ToString()),Emphasized:key.StartsWith("tab:",StringComparison.Ordinal)&&p==(view switch {NativeHuntPage.Boards=>NativeHuntPage.Boards,NativeHuntPage.Settings or NativeHuntPage.Advanced or NativeHuntPage.Number=>NativeHuntPage.Settings,_=>NativeHuntPage.Hunt}));
   if(!mini){
-   Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),Margin,37,84,27);
-   Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),Margin+90,37,84,27);
-   Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),Margin+180,37,112,27);
+   Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),Margin,37,84,ActionHeight);
+   Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),Margin+90,37,84,ActionHeight);
+   Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),Margin+180,37,112,ActionHeight);
   }
   int rows=0;
   float bottom=bodyY;
@@ -94,8 +95,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   if(pager){Set(9,7,0,new("previous","Предыдущая",new("previous",Delta:-1),page>0),Margin,bottom,pagerWidth,30);Set(10,7,1,new("next-page","Следующая",new("next-page",Delta:1),page+1<pageCount),width-Margin-pagerWidth,bottom,pagerWidth,30);}
   float footer=bottom+(pager?38:0);
   var back=view switch {NativeHuntPage.Number=>NativeHuntPage.Advanced,NativeHuntPage.Advanced=>NativeHuntPage.Settings,NativeHuntPage.Target or NativeHuntPage.Filters=>NativeHuntPage.Targets,NativeHuntPage.Expansions or NativeHuntPage.Zones=>NativeHuntPage.Filters,_=>NativeHuntPage.Hunt};
-  if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),Margin,footer,footerWidth,27);
-  Set(12,8,1,new("close","Закрыть",new("close")),width-Margin-footerWidth,footer,footerWidth,27);
+  if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),Margin,footer,footerWidth,ActionHeight);
+  Set(12,8,1,new("close","Закрыть",new("close")),width-Margin-footerWidth,footer,footerWidth,ActionHeight);
   return new(new(width,footer+36),new(new(Margin,titleY),new(inner,titleHeight)),
    new(new(Margin,summaryY),new(textWidth,summaryHeight)),new(new(width-Margin-PortraitSize,summaryY),new(PortraitSize,PortraitSize)),
    new(new(Margin,progressY),new(textWidth,18)),new(new(Margin,progressY+19),new(textWidth,5)),
