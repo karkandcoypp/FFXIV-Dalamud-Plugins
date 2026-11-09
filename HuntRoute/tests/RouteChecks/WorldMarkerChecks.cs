@@ -9,10 +9,18 @@ static class WorldMarkerChecks {
   WorldHuntMarker[] Build(WorldHuntGoal[]? goals=null,WorldHuntActor[]? npcs=null,string? key=null,ulong? id=null)=>WorldHuntMarkers.Build(goals??[ordinary,elite],npcs??actors,Vector3.Zero,10,20,settings,key,id);
   check(Build().Length==3,"Only alive required ordinary/elite instances are labelled");
   var selected=Build(key:"daily",id:11);check(selected[0].ActorId==11&&selected.Count(m=>m.Current)==1&&selected[0].Radius>selected.Single(m=>m.ActorId==10).Radius,"Exactly the tracked ordinary instance is emphasized, even when another is closer");
-  var gradient=selected.OrderBy(m=>m.Distance).ToArray();
-  check(gradient.Select(m=>m.DistanceFraction).SequenceEqual(new[]{0f,.5f,1f})&&gradient.Select(m=>m.Color).Distinct().Count()==3,"Marker color follows real distance across ordinary, tracked and elite targets");
-  check(gradient[0].Color==0xff5ec3ff&&gradient[2].Color==0xffffd06d,"Nearest marker is gold and furthest is sky blue");
-  check(Build(npcs:[actors[0],actors[1] with {Position=actors[0].Position}]).All(m=>m.Color==gradient[0].Color),"Equal distances share the same nearest color");
+  uint[] colors=[0xff62d24d,0xff81ecad,0xff63eaff,0xff539eff,0xff6666ff];
+  float[] distances=[0,15,15.1f,35,35.1f,65,65.1f,100,100.1f];
+  int[] bands=[0,0,1,1,2,2,3,3,4];
+  var nearby=actors[0];
+  var marker=selected[0];
+  for(int i=0;i<distances.Length;i++){
+   uint expected=colors[bands[i]];
+   check((marker with {Distance=distances[i]}).Color==expected,"Distance marker uses the correct band at both sides of each boundary");
+  }
+  check((marker with {Current=false,Elite=true}).Color==marker.Color,"Elite and current styling do not override distance color");
+  var far=actors[1] with {Position=new(110,0,0)};
+  check(Build(npcs:[far]).Single().Color==colors[4]&&Build(npcs:[nearby,far]).Single(m=>m.ActorId==far.Id).Color==colors[4],"A far target stays red when other mobs enter or leave range");
   check(selected[0].Label.Contains("1/3")&&selected[0].Label.Contains("20 м")&&selected[0].Label.StartsWith("Цель"),"Ordinary label contains real count, distance and textual active-goal distinction");
   check(Build(key:"daily").Single(m=>m.Current).ActorId==10,"Before navigator instance selection only nearest current-type actor is emphasized");
   check(!Build(key:"daily",id:999).Any(m=>m.Current),"A known missing/off-range tracked instance never falsely highlights another actor");
