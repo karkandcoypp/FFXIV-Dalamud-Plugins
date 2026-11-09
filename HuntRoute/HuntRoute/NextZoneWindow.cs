@@ -16,6 +16,6 @@ public sealed class NextZoneWindow(Plugin plugin) {
             ()=>plugin.Ready && (!plugin.Flow.Active||plugin.Eligible(next)) && session.RunId==run && session.Phase==RoutePhase.NextZone && session.Suggested?.TerritoryType==zone && JourneyFlow.Key(session.Suggested)==targetKey && (entry==null || plugin.EntryFor(next)?.Id==entry.Id && plugin.Price(entry.Id)<=quote),
             ()=>!plugin.TravelBusy && plugin.NavigationAllowed,
             ()=> { var target=session.Suggested;if(target==null || entry!=null && (plugin.Price(entry.Id)>quote || plugin.EntryFor(target)?.Id!=entry.Id)) return false;plugin.Travel(target);return session.Phase!=RoutePhase.NextZone; },
-            TravelDialogContent.Next(from.TerritoryName ?? "Текущая зона",next.TerritoryName ?? "Следующая зона",next.Name ?? "Цель контракта") with {Detail=entry==null?"Метка появится после прибытия.":plugin.TravelHint(next,entry),Context=entry==null?"Цели текущей зоны выполнены.":$"{entry.Name} · {quote} гил"}));
+            TravelDialogContent.Next(from.TerritoryName ?? "Текущая зона",next.TerritoryName ?? "Следующая зона",next.Name ?? "Цель контракта") with {Detail=plugin.TravelHint(next,entry),Context=entry==null?"Цели текущей зоны выполнены.":$"{entry.Name} · {quote} гил"}));
     }
 }

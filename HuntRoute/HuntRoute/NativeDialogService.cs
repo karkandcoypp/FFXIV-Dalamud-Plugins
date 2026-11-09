@@ -38,7 +38,7 @@ internal sealed class NativeDialogService : IDisposable {
         if(request==null) return;
         try {
             addon=new NativeConfirmationAddon(request.Presentation ?? TravelDialogContent.Plain(request.Text),request.Ready,yes=>Answered(request.Key,yes)) {
-                InternalName="HuntRouteConfirm",Title=string.Empty,Size=new Vector2(TravelDialogLayout.DialogWidth,360),
+                InternalName="HuntRouteConfirm",Title=string.Empty,Size=new Vector2(TravelDialogLayout.DialogWidth,180),
                 RememberClosePosition=false,EnableContextMenu=false,DisableClamping=false
             };
             addon.Open();request.OnShown?.Invoke();
@@ -72,6 +72,7 @@ internal sealed class NativeDialogService : IDisposable {
 }
 internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content,Func<bool> ready,Action<bool> answer) : NativeAddon {
     private bool answered;
+    private Vector2 measuredSize;
     private TextButtonNode? yesButton;
     protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values) {
         if(WindowNode is WindowNode window) {
@@ -96,18 +97,18 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         var no=new TextButtonNode { Position=layout.Decline.Position,Size=layout.Decline.Size,String=content.DeclineLabel,
             NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false,true) };
         no.LabelNode.FontSize=13;
-        AddNode(yesButton);AddNode(no);SetWindowSize(new Vector2(layout.Width,layout.Height));
+        AddNode(yesButton);AddNode(no);measuredSize=new(layout.Width,layout.Height);SetWindowSize(measuredSize);
         native->FocusNode=no;
     }
     protected override void OnShow(AtkUnitBase* native) {
         // Center the measured window after setup, accounting for the game's UI scale.
         var viewport=(Vector2)AtkStage.Instance()->ScreenSize;
         if(viewport.X<=16||viewport.Y<=16)return;
-        SetWindowSize(Size);
+        SetWindowSize(measuredSize);
         float requested=native->GetScale();
-        float fitted=TravelDialogLayout.FitScale(Size,viewport,requested);
+        float fitted=TravelDialogLayout.FitScale(measuredSize,viewport,requested);
         if(fitted!=requested)native->SetScale(fitted,true);
-        var origin=(viewport-Size*fitted)/2;
+        var origin=(viewport-measuredSize*fitted)/2;
         native->SetPosition((short)origin.X,(short)origin.Y);
     }
     protected override void OnUpdate(AtkUnitBase* native) { if(!answered && yesButton!=null) yesButton.IsEnabled=ready(); }

@@ -17,8 +17,8 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
         new("HUNT ROUTE",title,"","",context,"","","","",[],action);
     public bool HasSubject => Subject.Length>0 || Detail.Length>0;
     public static TravelDialogContent Next(string from,string zone,string target) => new(
-        "СЛЕДУЮЩАЯ ЗОНА","Продолжить охоту?","КУДА",zone,
-        "Завершены цели: "+from,"ПЕРВАЯ ЦЕЛЬ",target,"Метка появится после прибытия.",
+        "СЛЕДУЮЩАЯ ЗОНА",zone,"",zone,
+        "Завершены цели: "+from,"ПЕРВАЯ ЦЕЛЬ",target,"",
         "",[]);
     public static TravelDialogContent Shortcut(ShortcutOffer offer,string zone,string target) => new(
         "В ПРЕДЕЛАХ ЗОНЫ","Сократить перелёт?","ЭФИРИТ",offer.Name,
@@ -40,16 +40,16 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
     }
     public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure) {
         const float width=DialogWidth,left=18,inner=width-2*left;
-        var texts=new List<DialogText>();var panels=new List<DialogPanel> {new(new(16,36),Vector2.Zero,new(.055f,.065f,.095f,1)),new(new(left,40),Vector2.Zero,Brand)};
+        var texts=new List<DialogText>();var panels=new List<DialogPanel> {new(new(12,32),Vector2.Zero,new(.055f,.065f,.095f,1)),new(new(left,35),Vector2.Zero,Brand)};
         float Text(string value,float x,float y,float w,uint font,Vector4 color) {
             float height=Math.Max(font+3,measure(value,w,font));
             if(!float.IsFinite(height) || height<0)throw new ArgumentException("Invalid text measurement");
             texts.Add(new(value,new(x,y),new(w,height),font,color));return height;
         }
-        float y=40;y+=Text(content.Eyebrow,left+10,y,inner-10,11,Brand)+2;
-        y+=Text(content.Title,left+10,y,inner-10,16,White)+7;
-        panels[1]=panels[1] with {Size=new(3,y-40-4)};
-        if(!string.IsNullOrEmpty(content.Destination)) {
+        float y=40;y+=Text(content.Eyebrow,left,y,inner,11,Brand)+4;
+        y+=Text(content.Title,left,y,inner,17,White)+6;
+        panels[1]=panels[1] with {Size=new(24,2)};
+        if(!string.IsNullOrEmpty(content.Destination)&&content.Destination!=content.Title) {
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";
             y+=Text(destination,left,y,inner,14,White)+2;
         }
@@ -78,8 +78,8 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         const float buttonHeight=28;
         float buttonsY=y+8,heightTotal=buttonsY+buttonHeight+14;
         var confirm=new DialogButton(new(left,buttonsY),new(154,buttonHeight));
-        var decline=new DialogButton(new(width-left-94,buttonsY),new(94,buttonHeight));
-        panels[0]=panels[0] with {Size=new(width-32,heightTotal-52)};
+        var decline=new DialogButton(new(left+154+8,buttonsY),new(94,buttonHeight));
+        panels[0]=panels[0] with {Size=new(width-24,heightTotal-44)};
         return new(width,heightTotal,confirm,decline,texts,panels);
     }
 }
