@@ -76,7 +76,7 @@ public sealed class NativeHuntController {
   bool excluded=plugin.Flow.Excluded(goal);string summary=goal.TerritoryName??"";
   if(plugin.Flow.Unavailable.TryGetValue(JourneyFlow.Key(goal),out var reason))summary+="\n"+reason;
   if(excluded)summary+="\nОтложено";
-  var buttons=new List<NativeHuntButton>{Button("track","Сопровождать эту цель","track",selected!,!excluded&&!plugin.Done(goal)),Button("map","Карта","map",selected!),Button("defer",excluded?"Вернуть в маршрут":"Отложить цель",excluded?"restore":"defer",selected!)};
+  var buttons=new List<NativeHuntButton>{Button("track","Сопровождать","track",selected!,!excluded&&!plugin.Done(goal)),Button("map","Карта","map",selected!),Button("defer",excluded?"Вернуть в маршрут":"Отложить цель",excluded?"restore":"defer",selected!)};
   if(!excluded)buttons.Add(Button("defer-zone","Отложить зону","defer-zone",selected!));
   buttons.Add(Button("targets","К списку целей","page",NativeHuntPage.Targets.ToString()));return new(goal.Name??"Цель",summary,buttons,goal.Icon,new(plugin.Kills(goal),goal.NeededKills));
  }

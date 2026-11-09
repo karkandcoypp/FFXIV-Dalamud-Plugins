@@ -17,7 +17,7 @@ public static class NativeHuntColors {
  public static readonly Vector4 Ready=new(.50f,1,.64f,1), Attention=new(1,.83f,.48f,1), Tracking=new(.62f,.84f,1,1), Muted=new(.78f,.81f,.85f,1);
 }
 public sealed record NativeHuntProgress(int Kills,uint Required){
- public string Label=>$"Побеждено  {Kills} / {Required}";
+ public string Label=>$"Прогресс  {Kills} / {Required}";
  public float Fraction=>Required>0?Math.Clamp((float)Kills/Required,0,1):0;
 }
 public readonly record struct NativeNavItem(int Index,int Row,int Column,string Key,bool Enabled=true,bool Visible=true);
@@ -72,13 +72,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   int page=mini?0:NativeHuntNavigation.ClampPage(requestedPage,screen.Buttons.Count);
   int pageCount=Math.Max(1,(screen.Buttons.Count+5)/6);
   var visible=screen.Buttons.Skip(page*6).Take(mini?3:6).ToArray();
-  NativeHuntButton? routeAction=null;
   bool huntStrip=!mini&&view==NativeHuntPage.Hunt&&visible is [{Key:"primary"},{Key:"map"},{Key:"actions"},{Key:"targets"},..]
-   &&visible.Take(4).Where(b=>b.Key!="actions").Sum(CompactWidth)+2*Gap<=inner;
-  if(huntStrip){
-   routeAction=visible[2];
-   visible=visible.Where(b=>b.Key!="actions").ToArray();
-  }
+   &&visible.Take(4).All(b=>ButtonWidth(b.Label)==ActionWidth);
   var buttons=new List<NativeHuntPlacement>();
   void Set(int slot,int row,int col,NativeHuntButton button,float x,float y,float w,float h)=>buttons.Add(new(slot,row,col,button with {Label=button.Board==null?FitLabel(button.Label):button.Label},new(new(x,y),new(w,h))));
   NativeHuntButton Page(string key,string label,NativeHuntPage p)=>new(key,label,new("page",p.ToString()),Emphasized:key.StartsWith("tab:",StringComparison.Ordinal)&&p==(view switch {NativeHuntPage.Boards=>NativeHuntPage.Boards,NativeHuntPage.Settings or NativeHuntPage.Advanced or NativeHuntPage.Number=>NativeHuntPage.Settings,_=>NativeHuntPage.Hunt}));
@@ -111,12 +106,12 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
    if(huntStrip&&i==0){
     float x=Margin;
     rows++;
-    for(int column=0;column<3;column++){
+    for(int column=0;column<4;column++){
      float w=CompactWidth(visible[column]);
      Set(column+3,rows,column,visible[column],x,bottom,w,ActionHeight);
      x+=w+Gap;
     }
-    i=2;bottom+=ActionHeight+Gap;
+    i=3;bottom+=ActionHeight+Gap;
     continue;
    }
    if(button.Board is {} board){
@@ -159,7 +154,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     while(i+count<visible.Length){
      var item=visible[i+count];
      if(item.Board!=null||item.Goal!=null||item.Checked.HasValue||item.Label.Contains('\n')||item.Label.Length>25)break;
-     float w=view==NativeHuntPage.Number?LongActionWidth:CompactWidth(item);
+     float w=view is NativeHuntPage.Number or NativeHuntPage.Target?LongActionWidth:CompactWidth(item);
      if(used+w>gridWidth)break;
      Set(i+count+3,rows,count,item,gridX+used,bottom,w,ActionHeight);
      used+=w+Gap;count++;
@@ -178,8 +173,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   if(pager){Set(9,7,0,new("previous","Пред.",new("previous",Delta:-1),page>0),controlX,bottom,pagerWidth,ActionHeight);Set(10,7,1,new("next-page","Далее",new("next-page",Delta:1),page+1<pageCount),controlX+controlWidth-pagerWidth,bottom,pagerWidth,ActionHeight);}
   float footer=bottom+(pager?38:0);
   var back=view switch {NativeHuntPage.Number=>NativeHuntPage.Advanced,NativeHuntPage.Advanced=>NativeHuntPage.Settings,NativeHuntPage.Target or NativeHuntPage.Filters=>NativeHuntPage.Targets,NativeHuntPage.Expansions or NativeHuntPage.Zones=>NativeHuntPage.Filters,_=>NativeHuntPage.Hunt};
-  if(routeAction!=null)Set(11,8,0,routeAction,controlX,footer,ActionWidth,ActionHeight);
-  else if(settingsList)Set(11,8,0,Page("advanced","Дополнительно",NativeHuntPage.Advanced),controlX,footer,LongActionWidth,ActionHeight);
+  if(settingsList)Set(11,8,0,Page("advanced","Параметры",NativeHuntPage.Advanced),controlX,footer,footerWidth,ActionHeight);
   else if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),controlX,footer,footerWidth,ActionHeight);
   if(!mini)Set(12,8,1,new("close","Закрыть",new("close")),controlX+controlWidth-footerWidth,footer,footerWidth,ActionHeight);
   return new(new(width,footer+(mini?4:36)),new(new(Margin,titleY),new(inner,titleHeight)),

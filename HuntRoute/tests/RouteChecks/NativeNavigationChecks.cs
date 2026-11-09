@@ -19,10 +19,10 @@ static class NativeNavigationChecks {
    var actions=layout.Buttons.Single(b=>b.Button.Key=="actions");
    var primary=layout.Buttons.Single(b=>b.Button.Key=="primary");
    check(primary.Rect.Size.X<=200&&(mini||primary.Row==layout.Buttons.Single(b=>b.Button.Key=="targets").Row),"Primary action uses a compact button alongside the target list");
-   var rightOfMap=mini?actions:layout.Buttons.Single(b=>b.Button.Key=="targets");
+   var rightOfMap=actions;
    check(map.Row==rightOfMap.Row&&map.Rect.Position.X+map.Rect.Size.X<rightOfMap.Rect.Position.X,"Hunt actions fit side by side");
    check(!mini||primary.Row==map.Row,"Mini panel puts all three hunt actions in one row");
-   check(mini||actions.Row>map.Row,"Route actions stay reachable in the main window footer");
+   check(actions.Row==primary.Row,"Route actions share the hunt action row");
    check(layout.ProgressTrack.Position.Y+layout.ProgressTrack.Size.Y<primary.Rect.Position.Y,"Hunt progress does not overlap the primary action");
    var paired=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
    check(paired.Single(n=>n.Index==map.Slot+1).Right==rightOfMap.Slot+1,"D-pad right moves from Map to the adjacent action");
