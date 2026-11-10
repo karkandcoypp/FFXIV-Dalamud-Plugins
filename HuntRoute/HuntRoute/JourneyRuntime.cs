@@ -113,7 +113,7 @@ public sealed partial class Plugin {
   if(settingsLoadPending)try{settingsStore=HuntSettingsFile.Load(settingsFile,Store.Settings);settingsLoadPending=false;}catch(Exception e){nextSettingsSave=Now+10000;SettingsSaveError="Настройки недоступны для чтения. Исходный файл не перезаписан.";Service.PluginLog.Debug(e,"Повторное чтение настроек");return;}
   settingsStore??=new(){Settings=Store.Settings};string value=JsonSerializer.Serialize(settingsStore);
   if(!force&&lastSettingsSaved==value&&SettingsSaveError==null)return;
-  try{settingsStore.Save(settingsFile);lastSettingsSaved=value;nextSettingsSave=Now+2000;SettingsSaveError=null;}catch(Exception e){nextSettingsSave=Now+10000;SettingsSaveError="Не удалось сохранить настройки: изменения могут пропасть после перезапуска.";Service.PluginLog.Error(e,"Сохранение настроек");}
+  try{settingsStore.Save(settingsFile);Store.PreserveLegacySettings=false;lastSettingsSaved=value;nextSettingsSave=Now+2000;SettingsSaveError=null;}catch(Exception e){nextSettingsSave=Now+10000;SettingsSaveError="Не удалось сохранить настройки: изменения могут пропасть после перезапуска.";Service.PluginLog.Error(e,"Сохранение настроек");}
  }
  internal void RetryPersistence(){SaveJourney(true);SaveHistory(true);if(JourneySaveError==null&&SettingsSaveError==null&&HistorySaveError==null)NoticeText="Данные сохранены.";}
  internal static byte[] AllTiers=>Boards.SelectMany(b=>b.Daily.Append(b.Weekly)).ToArray();

@@ -201,7 +201,22 @@ static class JourneyRuntimeChecks {
     Check(Get<bool>(migrating,"settingsLoadPending")&&!File.Exists(migratedFile),"Locked legacy state defers settings migration without saving defaults");
    }
    Check((bool)Call(migrating,"RecoverJourneyStore")!,"Legacy route reloads after releasing lock");
+   string blockedWrite=migratedFile+".tmp";
+   Directory.CreateDirectory(blockedWrite);
+   Get<SavedJourney>(migrating,"CharacterSave").DailyNotice=654;
    Call(migrating,"SaveJourney",true);
+   Check(Get<string?>(migrating,"SettingsSaveError")!=null&&!File.Exists(migratedFile),"Simulated settings write failed");
+   var retainedRoute=HuntStore.Load(legacyFile);
+   Check(retainedRoute.Settings.Mini&&retainedRoute.Settings.MaxGil==321&&retainedRoute.Characters[123].DailyNotice==654,
+    "Failed settings write preserves legacy settings while saving route changes");
+   var restarted=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+   Set(restarted,"character",123UL);Set(restarted,"Session",new RouteSession());Set(restarted,"Search",new EliteSearch());
+   Call(restarted,"InitializeStore");
+   Check(Get<HuntSettings>(restarted,"Settings").MaxGil==321,"Restart restores legacy settings after failed migration");
+   Directory.Delete(blockedWrite);
+   Call(restarted,"SaveJourney",true);
+   using var migratedRoute=System.Text.Json.JsonDocument.Parse(File.ReadAllText(legacyFile));
+   Check(!migratedRoute.RootElement.TryGetProperty("Settings",out _),"Legacy settings removed only after successful migration");
    var migrated=HuntSettingsFile.Load(migratedFile,new HuntSettings()).Settings;
    Check(migrated.Mini&&migrated.MaxGil==321&&!Get<bool>(migrating,"settingsLoadPending"),"Recovered migration persists the user's legacy settings");
    Set(copy,"store",new HuntStore());Set(copy,"stateFile",file);Set(copy,"stateLoadPending",true);Call(copy,"LoadJourney");

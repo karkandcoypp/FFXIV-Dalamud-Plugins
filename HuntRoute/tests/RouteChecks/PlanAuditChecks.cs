@@ -54,7 +54,7 @@ static class PlanAuditChecks {
    File.WriteAllText(route,"{\"Version\":1,\"Settings\":{\"Sound\":true,\"Mini\":true},\"Characters\":{}}");
    var store=HuntStore.Load(route);var settings=HuntSettingsFile.Load(file,store.Settings);
    check(settings.Settings.EliteSound&&settings.Settings.NextZoneSound&&settings.Settings.Mini,"Legacy combined settings migrate without losing preference");
-   settings.Settings.NextZoneSound=false;settings.Save(file);store.Save(route);
+   settings.Settings.NextZoneSound=false;settings.Save(file);store.PreserveLegacySettings=false;store.Save(route);
    check(!File.ReadAllText(route).Contains("Settings"),"New route file no longer owns settings");
    File.WriteAllText(route,"broken route");check(HuntStore.Load(route)!=null&&HuntSettingsFile.Load(file,new()).Settings.EliteSound,"Corrupt route cannot erase independent settings");
    settings.Save(file);File.WriteAllText(file,"broken settings");var backup=HuntSettingsFile.Load(file,new());

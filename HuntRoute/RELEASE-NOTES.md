@@ -1,3 +1,7 @@
+# 0.4.29
+
+- Keep legacy settings in the route file until the separate settings file is successfully written.
+
 # 0.4.28
 
 - Fall back to classic confirmations when native dialogs cannot initialize or open.
