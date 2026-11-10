@@ -1,11 +1,14 @@
 using HuntRoute;
 static class NativeNavigationChecks {
  public static void Run(Action<bool,string> check){
-  foreach(float height in new[]{NativeHuntLayout.ActionHeight,44,56}){
-   var rect=NativeHuntLayout.ButtonCaption(new(10,20),new(120,height));
+  foreach(float height in new[]{NativeHuntLayout.ActionHeight,44,56})
+  foreach(var measured in new System.Numerics.Vector2[]{new(50,14),new(78,18),new(104,20)}){
+   var rect=NativeHuntLayout.ButtonCaption(new(10,20),new(120,height),measured);
    float top=rect.Position.Y-20,bottom=20+height-rect.Position.Y-rect.Size.Y;
-   check(top>=6&&Math.Abs(top-bottom)<.01f,"Native button captions have equal vertical breathing room");
-   check(rect.Position.X==18&&rect.Size.X==104,"Native caption horizontal padding remains consistent");
+   float left=rect.Position.X-10,right=130-rect.Position.X-rect.Size.X;
+   check(top>=6&&Math.Abs(top-bottom)<.01f,"Measured captions are vertically centered with breathing room");
+   check(left>=8&&Math.Abs(left-right)<.01f,"Measured captions are horizontally centered");
+   check(rect.Size==measured,"Caption positioning preserves the measured glyph size");
   }
   NativeNavItem[] items=[new(1,0,0,"hunt"),new(2,0,1,"boards"),new(3,0,2,"settings"),new(4,1,0,"primary"),new(5,2,0,"map"),new(10,7,0,"previous",false),new(11,7,1,"next"),new(12,8,0,"back"),new(13,8,1,"close")];
   var active=new NativeHuntScreen("Target","Zone",[

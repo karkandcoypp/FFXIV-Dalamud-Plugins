@@ -1,3 +1,7 @@
+# 0.4.37
+
+- Center independent native button captions using their measured text dimensions on both axes, avoiding a second alignment inside a fixed line box.
+
 # 0.4.36
 
 - Increase native button height to 32 and vertically center the caption line with equal top/bottom padding. Update tab, pager and footer spacing accordingly.

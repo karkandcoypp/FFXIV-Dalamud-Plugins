@@ -207,10 +207,11 @@ internal static class NativeButtonText {
  }
  internal static TextNode CreateCaption()=>new(){
   FontSize=NativeHuntLayout.ButtonFont,LineSpacing=18,
-  AlignmentType=AlignmentType.Center,IsVisible=false
+  AlignmentType=AlignmentType.TopLeft,IsVisible=false
  };
  internal static void SetCaption(TextNode caption,TextButtonNode button,string text,Vector4 color){
-  var rect=NativeHuntLayout.ButtonCaption(button.Position,button.Size);
+  caption.Size=new(4096,64);
+  var rect=NativeHuntLayout.ButtonCaption(button.Position,button.Size,caption.GetTextDrawSize(text,considerScale:false));
   caption.Position=rect.Position;
   caption.Size=rect.Size;
   caption.TextColor=color;

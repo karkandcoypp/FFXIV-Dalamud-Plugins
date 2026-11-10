@@ -58,9 +58,9 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  public static byte SummaryFont(NativeHuntPage view,bool mini)=>!mini&&view==NativeHuntPage.Boards?(byte)13:BodyFont;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Goal==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;
- public static NativeHuntRect ButtonCaption(Vector2 position,Vector2 size){
-  float lineHeight=Math.Min(20,size.Y);
-  return new(position+new Vector2(8,(size.Y-lineHeight)/2),new(Math.Max(0,size.X-16),lineHeight));
+ public static NativeHuntRect ButtonCaption(Vector2 position,Vector2 size,Vector2 measured){
+  var fitted=Vector2.Min(Vector2.Max(Vector2.Zero,measured),new(Math.Max(0,size.X-16),Math.Max(0,size.Y)));
+  return new(position+(size-fitted)/2,fitted);
  }
  public static float ButtonWidth(string label)=>label.Length<=11?ActionWidth:LongActionWidth;
  public static string FitLabel(string value,int length=64)=>value.Length<=length?value:string.Concat(value.EnumerateRunes().Take(length-1).Select(r=>r.ToString()))+"…";
