@@ -1,3 +1,9 @@
+# 0.4.28
+
+- Fall back to classic confirmations when native dialogs cannot initialize or open.
+- Preserve the active route when a manual target has no unlocked entry. Block overlapping board travel.
+- Defer settings migration until a temporarily locked legacy save can be read.
+
 # 0.4.27
 
 - Preserve player map flags when a temporarily unavailable target returns.

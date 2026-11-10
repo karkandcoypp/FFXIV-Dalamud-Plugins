@@ -8,8 +8,11 @@ public sealed class HuntSettingsFile {
  private bool skipBackup;
  public bool Recovered {get;private set;}
  public static HuntSettingsFile Load(string path,HuntSettings legacy){
-  if(!File.Exists(path))return new(){Settings=legacy};
-  try{return Parse(File.ReadAllText(path));}catch(Exception e)when(e is JsonException or InvalidDataException or NotSupportedException){
+  string json;
+  try{json=File.ReadAllText(path);}
+  catch(FileNotFoundException){return new(){Settings=legacy};}
+  catch(DirectoryNotFoundException){return new(){Settings=legacy};}
+  try{return Parse(json);}catch(Exception e)when(e is JsonException or InvalidDataException or NotSupportedException){
    File.Copy(path,path+".invalid-"+DateTime.UtcNow.Ticks,false);
    if(File.Exists(path+".bak"))try{var backup=Parse(File.ReadAllText(path+".bak"));backup.skipBackup=true;backup.Recovered=true;return backup;}catch(Exception fallback)when(fallback is JsonException or InvalidDataException or NotSupportedException){}
    return new(){skipBackup=true,Recovered=true};

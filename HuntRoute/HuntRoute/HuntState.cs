@@ -46,8 +46,11 @@ public sealed class HuntStore {
  private bool skipBackup;
  private static readonly JsonSerializerOptions Options=new(){IncludeFields=true};
  public static HuntStore Load(string path){
-  if(!File.Exists(path))return new();
-  try{return Parse(File.ReadAllText(path));}catch(Exception e)when(e is JsonException or InvalidDataException or NotSupportedException){
+  string json;
+  try{json=File.ReadAllText(path);}
+  catch(FileNotFoundException){return new();}
+  catch(DirectoryNotFoundException){return new();}
+  try{return Parse(json);}catch(Exception e)when(e is JsonException or InvalidDataException or NotSupportedException){
    File.Copy(path,path+".invalid-"+DateTime.UtcNow.Ticks,false);
    if(File.Exists(path+".bak")){try{var recovered=Parse(File.ReadAllText(path+".bak"));recovered.skipBackup=true;return recovered;}catch(Exception fallback)when(fallback is JsonException or InvalidDataException or NotSupportedException){}}
    return new(){skipBackup=true};

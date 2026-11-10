@@ -77,7 +77,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         NextZone=new(this);
         Shortcut=new(this);
         Service.Commands.AddHandler("/huntroute", new CommandInfo((_, args) => { switch(args.Trim().ToLowerInvariant()){case "pause":TogglePause();break;case "resume":ResumeJourney();break;case "stop":StopJourney();break;case "mini":SetMini(!Settings.Mini);break;case "classic":OpenClassic();break;case "settings":OpenConfig();break;default:NativeMain.Toggle();break;} }) { HelpMessage = "Hunt Route: нативное меню охоты; classic — резервное окно мыши" });
-        pi.UiBuilder.Draw += windows.Draw; pi.UiBuilder.Draw += Elite.DrawWorld; pi.UiBuilder.OpenMainUi += Open; pi.UiBuilder.OpenConfigUi += OpenConfig;
+        pi.UiBuilder.Draw += windows.Draw; pi.UiBuilder.Draw += NativeDialogs.DrawFallback; pi.UiBuilder.Draw += Elite.DrawWorld; pi.UiBuilder.OpenMainUi += Open; pi.UiBuilder.OpenConfigUi += OpenConfig;
         Service.Framework.Update += Update;
         Service.ClientState.Logout += OnLogout;
         Service.ClientState.TerritoryChanged += OnTerritoryChanged;
@@ -155,7 +155,7 @@ public sealed partial class Plugin : IDalamudPlugin {
             BillStates=snapshots;
             contractAt=Now;contractRevision++;
             Ready = true; Error = null;
-            ReconcileContext();ReconcileTravel();if(pendingJourney==null)Timing.Ready(contractAt);CheckMarker();AdvanceRoute();CheckResetNotice();NativeDialogs.Pump();if(NativeDialogs.Error is {} dialogError)NoticeText=dialogError;AuditState();SaveJourney();
+            ReconcileContext();ReconcileTravel();if(pendingJourney==null)Timing.Ready(contractAt);CheckMarker();AdvanceRoute();CheckResetNotice();NativeDialogs.Pump();AuditState();SaveJourney();
         } catch (Exception e) { Ready = false; Error = e.Message; nextScan=Now+10000; Service.PluginLog.Error(e, "Reading hunt bills"); }
     }
     private unsafe void ReadBills() {
@@ -428,7 +428,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         SaveHistory(true);
         Service.ClientState.Logout -= OnLogout;
         Service.ClientState.TerritoryChanged -= OnTerritoryChanged;
-        Service.Framework.Update -= Update; Service.PluginInterface.UiBuilder.Draw -= Elite.DrawWorld; Service.PluginInterface.UiBuilder.Draw -= windows.Draw;
+        Service.Framework.Update -= Update; Service.PluginInterface.UiBuilder.Draw -= Elite.DrawWorld; Service.PluginInterface.UiBuilder.Draw -= windows.Draw; Service.PluginInterface.UiBuilder.Draw -= NativeDialogs.DrawFallback;
         Service.PluginInterface.UiBuilder.OpenMainUi -= Open; Service.PluginInterface.UiBuilder.OpenConfigUi -= OpenConfig;
         Service.Commands.RemoveHandler("/huntroute"); windows.RemoveAllWindows();try{NativeMain?.Dispose();}finally{NativeDialogs.Dispose();}
     }

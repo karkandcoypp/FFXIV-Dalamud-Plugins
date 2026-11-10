@@ -43,6 +43,30 @@ static class JourneyRuntimeChecks {
   var daily=queue.Activate(true)??throw new Exception("New daily period is still suppressed");
   Check(daily.Key.EndsWith(":0"),"New daily period incorrectly included acknowledged weekly bills");
   Console.WriteLine("PASS offline login, reset, pause and Later regressions");
+  var fallback=Activator.CreateInstance(bridge.GetType(),BindingFlags.Instance|BindingFlags.NonPublic,null,
+   [Task.FromException(new InvalidOperationException("Simulated native init fault"))],null)!;
+  Service.PluginLog=Proxy<IPluginLog>((_,_)=>null);
+  Service.GameGui=Proxy<IGameGui>((method,_)=>Activator.CreateInstance(method.ReturnType));
+  System.Action? deferred=null;int accepts=0,shown=0;bool ready=true;
+  Service.Framework=Proxy<IFramework>((method,args)=>{
+   if(method.Name!="RunOnTick")throw new Exception(method.Name);
+   deferred=(System.Action)args![0]!;return Task.CompletedTask;
+  });
+  ConfirmationRequest Request(string key)=>new("travel",key,"Телепорт?",()=>true,()=>ready,()=>{accepts++;return true;},OnShown:()=>shown++,DeclineKey:key);
+  var later=Request("later");Call(fallback,"Offer",later,false);Call(fallback,"Pump");
+  Check(ReferenceEquals(Call(fallback,"PresentFallback"),later)&&shown==1,"Initialization fault exposes the same request via classic confirmation");
+  Call(fallback,"PresentFallback");Check(shown==1,"Fallback does not acknowledge every draw");
+  Call(fallback,"AnswerFallback",later.Key,false);
+  Check(accepts==0&&deferred==null&&(bool)Call(fallback,"WasDeclined",later.Key)!,"Later dismisses fallback without requesting teleport");
+  var yes=Request("yes");Call(fallback,"Offer",yes,false);Call(fallback,"Pump");Call(fallback,"PresentFallback");
+  Call(fallback,"AnswerFallback",yes.Key,true);Call(fallback,"AnswerFallback",yes.Key,true);
+  Check(accepts==0&&deferred!=null,"Fallback confirm schedules the action on the game tick");
+  deferred!();Check(accepts==1,"Fallback confirmation accepts exactly once");
+  var busy=Request("busy");Call(fallback,"Offer",busy,false);Call(fallback,"Pump");Call(fallback,"PresentFallback");
+  Call(fallback,"AnswerFallback",busy.Key,true);ready=false;deferred!();
+  Check(accepts==1,"Fallback revalidates readiness before teleport");
+  Call(fallback,"CancelAll");
+  Console.WriteLine("PASS offline native initialization fault, classic confirmation and Later");
  }
  public static int Run(GameData game){
   int checks=0;void Check(bool yes,string message){checks++;if(!yes)throw new Exception(message);}
@@ -75,6 +99,15 @@ static class JourneyRuntimeChecks {
   var spawn=EliteSpawns.Sets.First(p=>p.Value.Territory==397);var elite=new MobHuntEntry{Name=spawn.Value.Name,BillNumber=5,OrderId=1,MobIndex=0,MobHuntId=spawn.Key,TerritoryType=397,MapId=spawn.Value.Map,NeededKills=1,TerritoryName=spawn.Value.Zone,IsEliteMark=true};
   var counts=new Dictionary<(byte,byte),int>();Set(plugin,"KillCounts",counts);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,c,elite});Set(plugin,"Routes",new List<ZoneRoute>{new(a.TerritoryName!,new(){a,b,elite},null,true),new(c.TerritoryName!,new(){c},null)});
   Call(plugin,"ResumeJourney");Check(flow.Active&&session.Target==a&&writes==1&&ports==0,"Main start in current zone flags target without teleport");uint run=session.RunId;
+  flow.Manual=JourneyFlow.Key(a);int beforeLocked=writes;
+  Service.Aetherytes=Proxy<IAetheryteList>((_,_)=>Array.Empty<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>().AsEnumerable().GetEnumerator());
+  Call(plugin,"Track",c);
+  Check(session.Target==a&&flow.Manual==JourneyFlow.Key(a)&&writes==beforeLocked&&queue.Activate(true)==null,"Locked entry leaves old manual goal, flag and route intact");
+  Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?entries.AsEnumerable().GetEnumerator():throw new Exception(m.Name));
+  Call(plugin,"Track",c);
+  Check(session.Target==c&&flow.Manual==JourneyFlow.Key(c)&&session.Phase==RoutePhase.AwaitingTravel&&queue.Activate(true)?.Owner=="travel",
+   "Selecting the goal after unlocking sets a consistent manual target and offers travel");
+  queue.Clear();Call(plugin,"Track",a);flow.Manual=null;
   IBattleNpc Npc(ulong id,uint name,Vector3 location,bool dead=false)=>Proxy<IBattleNpc>((m,_)=>m.Name switch{"get_GameObjectId"=>id,"get_NameId"=>name,"get_Position"=>location,"get_IsDead"=>dead,_=>throw new Exception(m.Name)});
   objects=[Npc(10,a.MobHuntId,new(10,0,0)),Npc(11,b.MobHuntId,new(20,0,0))];Call(plugin,"AdvanceRoute");Check(session.Target==a&&marker?.X==10,"Ordinary detection replaces anchor with nearest actual position");
   objects=[Npc(10,a.MobHuntId,new(12,0,0)),Npc(11,b.MobHuntId,new(1,0,0))];Call(plugin,"AdvanceRoute");Check(session.Target==a&&marker?.X==12,"Ordinary actor stays selected while another gets closer; position updates");
@@ -156,6 +189,21 @@ static class JourneyRuntimeChecks {
    durable.Characters[123].Contracts[1]=new(){Generation=7};
    durable.Characters[124]=new(){WeeklyNotice=99};
    durable.Save(file);
+   string legacyFile=Path.Combine(folder,"journey-state.json"),migratedFile=Path.Combine(folder,"hunt-settings.json");
+   var legacy=System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(file))!;
+   legacy["Settings"]=System.Text.Json.JsonSerializer.SerializeToNode(new HuntSettings{Mini=true,MaxGil=321});
+   File.WriteAllText(legacyFile,legacy.ToJsonString());
+   Service.PluginInterface=Proxy<Dalamud.Plugin.IDalamudPluginInterface>((method,_)=>method.Name=="GetPluginConfigDirectory"?folder:throw new Exception(method.Name));
+   var migrating=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+   Set(migrating,"character",123UL);Set(migrating,"Session",new RouteSession());Set(migrating,"Search",new EliteSearch());
+   using(var lockedLegacy=File.Open(legacyFile,FileMode.Open,FileAccess.Read,FileShare.None)){
+    Call(migrating,"InitializeStore");Call(migrating,"SaveJourney",true);
+    Check(Get<bool>(migrating,"settingsLoadPending")&&!File.Exists(migratedFile),"Locked legacy state defers settings migration without saving defaults");
+   }
+   Check((bool)Call(migrating,"RecoverJourneyStore")!,"Legacy route reloads after releasing lock");
+   Call(migrating,"SaveJourney",true);
+   var migrated=HuntSettingsFile.Load(migratedFile,new HuntSettings()).Settings;
+   Check(migrated.Mini&&migrated.MaxGil==321&&!Get<bool>(migrating,"settingsLoadPending"),"Recovered migration persists the user's legacy settings");
    Set(copy,"store",new HuntStore());Set(copy,"stateFile",file);Set(copy,"stateLoadPending",true);Call(copy,"LoadJourney");
    using(var locked=File.Open(file,FileMode.Open,FileAccess.Read,FileShare.None)){
     Check(!(bool)Call(copy,"RecoverJourneyStore")!,"Unreadable route store stays pending");
@@ -238,6 +286,8 @@ static class JourneyRuntimeChecks {
   var expectedLanding=MapCoordinates.ToWorld(expectedEntry.Position,game.Excel.GetSheet<Map>().GetRow(a.MapId));
   Check(actualJourney is {ArrivalPoint: {} landing}&&landing==expectedLanding&&actualJourney.Map==mapId&&ports==portsBeforeShortcut+1&&transported==quoted.Aetheryte,
    "Accepted shortcut creates an arrival stamp for the submitted aetheryte");
+  clock+=3500;Call(plugin,"OfferBoard",Plugin.Boards[0]);
+  Check(queue.Activate(true)==null&&Get<PendingJourney?>(plugin,"pendingJourney")==actualJourney&&writes==writesBeforeShortcut,"Board travel cannot overwrite pending shortcut after cooldown");
   casting=true;Call(plugin,"ReconcileTravel");Call(plugin,"AdvanceRoute");
   Check(writes==writesBeforeShortcut&&session.Phase==RoutePhase.WaitingForZone,"No target flag is written while shortcut is casting");
   loading=true;Call(plugin,"Update",(object?)null);loading=false;

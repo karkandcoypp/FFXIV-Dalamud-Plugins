@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dalamud.Plugin;
+using Dalamud.Bindings.ImGui;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit;
 using KamiToolKit.BaseTypes;
@@ -13,30 +14,32 @@ internal sealed class NativeDialogService : IDisposable {
     private readonly Task initialization;
     private readonly ConfirmationQueue queue=new();
     private NativeConfirmationAddon? addon;
-    private bool disposed,failed;
-    internal NativeDialogService(IDalamudPluginInterface pi) => initialization=KamiToolKitLibrary.InitializeAsync(pi);
+    private bool disposed,useFallback;
+    private ConfirmationRequest? shownFallback;
+    private uint queueGeneration;
+    internal NativeDialogService(IDalamudPluginInterface pi) : this(KamiToolKitLibrary.InitializeAsync(pi)) {}
+    internal NativeDialogService(Task initialization) => this.initialization=initialization;
     internal bool Initialized=>initialization.IsCompletedSuccessfully;
     internal bool InitializationFailed=>initialization.IsFaulted||initialization.IsCanceled;
     internal bool WasDeclined(string key)=>queue.IsDeclined(key);
     internal bool HasDialog=>queue.Active!=null||addon!=null;
-    internal string? Error=>failed?"Не удалось открыть игровое подтверждение. Маршрут сохранён; проверьте журнал Dalamud.":null;
     internal void Offer(ConfirmationRequest request,bool repeat=false) { if(disposed||queue.Active?.Key==request.Key)return;if(repeat)queue.Retry(request);else queue.Offer(request); }
-    internal void CancelAll(){queue.Clear();addon?.CloseQuietly();addon=null;}
+    internal void CancelAll(){queueGeneration++;shownFallback=null;queue.Clear();addon?.CloseQuietly();addon=null;}
     internal void Cancel(string owner) {
         if(queue.Cancel(owner)) { addon?.CloseQuietly();addon=null; }
     }
     internal void Pump() {
         if(disposed || !initialization.IsCompleted) return;
-        if(!initialization.IsCompletedSuccessfully) {
-            if(!failed) { failed=true;Service.PluginLog.Error(initialization.Exception!,"Не удалось подготовить игровой диалог Hunt Route"); }
-            return;
+        if(InitializationFailed&&!useFallback){
+            useFallback=true;
+            Service.PluginLog.Error("Не удалось подготовить игровой диалог Hunt Route: {Initialization}",initialization.Exception?.GetBaseException().Message??initialization.Status.ToString());
         }
         if(queue.Active is {} current && !current.Valid()) { queue.Resolve(current.Key,false,userResponse:false);addon?.CloseQuietly();addon=null; }
-        if(addon!=null) return;
+        if(addon!=null||queue.Active!=null) return;
         bool available=Service.GameGui.GetAddonByName("SelectYesno").IsNull
             && Service.GameGui.GetAddonByName("HuntRouteConfirm").IsNull;
         var request=queue.Activate(available,Environment.TickCount64);
-        if(request==null) return;
+        if(request==null||useFallback) return;
         try {
             addon=new NativeConfirmationAddon(request.Presentation ?? TravelDialogContent.Plain(request.Text),request.Ready,yes=>Answered(request.Key,yes)) {
                 InternalName="HuntRouteConfirm",Title="Hunt Route",Size=new Vector2(TravelDialogLayout.DialogWidth,180),
@@ -45,18 +48,56 @@ internal sealed class NativeDialogService : IDisposable {
             addon.Open();request.OnShown?.Invoke();
         } catch(Exception e) {
             addon?.CloseQuietly();addon=null;
-            queue.Resolve(request.Key,false,userResponse:false);queue.RetryOpen(request,Environment.TickCount64);
+            useFallback=true;
             Service.PluginLog.Error(e,"Не удалось открыть игровой диалог Hunt Route");
         }
+    }
+    internal ConfirmationRequest? PresentFallback(){
+        if(disposed||!useFallback||queue.Active is not {} request||!request.Valid())return null;
+        if(!ReferenceEquals(shownFallback,request)){
+            shownFallback=request;
+            request.OnShown?.Invoke();
+        }
+        return request;
+    }
+    internal void DrawFallback(){
+        if(disposed||!useFallback||queue.Active is not {} active)return;
+        ImGui.SetNextWindowSize(new(400,0),ImGuiCond.FirstUseEver);
+        bool expanded=ImGui.Begin("Hunt Route · Подтверждение###HuntRouteConfirmFallback",ImGuiWindowFlags.AlwaysAutoResize|ImGuiWindowFlags.NoCollapse);
+        try {
+            if(!expanded||PresentFallback() is not {} request)return;
+            var content=request.Presentation??TravelDialogContent.Plain(request.Text);
+            ImGui.PushTextWrapPos(ImGui.GetCursorPosX()+360);
+            try{
+                ImGui.TextWrapped(content.Title);
+                if(content.Destination.Length>0&&content.Destination!=content.Title)ImGui.TextWrapped(content.Destination);
+                if(content.Context.Length>0)ImGui.TextWrapped(content.Context);
+                if(content.Subject.Length>0)ImGui.TextWrapped(content.SubjectLabel.Length>0?$"{content.SubjectLabel} · {content.Subject}":content.Subject);
+                if(content.Detail.Length>0)ImGui.TextWrapped(content.Detail);
+                foreach(var metric in content.Metrics)ImGui.TextWrapped($"{metric.Label} · {metric.Value}");
+                if(content.Footer.Length>0)ImGui.TextWrapped(content.Footer);
+            }finally{ImGui.PopTextWrapPos();}
+            ImGui.BeginDisabled(!request.Ready());
+            bool accept=ImGui.Button(content.ConfirmLabel);
+            ImGui.EndDisabled();
+            ImGui.SameLine();
+            bool decline=ImGui.Button(content.DeclineLabel);
+            if(accept||decline)AnswerFallback(active.Key,accept);
+        }finally{ImGui.End();}
+    }
+    internal void AnswerFallback(string key,bool yes){
+        if(useFallback&&shownFallback?.Key==key&&ReferenceEquals(shownFallback,queue.Active))Answered(key,yes);
     }
     private void Answered(string key,bool yes) {
         try {
             if(queue.Active?.Key!=key) return;
             var request=queue.Resolve(key,yes);var retired=addon;addon=null;
+            shownFallback=null;
+            uint generation=queueGeneration;
             if(request==null && retired==null) return;
             Service.Framework.RunOnTick(()=> {
                 retired?.Dispose();
-                if(disposed || request==null || !request.Valid()) return;
+                if(disposed || generation!=queueGeneration || request==null || !request.Valid()) return;
                 if(!request.Ready() || !request.Accept()) queue.Retry(request);
             },delayTicks:1);
         } catch(Exception e) { Service.PluginLog.Error(e,"Ошибка ответа на игровой диалог Hunt Route"); }

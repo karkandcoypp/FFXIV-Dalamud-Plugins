@@ -60,6 +60,11 @@ public sealed partial class Plugin {
   stateFile=Path.Combine(Service.PluginInterface.GetPluginConfigDirectory(),"journey-state.json");
   settingsFile=Path.Combine(Service.PluginInterface.GetPluginConfigDirectory(),"hunt-settings.json");
   try{store=HuntStore.Load(stateFile);}catch(Exception e){stateLoadPending=true;store=new();Service.PluginLog.Error(e,"Не удалось прочитать состояние маршрута");NoticeText="Сохранение маршрута недоступно; история контрактов хранится отдельно.";}
+  if(stateLoadPending&&!File.Exists(settingsFile)){
+   settingsLoadPending=true;
+   SettingsSaveError="Настройки ожидают чтения прежнего сохранения.";
+   return;
+  }
   try{settingsStore=HuntSettingsFile.Load(settingsFile,Store.Settings);if(settingsStore.Recovered)NoticeText="Настройки восстановлены; история выполнения и маршруты хранятся отдельно.";}catch(Exception e){settingsLoadPending=true;SettingsSaveError="Настройки временно недоступны. Исходный файл сохранён.";Service.PluginLog.Error(e,"Чтение настроек");}
  }
  private bool RecoverJourneyStore(){
@@ -104,7 +109,7 @@ public sealed partial class Plugin {
   try{Store.Save(stateFile);lastSaved=value;nextStateSave=Now+2000;JourneySaveError=null;}catch(Exception e){nextStateSave=Now+10000;JourneySaveError="Не удалось сохранить маршрут: после перезапуска изменения могут пропасть.";Service.PluginLog.Error(e,"Сохранение маршрута");}
  }
  private void SaveSettings(bool force=false){
-  if(settingsFile==null||!force&&Now<nextSettingsSave)return;
+  if(settingsFile==null||stateLoadPending&&settingsLoadPending||!force&&Now<nextSettingsSave)return;
   if(settingsLoadPending)try{settingsStore=HuntSettingsFile.Load(settingsFile,Store.Settings);settingsLoadPending=false;}catch(Exception e){nextSettingsSave=Now+10000;SettingsSaveError="Настройки недоступны для чтения. Исходный файл не перезаписан.";Service.PluginLog.Debug(e,"Повторное чтение настроек");return;}
   settingsStore??=new(){Settings=Store.Settings};string value=JsonSerializer.Serialize(settingsStore);
   if(!force&&lastSettingsSaved==value&&SettingsSaveError==null)return;
@@ -165,10 +170,16 @@ public sealed partial class Plugin {
   if(!Ready||Done(m)||Flow.Excluded(m))return;
   if(pendingJourney!=null){NoticeText="Дождитесь завершения текущего перемещения, затем выберите цель.";return;}
   RefreshLive();if(!HasPosition(m)){NoticeText="Для этой цели пока нет доступной позиции. Она остаётся незавершённой.";return;}
+  EntryPoint? entry=null;
+  if(CurrentTerritory!=m.TerritoryType&&(entry=EntryFor(m))==null){
+   Flow.Unavailable[JourneyFlow.Key(m)]="Нет открытого эфирита или проверенного входа";
+   NoticeText="Цель пока недоступна: откройте эфирит и выберите её снова.";
+   return;
+  }
   if(Session.Target is {} prior&&JourneyFlow.Key(prior)!=JourneyFlow.Key(m))ResetTargetTracking();
   Flow.Manual=JourneyFlow.Key(m);Flow.Active=true;Flow.Pauses&=~(PauseReason.User|PauseReason.Restored|PauseReason.TravelError|PauseReason.NoZone|PauseReason.Board);
   if(CurrentTerritory==m.TerritoryType){if(Session.Phase is RoutePhase.Idle or RoutePhase.Finished)Session.Start(m,AllTiers);else Session.Continue(m);AdvanceRoute();}
-  else OfferTravel(m,Session.Phase==RoutePhase.Idle);
+  else OfferTravel(m,Session.Phase==RoutePhase.Idle,entry);
   SaveJourney(true);
  }
  internal void Defer(MobHuntEntry m,bool zone=false){if(zone)Flow.Zones.Add(m.TerritoryType);else Flow.Deferred.Add(JourneyFlow.Key(m));if(Flow.Manual==JourneyFlow.Key(m)||zone&&Session.Target?.TerritoryType==m.TerritoryType)Flow.Manual=null;NativeDialogs.Cancel("travel");routeSignature="";AdvanceRoute();SaveJourney(true);}
@@ -189,8 +200,8 @@ public sealed partial class Plugin {
  }
  private EntryPoint? NearestEntryFor(MobHuntEntry m){var positions=m.IsEliteMark?EliteSpawns.For(m):Position(m) is {} p?new[]{p}:Array.Empty<Vector2>();return Entries(m.MapId,m.TerritoryType).OrderBy(e=>positions.Length==0?float.MaxValue:positions.Min(p=>Vector2.DistanceSquared(e.Position,p))).ThenBy(e=>e.Id).FirstOrDefault() ?? (m.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75)?new(75,"Idyllshire",Vector2.Zero):null);}
  internal uint Price(uint id)=>Service.Aetherytes.Where(a=>a.AetheryteId==id).Select(a=>a.GilCost).DefaultIfEmpty(uint.MaxValue).Min();
- private void OfferTravel(MobHuntEntry target,bool starting){
-  var entry=EntryFor(target);if(entry==null){Flow.Unavailable[JourneyFlow.Key(target)]="Нет открытого эфирита или проверенного входа";Flow.Status="Цель отложена: нет открытого входа.";return;}
+ private void OfferTravel(MobHuntEntry target,bool starting,EntryPoint? reviewedEntry=null){
+  var entry=reviewedEntry??EntryFor(target);if(entry==null){Flow.Unavailable[JourneyFlow.Key(target)]="Нет открытого эфирита или проверенного входа";Flow.Status="Цель отложена: нет открытого входа.";return;}
   if(Session.Target is {} old&&JourneyFlow.Key(old)!=JourneyFlow.Key(target))ResetTargetTracking();
   Session.PlanTravel(target,AllTiers,starting);
   string key=JourneyFlow.Key(target);uint run=Session.RunId;uint quote=Price(entry.Id);
@@ -207,13 +218,15 @@ public sealed partial class Plugin {
  internal void OfferNext(){if(Session.Phase==RoutePhase.AwaitingTravel)OfferPlannedTravel();else if(Session.Suggested is {} next)OfferTravel(next,false);}
  internal void OfferPlannedTravel(){if(Session.Phase==RoutePhase.AwaitingTravel&&Session.Target is {} target)OfferTravel(target,false);}
  internal void OfferBoard(Board board){
-  if(!Ready)return;uint quote=CurrentTerritory==board.Territory?0:Price(board.Aetheryte);if(quote==uint.MaxValue){NoticeText="Эфирит города не открыт.";return;}
+  if(!Ready)return;
+  if(pendingJourney!=null){NoticeText="Дождитесь завершения текущего перемещения.";return;}
+  uint quote=CurrentTerritory==board.Territory?0:Price(board.Aetheryte);if(quote==uint.MaxValue){NoticeText="Эфирит города не открыт.";return;}
   NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");NativeDialogs.Cancel("travel");
   string city=Service.DataManager.GetExcelSheet<TerritoryType>().GetRow(board.Territory).PlaceName.Value.Name.ToString();
   string aetheryte=Service.DataManager.GetExcelSheet<Aetheryte>().GetRow(board.Aetheryte).PlaceName.Value.Name.ToString();
   bool onlyNew=PickupOpen;
   NativeDialogs.Offer(new("travel",$"board:{board.Name}:{quote}:{Session.RunId}","К доске охоты?",()=>Ready&&(!onlyNew||CanPickup(board,false)||CanPickup(board,true))&&(CurrentTerritory==board.Territory||Price(board.Aetheryte)<=quote),
-   ()=>!TravelBusy,()=>{if(CurrentTerritory!=board.Territory&&Price(board.Aetheryte)>quote)return false;if(!Teleport(board.Aetheryte))return false;Flow.Pauses|=PauseReason.Board;Flow.Status="Поездка к доске. Маршрут сохранён.";pendingJourney=CurrentTerritory==board.Territory?null:new(CurrentTerritory,board.Territory,board.Map,Now,null,true);PlaceFlag(board.Territory,board.Map,MapCoordinates.ToWorld(board.Position,Service.DataManager.GetExcelSheet<Map>().GetRow(board.Map)));PickupOpen=false;SaveJourney(true);return true;},
+   ()=>!TravelBusy&&pendingJourney==null,()=>{if(pendingJourney!=null)return false;if(CurrentTerritory!=board.Territory&&Price(board.Aetheryte)>quote)return false;if(!Teleport(board.Aetheryte))return false;Flow.Pauses|=PauseReason.Board;Flow.Status="Поездка к доске. Маршрут сохранён.";pendingJourney=CurrentTerritory==board.Territory?null:new(CurrentTerritory,board.Territory,board.Map,Now,null,true);PlaceFlag(board.Territory,board.Map,MapCoordinates.ToWorld(board.Position,Service.DataManager.GetExcelSheet<Map>().GetRow(board.Map)));PickupOpen=false;SaveJourney(true);return true;},
    TravelDialogContent.Board(city,aetheryte,board.Name,quote,CurrentTerritory==board.Territory)),true);
  }
  private unsafe string ContextKey()=> ContextProvider?.Invoke() ?? $"{Service.ObjectTable.LocalPlayer?.CurrentWorld.RowId ?? 0}:{UIState.Instance()->PublicInstance.InstanceId}:{CurrentTerritory}:{CurrentMap}";
