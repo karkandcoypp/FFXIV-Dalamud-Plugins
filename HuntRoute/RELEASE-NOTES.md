@@ -1,3 +1,9 @@
+# 0.4.34
+
+- Render native button captions as independent text nodes to avoid truncation by button components.
+- Invalidate cross-zone travel prompts on entering the target territory and resume local tracking without a gateway trip.
+- Use smaller reset timers, larger expansion names, and remove remaining custom focus outlines.
+
 # 0.4.33
 
 - Measure labels without changing the measurement node text. Restore complete button captions after sizing to prevent repeated ellipsis truncation.

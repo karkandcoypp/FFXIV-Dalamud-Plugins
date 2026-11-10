@@ -201,12 +201,19 @@ public sealed partial class Plugin {
  private EntryPoint? NearestEntryFor(MobHuntEntry m){var positions=m.IsEliteMark?EliteSpawns.For(m):Position(m) is {} p?new[]{p}:Array.Empty<Vector2>();return Entries(m.MapId,m.TerritoryType).OrderBy(e=>positions.Length==0?float.MaxValue:positions.Min(p=>Vector2.DistanceSquared(e.Position,p))).ThenBy(e=>e.Id).FirstOrDefault() ?? (m.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75)?new(75,"Idyllshire",Vector2.Zero):null);}
  internal uint Price(uint id)=>Service.Aetherytes.Where(a=>a.AetheryteId==id).Select(a=>a.GilCost).DefaultIfEmpty(uint.MaxValue).Min();
  private void OfferTravel(MobHuntEntry target,bool starting,EntryPoint? reviewedEntry=null){
+  if(Service.ClientState.TerritoryType==target.TerritoryType){
+   NativeDialogs.Cancel("travel");NativeDialogs.Cancel("next");
+   if(Session.Target is {} previous&&JourneyFlow.Key(previous)!=JourneyFlow.Key(target))ResetTargetTracking();
+   Flow.Active=true;
+   if(starting)Session.Start(target,AllTiers);else Session.Continue(target);
+   AdvanceRoute();return;
+  }
   var entry=reviewedEntry??EntryFor(target);if(entry==null){Flow.Unavailable[JourneyFlow.Key(target)]="Нет открытого эфирита или проверенного входа";Flow.Status="Цель отложена: нет открытого входа.";return;}
   if(Session.Target is {} old&&JourneyFlow.Key(old)!=JourneyFlow.Key(target))ResetTargetTracking();
   Session.PlanTravel(target,AllTiers,starting);
   string key=JourneyFlow.Key(target);uint run=Session.RunId;uint quote=Price(entry.Id);
   NativeDialogs.Offer(new("travel",$"travel:{run}:{key}:{entry.Id}:{quote}","Продолжить охоту?",
-   ()=>Ready && Eligible(target)&&Flow.Active&&Session.RunId==run&&Session.Phase==RoutePhase.AwaitingTravel&&Session.Target is {} planned&&JourneyFlow.Key(planned)==key&&Mobs.Any(m=>JourneyFlow.Key(m)==key)&&EntryFor(target)?.Id==entry.Id&&Price(entry.Id)<=quote,
+   ()=>Ready && Service.ClientState.TerritoryType!=target.TerritoryType&&Eligible(target)&&Flow.Active&&Session.RunId==run&&Session.Phase==RoutePhase.AwaitingTravel&&Session.Target is {} planned&&JourneyFlow.Key(planned)==key&&Mobs.Any(m=>JourneyFlow.Key(m)==key)&&EntryFor(target)?.Id==entry.Id&&Price(entry.Id)<=quote,
    ()=>!TravelBusy && NavigationAllowed,
    ()=>{var current=EntryFor(target);if(current?.Id!=entry.Id || Price(entry.Id)>quote)return false;Travel(target);return Session.Target is {} t&&JourneyFlow.Key(t)==key&&Session.Phase is RoutePhase.WaitingForZone or RoutePhase.Following;},
    TravelDialogContent.Next(CurrentTerritory.ToString(),target.TerritoryName??"Зона",target.Name??"Цель") with {Context=$"{entry.Name} · {quote} гил",Detail=TravelHint(target,entry)}),true);

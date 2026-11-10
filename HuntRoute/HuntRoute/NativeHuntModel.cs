@@ -55,13 +55,13 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  // Axis typography with slightly larger labels for legibility.
  public const byte TitleFont=18, BodyFont=15, ButtonFont=14;
  public static float ContentWidth(bool mini)=>(mini?300:420)-2*Margin;
- public static byte SummaryFont(NativeHuntPage view,bool mini)=>!mini&&view==NativeHuntPage.Boards?(byte)17:BodyFont;
+ public static byte SummaryFont(NativeHuntPage view,bool mini)=>!mini&&view==NativeHuntPage.Boards?(byte)13:BodyFont;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Goal==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;
  public static float ButtonWidth(string label)=>label.Length<=11?ActionWidth:LongActionWidth;
  public static string FitLabel(string value,int length=64)=>value.Length<=length?value:string.Concat(value.EnumerateRunes().Take(length-1).Select(r=>r.ToString()))+"…";
  public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false,Func<string,float>? measureButton=null){
-  float Button(string label)=>Math.Max(ButtonWidth(label),measureButton==null?0:MathF.Ceiling(measureButton(label))+32);
+  float Button(string label)=>Math.Max(ButtonWidth(label),measureButton==null?0:MathF.Ceiling(measureButton(label))+16);
   float Compact(NativeHuntButton button)=>Button(button.Label);
   float inner=ContentWidth(mini),width=inner+2*Margin,titleY=mini?38:71;
   titleHeight=float.IsFinite(titleHeight)?Math.Clamp(titleHeight,22,110):22;
@@ -117,15 +117,15 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
    }
    if(button.Board is {} board){
     if(i==0){
-     Cell("Дополнение",Margin+8,bottom,110,NativeHuntColors.Muted,16);
-     Cell("Ежедневные",Margin+130,bottom,114,NativeHuntColors.Muted,16);
-     Cell("Еженедельный",Margin+254,bottom,126,NativeHuntColors.Muted,16);
+     Cell("Дополнение",Margin+8,bottom,140,NativeHuntColors.Muted,14);
+     Cell("Ежедневные",Margin+154,bottom,104,NativeHuntColors.Muted,14);
+     Cell("Еженедельный",Margin+266,bottom,110,NativeHuntColors.Muted,14);
      bottom+=25;
     }
     Set(i+3,++rows,0,button,Margin,bottom,inner,28);
-    Cell(board.Name,Margin+8,bottom+5,116,NativeHuntColors.Tracking);
-    Cell(board.Daily.Label,Margin+130,bottom+5,114,board.Daily.Color??Vector4.One);
-    Cell(board.Weekly.Label,Margin+254,bottom+5,126,board.Weekly.Color??Vector4.One);
+    Cell(board.Name,Margin+8,bottom+5,140,NativeHuntColors.Tracking,16);
+    Cell(board.Daily.Label,Margin+154,bottom+5,104,board.Daily.Color??Vector4.One);
+    Cell(board.Weekly.Label,Margin+266,bottom+5,110,board.Weekly.Color??Vector4.One);
     bottom+=32;
     continue;
    }

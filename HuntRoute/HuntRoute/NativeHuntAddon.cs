@@ -12,6 +12,7 @@ namespace HuntRoute;
 internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Action<NativeHuntAction> execute,Action closed,Func<bool> modal,bool mini=false):NativeAddon {
  private void AddFixedNode(NodeBase node)=>NativeFixedLayout.Attach(this,node);
  private TextNode? buttonMeasure;
+ private readonly TextNode?[] captions=new TextNode?[NativeHuntLayout.ButtonCapacity];
  private readonly TextButtonNode?[] buttons=new TextButtonNode?[NativeHuntLayout.ButtonCapacity];
  private readonly CheckboxNode?[] checks=new CheckboxNode?[NativeHuntLayout.ButtonCapacity];
  private ComponentNode? Control(int slot)=>checks[slot] is {IsVisible:true} check?check:buttons[slot];
@@ -20,13 +21,11 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  private NativeHuntAction?[] commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];
  private TextNode? heading,summary,pageLabel,progressLabel;
  private ColorImageNode? progressTrack,progressFill;
- private NativeFocusOutline? focusOutline;
  private readonly TextNode?[] tableCells=new TextNode?[NativeHuntLayout.ButtonCapacity*3];
  private IconImageNode? portrait;
  private IReadOnlyList<NativeNavLink> links=[];
  private bool focusRequested,focusFirstBody;
  private string? titleText,summaryText;
- private readonly string?[] buttonText=new string?[NativeHuntLayout.ButtonCapacity];
  private string? focusedKey;
  private string? screenIdentity;
  private uint icon;
@@ -55,6 +54,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    int slot=i;var button=new TextButtonNode{NavIndex=i+1,OnClick=()=>Clicked(slot)};
    button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.LabelNode.AddTextFlags(TextFlags.Ellipsis);
    buttons[i]=button;AddFixedNode(button);
+   var caption=NativeButtonText.CreateCaption();captions[i]=caption;AddFixedNode(caption);
    if(i is >=3 and <=8){
     var check=new CheckboxNode{NavIndex=i+1,DisableAutoResize=true,IsVisible=false,OnClick=_=>Clicked(slot)};
     checks[i]=check;AddFixedNode(check);
@@ -64,8 +64,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    var cell=new TextNode{FontSize=NativeHuntLayout.ButtonFont,IsVisible=false};
    cell.AddTextFlags(TextFlags.Ellipsis);tableCells[i]=cell;AddFixedNode(cell);
   }
-  focusOutline=new NativeFocusOutline(node=>AddFixedNode(node));
-  requestedScale=0;screenIdentity=null;keys=new string?[NativeHuntLayout.ButtonCapacity];commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];nextUpdate=0;focusRequested=!mini;focusFirstBody=false;icon=0;titleText=summaryText=null;Array.Clear(buttonText);
+  requestedScale=0;screenIdentity=null;keys=new string?[NativeHuntLayout.ButtonCapacity];commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];nextUpdate=0;focusRequested=!mini;focusFirstBody=false;icon=0;titleText=summaryText=null;
   Refresh(native);
  }
  protected override void OnShow(AtkUnitBase* native){
@@ -87,7 +86,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(focusRequested&&IsOpen&&!modal()){int index=NativeHuntNavigation.RestoreFocus(links,focusedKey);if(index>0){if(checks[index-1] is {IsVisible:true} check)check.SetFocus();else buttons[index-1]?.SetFocus();}focusRequested=false;}
  }
  protected override void OnHide(AtkUnitBase* native)=>closed();
- protected override void OnFinalize(AtkUnitBase* native){Array.Clear(buttons);Array.Clear(checks);Array.Clear(tableCells);focusOutline=null;buttonMeasure=null;heading=null;summary=null;portrait=null;pageLabel=progressLabel=null;progressTrack=progressFill=null;links=[];}
+ protected override void OnFinalize(AtkUnitBase* native){Array.Clear(buttons);Array.Clear(captions);Array.Clear(checks);Array.Clear(tableCells);buttonMeasure=null;heading=null;summary=null;portrait=null;pageLabel=progressLabel=null;progressTrack=progressFill=null;links=[];}
  private void Clicked(int slot){
   if(modal()||slot<0||slot>=buttons.Length||!(checks[slot] is {IsVisible:true} check?check.IsEnabled:buttons[slot] is {IsVisible:true,IsEnabled:true})||commands[slot] is not {} command)return;
   focusedKey=keys[slot];
@@ -142,9 +141,10 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   foreach(var placement in layout.Buttons){
    int slot=placement.Slot;var spec=placement.Button;var button=buttons[slot]!;used[slot]=true;
    if(spec.Checked is {} value&&checks[slot] is {} check){
-    button.IsVisible=false;check.IsVisible=true;check.IsEnabled=spec.Enabled;
+    button.IsVisible=false;captions[slot]!.IsVisible=false;check.IsVisible=true;check.IsEnabled=spec.Enabled;
     if(check.Size!=placement.Rect.Size)check.Size=placement.Rect.Size;
     check.Position=placement.Rect.Position;
+    check.Label.TextColor=ownsFocus&&focusedKey==spec.Key?NativeHuntColors.Attention:Vector4.One;
     check.Label.Position=new(24,0);check.Label.Width=check.Width-28;
     if(check.Label.String.ToString()!=spec.Label)check.Label.String=spec.Label;
     if(check.IsChecked!=value){
@@ -154,18 +154,21 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    }else{
     if(checks[slot] is {} hidden)hidden.IsVisible=false;
     if(button.Position!=placement.Rect.Position)button.Position=placement.Rect.Position;
-    if(button.Size!=placement.Rect.Size){button.Size=placement.Rect.Size;buttonText[slot]=null;}
-    NativeButtonText.Apply(button,spec.Board!=null||spec.Goal!=null?"":spec.Label);
+    if(button.Size!=placement.Rect.Size)button.Size=placement.Rect.Size;
+    button.String="";
+    var caption=captions[slot]!;
+    NativeButtonText.SetCaption(caption,button,spec.Board!=null||spec.Goal!=null?"":spec.Label,
+     !spec.Enabled?NativeHuntColors.Muted:ownsFocus&&focusedKey==spec.Key?NativeHuntColors.Attention:spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One));
+    caption.IsVisible=spec.Board==null&&spec.Goal==null;
     button.BackgroundNode.Color=spec.Key=="primary"&&spec.Emphasized?NativeHuntColors.PrimarySurface:Vector4.One;
     button.LabelNode.TextColor=spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One);
-    if(buttonText[slot]!=spec.Label){button.String=spec.Board!=null||spec.Goal!=null?"":spec.Label;buttonText[slot]=spec.Label;}
     button.IsVisible=true;button.IsEnabled=spec.Enabled;
     button.BackgroundNode.IsVisible=spec.Board==null&&spec.Goal==null;
     button.LabelNode.AlignmentType=spec.Board==null?AlignmentType.Center:AlignmentType.Left;
    }
    keys[slot]=spec.Key;commands[slot]=spec.Action;items.Add(new(slot+1,placement.Row,placement.Column,spec.Key,spec.Enabled));
   }
-  for(int i=0;i<buttons.Length;i++)if(!used[i]){buttons[i]!.IsVisible=false;if(checks[i] is {} check)check.IsVisible=false;keys[i]=null;commands[i]=null;}
+  for(int i=0;i<buttons.Length;i++)if(!used[i]){buttons[i]!.IsVisible=false;captions[i]!.IsVisible=false;if(checks[i] is {} check)check.IsVisible=false;keys[i]=null;commands[i]=null;}
   for(int i=0;i<tableCells.Length;i++){
    var node=tableCells[i]!;
    node.IsVisible=i<layout.TableText.Count;
@@ -175,7 +178,6 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    if(node.String.ToString()!=cell.Label)node.String=cell.Label;
   }
   var focused=layout.Buttons.FirstOrDefault(p=>p.Button.Enabled&&IsFocused(Control(p.Slot),global));
-  focusOutline?.Show(focused is {Button: {Board: not null}} or {Button: {Goal: not null}} or {Button: {Checked: not null}}?focused.Rect:null);
   links=NativeHuntNavigation.Build(items);foreach(var link in links){var b=Control(link.Index-1)!;b.NavIndex=link.Index;b.NavUp=link.Up;b.NavDown=link.Down;b.NavLeft=link.Left;b.NavRight=link.Right;}
   if(focusedKey==null&&controller.Page==NativeHuntPage.Hunt&&links.Any(n=>n.Key=="primary"))focusedKey="primary";
   if(focusFirstBody){focusedKey=items.FirstOrDefault(n=>n.Row is >0 and <=6&&n.Enabled).Key;focusFirstBody=false;}
@@ -187,29 +189,6 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
 
 
 // Shared border for native controls. It leaves the control's surface and text visible.
-internal sealed class NativeFocusOutline {
- private readonly ColorImageNode[] edges=new ColorImageNode[4];
- internal NativeFocusOutline(Action<ColorImageNode> attach){
-  for(int i=0;i<edges.Length;i++){
-   var edge=new ColorImageNode{Color=NativeHuntColors.Focus,IsVisible=false};
-   edges[i]=edge;attach(edge);
-  }
- }
- internal void Show(NativeHuntRect? rect){
-  foreach(var edge in edges)edge.IsVisible=rect.HasValue;
-  if(rect is not {} box)return;
-  const float stroke=2;
-  var p=box.Position;var s=box.Size;
-  Place(0,p,new(s.X,stroke));
-  Place(1,p+new Vector2(0,s.Y-stroke),new(s.X,stroke));
-  Place(2,p,new(stroke,s.Y));
-  Place(3,p+new Vector2(s.X-stroke,0),new(stroke,s.Y));
- }
- private void Place(int index,Vector2 position,Vector2 size){
-  edges[index].Position=position;edges[index].Size=size;
- }
-}
-
 internal static class NativeFixedLayout {
  internal static NodeFlags FixedFlags(NodeFlags flags)=>
   (flags&~(NodeFlags.AnchorTop|NodeFlags.AnchorBottom|NodeFlags.AnchorLeft|NodeFlags.AnchorRight))
@@ -224,16 +203,16 @@ internal static class NativeFixedLayout {
 
 internal static class NativeButtonText {
  internal static float Measure(TextNode node,string label){
-  return node.GetTextDrawSize(label,considerScale:false).X;
+  return Math.Max(node.GetTextDrawSize(label,considerScale:false).X,label.EnumerateRunes().Count()*9.5f);
  }
- internal static void Apply(TextButtonNode button,string text){
-  var label=button.LabelNode;
-  label.NodeFlags=NativeFixedLayout.FixedFlags(label.NodeFlags);
-  label.FontSize=NativeHuntLayout.ButtonFont;
-  label.RemoveTextFlags(TextFlags.WordWrap,TextFlags.MultiLine);
-  label.AddTextFlags(TextFlags.Ellipsis);
-  label.Position=new(16,3);
-  label.Size=new(Math.Max(0,button.Width-32),Math.Max(0,button.Height-8));
-  label.String=text;
+ internal static TextNode CreateCaption()=>new(){
+  FontSize=NativeHuntLayout.ButtonFont,LineSpacing=18,
+  AlignmentType=AlignmentType.Center,IsVisible=false
+ };
+ internal static void SetCaption(TextNode caption,TextButtonNode button,string text,Vector4 color){
+  caption.Position=button.Position+new Vector2(8,3);
+  caption.Size=new(Math.Max(0,button.Width-16),Math.Max(0,button.Height-6));
+  caption.TextColor=color;
+  caption.String=text;
  }
 }

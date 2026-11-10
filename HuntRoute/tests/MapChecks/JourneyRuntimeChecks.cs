@@ -238,6 +238,18 @@ static class JourneyRuntimeChecks {
   // Gateway arrival is distinct from entering the actual hunting territory.
   var hinterTarget=game.Excel.GetSubrowSheet<MobHuntOrder>().SelectMany(g=>g).Where(o=>o.Target.RowId!=0).Select(o=>o.Target.Value).First(t=>t.Map.Value.TerritoryType.RowId==399&&Location.Database.ContainsKey(t.Name.RowId));
   var gateway=Daily(hinterTarget.Name.RowId,3,399);Set(plugin,"Mobs",new List<MobHuntEntry>{gateway});Set(plugin,"Routes",new List<ZoneRoute>{new(gateway.TerritoryName!,new(){gateway},null)});queue.Clear();flow.Pauses=PauseReason.None;flow.Manual=null;flow.Active=true;
+  Call(plugin,"Track",gateway);var gatewayRequest=queue.Activate(true);
+  Check(gatewayRequest?.Owner=="travel","Gateway target outside the territory offers reviewed travel");
+  int beforeLocalGatewayPorts=ports;
+  territory=399;mapId=gateway.MapId;
+  Check(!gatewayRequest!.Valid()&&queue.Resolve(gatewayRequest.Key,true)==null,"Live entry into the target territory invalidates travel before the cached location refresh");
+  Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);
+  Call(plugin,"OfferPlannedTravel");
+  Check(queue.Activate(true)==null&&ports==beforeLocalGatewayPorts&&session.Phase==RoutePhase.Following&&marker?.Territory==399,
+   "Already in Hinterlands resumes local flag without teleporting back to Idyllshire");
+  session.RequestNext(gateway);Call(Get<NextZoneWindow>(plugin,"NextZone"),"Sync");
+  Check(queue.Activate(true)==null,"Next-zone dialog cannot be created for the current territory");
+  territory=397;mapId=a.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);flow.Manual=null;
   Call(plugin,"Travel",gateway);Check(Get<PendingJourney>(plugin,"pendingJourney").Destination==478,"Hinterlands trip expects actual Idyllshire teleport destination");
   clock+=10000;territory=478;mapId=game.Excel.GetSheet<TerritoryType>().GetRow(478).Map.RowId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Call(plugin,"ReconcileTravel");
   Check(flow.Pauses.HasFlag(PauseReason.NoZone)&&!flow.Pauses.HasFlag(PauseReason.TravelError)&&session.Target==gateway,"Idyllshire arrival pauses for the known gateway instead of reporting failed teleport");

@@ -79,8 +79,8 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         }
         if(!string.IsNullOrEmpty(content.Footer)) y+=Text(content.Footer,left,y,inner,13,Muted)+4;
         const float buttonHeight=NativeHuntLayout.ActionHeight;
-        float confirmWidth=Math.Max(NativeHuntLayout.ButtonWidth(content.ConfirmLabel),measureButton==null?0:MathF.Ceiling(measureButton(content.ConfirmLabel))+32);
-        float declineWidth=Math.Max(NativeHuntLayout.ActionWidth,measureButton==null?0:MathF.Ceiling(measureButton(content.DeclineLabel))+32);
+        float confirmWidth=Math.Max(NativeHuntLayout.ButtonWidth(content.ConfirmLabel),measureButton==null?0:MathF.Ceiling(measureButton(content.ConfirmLabel))+16);
+        float declineWidth=Math.Max(NativeHuntLayout.ActionWidth,measureButton==null?0:MathF.Ceiling(measureButton(content.DeclineLabel))+16);
         float buttonsY=y+6,heightTotal=buttonsY+buttonHeight+12;
         float buttonsX=(width-confirmWidth-declineWidth-6)/2;
         var confirm=new DialogButton(new(buttonsX,buttonsY),new(confirmWidth,buttonHeight));

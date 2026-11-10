@@ -31,7 +31,8 @@ static class NativeTextLifecycleChecks {
   if(measuredCalls.Any(m=>m.Name.StartsWith("set_",StringComparison.Ordinal))
    ||!measuredCalls.Any(m=>m.Name=="GetTextDrawSize"&&m.GetParameters().Length==2))
    throw new Exception("Label measurement must use explicit text without modifying a drawable node");
-  var apply=type.GetMethod("Apply",BindingFlags.Static|BindingFlags.NonPublic)!;
+  var apply=type.GetMethod("SetCaption",BindingFlags.Static|BindingFlags.NonPublic)!;
+  if(apply.GetParameters()[0].ParameterType.Name!="TextNode")throw new Exception("Captions must use independent text nodes");
   var writes=Calls(apply).Where(m=>m.Name.StartsWith("set_",StringComparison.Ordinal)).ToArray();
   if(writes.Length==0||writes[^1].Name!="set_String"||!writes.Any(m=>m.Name=="set_Size"))
    throw new Exception("Full source caption must be restored after all native sizing and style changes");
