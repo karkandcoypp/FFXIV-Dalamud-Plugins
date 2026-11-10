@@ -56,6 +56,7 @@ internal static class NativeHuntPreviewChecks {
     }
     if(layout.PageText.Length>0)Text(layout.PageText,Center(layout.PageText,layout.PageLabel,14),14,new(.9f,.9f,.9f,1));
     var focused=layout.Buttons.FirstOrDefault(b=>b.Button.Enabled&&(b.Button.Board!=null||b.Button.Goal!=null||b.Button.Checked.HasValue||b.Button.Key=="primary"));
+    if(sample.Page is NativeHuntPage.Advanced or NativeHuntPage.Filters)focused=layout.Buttons.FirstOrDefault(b=>b.Row==1&&b.Button.Enabled);
     foreach(var entry in layout.Buttons){
      var r=entry.Rect;
      if(entry.Button.Checked is {} state){

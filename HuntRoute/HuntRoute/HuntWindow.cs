@@ -89,7 +89,7 @@ public sealed partial class HuntWindow:Window {
  }
  private void DrawBoards(){
   HuntTheme.Heading("Доски охоты");var now=DateTimeOffset.UtcNow;
-  ImGui.TextWrapped("Сброс: день "+Countdown(ResetClock.Next(now,false)-now)+" · неделя "+Countdown(ResetClock.Next(now,true)-now));
+  ImGui.TextWrapped("Ежедневный сброс через "+Countdown(ResetClock.Next(now,false)-now)); ImGui.TextWrapped("Еженедельный сброс через "+Countdown(ResetClock.Next(now,true)-now));
   if(onlyNewBoards){ImGui.TextDisabled("Выберите доступные новые контракты");if(ImGui.SmallButton("Показать все доски"))onlyNewBoards=false;}
   foreach(var board in Plugin.Boards){
    ImGui.PushID(board.Name);if(!HuntTheme.BeginCard("board")){ImGui.PopID();continue;}
@@ -105,7 +105,7 @@ public sealed partial class HuntWindow:Window {
   }
  }
  private void Progress(Board board,bool weekly){
-  string prefix=weekly?"Неделя: ":"Сегодня: ";
+  string prefix=weekly?"Еженедельный: ":"Ежедневные: ";
   if(plugin.CompletionUncertain(board,weekly)){Colored(HuntTheme.Gold,prefix+"история не подтверждена");return;}
   var p=plugin.CollectionProgress(board,weekly);
   string label=p.AllCompleted?"выполнено":p.Total==0?"не открыто":p.Taken>0?$"взято {p.Taken}/{p.Total}":plugin.CanPickup(board,weekly)?"можно взять":p.Completed>0?$"выполнено {p.Completed}/{p.Total}":"нет доступных";
