@@ -3,11 +3,12 @@ using System.Linq;
 namespace HuntRoute;
 
 public readonly record struct BillState(bool Unlocked,bool Obtained,byte ObtainedId,byte AvailableId,bool Completed,bool? PeriodCompleted=null) {
+    public bool RepeatedSetAvailable { get; init; }
     public static BillState FromGame(bool unlocked,bool obtained,byte id,byte available,bool completed,uint count) =>
         new(unlocked,obtained && id>0 && id<=count,id<=count?id:(byte)0,available<=count?available:(byte)0,completed && id>0 && id<=count);
     public bool Taken => Obtained && ObtainedId!=0;
     public bool CompletedCurrentSet => PeriodCompleted ?? (Completed && ObtainedId!=0 && AvailableId==ObtainedId);
-    public bool HasNewSet => (Taken || Completed) && AvailableId!=0 && AvailableId!=ObtainedId;
+    public bool HasNewSet => RepeatedSetAvailable || (Taken || Completed) && AvailableId!=0 && AvailableId!=ObtainedId;
 }
 public readonly record struct ContractProgress(int Total,int Taken,int Completed,int NewSets) {
     public bool AllCompleted => Total>0 && Completed==Total && NewSets==0;

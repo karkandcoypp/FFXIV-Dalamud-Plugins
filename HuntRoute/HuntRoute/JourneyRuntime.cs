@@ -121,6 +121,12 @@ public sealed partial class Plugin {
    return HasPosition(m);
   }catch(Exception e){Flow.Unavailable[JourneyFlow.Key(m)]="Координаты временно недоступны: "+e.Message;return false;}
  }
+ private MobHuntEntry? ManualTarget()=>Flow.Manual is {} key?Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==key&&!Done(m)&&!Flow.Excluded(m)):null;
+ private void PauseUnavailableManual(){
+  Flow.Pauses|=PauseReason.Unavailable;
+  Flow.Status="Ручная цель временно недоступна. Выбор сохранён.";
+  Search.Suspend();NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");
+ }
  private void ResetTargetTracking(){Search.Start([]);searchKey="";ordinaryActor=null;ordinaryKind=null;ordinaryPosition=null;}
  private string SearchIdentity(MobHuntEntry target)=>$"{Session.RunId}:{JourneyFlow.Key(target)}";
  internal bool NavigationAllowed=>(!Flow.Active || Flow.Pauses==PauseReason.None)&&!(Session.Target is {} t&&unreadBills.Contains(t.BillNumber));
@@ -133,6 +139,7 @@ public sealed partial class Plugin {
   Flow.Pauses&=~(PauseReason.User|PauseReason.Restored|PauseReason.Marker|PauseReason.TravelError|PauseReason.Unavailable|PauseReason.FlagError|PauseReason.Board|PauseReason.NoZone);
   ownedMarker=null;Search.Suspend();
   var target=Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==(Flow.Manual??Flow.RestoreTarget)&&Eligible(m));
+  if(target==null&&ManualTarget()!=null){PauseUnavailableManual();SaveJourney(true);return;}
   if(target==null && Flow.Manual!=null){Flow.Manual=null;Flow.Status="Ручная цель больше не активна.";}
   target??=Session.Target is {} old?Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==JourneyFlow.Key(old)&&Eligible(m)):null;
   target??=BestTarget();
@@ -226,13 +233,16 @@ public sealed partial class Plugin {
   if(casting)p.CastingSeen=true;
   bool nearArrival=false;
   if(!casting&&p.Origin is {} origin&&p.ArrivalPoint is {} destination&&Service.ObjectTable.LocalPlayer is {} local){var here=new Vector2(local.Position.X,local.Position.Z);nearArrival=Vector2.Distance(here,origin)>80&&Vector2.Distance(here,destination)<50;}
-  bool arrived=CurrentTerritory==p.Destination && (p.Source!=p.Destination || p.Loaded || nearArrival);
+  bool wrongContext=p.Source==p.Destination && (CurrentMap!=p.Map||p.OriginContext!=null&&p.OriginContext!=ContextKey());
+  bool sameZone=p.Source==p.Destination;
+  bool arrived=CurrentTerritory==p.Destination && (!sameZone || !wrongContext&&nearArrival&&(p.Loaded||p.CastingSeen));
   if(arrived){pendingJourney=null;ownedMarker=null;Session.ZoneTransition();if(p.Board){var b=Boards.FirstOrDefault(b=>b.Territory==p.Destination);if(b!=null)PlaceFlag(b.Territory,b.Map,MapCoordinates.ToWorld(b.Position,Service.DataManager.GetExcelSheet<Map>().GetRow(b.Map)));}else{
    Flow.Pauses&=~PauseReason.TravelError;
    if(Session.Target is {} target&&target.TerritoryType!=CurrentTerritory){Flow.Pauses|=PauseReason.NoZone;Flow.Status="Телепорт завершён. Перейдите в "+target.TerritoryName+" через переход из города; сопровождение продолжится при входе.";}
   }return;}
   if(!casting && p.CastingSeen){p.CastStopped??=now;}else p.CastStopped=null;
-  if(p.Expired(now) || !p.CastingSeen&&!p.Loaded&&now-p.Started>=5000 || p.CastStopped is {} stopped && now-stopped>=2000 && !p.Loaded || p.Loaded && CurrentTerritory!=p.Destination){pendingJourney=null;Flow.Pauses|=PauseReason.TravelError;Flow.Status="Телепорт отменён или прибытие не подтверждено. Нажмите «Продолжить» для повторного предложения.";externalTransition=true;}
+  if(sameZone&&p.Loaded&&!casting)p.LoadingFinishedAt??=now;
+  if(p.Expired(now) || p.LoadingFinishedAt is {} finished&&now-finished>=5000 || !p.CastingSeen&&!p.Loaded&&now-p.Started>=5000 || p.CastStopped is {} stopped && now-stopped>=2000 && !p.Loaded || p.Loaded && (CurrentTerritory!=p.Destination||wrongContext)){pendingJourney=null;Timing.Reset();Flow.Pauses|=PauseReason.TravelError;Flow.Status="Телепорт отменён или прибытие не подтверждено. Нажмите «Продолжить» для повторного предложения.";}
  }
  private unsafe MarkerStamp? ReadFlag(){if(MarkerReader!=null)return MarkerReader();var map=AgentMap.Instance();if(map==null||map->FlagMarkerCount==0)return null;var flag=map->FlagMapMarkers[0];return new(flag.TerritoryId,flag.MapId,flag.XFloat,flag.YFloat);}
  private void CheckMarker(){if(ownedMarker is {} expected && Flow.CanNavigate&&pendingJourney==null&&!expected.Matches(ReadFlag())){Flow.Pauses|=PauseReason.Marker;Search.Suspend();Flow.Status="Игровая метка изменена. Нажмите «Вернуть сопровождение».";NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");NativeDialogs.Cancel("travel");}}
@@ -254,10 +264,14 @@ public sealed partial class Plugin {
  internal void ShowMap(MobHuntEntry m){
   if(!Ready)return;try{
   var map=Service.DataManager.GetExcelSheet<Map>().GetRow(m.MapId);Vector2? pos=Position(m);
-  if(m.IsEliteMark&&Session.Target is {} current&&JourneyFlow.Key(current)==JourneyFlow.Key(m)&&searchKey==SearchIdentity(m)&&Search.LockedPosition is {} known)pos=MapUtil.WorldToMap(known,map);
+  bool current=Session.Target is {} target&&JourneyFlow.Key(target)==JourneyFlow.Key(m);
+  if(current){
+   if(m.IsEliteMark&&searchKey==SearchIdentity(m)&&Search.LockedPosition is {} known)pos=MapUtil.WorldToMap(known,map);
+   else if(!m.IsEliteMark&&ordinaryActor!=null&&ordinaryKind==JourneyFlow.Key(m)&&ordinaryPosition is {} tracked)pos=MapUtil.WorldToMap(tracked,map);
+  }
   if(pos==null){NoticeText="Для цели нет координат.";return;}
-  if(Flow.Active && (Session.Target==null||JourneyFlow.Key(Session.Target)!=JourneyFlow.Key(m))){Flow.Pauses|=PauseReason.Marker;Flow.Status="Просмотр другой цели. Верните сопровождение для смены меток.";}
-  Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(m.TerritoryType,map,pos.Value));
+  if(!Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(m.TerritoryType,map,pos.Value))){NoticeText="Карту этой цели открыть не удалось.";return;}
+  if(Flow.Active && !current){Flow.Pauses|=PauseReason.Marker;Flow.Status="Просмотр другой цели. Верните сопровождение для смены меток.";}
   if(!Flow.Pauses.HasFlag(PauseReason.Marker)){var world=MapCoordinates.ToWorld(pos.Value,map);ownedMarker=new(m.TerritoryType,m.MapId,world.X,world.Y);}
   }catch(Exception e){NoticeText="Карту этой цели открыть не удалось: "+e.Message;}
  }
@@ -279,7 +293,8 @@ public sealed partial class Plugin {
   var target=candidates.First(m=>!m.IsEliteMark&&m.MobHuntId==ordinary.NameId&&(Flow.Manual==null||JourneyFlow.Key(m)==Flow.Manual));
   if(Session.Target==null || JourneyFlow.Key(Session.Target)!=JourneyFlow.Key(target))Session.Retarget(target);
   var position=new Vector2(ordinary.Position.X,ordinary.Position.Z);
-  bool changed=ordinaryActor!=ordinary.GameObjectId||ordinaryKind!=JourneyFlow.Key(target)||ordinaryPosition is not {} previousPosition||Vector2.Distance(previousPosition,position)>=2;
+  bool changed=ordinaryActor!=ordinary.GameObjectId||ordinaryKind!=JourneyFlow.Key(target)
+   ||ownedMarker is not {} flag||flag.Territory!=target.TerritoryType||flag.Map!=target.MapId||Vector2.Distance(new(flag.X,flag.Y),position)>=2;
   ordinaryActor=ordinary.GameObjectId;ordinaryKind=JourneyFlow.Key(target);ordinaryPosition=position;
   if(changed)PlaceFlag(target.TerritoryType,target.MapId,position);
   return true;
@@ -288,10 +303,19 @@ public sealed partial class Plugin {
  private void AuditState(){string value=$"{Session.Phase}|{Session.Target?.MobHuntId}|{Flow.Pauses}|{Flow.Status}";if(value==lastJournal)return;lastJournal=value;journal.Enqueue(DateTimeOffset.UtcNow.ToString("O")+" "+value);while(journal.Count>200)journal.Dequeue();}
  internal void Export(){if(stateFile==null)return;string path=Path.Combine(Path.GetDirectoryName(stateFile)!,"hunt-diagnostics.txt");try{File.WriteAllLines(path,new[]{"Hunt Route "+typeof(Plugin).Assembly.GetName().Version}.Concat(journal));NoticeText="Диагностика сохранена: "+path;}catch(Exception e){NoticeText="Не удалось сохранить диагностику: "+e.Message;}}
  internal bool PersistenceBlocked=>settingsLoadPending;
- internal bool CompletionUncertain(Board board,bool weekly)=>(completionLoadPending||History.RequiresPickupEvidence)&&(weekly?new[]{board.Weekly}:board.Daily).Any(i=>BillStates.TryGetValue(i,out var s)&&s.CompletedCurrentSet&&!History.IsComplete(character,i,weekly,DateTimeOffset.UtcNow,s.AvailableId));
+ internal bool CompletionUncertain(Board board,bool weekly)=>(completionLoadPending||History.RequiresPickupEvidence)&&(weekly?new[]{board.Weekly}:board.Daily).Any(i=>BillStates.TryGetValue(i,out var s)&&s.CompletedCurrentSet&&!History.IsComplete(character,i,weekly,DateTimeOffset.UtcNow,s.AvailableId)&&!RepeatedSetAvailable(i,weekly,DateTimeOffset.UtcNow,s));
  internal bool BoardReachable(Board b)=>CurrentTerritory==b.Territory||Service.Aetherytes is not null&&Service.Aetherytes.Any(a=>a.AetheryteId==b.Aetheryte);
  internal string LocationLabel=>Session.Target is {IsEliteMark:true}?Search.Lost?"Последняя известная позиция":Search.ActorId!=null?"Элита обнаружена":"Предполагаемые места появления":ordinaryActor!=null&&Session.Target is {} goal&&ordinaryKind==JourneyFlow.Key(goal)?"Моб обнаружен":"Известная точка охоты";
- internal bool CanPickup(Board b,bool weekly){var ids=weekly?new[]{b.Weekly}:b.Daily;return ids.Any(i=>!unreadBills.Contains(i)&&BillStates.TryGetValue(i,out var state)&&state.Unlocked&&state.AvailableId>0&&!state.Taken&&!state.CompletedCurrentSet&&!History.IsComplete(character,i,weekly,DateTimeOffset.UtcNow,state.AvailableId));}
+ private bool RepeatedSetAvailable(byte bill,bool weekly,DateTimeOffset now,BillState state)=>
+  !completionLoadPending&&!state.Taken&&state.CompletedCurrentSet
+  &&History.IsPreviousCompletion(character,bill,weekly,now,state.AvailableId)
+  &&!History.IsComplete(character,bill,weekly,now,state.AvailableId);
+ internal bool CanPickup(Board b,bool weekly){
+  var ids=weekly?new[]{b.Weekly}:b.Daily;
+  var now=DateTimeOffset.UtcNow;
+  return ids.Any(i=>!unreadBills.Contains(i)&&BillStates.TryGetValue(i,out var state)&&state.Unlocked&&state.AvailableId>0&&!state.Taken
+   &&(!state.CompletedCurrentSet||RepeatedSetAvailable(i,weekly,now,state))&&!History.IsComplete(character,i,weekly,now,state.AvailableId));
+ }
  private string LoginMode()=>Mobs.Any(m=>AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m))?"taken":Boards.Any(b=>CanPickup(b,false)||CanPickup(b,true))?"pickup":"summary";
  private void OfferLoginNotice(){
   string mode=LoginMode();

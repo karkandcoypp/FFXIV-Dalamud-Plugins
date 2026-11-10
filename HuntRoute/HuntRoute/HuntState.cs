@@ -76,8 +76,10 @@ public sealed class JourneyFlow {
 public sealed record PendingJourney(uint Source,uint Destination,uint Map,long Started,string? Target,bool Board) {
  public System.Numerics.Vector2? Origin {get;set;}
  public System.Numerics.Vector2? ArrivalPoint {get;set;}
+ public string? OriginContext {get;init;}
  public bool Loaded {get;set;}
  public bool CastingSeen {get;set;}
  public long? CastStopped {get;set;}
+ public long? LoadingFinishedAt {get;set;}
  public bool Expired(long now)=>now>=Started && now-Started>=120000;
 }

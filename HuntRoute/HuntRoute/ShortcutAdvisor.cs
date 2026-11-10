@@ -15,6 +15,9 @@ public static class ShortcutAdvisor {
     // Estimates use horizontal flight distance; terrain and altitude are not available here.
     public const float FlightSpeed=20,MinimumFlightSeconds=30,MinimumSavedSeconds=10,MinimumSavedFraction=.20f;
     public const uint MaximumCost=200;
+    public static bool MatchesQuote(ShortcutOffer offered,ShortcutOffer current) =>
+        current.RunId==offered.RunId && current.ContractKey==offered.ContractKey && current.Territory==offered.Territory
+        && current.Aetheryte==offered.Aetheryte && current.GilCost<=offered.GilCost;
     public static ShortcutOffer? Evaluate(uint run,MobHuntEntry target,Vector2 player,Vector2 destination,IEnumerable<ShortcutCandidate> entries,float teleportOverheadSeconds=18,uint maximumCost=MaximumCost,float minimumSeconds=MinimumSavedSeconds,float minimumFraction=MinimumSavedFraction) {
         float direct=Vector2.Distance(player,destination);
         float directSeconds=direct/FlightSpeed;

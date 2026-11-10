@@ -45,9 +45,15 @@ public sealed class CompletionHistory {
         character!=0 && Characters.TryGetValue(character,out var bills) && bills.TryGetValue(bill,out var record)
         && record.CompletedPeriod==Period(now,weekly) && record.CompletedOrder!=0
         && (available==0 || available==record.CompletedOrder);
+    public bool IsPreviousCompletion(ulong character,byte bill,bool weekly,DateTimeOffset now,byte order) =>
+        order!=0 && Characters.TryGetValue(character,out var bills) && bills.TryGetValue(bill,out var record)
+        && record.CompletedOrder==order && record.CompletedPeriod!=0 && record.CompletedPeriod<Period(now,weekly);
     public static CompletionHistory Load(string path) {
-        if(!File.Exists(path)) return new();
-        var history=JsonSerializer.Deserialize<CompletionHistory>(File.ReadAllText(path)) ?? throw new InvalidDataException("Empty completion history");
+        string json;
+        try{json=File.ReadAllText(path);}
+        catch(FileNotFoundException){return new();}
+        catch(DirectoryNotFoundException){return new();}
+        var history=JsonSerializer.Deserialize<CompletionHistory>(json) ?? throw new InvalidDataException("Empty completion history");
         if(history.Version!=1 || history.Characters==null) throw new InvalidDataException("Unsupported completion history");
         foreach(var bills in history.Characters.Values) {
             if(bills==null) throw new InvalidDataException("Invalid character history");

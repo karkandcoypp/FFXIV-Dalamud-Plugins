@@ -11,6 +11,10 @@ static class PlanAuditChecks {
   var guard=new BillSnapshotGuard();
   BillSnapshot Taken(byte order,int kills=0)=>new(true,order,[kills,0,0,0,0]);
   check(guard.Observe(1,Taken(1,2),0,10),"Initial taken bill accepted");
+  check(!guard.Observe(1,Taken(1,0),800,10)&&guard.Current(1)!.Kills[0]==2,"A single same-order counter regression cannot revive completed goals");
+  check(guard.Observe(1,Taken(1,2),900,10),"An intact snapshot cancels counter regression");
+  check(!guard.Observe(2,Taken(1,99),0,0),"Invalid readings cannot initialize a guard");
+  check(guard.Observe(2,Taken(1,3),1000,10)&&!guard.Observe(2,Taken(1,0),2000,10)&&!guard.Observe(2,Taken(1,1),3000,10)&&guard.Observe(2,Taken(1,1),4000,10),"Only matching spaced lower counters confirm a correction");
   check(!guard.Observe(1,new(false,0,[0,0,0,0,0]),1000,10)&&guard.Current(1)!.Kills[0]==2,"Single empty snapshot preserves accepted bill and counters");
   check(guard.Observe(1,Taken(1,3),2000,10),"Valid recovery cancels candidate removal");
   check(!guard.Observe(1,new(false,1,[3,0,0,0,0]),3000,10),"Completion removal also needs confirmation");

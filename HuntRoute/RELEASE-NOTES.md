@@ -1,3 +1,9 @@
+# 0.4.26
+
+- Preserve manual goals through temporary coordinate loss. Keep ordinary flags on the tracked actor and retry failed writes on resume.
+- Validate same-zone arrivals against the map, instance and destination. Reject outdated shortcut quotes before confirmation.
+- Guard transient counter drops, replay completions after history read failures, and distinguish retained IDs from current-period completion.
+
 # 0.4.25
 
 - Added focus previews for both rows of the native numeric controls.

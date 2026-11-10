@@ -38,6 +38,8 @@ public sealed partial class Plugin : IDalamudPlugin {
     internal readonly NativeDialogService NativeDialogs;
     internal NativeHuntUi? NativeMain;
     private CompletionHistory? completionHistory;
+    private List<(ulong Character,byte Bill,bool Weekly,DateTimeOffset At,BillState State)>? pendingCompletionObservations;
+    private Dictionary<(ulong Character,byte Bill),(long Period,BillState State)>? pendingCompletionSnapshots;
     private CompletionHistory History => completionHistory ??= new();
     private string? completionFile;
     private long nextHistorySave;
@@ -148,12 +150,12 @@ public sealed partial class Plugin : IDalamudPlugin {
                 snapshots[bill]=BillState.FromGame(hunt->IsMarkBillUnlocked(bill),obtained,retainedId,hunt->AvailableMarkId[bill],complete,type.OrderAmount);
             }
             var observedAt=DateTimeOffset.UtcNow;
-            foreach(var pair in snapshots.Where(p=>!unreadBills.Contains(p.Key))) History.Observe(character,pair.Key,Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(pair.Key).Type==2,observedAt,pair.Value);
+            foreach(var pair in snapshots.Where(p=>!unreadBills.Contains(p.Key))) ObserveCompletion(character,pair.Key,Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(pair.Key).Type==2,observedAt,pair.Value);
             SaveHistory();
             BillStates=snapshots;
             contractAt=Now;contractRevision++;
-            Timing.Ready(contractAt); Ready = true; Error = null;
-            ReconcileContext();ReconcileTravel();CheckMarker();AdvanceRoute();CheckResetNotice();NativeDialogs.Pump();if(NativeDialogs.Error is {} dialogError)NoticeText=dialogError;AuditState();SaveJourney();
+            Ready = true; Error = null;
+            ReconcileContext();ReconcileTravel();if(pendingJourney==null)Timing.Ready(contractAt);CheckMarker();AdvanceRoute();CheckResetNotice();NativeDialogs.Pump();if(NativeDialogs.Error is {} dialogError)NoticeText=dialogError;AuditState();SaveJourney();
         } catch (Exception e) { Ready = false; Error = e.Message; nextScan=Now+10000; Service.PluginLog.Error(e, "Reading hunt bills"); }
     }
     private unsafe void ReadBills() {
@@ -276,13 +278,19 @@ public sealed partial class Plugin : IDalamudPlugin {
     internal void AdvanceRoute() {
         if(Ready&&Session.Target is {IsEliteMark:true} credited&&!unreadBills.Contains(credited.BillNumber)&&Done(credited)){Search.Start([]);searchKey="";if(Flow.Manual==JourneyFlow.Key(credited))Flow.Manual=null;}
         if(!Ready || Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.Casting,ConditionFlag.Unconscious) || Now<nextTeleportAllowed) { Search.Suspend();return; }
+        if(pendingJourney!=null){Search.Suspend();return;}
         if(Session.Target is {} uncertainTarget&&unreadBills.Contains(uncertainTarget.BillNumber)){Search.Suspend();Flow.Status="Данные текущего контракта уточняются. Цель сохранена.";NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");return;}
         if(Flow.Active&&Session.Phase==RoutePhase.AwaitingTravel&&Session.Target is {} planned&&Done(planned)){
             NativeDialogs.Cancel("travel");ResetTargetTracking();var remaining=BestTarget();
             if(remaining==null){Session.Stop();Flow.Active=false;Flow.Status="Доступные цели выполнены. Проверьте отложенные.";SaveJourney(true);return;}
             if(remaining.TerritoryType==Service.ClientState.TerritoryType)Session.Continue(remaining);else Session.PlanTravel(remaining,AllTiers);
         }
-        if(Flow.Active && Flow.Pauses.HasFlag(PauseReason.Unavailable) && Routes.SelectMany(r=>r.Mobs).Any(Eligible))Flow.Pauses&=~PauseReason.Unavailable;
+        var manual=ManualTarget();
+        if(Flow.Active&&manual!=null&&Flow.Pauses.HasFlag(PauseReason.Unavailable))RefreshLive();
+        if(Flow.Active&&manual!=null&&!Eligible(manual)){
+            PauseUnavailableManual();return;
+        }
+        if(Flow.Active && Flow.Pauses.HasFlag(PauseReason.Unavailable) && (manual!=null||Routes.SelectMany(r=>r.Mobs).Any(Eligible)))Flow.Pauses&=~PauseReason.Unavailable;
         if(Flow.Active && Flow.Manual==null && Flow.Pauses.HasFlag(PauseReason.NoZone)){
             var local=Routes.SelectMany(r=>r.Mobs).FirstOrDefault(m=>m.TerritoryType==Service.ClientState.TerritoryType&&Eligible(m));
             if(local!=null){Flow.Pauses&=~PauseReason.NoZone;Session.Continue(local);}
@@ -359,17 +367,20 @@ public sealed partial class Plugin : IDalamudPlugin {
             .Select(e=>new ShortcutCandidate(e.Id,e.Name,MapCoordinates.ToWorld(e.Position,map),prices[e.Id]));
         return ShortcutAdvisor.Evaluate(Session.RunId,target,here,destination,candidates,Timing.OverheadSeconds,Settings.MaxGil,Settings.MinSeconds,Settings.MinPercent/100f);
     }
+    internal bool ShortcutStillValid(ShortcutOffer offered) =>
+        FindShortcut() is {} current && ShortcutAdvisor.MatchesQuote(offered,current);
     internal bool AcceptShortcut(ShortcutOffer offered) {
-        var current=FindShortcut();
-        if(current==null || current.RunId!=offered.RunId || current.ContractKey!=offered.ContractKey || current.Bill!=offered.Bill || current.Mob!=offered.Mob
-            || current.TargetId!=offered.TargetId || current.Aetheryte!=offered.Aetheryte || current.GilCost>offered.GilCost) {
+        if(!ShortcutStillValid(offered) || TravelBusy) {
             Service.Chat.PrintError("Предложение изменилось или больше не сокращает путь. Проверьте обновлённые данные."); return false;
         }
-        if(!Teleport(current.Aetheryte,true)) return false;
-        var destinationEntry=Entries(Session.Target!.MapId,current.Territory).FirstOrDefault(e=>e.Id==current.Aetheryte);
+        var destinationEntry=Entries(Session.Target!.MapId,offered.Territory).FirstOrDefault(e=>e.Id==offered.Aetheryte);
+        if(destinationEntry==null||Service.ObjectTable.LocalPlayer is not {} sourcePlayer)return false;
         var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(Session.Target.MapId);
-        var sourcePlayer=Service.ObjectTable.LocalPlayer;
-        pendingJourney=new(CurrentTerritory,current.Territory,Session.Target.MapId,Now,JourneyFlow.Key(Session.Target),false){ArrivalPoint=destinationEntry==null?null:MapCoordinates.ToWorld(destinationEntry.Position,map),Origin=sourcePlayer==null?null:new Vector2(sourcePlayer.Position.X,sourcePlayer.Position.Z)};
+        var origin=new Vector2(sourcePlayer.Position.X,sourcePlayer.Position.Z);
+        var originContext=ContextKey();
+        var arrival=MapCoordinates.ToWorld(destinationEntry.Position,map);
+        if(!Teleport(offered.Aetheryte,true))return false;
+        pendingJourney=new(CurrentTerritory,offered.Territory,Session.Target.MapId,Now,JourneyFlow.Key(Session.Target),false){ArrivalPoint=arrival,Origin=origin,OriginContext=originContext};
         Session.ZoneTransition();nextScan=0;routeSignature="";
         return true;
     }
@@ -378,13 +389,31 @@ public sealed partial class Plugin : IDalamudPlugin {
         var now=DateTimeOffset.UtcNow;var indices=weekly?new[]{b.Weekly}:b.Daily;
         var states=indices.ToDictionary(i=>i,i=> {
             var state=BillStates.GetValueOrDefault(i);
-            return state with {PeriodCompleted=History.IsComplete(character,i,weekly,now,state.AvailableId)};
+            return state with {PeriodCompleted=History.IsComplete(character,i,weekly,now,state.AvailableId),RepeatedSetAvailable=RepeatedSetAvailable(i,weekly,now,state)};
         });
         return ContractProgress.Summarize(indices,states);
     }
+    private void ObserveCompletion(ulong id,byte bill,bool weekly,DateTimeOffset at,BillState state) {
+        if(completionLoadPending&&id!=0&&state.Unlocked){
+            var snapshot=(ResetClock.Period(at,weekly).ToUnixTimeSeconds(),state);
+            var snapshots=pendingCompletionSnapshots??=new();
+            if(!snapshots.TryGetValue((id,bill),out var previous)||previous!=snapshot){
+                snapshots[(id,bill)]=snapshot;
+                (pendingCompletionObservations??=new()).Add((id,bill,weekly,at,state));
+            }
+        }
+        History.Observe(id,bill,weekly,at,state);
+    }
     private void SaveHistory(bool force=false) {
         if(completionLoadPending && completionFile!=null && (force || Now>=nextHistorySave)){
-            try{completionHistory=CompletionHistory.LoadRecovering(completionFile);completionLoadPending=false;HistorySaveError=null;foreach(var pair in BillStates)History.Observe(character,pair.Key,Boards.Any(b=>b.Weekly==pair.Key),DateTimeOffset.UtcNow,pair.Value);}
+            try{
+                var recovered=CompletionHistory.LoadRecovering(completionFile);
+                if(pendingCompletionObservations!=null)
+                    foreach(var observation in pendingCompletionObservations)
+                        recovered.Observe(observation.Character,observation.Bill,observation.Weekly,observation.At,observation.State);
+                completionHistory=recovered;completionLoadPending=false;HistorySaveError=null;
+                pendingCompletionObservations=null;pendingCompletionSnapshots=null;
+            }
             catch(Exception e){nextHistorySave=Now+10000;HistorySaveError="История выполнения временно недоступна для чтения. Исходный файл сохранён.";Service.PluginLog.Debug(e,"Повторное чтение истории");return;}
         }
         if(completionLoadPending || !History.Dirty || completionFile==null || (!force && Now<nextHistorySave)) return;

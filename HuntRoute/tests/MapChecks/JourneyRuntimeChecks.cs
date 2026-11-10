@@ -62,11 +62,13 @@ static class JourneyRuntimeChecks {
   Service.Condition=Proxy<ICondition>((m,args)=>args is {Length:>0} ? args[0] is ConditionFlag[] flags?flags.Any(Flag):Flag((ConditionFlag)args[0]!) : false);
   Service.DataManager=new SheetServices(game);Service.PluginLog=Proxy<IPluginLog>((_,_)=>null);
   Service.Player=Proxy<IPlayerState>((m,_)=>m.Name switch{"get_IsLoaded"=>true,"get_ContentId"=>123UL,_=>throw new Exception(m.Name)});
-  var entries=game.Excel.GetSheet<Aetheryte>().Where(a=>a.IsAetheryte).Select(a=>Proxy<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>((m,_)=>m.Name switch{"get_AetheryteId"=>a.RowId,"get_GilCost"=>100u,_=>throw new Exception(m.Name)})).ToArray();
+  uint shortcutPrice=100;
+  var entries=game.Excel.GetSheet<Aetheryte>().Where(a=>a.IsAetheryte).Select(a=>Proxy<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>((m,_)=>m.Name switch{"get_AetheryteId"=>a.RowId,"get_GilCost"=>shortcutPrice,_=>throw new Exception(m.Name)})).ToArray();
   Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?entries.AsEnumerable().GetEnumerator():throw new Exception(m.Name));
   MarkerStamp? marker=null;int writes=0,ports=0,opens=0;
   Set(plugin,"MarkerReader",(Func<MarkerStamp?>)(()=>marker));Set(plugin,"MarkerWriter",(Func<MarkerStamp,bool>)(stamp=>{marker=stamp;writes++;return true;}));Set(plugin,"TeleportTransport",(Func<uint,bool>)(_=>{ports++;return true;}));
-  Service.GameGui=Proxy<IGameGui>((m,_)=>{if(m.Name=="OpenMapWithMapLink"){opens++;return true;}throw new Exception(m.Name);});
+  bool mapOpens=true;int rawMapX=0;
+  Service.GameGui=Proxy<IGameGui>((m,args)=>{if(m.Name=="OpenMapWithMapLink"){opens++;rawMapX=((Dalamud.Game.Text.SeStringHandling.Payloads.MapLinkPayload)args![0]!).RawX;return mapOpens;}throw new Exception(m.Name);});
   Set(plugin,"ContextProvider",(Func<string>)(()=>territory+":"+mapId));
   MobHuntEntry Daily(uint id,byte mob,uint zone){var row=game.Excel.GetSubrowSheet<MobHuntOrder>().SelectMany(g=>g).Where(o=>o.Target.RowId!=0).Select(o=>o.Target.Value).First(t=>t.Name.RowId==id&&t.Map.Value.TerritoryType.RowId==zone);return new(){Name=row.Name.Value.Singular.ToString(),BillNumber=1,OrderId=1,MobIndex=mob,MobHuntId=id,NeededKills=1,TerritoryType=zone,MapId=row.Map.RowId,TerritoryName=row.Map.Value.PlaceName.Value.Name.ToString()};}
   var a=Daily(3481,0,397);var b=Daily(3479,1,397);var c=Daily(3494,2,401);
@@ -76,6 +78,25 @@ static class JourneyRuntimeChecks {
   IBattleNpc Npc(ulong id,uint name,Vector3 location,bool dead=false)=>Proxy<IBattleNpc>((m,_)=>m.Name switch{"get_GameObjectId"=>id,"get_NameId"=>name,"get_Position"=>location,"get_IsDead"=>dead,_=>throw new Exception(m.Name)});
   objects=[Npc(10,a.MobHuntId,new(10,0,0)),Npc(11,b.MobHuntId,new(20,0,0))];Call(plugin,"AdvanceRoute");Check(session.Target==a&&marker?.X==10,"Ordinary detection replaces anchor with nearest actual position");
   objects=[Npc(10,a.MobHuntId,new(12,0,0)),Npc(11,b.MobHuntId,new(1,0,0))];Call(plugin,"AdvanceRoute");Check(session.Target==a&&marker?.X==12,"Ordinary actor stays selected while another gets closer; position updates");
+  objects=[Npc(10,a.MobHuntId,new(13,0,0)),Npc(12,a.MobHuntId,new(1,0,0))];Call(plugin,"AdvanceRoute");Check(marker?.X==12,"First short move stays inside flag tolerance");
+  objects=[Npc(10,a.MobHuntId,new(14,0,0)),Npc(12,a.MobHuntId,new(1,0,0))];Call(plugin,"AdvanceRoute");Check(marker?.X==14,"Short moves accumulate from last confirmed flag");
+  Call(plugin,"ShowMap",a);Check(Math.Abs(rawMapX-14000)<4,"Opening current target uses held actor even when a different same-name actor is closer");
+  mapOpens=false;var priorFlag=Get<MarkerStamp?>(plugin,"ownedMarker");Call(plugin,"ShowMap",b);
+  Check(flow.Pauses==PauseReason.None&&Get<MarkerStamp?>(plugin,"ownedMarker")==priorFlag,"Failed map open preserves flag ownership and pause");
+  mapOpens=true;opens=0;
+  Set(plugin,"MarkerWriter",(Func<MarkerStamp,bool>)(_=>false));objects=[Npc(10,a.MobHuntId,new(18,0,0))];Call(plugin,"AdvanceRoute");
+  Check(flow.Pauses.HasFlag(PauseReason.FlagError)&&marker?.X==14,"Failed flag write pauses while preserving old marker");
+  Set(plugin,"MarkerWriter",(Func<MarkerStamp,bool>)(stamp=>{marker=stamp;writes++;return true;}));Call(plugin,"ResumeJourney");
+  Check(marker?.X==18&&!flow.Pauses.HasFlag(PauseReason.FlagError),"Resume retries the same unchanged actor after flag failure");
+  var unknown=new MobHuntEntry{BillNumber=1,OrderId=1,MobIndex=4,MobHuntId=99999999,NeededKills=1,TerritoryType=territory,MapId=mapId};
+  var originalMobs=Get<List<MobHuntEntry>>(plugin,"Mobs");originalMobs.Add(unknown);
+  var localGoals=Get<List<ZoneRoute>>(plugin,"Routes").First().Mobs;localGoals.Add(unknown);
+  objects=[Npc(13,unknown.MobHuntId,new(3,0,0))];Call(plugin,"Track",unknown);Check(session.Target==unknown,"Manual live-only target is tracked");
+  objects=[Npc(10,a.MobHuntId,new(18,0,0))];Call(plugin,"RefreshLive");Call(plugin,"AdvanceRoute");Call(plugin,"ResumeJourney");
+  Check(session.Target==unknown&&flow.Manual==JourneyFlow.Key(unknown)&&flow.Pauses.HasFlag(PauseReason.Unavailable),"Unavailable manual goal remains pinned despite another available target");
+  objects=[Npc(13,unknown.MobHuntId,new(3,0,0))];Call(plugin,"AdvanceRoute");
+  Check(session.Target==unknown&&session.Phase==RoutePhase.Following&&flow.Pauses==PauseReason.None&&marker?.X==3,"Manual goal resumes when it regains coordinates");
+  originalMobs.Remove(unknown);localGoals.Remove(unknown);session.Retarget(a);
   flow.Manual=JourneyFlow.Key(a);objects=[Npc(20,elite.MobHuntId,new(2,0,0))];Call(plugin,"AdvanceRoute");Check(session.Target==a&&search.ActorId==null,"Manual ordinary goal cannot be preempted by detected elite");
   flow.Manual=null;Call(plugin,"AdvanceRoute");Check(session.Target==elite&&search.ActorId==20&&marker?.X==2,"Auto mode preempts ordinary target with live elite");
   objects=[];Call(plugin,"AdvanceRoute");Check(search.Lost&&search.ActorId==20,"Lost elite stays locked");
@@ -182,6 +203,25 @@ static class JourneyRuntimeChecks {
   Set(plugin,"pendingJourney",null);Set(plugin,"nextTeleportAllowed",0L);flow.Pauses=PauseReason.None;territory=397;mapId=a.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);session.Retarget(a);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,c,elite});counts.Clear();
   var anchor=MapCoordinates.ToWorld(Location.Database[a.MobHuntId].Coordinate,game.Excel.GetSheet<Map>().GetRow(a.MapId));position=new(anchor.X+5000,0,anchor.Y);
   var shortcut=(ShortcutOffer?)Call(plugin,"FindShortcut");Check(shortcut!=null,$"Long-flight regression fixture has a valid shortcut: phase={session.Phase}, pause={flow.Pauses}, ready={Get<bool>(plugin,"Ready")}, settings={store.Settings.Shortcuts}, overhead={Get<ShortcutTiming>(plugin,"Timing").OverheadSeconds}, point={position}, anchor={anchor}, entries={alternatives.Count}");queue.Clear();Call(Get<ShortcutWindow>(plugin,"Shortcut"),"Sync");request=queue.Activate(true);Check(request?.Owner=="shortcut","Shortcut controller queues reviewed proposal");
+  shortcutPrice=150;Check(!request!.Valid()&&queue.Resolve(request.Key,true)==null,"Price increase invalidates the active shortcut before acceptance");
+  queue.Retry(request);Check(queue.Activate(true)==null,"Stale shortcut cannot be requeued");shortcutPrice=100;
+  var quoted=shortcut??throw new Exception("Missing quote");
+  Check(!ShortcutAdvisor.MatchesQuote(quoted,quoted with {Aetheryte=quoted.Aetheryte+1}),"Switching optimal aetheryte invalidates old quote");
+  string contextAtDeparture=territory+":"+mapId;
+  var sameZone=new PendingJourney(territory,territory,mapId,clock,JourneyFlow.Key(a),false){Loaded=true,Origin=new(position.X,position.Z),ArrivalPoint=anchor,OriginContext=contextAtDeparture};
+  Set(plugin,"pendingJourney",sameZone);int beforeUnrelated=writes;
+  Call(plugin,"ReconcileTravel");Call(plugin,"AdvanceRoute");
+  Check(Get<PendingJourney?>(plugin,"pendingJourney")==sameZone&&writes==beforeUnrelated,"Unrelated load at origin does not confirm arrival or write a flag");
+  clock+=5000;Call(plugin,"ReconcileTravel");
+  Check(Get<PendingJourney?>(plugin,"pendingJourney")==null&&flow.Pauses.HasFlag(PauseReason.TravelError),"Unrelated load expires without leaving the route waiting indefinitely");
+  Set(plugin,"pendingJourney",sameZone);
+  position=new(anchor.X,0,anchor.Y);Set(plugin,"ContextProvider",(Func<string>)(()=>contextAtDeparture+":other-instance"));Call(plugin,"ReconcileTravel");
+  Check(Get<PendingJourney?>(plugin,"pendingJourney")==null&&flow.Pauses.HasFlag(PauseReason.TravelError),"Wrong instance rejects arrival even near the destination");
+  Set(plugin,"ContextProvider",(Func<string>)(()=>territory+":"+mapId));Set(plugin,"pendingJourney",sameZone);Set(plugin,"CurrentMap",mapId+1);Call(plugin,"ReconcileTravel");
+  Check(Get<PendingJourney?>(plugin,"pendingJourney")==null&&flow.Pauses.HasFlag(PauseReason.TravelError),"Wrong map rejects arrival");
+  Set(plugin,"CurrentMap",mapId);Set(plugin,"pendingJourney",sameZone);Call(plugin,"ReconcileTravel");
+  Check(Get<PendingJourney?>(plugin,"pendingJourney")==null&&!flow.Pauses.HasFlag(PauseReason.TravelError),"Reaching destination on expected map and instance confirms arrival");
+  position=new(anchor.X+5000,0,anchor.Y);session.Retarget(a);
   Set(plugin,"ordinaryActor",(ulong?)777UL);Set(plugin,"ordinaryKind",JourneyFlow.Key(a));
   Set(plugin,"ordinaryPosition",(Vector2?)new Vector2(position.X,position.Z));
   Check(Call(plugin,"FindShortcut")==null,"A live tracked mob at the player cancels the otherwise beneficial static-anchor shortcut");
@@ -199,6 +239,37 @@ static class JourneyRuntimeChecks {
    Call(plugin,"SaveHistory",true);Check(Get<string?>(plugin,"HistorySaveError")!=null&&history.IsComplete(123,1,false,DateTimeOffset.UtcNow),"Write failure exposes persistent warning without altering confirmed completion");Directory.Delete(blocked);Call(plugin,"RetryPersistence");
    Check(Get<string?>(plugin,"HistorySaveError")==null&&CompletionHistory.Load(blocked).IsComplete(123,1,false,DateTimeOffset.UtcNow),"Explicit retry persists unchanged result and clears warning");
   }finally{Directory.Delete(ioFolder,true);Set(plugin,"completionFile",null);}
+  string recoveryFolder=Path.Combine(Path.GetTempPath(),"HuntRoute-history-replay-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(recoveryFolder);
+  try{
+   string path=Path.Combine(recoveryFolder,"history.json");var now=DateTimeOffset.UtcNow;
+   var oldHistory=new CompletionHistory();oldHistory.Observe(456,1,false,now,new(true,false,2,2,true));oldHistory.Save(path);
+   Set(plugin,"completionFile",path);Set(plugin,"completionLoadPending",true);Set(plugin,"completionHistory",new CompletionHistory(){RequiresPickupEvidence=true});
+   using(var locked=File.Open(path,FileMode.Open,FileAccess.Read,FileShare.None)){
+    Call(plugin,"ObserveCompletion",123UL,(byte)1,false,now,new BillState(true,true,1,1,false));
+    Call(plugin,"ObserveCompletion",123UL,(byte)1,false,now,new BillState(true,false,1,1,true));
+    Call(plugin,"SaveHistory",true);Check(Get<bool>(plugin,"completionLoadPending"),"Unread history remains pending while the file is locked");
+   }
+   Call(plugin,"SaveHistory",true);var recovered=CompletionHistory.Load(path);
+   Check(recovered.IsComplete(123,1,false,now)&&recovered.IsComplete(456,1,false,now),"Recovery replays fresh pickup and completion while preserving another character");
+  }finally{Directory.Delete(recoveryFolder,true);Set(plugin,"completionFile",null);}
+  var repeatHistory=new CompletionHistory();var currentTime=DateTimeOffset.UtcNow;var lastDaily=currentTime.AddDays(-1);var lastWeekly=currentTime.AddDays(-7);
+  var retained=new BillState(true,false,1,1,true);
+  repeatHistory.Observe(123,1,false,lastDaily,retained);repeatHistory.Observe(123,5,true,lastWeekly,retained);
+  repeatHistory.Observe(123,1,false,currentTime,retained);repeatHistory.Observe(123,5,true,currentTime,retained);
+  Set(plugin,"completionHistory",repeatHistory);Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,retained},{5,retained}});
+  var repeatBoard=Plugin.Boards[0];
+  savedNotice.DailyNotice=0;savedNotice.WeeklyNotice=0;Call(plugin,"CheckResetNotice");
+  Check(queue.Activate(true)?.Key.StartsWith("pickup:")==true,"Repeated available IDs trigger the new-contract notification");
+  queue.Clear();
+  foreach(bool weekly in new[]{false,true}){
+   Check((bool)Call(plugin,"CanPickup",repeatBoard,weekly)!,"Previously completed same-ID bill becomes available after its reset");
+   var progress=(ContractProgress)Call(plugin,"CollectionProgress",repeatBoard,weekly)!;
+   Check(progress.NewSets==1&&progress.Completed==0,"Repeated IDs report a new set without false completion");
+   byte bill=weekly?(byte)5:(byte)1;repeatHistory.Observe(123,bill,weekly,currentTime,new(true,true,1,1,false));repeatHistory.Observe(123,bill,weekly,currentTime,retained);
+   Check(!(bool)Call(plugin,"CanPickup",repeatBoard,weekly)!&&repeatHistory.IsComplete(123,bill,weekly,currentTime,1),"Fresh pickup and completion supersede retained history");
+  }
+  Set(plugin,"completionHistory",new CompletionHistory(){RequiresPickupEvidence=true});
+  Check(!(bool)Call(plugin,"CanPickup",repeatBoard,false)!,"A retained ID with unknown history cannot prove a repeat");
   // Login proposals are session-scoped, independently of persisted reset acknowledgement.
   queue.Clear();Set(plugin,"loginNoticeShown",false);Set(plugin,"Mobs",new List<MobHuntEntry>());Set(plugin,"completionHistory",new CompletionHistory());Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});flow.Active=false;flow.Pauses=PauseReason.None;
   savedNotice.DailyNotice=ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds();combat=true;Call(plugin,"CheckResetNotice");
