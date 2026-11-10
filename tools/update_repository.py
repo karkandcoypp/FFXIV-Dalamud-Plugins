@@ -30,6 +30,8 @@ def update(index_path, manifest_path, repository, tag):
     link = f'https://github.com/{repository}/releases/download/{tag}/{asset}'
     manifest.update(RepoUrl=f'https://github.com/{repository}',
                     DownloadLinkInstall=link, DownloadLinkUpdate=link, DownloadLinkTesting=link)
+    if name == 'HuntRoute':
+        manifest['IconUrl'] = f'https://raw.githubusercontent.com/{repository}/main/HuntRoute/icon.png'
     existing = next((i for i, item in enumerate(index) if item.get('InternalName') == manifest['InternalName']), None)
     if existing is None:
         index.append(manifest)
