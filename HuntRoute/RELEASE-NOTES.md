@@ -1,3 +1,8 @@
+# 0.4.25
+
+- Added focus previews for both rows of the native numeric controls.
+- Extended offline navigation and board confirmation dismissal checks.
+
 # 0.4.24
 
 - Keep new-contract notices eligible after the login continuation prompt.
