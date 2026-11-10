@@ -1,3 +1,8 @@
+# 0.4.27
+
+- Preserve player map flags when a temporarily unavailable target returns.
+- Cover confirmed shortcuts from teleport submission through the first target flag after arrival.
+
 # 0.4.26
 
 - Preserve manual goals through temporary coordinate loss. Keep ordinary flags on the tracked actor and retry failed writes on resume.

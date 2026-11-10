@@ -96,6 +96,14 @@ static class JourneyRuntimeChecks {
   Check(session.Target==unknown&&flow.Manual==JourneyFlow.Key(unknown)&&flow.Pauses.HasFlag(PauseReason.Unavailable),"Unavailable manual goal remains pinned despite another available target");
   objects=[Npc(13,unknown.MobHuntId,new(3,0,0))];Call(plugin,"AdvanceRoute");
   Check(session.Target==unknown&&session.Phase==RoutePhase.Following&&flow.Pauses==PauseReason.None&&marker?.X==3,"Manual goal resumes when it regains coordinates");
+  objects=[];Call(plugin,"RefreshLive");Call(plugin,"AdvanceRoute");
+  Check(flow.Pauses.HasFlag(PauseReason.Unavailable),"Manual target can become unavailable again");
+  marker=new(territory,mapId,999,999);var playerFlag=marker;int beforeRecovery=writes;
+  objects=[Npc(13,unknown.MobHuntId,new(6,0,0))];Call(plugin,"AdvanceRoute");
+  Check(marker==playerFlag&&writes==beforeRecovery&&flow.Pauses==PauseReason.Marker&&session.Target==unknown,
+   "Returning manual target preserves the player flag and pauses before writing");
+  Call(plugin,"ResumeJourney");
+  Check(marker?.X==6&&writes==beforeRecovery+1&&flow.Pauses==PauseReason.None,"Explicit resume restores the pinned target flag");
   originalMobs.Remove(unknown);localGoals.Remove(unknown);session.Retarget(a);
   flow.Manual=JourneyFlow.Key(a);objects=[Npc(20,elite.MobHuntId,new(2,0,0))];Call(plugin,"AdvanceRoute");Check(session.Target==a&&search.ActorId==null,"Manual ordinary goal cannot be preempted by detected elite");
   flow.Manual=null;Call(plugin,"AdvanceRoute");Check(session.Target==elite&&search.ActorId==20&&marker?.X==2,"Auto mode preempts ordinary target with live elite");
@@ -222,6 +230,25 @@ static class JourneyRuntimeChecks {
   Set(plugin,"CurrentMap",mapId);Set(plugin,"pendingJourney",sameZone);Call(plugin,"ReconcileTravel");
   Check(Get<PendingJourney?>(plugin,"pendingJourney")==null&&!flow.Pauses.HasFlag(PauseReason.TravelError),"Reaching destination on expected map and instance confirms arrival");
   position=new(anchor.X+5000,0,anchor.Y);session.Retarget(a);
+  queue.Clear();Call(new ShortcutWindow(plugin),"Sync");var confirmedShortcut=queue.Activate(true);
+  int portsBeforeShortcut=ports,writesBeforeShortcut=writes;uint shortcutRun=session.RunId;
+  Check(confirmedShortcut?.Owner=="shortcut"&&queue.Resolve(confirmedShortcut.Key,true)?.Accept()==true,"Confirming a fresh shortcut submits the reviewed teleport");
+  var actualJourney=Get<PendingJourney?>(plugin,"pendingJourney");
+  var expectedEntry=alternatives.Single(entry=>entry.Id==quoted.Aetheryte);
+  var expectedLanding=MapCoordinates.ToWorld(expectedEntry.Position,game.Excel.GetSheet<Map>().GetRow(a.MapId));
+  Check(actualJourney is {ArrivalPoint: {} landing}&&landing==expectedLanding&&actualJourney.Map==mapId&&ports==portsBeforeShortcut+1&&transported==quoted.Aetheryte,
+   "Accepted shortcut creates an arrival stamp for the submitted aetheryte");
+  casting=true;Call(plugin,"ReconcileTravel");Call(plugin,"AdvanceRoute");
+  Check(writes==writesBeforeShortcut&&session.Phase==RoutePhase.WaitingForZone,"No target flag is written while shortcut is casting");
+  loading=true;Call(plugin,"Update",(object?)null);loading=false;
+  Check(actualJourney!.Loaded&&writes==writesBeforeShortcut,"Loading is observed without writing a target flag");
+  casting=false;clock+=8000;position=new(expectedLanding.X,0,expectedLanding.Y);
+  Call(plugin,"ReconcileTravel");Call(plugin,"AdvanceRoute");
+  Check(Get<PendingJourney?>(plugin,"pendingJourney")==null&&session.Target==a&&session.RunId==shortcutRun&&session.Phase==RoutePhase.Following
+   &&writes==writesBeforeShortcut+1&&marker is {} firstFlag&&firstFlag.Matches(new(territory,mapId,anchor.X,anchor.Y)),
+   "Arrival writes exactly one flag for the active goal and continues the same route");
+  Call(plugin,"AdvanceRoute");Check(writes==writesBeforeShortcut+1&&ports==portsBeforeShortcut+1,"Next tick does not duplicate flag or teleport");
+  position=new(anchor.X+5000,0,anchor.Y);
   Set(plugin,"ordinaryActor",(ulong?)777UL);Set(plugin,"ordinaryKind",JourneyFlow.Key(a));
   Set(plugin,"ordinaryPosition",(Vector2?)new Vector2(position.X,position.Z));
   Check(Call(plugin,"FindShortcut")==null,"A live tracked mob at the player cancels the otherwise beneficial static-anchor shortcut");

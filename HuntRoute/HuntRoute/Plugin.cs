@@ -290,7 +290,10 @@ public sealed partial class Plugin : IDalamudPlugin {
         if(Flow.Active&&manual!=null&&!Eligible(manual)){
             PauseUnavailableManual();return;
         }
-        if(Flow.Active && Flow.Pauses.HasFlag(PauseReason.Unavailable) && (manual!=null||Routes.SelectMany(r=>r.Mobs).Any(Eligible)))Flow.Pauses&=~PauseReason.Unavailable;
+        if(Flow.Active && Flow.Pauses.HasFlag(PauseReason.Unavailable) && (manual!=null||Routes.SelectMany(r=>r.Mobs).Any(Eligible))){
+            Flow.Pauses&=~PauseReason.Unavailable;
+            CheckMarker();
+        }
         if(Flow.Active && Flow.Manual==null && Flow.Pauses.HasFlag(PauseReason.NoZone)){
             var local=Routes.SelectMany(r=>r.Mobs).FirstOrDefault(m=>m.TerritoryType==Service.ClientState.TerritoryType&&Eligible(m));
             if(local!=null){Flow.Pauses&=~PauseReason.NoZone;Session.Continue(local);}
