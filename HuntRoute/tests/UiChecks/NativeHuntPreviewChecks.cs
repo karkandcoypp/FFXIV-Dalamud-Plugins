@@ -9,6 +9,8 @@ internal static class NativeHuntPreviewChecks {
   var controller=new NativeHuntController(plugin);
   var samples=new List<(string Name,NativeHuntPage Page,NativeHuntScreen Screen,bool Mini,int Offset)>();
   foreach(var page in Enum.GetValues<NativeHuntPage>()){if(page==NativeHuntPage.Target)controller.FocusGoal();else controller.Navigate(page);samples.Add((page.ToString(),page,controller.Build(),false,0));}
+  var number=samples.Single(s=>s.Page==NativeHuntPage.Number);
+  samples.Add(("Number-lower",number.Page,number.Screen,false,0));
   samples.Add(("mini",NativeHuntPage.Hunt,controller.Build(true),true,0));
   var flow=(JourneyFlow)typeof(Plugin).GetProperty("Flow",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(plugin)!;
   var priorPauses=flow.Pauses;
@@ -44,14 +46,27 @@ internal static class NativeHuntPreviewChecks {
     if(r.Position.X<0||r.Position.Y<0||r.Position.X+r.Size.X>layout.Size.X||r.Position.Y+r.Size.Y>layout.Size.Y)
      throw new Exception("Native button exceeds its window: "+entry.Button.Key);
    }
+   var links=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+   if(sample.Page==NativeHuntPage.Boards){
+    var board=layout.Buttons.First(b=>b.Button.Enabled&&b.Button.Board!=null);
+    var queue=new ConfirmationQueue();
+    queue.Offer(new("travel","board-preview","К доске охоты?",()=>true,()=>true,()=>throw new Exception("Later must not teleport")));
+    var dialog=queue.Activate(true)??throw new Exception("Board confirmation did not open");
+    if(queue.Resolve(dialog.Key,false)!=null||queue.Active!=null||NativeHuntNavigation.RestoreFocus(links,board.Button.Key)!=board.Slot+1)
+     throw new Exception("Dismissing confirmation must restore the board row by key");
+    Console.WriteLine("PASS offline board dismissal and row focus restoration");
+   }
    if(sample.Page==NativeHuntPage.Number){
     var steps=layout.Buttons.Where(b=>b.Button.Action.Kind=="step").ToArray();
     if(steps.Length!=6||steps.GroupBy(b=>b.Row).Select(g=>g.Count()).ToArray() is not [3,3]||steps.Any(b=>b.Rect.Size.X!=NativeHuntLayout.ActionWidth))
      throw new Exception("Numeric controls must fit two compact rows");
-    var links=NativeHuntNavigation.Build(steps.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key)));
-    for(int column=0;column<3;column++)
-     if(links[column].Down!=links[column+3].Index||links[column+3].Up!=links[column].Index)
-      throw new Exception("Numeric focus must stay in the same column");
+    for(int column=0;column<3;column++){
+     var upper=links.Single(n=>n.Index==steps[column].Slot+1);
+     var lower=links.Single(n=>n.Index==steps[column+3].Slot+1);
+     if(upper.Down!=lower.Index||lower.Up!=upper.Index||
+        upper.Right!=steps[(column+1)%3].Slot+1||lower.Left!=steps[3+(column+2)%3].Slot+1)
+      throw new Exception("Numeric focus must follow the two-row grid");
+    }
    }
    if(sample.Page==NativeHuntPage.Zones){
     var zones=layout.Buttons.Where(b=>b.Button.Action.Kind=="filter-zone").ToArray();
@@ -78,6 +93,10 @@ internal static class NativeHuntPreviewChecks {
     }
     if(layout.PageText.Length>0)Text(layout.PageText,Center(layout.PageText,layout.PageLabel,14),14,new(.9f,.9f,.9f,1));
     var focused=layout.Buttons.FirstOrDefault(b=>b.Button.Enabled&&(b.Button.Board!=null||b.Button.Goal!=null||b.Button.Checked.HasValue||b.Button.Key=="primary"));
+    if(sample.Page==NativeHuntPage.Number){
+     string key=sample.Name=="Number-lower"?"step:10":"step:-10";
+     focused=layout.Buttons.Single(b=>b.Button.Key==key&&b.Button.Enabled);
+    }
     if(sample.Page is NativeHuntPage.Advanced or NativeHuntPage.Filters)focused=layout.Buttons.FirstOrDefault(b=>b.Row==1&&b.Button.Enabled);
     foreach(var entry in layout.Buttons){
      var r=entry.Rect;
