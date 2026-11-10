@@ -27,6 +27,19 @@ static class NativeNavigationChecks {
    var paired=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
    check(paired.Single(n=>n.Index==map.Slot+1).Right==rightOfMap.Slot+1,"D-pad right moves from Map to the adjacent action");
   }
+  foreach(string action in new[]{"Пауза","Продолжить"})foreach(float glyphWidth in new[]{7f,9.5f,12f}){
+   var miniScreen=new NativeHuntScreen("Цель","",[
+    new("primary",action,new("pause")),new("map","Карта",new("map")),new("actions","Маршрут",new("page"))
+   ],Progress:new(1,3));
+   var layout=NativeHuntLayout.Build(miniScreen,NativeHuntPage.Hunt,0,22,0,true,label=>label.Length*glyphWidth);
+   var row=layout.Buttons.OrderBy(b=>b.Column).ToArray();
+   check(row.Length==3&&row.Select(b=>b.Row).Distinct().Count()==1,"Russian mini actions stay in one row at varying glyph widths");
+   check(row.All(b=>b.Rect.Size.X>=b.Button.Label.Length*glyphWidth+16),"Mini captions keep the full measured width and padding");
+   check(row[0].Rect.Position.X>0&&row[^1].Rect.Position.X+row[^1].Rect.Size.X<=layout.Size.X,"Mini row stays within the window");
+   check(row.Zip(row.Skip(1)).All(pair=>pair.First.Rect.Position.X+pair.First.Rect.Size.X<pair.Second.Rect.Position.X),"Mini actions do not overlap");
+   var nav=NativeHuntNavigation.Build(row.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key)));
+   check(nav[0].Right==nav[1].Index&&nav[1].Right==nav[2].Index&&nav[2].Right==nav[0].Index,"Mini d-pad cycles through all three actions");
+  }
   var settings=new NativeHuntScreen("Settings","",Enumerable.Range(0,6).Select(i=>new NativeHuntButton($"toggle:{i}","Setting",new("toggle"),Checked:i%2==0)).ToArray());
   var settingsLayout=NativeHuntLayout.Build(settings,NativeHuntPage.Settings,0,30,0);
   var settingLinks=NativeHuntNavigation.Build(settingsLayout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));

@@ -1,3 +1,7 @@
+# 0.4.35
+
+- Keep all three mini-panel actions in one centered row using their individual measured widths. Expand the panel only when the labels require it.
+
 # 0.4.34
 
 - Render native button captions as independent text nodes to avoid truncation by button components.

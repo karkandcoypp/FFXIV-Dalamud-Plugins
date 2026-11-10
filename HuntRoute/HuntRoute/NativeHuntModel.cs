@@ -73,6 +73,12 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   int page=mini?0:NativeHuntNavigation.ClampPage(requestedPage,screen.Buttons.Count);
   int pageCount=Math.Max(1,(screen.Buttons.Count+5)/6);
   var visible=screen.Buttons.Skip(page*6).Take(mini?3:6).ToArray();
+  bool miniStrip=mini&&visible.Length>0&&visible.All(IsCompact);
+  if(miniStrip){
+   inner=Math.Max(inner,visible.Sum(Compact)+(visible.Length-1)*Gap);
+   width=inner+2*Margin;
+   textWidth=inner;
+  }
   bool huntStrip=!mini&&view==NativeHuntPage.Hunt&&visible is [{Key:"primary"},{Key:"map"},{Key:"actions"},{Key:"targets"},..]
    &&visible.Take(4).Sum(b=>Compact(b))+3*Gap<=inner;
   var buttons=new List<NativeHuntPlacement>();
@@ -95,12 +101,14 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   float bottom=bodyY;
   for(int i=0;i<visible.Length;i++){
    var button=visible[i];
-   if(mini&&i==0&&visible.All(IsCompact)&&visible.Length*visible.Max(Compact)+(visible.Length-1)*Gap<=inner){
-    float miniActionWidth=visible.Max(Compact);
-    float x=(width-visible.Length*miniActionWidth-(visible.Length-1)*Gap)/2;
+   if(miniStrip&&i==0){
+    float x=(width-visible.Sum(Compact)-(visible.Length-1)*Gap)/2;
     rows++;
-    for(int column=0;column<visible.Length;column++)
-     Set(column+3,rows,column,visible[column],x+column*(miniActionWidth+Gap),bottom,miniActionWidth,ActionHeight);
+    for(int column=0;column<visible.Length;column++){
+     float actionWidth=Compact(visible[column]);
+     Set(column+3,rows,column,visible[column],x,bottom,actionWidth,ActionHeight);
+     x+=actionWidth+Gap;
+    }
     bottom+=ActionHeight+Gap;
     break;
    }

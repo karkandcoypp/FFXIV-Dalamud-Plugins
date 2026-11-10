@@ -47,6 +47,11 @@ internal static class NativeHuntPreviewChecks {
    if(!sample.Mini&&sample.Screen.Progress!=null)visibleRects=visibleRects.Append(layout.ProgressTrack);
    if(!sample.Mini&&sample.Screen.Icon!=0)visibleRects=visibleRects.Append(layout.Portrait);
    NativeResizeChecks.Check(layout.Size,visibleRects);
+   if(sample.Mini&&sample.Name is "mini" or "mini-paused"){
+    var actions=layout.Buttons.Where(b=>b.Button.Key is "primary" or "map" or "actions").ToArray();
+    if(actions.Length!=3||actions.Select(b=>b.Row).Distinct().Count()!=1)
+     throw new Exception("Mini panel split its action row");
+   }
    foreach(var entry in layout.Buttons){
     if(entry.Button.Board==null&&entry.Button.Goal==null&&entry.Button.Checked==null&&sample.Name!="long-paged"){
      ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);
