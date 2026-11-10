@@ -141,7 +141,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         var no=noButton=new TextButtonNode { Position=layout.Decline.Position,Size=layout.Decline.Size,String=content.DeclineLabel,
             NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false,true) };
         no.LabelNode.FontSize=NativeHuntLayout.ButtonFont;
-        NativeButtonText.Apply(yesButton);NativeButtonText.Apply(no);
+        NativeButtonText.Apply(yesButton,content.ConfirmLabel);NativeButtonText.Apply(no,content.DeclineLabel);
         AddFixedNode(yesButton);AddFixedNode(no);measuredSize=new(layout.Width,layout.Height);SetWindowSize(measuredSize);
         native->FocusNode=no.FocusNode;
     }
@@ -160,7 +160,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     protected override void OnUpdate(AtkUnitBase* native) {
         if(answered||yesButton==null||noButton==null)return;
         yesButton.IsEnabled=ready();
-        NativeButtonText.Apply(yesButton);NativeButtonText.Apply(noButton);
+        NativeButtonText.Apply(yesButton,content.ConfirmLabel);NativeButtonText.Apply(noButton,content.DeclineLabel);
     }
     protected override void OnHide(AtkUnitBase* native)=>Complete(false,false);
     protected override void OnFinalize(AtkUnitBase* native)=>Complete(false,false);

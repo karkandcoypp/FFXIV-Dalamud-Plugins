@@ -1,3 +1,7 @@
+# 0.4.33
+
+- Measure labels without changing the measurement node text. Restore complete button captions after sizing to prevent repeated ellipsis truncation.
+
 # 0.4.32
 
 - Measure native button labels using game fonts and reserve the native button insets. Keep labels on one line and remove custom outlines from buttons.

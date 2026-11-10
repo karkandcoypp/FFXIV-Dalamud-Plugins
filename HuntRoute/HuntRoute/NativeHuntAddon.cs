@@ -155,7 +155,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
     if(checks[slot] is {} hidden)hidden.IsVisible=false;
     if(button.Position!=placement.Rect.Position)button.Position=placement.Rect.Position;
     if(button.Size!=placement.Rect.Size){button.Size=placement.Rect.Size;buttonText[slot]=null;}
-    NativeButtonText.Apply(button);
+    NativeButtonText.Apply(button,spec.Board!=null||spec.Goal!=null?"":spec.Label);
     button.BackgroundNode.Color=spec.Key=="primary"&&spec.Emphasized?NativeHuntColors.PrimarySurface:Vector4.One;
     button.LabelNode.TextColor=spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One);
     if(buttonText[slot]!=spec.Label){button.String=spec.Board!=null||spec.Goal!=null?"":spec.Label;buttonText[slot]=spec.Label;}
@@ -224,15 +224,16 @@ internal static class NativeFixedLayout {
 
 internal static class NativeButtonText {
  internal static float Measure(TextNode node,string label){
-  node.String=label;
-  return node.GetTextDrawSize(considerScale:false).X;
+  return node.GetTextDrawSize(label,considerScale:false).X;
  }
- internal static void Apply(TextButtonNode button){
+ internal static void Apply(TextButtonNode button,string text){
   var label=button.LabelNode;
+  label.NodeFlags=NativeFixedLayout.FixedFlags(label.NodeFlags);
   label.FontSize=NativeHuntLayout.ButtonFont;
   label.RemoveTextFlags(TextFlags.WordWrap,TextFlags.MultiLine);
   label.AddTextFlags(TextFlags.Ellipsis);
   label.Position=new(16,3);
   label.Size=new(Math.Max(0,button.Width-32),Math.Max(0,button.Height-8));
+  label.String=text;
  }
 }
