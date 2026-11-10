@@ -10,6 +10,7 @@ using KamiToolKit.Nodes;
 namespace HuntRoute;
 
 internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Action<NativeHuntAction> execute,Action closed,Func<bool> modal,bool mini=false):NativeAddon {
+ private void AddFixedNode(NodeBase node)=>NativeFixedLayout.Attach(this,node);
  private readonly TextButtonNode?[] buttons=new TextButtonNode?[NativeHuntLayout.ButtonCapacity];
  private readonly CheckboxNode?[] checks=new CheckboxNode?[NativeHuntLayout.ButtonCapacity];
  private ComponentNode? Control(int slot)=>checks[slot] is {IsVisible:true} check?check:buttons[slot];
@@ -40,28 +41,28 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values){
   if(WindowNode is WindowNode window){window.ShowConfigButton=false;window.ShowHelpButton=false;}
   if(mini)native->DisableFocusOnShow=true;
-  heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route"};heading.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddNode(heading);
-  summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=18};summary.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddNode(summary);
-  portrait=new IconImageNode{FitTexture=true,IsVisible=false};AddNode(portrait);
-  progressLabel=new TextNode{FontSize=NativeHuntLayout.BodyFont,TextColor=new(.68f,.88f,.80f,1)};AddNode(progressLabel);
-  progressTrack=new ColorImageNode{Color=new(.24f,.27f,.28f,1)};AddNode(progressTrack);
-  progressFill=new ColorImageNode{Color=new(.38f,.76f,.64f,1)};AddNode(progressFill);
-  pageLabel=new TextNode{Size=new(240,24),FontSize=NativeHuntLayout.BodyFont};AddNode(pageLabel);
+  heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route"};heading.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddFixedNode(heading);
+  summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=18};summary.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddFixedNode(summary);
+  portrait=new IconImageNode{FitTexture=true,IsVisible=false};AddFixedNode(portrait);
+  progressLabel=new TextNode{FontSize=NativeHuntLayout.BodyFont,TextColor=new(.68f,.88f,.80f,1)};AddFixedNode(progressLabel);
+  progressTrack=new ColorImageNode{Color=new(.24f,.27f,.28f,1)};AddFixedNode(progressTrack);
+  progressFill=new ColorImageNode{Color=new(.38f,.76f,.64f,1)};AddFixedNode(progressFill);
+  pageLabel=new TextNode{Size=new(240,24),FontSize=NativeHuntLayout.BodyFont};AddFixedNode(pageLabel);
 
   for(int i=0;i<buttons.Length;i++){
    int slot=i;var button=new TextButtonNode{NavIndex=i+1,OnClick=()=>Clicked(slot)};
    button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.LabelNode.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);
-   buttons[i]=button;AddNode(button);
+   buttons[i]=button;AddFixedNode(button);
    if(i is >=3 and <=8){
     var check=new CheckboxNode{NavIndex=i+1,DisableAutoResize=true,IsVisible=false,OnClick=_=>Clicked(slot)};
-    checks[i]=check;AddNode(check);
+    checks[i]=check;AddFixedNode(check);
    }
   }
   for(int i=0;i<tableCells.Length;i++){
    var cell=new TextNode{FontSize=NativeHuntLayout.ButtonFont,IsVisible=false};
-   cell.AddTextFlags(TextFlags.Ellipsis);tableCells[i]=cell;AddNode(cell);
+   cell.AddTextFlags(TextFlags.Ellipsis);tableCells[i]=cell;AddFixedNode(cell);
   }
-  focusOutline=new NativeFocusOutline(node=>AddNode(node));
+  focusOutline=new NativeFocusOutline(node=>AddFixedNode(node));
   requestedScale=0;screenIdentity=null;keys=new string?[NativeHuntLayout.ButtonCapacity];commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];nextUpdate=0;focusRequested=!mini;focusFirstBody=false;icon=0;titleText=summaryText=null;Array.Clear(buttonText);
   Refresh(native);
  }
@@ -205,5 +206,17 @@ internal sealed class NativeFocusOutline {
  }
  private void Place(int index,Vector2 position,Vector2 size){
   edges[index].Position=position;edges[index].Size=size;
+ }
+}
+
+internal static class NativeFixedLayout {
+ internal static NodeFlags FixedFlags(NodeFlags flags)=>
+  (flags&~(NodeFlags.AnchorTop|NodeFlags.AnchorBottom|NodeFlags.AnchorLeft|NodeFlags.AnchorRight))
+   |NodeFlags.AnchorTop|NodeFlags.AnchorLeft;
+ internal static void Attach(NativeAddon owner,NodeBase node){
+  // The layout already computes absolute positions. Game window resizing must
+  // not center, stretch or translate these nodes a second time.
+  node.NodeFlags=FixedFlags(node.NodeFlags);
+  owner.AddNode(node);
  }
 }

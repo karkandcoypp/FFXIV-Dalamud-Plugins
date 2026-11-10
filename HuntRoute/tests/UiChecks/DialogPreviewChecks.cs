@@ -13,6 +13,10 @@ internal static class DialogPreviewChecks {
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
             ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);ImGui.Begin("measure",ImGuiWindowFlags.NoDecoration);
             var layout=TravelDialogLayout.Build(sample.Item2,(text,width,font)=> { ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(text,false,width).Y+4; });
+            NativeResizeChecks.Check(new(layout.Width,layout.Height),
+                layout.Texts.Select(t=>new NativeHuntRect(t.Position,t.Size))
+                .Append(new(layout.Confirm.Position,layout.Confirm.Size)).Append(new(layout.Decline.Position,layout.Decline.Size)));
+
             ImGui.End();ImGui.EndFrame();io.DisplaySize=new(layout.Width,MathF.Ceiling(layout.Height));
             for(int frame=0;frame<3;frame++) {
                 ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);

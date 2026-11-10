@@ -1,3 +1,7 @@
+# 0.4.31
+
+- Pin native dialog, main-window and mini-panel content to the top-left corner so game window resizing cannot shift labels and buttons into the title bar.
+
 # 0.4.30
 
 - Include IconUrl in the packaged plugin manifest so Dalamud can display the installed plugin icon. Validate it against the catalog during release checks.

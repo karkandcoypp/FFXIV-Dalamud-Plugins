@@ -41,6 +41,12 @@ internal static class NativeHuntPreviewChecks {
    float Height(string value,float width,float font){ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(value,false,width).Y+4;}
    float width=NativeHuntLayout.ContentWidth(sample.Mini);
    var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,width,NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.SummaryFont(sample.Page,sample.Mini)),sample.Mini);
+   var visibleRects=layout.Buttons.Select(b=>b.Rect).Concat(layout.TableText.Select(t=>t.Rect))
+    .Append(layout.Heading).Append(layout.Summary);
+   if(sample.Screen.Progress!=null)visibleRects=visibleRects.Append(layout.ProgressLabel);
+   if(!sample.Mini&&sample.Screen.Progress!=null)visibleRects=visibleRects.Append(layout.ProgressTrack);
+   if(!sample.Mini&&sample.Screen.Icon!=0)visibleRects=visibleRects.Append(layout.Portrait);
+   NativeResizeChecks.Check(layout.Size,visibleRects);
    foreach(var entry in layout.Buttons){
     var r=entry.Rect;
     if(r.Position.X<0||r.Position.Y<0||r.Position.X+r.Size.X>layout.Size.X||r.Position.Y+r.Size.Y>layout.Size.Y)
