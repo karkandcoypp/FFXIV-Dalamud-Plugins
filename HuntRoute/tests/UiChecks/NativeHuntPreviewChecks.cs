@@ -40,7 +40,7 @@ internal static class NativeHuntPreviewChecks {
    ImGui.NewFrame();ImGui.Begin("measure");
    float Height(string value,float width,float font){ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(value,false,width).Y+4;}
    float width=NativeHuntLayout.ContentWidth(sample.Mini);
-   var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,width,NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.SummaryFont(sample.Page,sample.Mini)),sample.Mini);
+   var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,width,NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.SummaryFont(sample.Page,sample.Mini)),sample.Mini,label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return ImGui.CalcTextSize(label).X;});
    var visibleRects=layout.Buttons.Select(b=>b.Rect).Concat(layout.TableText.Select(t=>t.Rect))
     .Append(layout.Heading).Append(layout.Summary);
    if(sample.Screen.Progress!=null)visibleRects=visibleRects.Append(layout.ProgressLabel);
@@ -48,6 +48,11 @@ internal static class NativeHuntPreviewChecks {
    if(!sample.Mini&&sample.Screen.Icon!=0)visibleRects=visibleRects.Append(layout.Portrait);
    NativeResizeChecks.Check(layout.Size,visibleRects);
    foreach(var entry in layout.Buttons){
+    if(entry.Button.Board==null&&entry.Button.Goal==null&&entry.Button.Checked==null&&sample.Name!="long-paged"){
+     ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);
+     if(ImGui.CalcTextSize(entry.Button.Label).X>entry.Rect.Size.X-32)
+      throw new Exception("Native label exceeds real button insets: "+entry.Button.Label);
+    }
     var r=entry.Rect;
     if(r.Position.X<0||r.Position.Y<0||r.Position.X+r.Size.X>layout.Size.X||r.Position.Y+r.Size.Y>layout.Size.Y)
      throw new Exception("Native button exceeds its window: "+entry.Button.Key);
@@ -107,13 +112,13 @@ internal static class NativeHuntPreviewChecks {
     foreach(var entry in layout.Buttons){
      var r=entry.Rect;
      if(entry.Button.Checked is {} state){
-      var box=r.Position+new Vector2(r.Size.X-28,2);
+      var box=r.Position+new Vector2(0,2);
       draw.AddRect(box,box+new Vector2(20,20),0xffb0a697,3);
       if(state){
        draw.AddLine(box+new Vector2(4,10),box+new Vector2(8,15),ImGui.GetColorU32(NativeHuntColors.Ready),2);
        draw.AddLine(box+new Vector2(8,15),box+new Vector2(16,5),ImGui.GetColorU32(NativeHuntColors.Ready),2);
       }
-      Text(entry.Button.Label,new(r.Position+new Vector2(8,2),new(r.Size.X-40,22)),NativeHuntLayout.BodyFont,Vector4.One);
+      Text(entry.Button.Label,new(r.Position+new Vector2(24,2),new(r.Size.X-28,22)),NativeHuntLayout.BodyFont,Vector4.One);
       continue;
      }
      if(entry.Button.Board!=null||entry.Button.Goal!=null)continue;
@@ -130,7 +135,7 @@ internal static class NativeHuntPreviewChecks {
       throw new Exception("Board cell label exceeds its column: "+cell.Label);
      Text(cell.Label,cell.Rect,cell.Font,cell.Color);
     }
-    if(focused!=null){
+    if(focused?.Button is {Board:not null} or {Goal:not null} or {Checked:not null}){
      var rect=focused.Rect;
      draw.AddRect(rect.Position+Vector2.One,rect.Position+rect.Size-Vector2.One,ImGui.GetColorU32(NativeHuntColors.Focus),0,0,2);
     }

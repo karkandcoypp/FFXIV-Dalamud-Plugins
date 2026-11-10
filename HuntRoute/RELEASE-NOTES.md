@@ -1,3 +1,8 @@
+# 0.4.32
+
+- Measure native button labels using game fonts and reserve the native button insets. Keep labels on one line and remove custom outlines from buttons.
+- Keep settings checkboxes at their native left-hand position so controller focus animations cannot flash a second box over the label.
+
 # 0.4.31
 
 - Pin native dialog, main-window and mini-panel content to the top-left corner so game window resizing cannot shift labels and buttons into the title bar.

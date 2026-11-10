@@ -44,7 +44,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
     public static Vector2 ClampPosition(Vector2 origin,Vector2 size,Vector2 viewport) =>
         Vector2.Clamp(origin,Vector2.Zero,Vector2.Max(Vector2.Zero,viewport-size));
 
-    public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure) {
+    public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure,Func<string,float>? measureButton=null) {
         const float width=DialogWidth,left=18,inner=width-2*left;
         var texts=new List<DialogText>();
         float Text(string value,float x,float y,float w,uint font,Vector4 color) {
@@ -79,11 +79,12 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         }
         if(!string.IsNullOrEmpty(content.Footer)) y+=Text(content.Footer,left,y,inner,13,Muted)+4;
         const float buttonHeight=NativeHuntLayout.ActionHeight;
-        float confirmWidth=NativeHuntLayout.ButtonWidth(content.ConfirmLabel);
+        float confirmWidth=Math.Max(NativeHuntLayout.ButtonWidth(content.ConfirmLabel),measureButton==null?0:MathF.Ceiling(measureButton(content.ConfirmLabel))+32);
+        float declineWidth=Math.Max(NativeHuntLayout.ActionWidth,measureButton==null?0:MathF.Ceiling(measureButton(content.DeclineLabel))+32);
         float buttonsY=y+6,heightTotal=buttonsY+buttonHeight+12;
-        float buttonsX=(width-confirmWidth-NativeHuntLayout.ActionWidth-6)/2;
+        float buttonsX=(width-confirmWidth-declineWidth-6)/2;
         var confirm=new DialogButton(new(buttonsX,buttonsY),new(confirmWidth,buttonHeight));
-        var decline=new DialogButton(new(buttonsX+confirmWidth+6,buttonsY),new(NativeHuntLayout.ActionWidth,buttonHeight));
+        var decline=new DialogButton(new(buttonsX+confirmWidth+6,buttonsY),new(declineWidth,buttonHeight));
         return new(width,heightTotal,confirm,decline,texts);
     }
 }

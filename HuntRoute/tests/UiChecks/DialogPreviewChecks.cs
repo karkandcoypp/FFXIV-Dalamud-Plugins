@@ -12,7 +12,7 @@ internal static class DialogPreviewChecks {
             io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
             ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);ImGui.Begin("measure",ImGuiWindowFlags.NoDecoration);
-            var layout=TravelDialogLayout.Build(sample.Item2,(text,width,font)=> { ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(text,false,width).Y+4; });
+            var layout=TravelDialogLayout.Build(sample.Item2,(text,width,font)=> { ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(text,false,width).Y+4; },label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return ImGui.CalcTextSize(label).X;});
             NativeResizeChecks.Check(new(layout.Width,layout.Height),
                 layout.Texts.Select(t=>new NativeHuntRect(t.Position,t.Size))
                 .Append(new(layout.Confirm.Position,layout.Confirm.Size)).Append(new(layout.Decline.Position,layout.Decline.Size)));
@@ -31,11 +31,10 @@ internal static class DialogPreviewChecks {
                 ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);
                 foreach(var (rect,label,primary) in new[]{(layout.Confirm,sample.Item2.ConfirmLabel,true),(layout.Decline,sample.Item2.DeclineLabel,false)}) {
                     var size=ImGui.CalcTextSize(label);
-                    if(size.X>rect.Size.X-16||rect.Position.Y+rect.Size.Y>layout.Height-12||rect.Position.X+rect.Size.X>layout.Width-16)
+                    if(size.X>rect.Size.X-32||rect.Position.Y+rect.Size.Y>layout.Height-12||rect.Position.X+rect.Size.X>layout.Width-16)
                         throw new Exception("Dialog button exceeds its bounds: "+label);
                     draw.AddRectFilled(rect.Position,rect.Position+rect.Size,ImGui.GetColorU32(primary?new Vector4(.26f,.38f,.49f,1):new Vector4(.31f,.31f,.31f,1)),5);
                     ImGui.SetCursorScreenPos(rect.Position+(rect.Size-size)/2);ImGui.TextColored(primary?NativeHuntColors.Attention:TravelDialogLayout.White,label);
-                    if(!primary)draw.AddRect(rect.Position+Vector2.One,rect.Position+rect.Size-Vector2.One,ImGui.GetColorU32(NativeHuntColors.Focus),0,0,2);
                 }
                 ImGui.End();ImGui.PopStyleVar();ImGui.Render();
             }

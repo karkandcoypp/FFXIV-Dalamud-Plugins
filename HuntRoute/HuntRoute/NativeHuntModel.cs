@@ -59,9 +59,10 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Goal==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;
  public static float ButtonWidth(string label)=>label.Length<=11?ActionWidth:LongActionWidth;
- private static float CompactWidth(NativeHuntButton button)=>ButtonWidth(button.Label);
  public static string FitLabel(string value,int length=64)=>value.Length<=length?value:string.Concat(value.EnumerateRunes().Take(length-1).Select(r=>r.ToString()))+"…";
- public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false){
+ public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false,Func<string,float>? measureButton=null){
+  float Button(string label)=>Math.Max(ButtonWidth(label),measureButton==null?0:MathF.Ceiling(measureButton(label))+32);
+  float Compact(NativeHuntButton button)=>Button(button.Label);
   float inner=ContentWidth(mini),width=inner+2*Margin,titleY=mini?38:71;
   titleHeight=float.IsFinite(titleHeight)?Math.Clamp(titleHeight,22,110):22;
   summaryHeight=string.IsNullOrEmpty(screen.Summary)?0:float.IsFinite(summaryHeight)?Math.Clamp(summaryHeight,17,190):17;
@@ -73,13 +74,13 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   int pageCount=Math.Max(1,(screen.Buttons.Count+5)/6);
   var visible=screen.Buttons.Skip(page*6).Take(mini?3:6).ToArray();
   bool huntStrip=!mini&&view==NativeHuntPage.Hunt&&visible is [{Key:"primary"},{Key:"map"},{Key:"actions"},{Key:"targets"},..]
-   &&visible.Take(4).All(b=>ButtonWidth(b.Label)==ActionWidth);
+   &&visible.Take(4).Sum(b=>Compact(b))+3*Gap<=inner;
   var buttons=new List<NativeHuntPlacement>();
   void Set(int slot,int row,int col,NativeHuntButton button,float x,float y,float w,float h)=>buttons.Add(new(slot,row,col,button with {Label=button.Board==null?FitLabel(button.Label):button.Label},new(new(x,y),new(w,h))));
   NativeHuntButton Page(string key,string label,NativeHuntPage p)=>new(key,label,new("page",p.ToString()),Emphasized:key.StartsWith("tab:",StringComparison.Ordinal)&&p==(view switch {NativeHuntPage.Boards=>NativeHuntPage.Boards,NativeHuntPage.Settings or NativeHuntPage.Advanced or NativeHuntPage.Number=>NativeHuntPage.Settings,_=>NativeHuntPage.Hunt}));
   bool settingsList=view==NativeHuntPage.Settings&&!mini;
   if(!mini){
-   const float tabWidth=ActionWidth;
+   float tabWidth=new[]{"Охота","Доски","Настройки"}.Max(Button);
    float tabsX=Margin;
    Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),tabsX,37,tabWidth,ActionHeight);
    Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),tabsX+tabWidth+Gap,37,tabWidth,ActionHeight);
@@ -94,8 +95,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   float bottom=bodyY;
   for(int i=0;i<visible.Length;i++){
    var button=visible[i];
-   if(mini&&i==0&&visible.All(IsCompact)){
-    const float miniActionWidth=ActionWidth;
+   if(mini&&i==0&&visible.All(IsCompact)&&visible.Length*visible.Max(Compact)+(visible.Length-1)*Gap<=inner){
+    float miniActionWidth=visible.Max(Compact);
     float x=(width-visible.Length*miniActionWidth-(visible.Length-1)*Gap)/2;
     rows++;
     for(int column=0;column<visible.Length;column++)
@@ -107,7 +108,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     float x=Margin;
     rows++;
     for(int column=0;column<4;column++){
-     float w=CompactWidth(visible[column]);
+     float w=Compact(visible[column]);
      Set(column+3,rows,column,visible[column],x,bottom,w,ActionHeight);
      x+=w+Gap;
     }
@@ -171,7 +172,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     while(i+count<visible.Length){
      var item=visible[i+count];
      if(item.Board!=null||item.Goal!=null||item.Checked.HasValue||item.Label.Contains('\n')||item.Label.Length>25)break;
-     float w=view==NativeHuntPage.Target?LongActionWidth:CompactWidth(item);
+     float w=Math.Max(view==NativeHuntPage.Target?LongActionWidth:0,Compact(item));
      if(used+w>gridWidth)break;
      Set(i+count+3,rows,count,item,gridX+used,bottom,w,ActionHeight);
      used+=w+Gap;count++;
@@ -185,8 +186,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
    bottom+=h+Gap;
   }
   bool pager=!mini&&pageCount>1;
-  const float pagerWidth=ActionWidth;
-  const float footerWidth=ActionWidth;
+  float pagerWidth=Math.Max(Button("Пред."),Button("Далее"));
+  float footerWidth=new[]{"Назад","Закрыть",settingsList?"Параметры":""}.Max(Button);
   if(pager){Set(9,7,0,new("previous","Пред.",new("previous",Delta:-1),page>0),controlX,bottom,pagerWidth,ActionHeight);Set(10,7,1,new("next-page","Далее",new("next-page",Delta:1),page+1<pageCount),controlX+controlWidth-pagerWidth,bottom,pagerWidth,ActionHeight);}
   float footer=bottom+(pager?38:0);
   var back=view switch {NativeHuntPage.Number=>NativeHuntPage.Advanced,NativeHuntPage.Advanced=>NativeHuntPage.Settings,NativeHuntPage.Target or NativeHuntPage.Filters=>NativeHuntPage.Targets,NativeHuntPage.Expansions or NativeHuntPage.Zones=>NativeHuntPage.Filters,_=>NativeHuntPage.Hunt};

@@ -11,6 +11,7 @@ namespace HuntRoute;
 
 internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Action<NativeHuntAction> execute,Action closed,Func<bool> modal,bool mini=false):NativeAddon {
  private void AddFixedNode(NodeBase node)=>NativeFixedLayout.Attach(this,node);
+ private TextNode? buttonMeasure;
  private readonly TextButtonNode?[] buttons=new TextButtonNode?[NativeHuntLayout.ButtonCapacity];
  private readonly CheckboxNode?[] checks=new CheckboxNode?[NativeHuntLayout.ButtonCapacity];
  private ComponentNode? Control(int slot)=>checks[slot] is {IsVisible:true} check?check:buttons[slot];
@@ -41,6 +42,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values){
   if(WindowNode is WindowNode window){window.ShowConfigButton=false;window.ShowHelpButton=false;}
   if(mini)native->DisableFocusOnShow=true;
+  buttonMeasure=new TextNode{FontSize=NativeHuntLayout.ButtonFont,Size=new(4096,64),IsVisible=false};AddFixedNode(buttonMeasure);
   heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route"};heading.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddFixedNode(heading);
   summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=18};summary.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddFixedNode(summary);
   portrait=new IconImageNode{FitTexture=true,IsVisible=false};AddFixedNode(portrait);
@@ -51,7 +53,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
 
   for(int i=0;i<buttons.Length;i++){
    int slot=i;var button=new TextButtonNode{NavIndex=i+1,OnClick=()=>Clicked(slot)};
-   button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.LabelNode.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);
+   button.LabelNode.FontSize=NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.LabelNode.AddTextFlags(TextFlags.Ellipsis);
    buttons[i]=button;AddFixedNode(button);
    if(i is >=3 and <=8){
     var check=new CheckboxNode{NavIndex=i+1,DisableAutoResize=true,IsVisible=false,OnClick=_=>Clicked(slot)};
@@ -85,7 +87,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(focusRequested&&IsOpen&&!modal()){int index=NativeHuntNavigation.RestoreFocus(links,focusedKey);if(index>0){if(checks[index-1] is {IsVisible:true} check)check.SetFocus();else buttons[index-1]?.SetFocus();}focusRequested=false;}
  }
  protected override void OnHide(AtkUnitBase* native)=>closed();
- protected override void OnFinalize(AtkUnitBase* native){Array.Clear(buttons);Array.Clear(checks);Array.Clear(tableCells);focusOutline=null;heading=null;summary=null;portrait=null;pageLabel=progressLabel=null;progressTrack=progressFill=null;links=[];}
+ protected override void OnFinalize(AtkUnitBase* native){Array.Clear(buttons);Array.Clear(checks);Array.Clear(tableCells);focusOutline=null;buttonMeasure=null;heading=null;summary=null;portrait=null;pageLabel=progressLabel=null;progressTrack=progressFill=null;links=[];}
  private void Clicked(int slot){
   if(modal()||slot<0||slot>=buttons.Length||!(checks[slot] is {IsVisible:true} check?check.IsEnabled:buttons[slot] is {IsVisible:true,IsEnabled:true})||commands[slot] is not {} command)return;
   focusedKey=keys[slot];
@@ -107,7 +109,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   summary.FontSize=NativeHuntLayout.SummaryFont(controller.Page,mini);
   summary.LineSpacing=summary.FontSize+3;
   heading.Size=new(inner,110);summary.Size=new(NativeHuntLayout.SummaryWidth(screen,mini),200);
-  var layout=NativeHuntLayout.Build(screen,controller.Page,controller.Offset,heading.GetTextDrawSize(considerScale:false).Y,summary.GetTextDrawSize(considerScale:false).Y,mini);
+  var layout=NativeHuntLayout.Build(screen,controller.Page,controller.Offset,heading.GetTextDrawSize(considerScale:false).Y,summary.GetTextDrawSize(considerScale:false).Y,mini,label=>NativeButtonText.Measure(buttonMeasure!,label));
   heading.TextColor=screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One;
   summary.TextColor=screen.SummaryColor??NativeHuntColors.Muted;
   heading.Position=layout.Heading.Position;heading.Size=layout.Heading.Size;
@@ -143,8 +145,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
     button.IsVisible=false;check.IsVisible=true;check.IsEnabled=spec.Enabled;
     if(check.Size!=placement.Rect.Size)check.Size=placement.Rect.Size;
     check.Position=placement.Rect.Position;
-    check.Label.Position=new(8,0);check.Label.Width=check.Width-40;
-    check.BoxForeground.Position=check.BoxBackground.Position=new(check.Width-28,2);
+    check.Label.Position=new(24,0);check.Label.Width=check.Width-28;
     if(check.Label.String.ToString()!=spec.Label)check.Label.String=spec.Label;
     if(check.IsChecked!=value){
      var onClick=check.OnClick;check.OnClick=null;
@@ -154,10 +155,10 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
     if(checks[slot] is {} hidden)hidden.IsVisible=false;
     if(button.Position!=placement.Rect.Position)button.Position=placement.Rect.Position;
     if(button.Size!=placement.Rect.Size){button.Size=placement.Rect.Size;buttonText[slot]=null;}
-    button.LabelNode.X=8;button.LabelNode.Width=button.Width-16;
+    NativeButtonText.Apply(button);
     button.BackgroundNode.Color=spec.Key=="primary"&&spec.Emphasized?NativeHuntColors.PrimarySurface:Vector4.One;
     button.LabelNode.TextColor=spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One);
-    if(buttonText[slot]!=spec.Label){button.LabelNode.FontSize=spec.Label.Contains('\n')?NativeHuntLayout.BodyFont:NativeHuntLayout.ButtonFont;button.LabelNode.LineSpacing=18;button.String=spec.Board!=null||spec.Goal!=null?"":spec.Label;if(button.LabelNode.GetTextDrawSize(considerScale:false).Y>button.LabelNode.Height){button.LabelNode.FontSize=NativeHuntLayout.BodyFont;button.LabelNode.LineSpacing=18;}buttonText[slot]=spec.Label;}
+    if(buttonText[slot]!=spec.Label){button.String=spec.Board!=null||spec.Goal!=null?"":spec.Label;buttonText[slot]=spec.Label;}
     button.IsVisible=true;button.IsEnabled=spec.Enabled;
     button.BackgroundNode.IsVisible=spec.Board==null&&spec.Goal==null;
     button.LabelNode.AlignmentType=spec.Board==null?AlignmentType.Center:AlignmentType.Left;
@@ -174,7 +175,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    if(node.String.ToString()!=cell.Label)node.String=cell.Label;
   }
   var focused=layout.Buttons.FirstOrDefault(p=>p.Button.Enabled&&IsFocused(Control(p.Slot),global));
-  focusOutline?.Show(focused?.Rect);
+  focusOutline?.Show(focused is {Button: {Board: not null}} or {Button: {Goal: not null}} or {Button: {Checked: not null}}?focused.Rect:null);
   links=NativeHuntNavigation.Build(items);foreach(var link in links){var b=Control(link.Index-1)!;b.NavIndex=link.Index;b.NavUp=link.Up;b.NavDown=link.Down;b.NavLeft=link.Left;b.NavRight=link.Right;}
   if(focusedKey==null&&controller.Page==NativeHuntPage.Hunt&&links.Any(n=>n.Key=="primary"))focusedKey="primary";
   if(focusFirstBody){focusedKey=items.FirstOrDefault(n=>n.Row is >0 and <=6&&n.Enabled).Key;focusFirstBody=false;}
@@ -218,5 +219,20 @@ internal static class NativeFixedLayout {
   // not center, stretch or translate these nodes a second time.
   node.NodeFlags=FixedFlags(node.NodeFlags);
   owner.AddNode(node);
+ }
+}
+
+internal static class NativeButtonText {
+ internal static float Measure(TextNode node,string label){
+  node.String=label;
+  return node.GetTextDrawSize(considerScale:false).X;
+ }
+ internal static void Apply(TextButtonNode button){
+  var label=button.LabelNode;
+  label.FontSize=NativeHuntLayout.ButtonFont;
+  label.RemoveTextFlags(TextFlags.WordWrap,TextFlags.MultiLine);
+  label.AddTextFlags(TextFlags.Ellipsis);
+  label.Position=new(16,3);
+  label.Size=new(Math.Max(0,button.Width-32),Math.Max(0,button.Height-8));
  }
 }
