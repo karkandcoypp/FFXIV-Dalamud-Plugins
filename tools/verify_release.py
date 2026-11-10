@@ -96,6 +96,8 @@ def verify(archive, manifest, repository, tag, index=None):
             raise ValueError('Missing plugin API')
         require_dll(package, name + '.dll')
         if name == 'HuntRoute':
+            if expected.get('IconUrl') != entry['IconUrl'] or actual.get('IconUrl') != entry['IconUrl']:
+                raise ValueError('Missing or mismatched Hunt Route package IconUrl')
             require_dll(package, 'KamiToolKit.dll')
     if index:
         entries = json.loads(Path(index).read_text(encoding='utf-8-sig'))

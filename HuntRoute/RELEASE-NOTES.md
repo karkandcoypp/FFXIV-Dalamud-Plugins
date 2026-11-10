@@ -1,3 +1,7 @@
+# 0.4.30
+
+- Include IconUrl in the packaged plugin manifest so Dalamud can display the installed plugin icon. Validate it against the catalog during release checks.
+
 # 0.4.29
 
 - Keep legacy settings in the route file until the separate settings file is successfully written.

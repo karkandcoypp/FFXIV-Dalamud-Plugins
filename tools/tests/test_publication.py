@@ -84,7 +84,9 @@ class PublicationTests(unittest.TestCase):
         for name,tag in [('HuntRoute','hr-v1.2.3'),('BagSense','bs-v1.2.3'),('EorzeaEventTracker','eet-v1.2.3'),('EorzeaCompass','ec-v1.2.3'),('Dalamud.FullscreenCutscenes.Community','uc-v1.2.3')]:
             with self.subTest(plugin=name),TemporaryDirectory() as directory:
                 root=Path(directory);manifest=root/'plugin.json';archive=root/'plugin.zip';index=root/'pluginmaster.json'
-                doc={'InternalName':name,'AssemblyVersion':'1.2.3.0','DalamudApiLevel':15};manifest.write_text(json.dumps(doc),encoding='utf8');index.write_text('[]',encoding='utf8')
+                doc={'InternalName':name,'AssemblyVersion':'1.2.3.0','DalamudApiLevel':15}
+                if name=='HuntRoute':doc['IconUrl']='https://raw.githubusercontent.com/owner/plugins/main/HuntRoute/icon.png'
+                manifest.write_text(json.dumps(doc),encoding='utf8');index.write_text('[]',encoding='utf8')
                 dll=managed_dll()
                 def package(plugin_dll=dll, toolkit=True):
                     with zipfile.ZipFile(archive,'w') as z:
@@ -102,6 +104,12 @@ class PublicationTests(unittest.TestCase):
                 if name=='HuntRoute':
                     package(toolkit=False)
                     with self.assertRaises(KeyError):verify(archive,manifest,'owner/plugins',tag,index)
+                if name=='HuntRoute':
+                    icon=doc.pop('IconUrl');package()
+                    with self.assertRaisesRegex(ValueError,'IconUrl'):verify(archive,manifest,'owner/plugins',tag,index)
+                    doc['IconUrl']='https://example.com/wrong.png';package()
+                    with self.assertRaisesRegex(ValueError,'IconUrl'):verify(archive,manifest,'owner/plugins',tag,index)
+                    doc['IconUrl']=icon
                 package()
                 entries=json.loads(index.read_text(encoding='utf8'));entries[0]['DalamudApiLevel']=999
                 index.write_text(json.dumps(entries),encoding='utf8')
