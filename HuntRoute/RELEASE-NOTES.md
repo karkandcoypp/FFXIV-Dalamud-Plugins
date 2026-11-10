@@ -1,3 +1,7 @@
+# 0.4.36
+
+- Increase native button height to 32 and vertically center the caption line with equal top/bottom padding. Update tab, pager and footer spacing accordingly.
+
 # 0.4.35
 
 - Keep all three mini-panel actions in one centered row using their individual measured widths. Expand the panel only when the labels require it.

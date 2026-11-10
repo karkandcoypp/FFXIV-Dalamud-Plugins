@@ -210,8 +210,9 @@ internal static class NativeButtonText {
   AlignmentType=AlignmentType.Center,IsVisible=false
  };
  internal static void SetCaption(TextNode caption,TextButtonNode button,string text,Vector4 color){
-  caption.Position=button.Position+new Vector2(8,3);
-  caption.Size=new(Math.Max(0,button.Width-16),Math.Max(0,button.Height-6));
+  var rect=NativeHuntLayout.ButtonCaption(button.Position,button.Size);
+  caption.Position=rect.Position;
+  caption.Size=rect.Size;
   caption.TextColor=color;
   caption.String=text;
  }

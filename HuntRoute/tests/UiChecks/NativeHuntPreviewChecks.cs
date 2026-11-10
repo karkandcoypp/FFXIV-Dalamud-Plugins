@@ -132,7 +132,8 @@ internal static class NativeHuntPreviewChecks {
      ImGui.SetWindowFontScale(font/17f);
      var textSize=ImGui.CalcTextSize(entry.Button.Label);
      float inset=entry.Button.Label.Contains('\n')?8:Math.Max(8,(r.Size.X-textSize.X)/2);
-     Text(entry.Button.Label,new(r.Position+new Vector2(inset,4),new(r.Size.X-inset-8,r.Size.Y-8)),font,entry.Button.Enabled?(entry.Button.Emphasized?new(1,.85f,.55f,1):Vector4.One):new(.62f,.62f,.62f,1));
+     var wrappedSize=ImGui.CalcTextSize(entry.Button.Label,false,r.Size.X-inset-8);
+     Text(entry.Button.Label,new(r.Position+new Vector2(inset,(r.Size.Y-wrappedSize.Y)/2),new(r.Size.X-inset-8,wrappedSize.Y+2)),font,entry.Button.Enabled?(entry.Button.Emphasized?new(1,.85f,.55f,1):Vector4.One):new(.62f,.62f,.62f,1));
     }
     foreach(var cell in layout.TableText){
      ImGui.SetWindowFontScale(cell.Font/17f);

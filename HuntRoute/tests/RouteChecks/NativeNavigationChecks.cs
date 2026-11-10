@@ -1,6 +1,12 @@
 using HuntRoute;
 static class NativeNavigationChecks {
  public static void Run(Action<bool,string> check){
+  foreach(float height in new[]{NativeHuntLayout.ActionHeight,44,56}){
+   var rect=NativeHuntLayout.ButtonCaption(new(10,20),new(120,height));
+   float top=rect.Position.Y-20,bottom=20+height-rect.Position.Y-rect.Size.Y;
+   check(top>=6&&Math.Abs(top-bottom)<.01f,"Native button captions have equal vertical breathing room");
+   check(rect.Position.X==18&&rect.Size.X==104,"Native caption horizontal padding remains consistent");
+  }
   NativeNavItem[] items=[new(1,0,0,"hunt"),new(2,0,1,"boards"),new(3,0,2,"settings"),new(4,1,0,"primary"),new(5,2,0,"map"),new(10,7,0,"previous",false),new(11,7,1,"next"),new(12,8,0,"back"),new(13,8,1,"close")];
   var active=new NativeHuntScreen("Target","Zone",[
    new("primary","Pause",new("pause"),Emphasized:true),new("map","Map",new("map")),new("actions","Route",new("page")),new("targets","Targets",new("page"))

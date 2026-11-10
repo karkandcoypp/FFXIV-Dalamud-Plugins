@@ -50,7 +50,7 @@ public sealed record NativeHuntText(string Label,NativeHuntRect Rect,Vector4 Col
 public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,NativeHuntRect Summary,NativeHuntRect Portrait,NativeHuntRect ProgressLabel,NativeHuntRect ProgressTrack,NativeHuntRect PageLabel,string PageText,IReadOnlyList<NativeHuntPlacement> Buttons,IReadOnlyList<NativeHuntText> TableText){
  public const int ButtonCapacity=13;
  private const float Margin=16,Gap=6;
- public const float ActionHeight=26, ActionWidth=84, LongActionWidth=2*ActionWidth+Gap;
+ public const float ActionHeight=32, ActionWidth=84, LongActionWidth=2*ActionWidth+Gap;
  public const float PortraitSize=68;
  // Axis typography with slightly larger labels for legibility.
  public const byte TitleFont=18, BodyFont=15, ButtonFont=14;
@@ -58,12 +58,16 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  public static byte SummaryFont(NativeHuntPage view,bool mini)=>!mini&&view==NativeHuntPage.Boards?(byte)13:BodyFont;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Goal==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;
+ public static NativeHuntRect ButtonCaption(Vector2 position,Vector2 size){
+  float lineHeight=Math.Min(20,size.Y);
+  return new(position+new Vector2(8,(size.Y-lineHeight)/2),new(Math.Max(0,size.X-16),lineHeight));
+ }
  public static float ButtonWidth(string label)=>label.Length<=11?ActionWidth:LongActionWidth;
  public static string FitLabel(string value,int length=64)=>value.Length<=length?value:string.Concat(value.EnumerateRunes().Take(length-1).Select(r=>r.ToString()))+"…";
  public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false,Func<string,float>? measureButton=null){
   float Button(string label)=>Math.Max(ButtonWidth(label),measureButton==null?0:MathF.Ceiling(measureButton(label))+16);
   float Compact(NativeHuntButton button)=>Button(button.Label);
-  float inner=ContentWidth(mini),width=inner+2*Margin,titleY=mini?38:71;
+  float inner=ContentWidth(mini),width=inner+2*Margin,titleY=mini?38:37+ActionHeight+8;
   titleHeight=float.IsFinite(titleHeight)?Math.Clamp(titleHeight,22,110):22;
   summaryHeight=string.IsNullOrEmpty(screen.Summary)?0:float.IsFinite(summaryHeight)?Math.Clamp(summaryHeight,17,190):17;
   float summaryY=titleY+titleHeight+4;bool portrait=!mini&&screen.Icon!=0;
@@ -197,12 +201,12 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   float pagerWidth=Math.Max(Button("Пред."),Button("Далее"));
   float footerWidth=new[]{"Назад","Закрыть",settingsList?"Параметры":""}.Max(Button);
   if(pager){Set(9,7,0,new("previous","Пред.",new("previous",Delta:-1),page>0),controlX,bottom,pagerWidth,ActionHeight);Set(10,7,1,new("next-page","Далее",new("next-page",Delta:1),page+1<pageCount),controlX+controlWidth-pagerWidth,bottom,pagerWidth,ActionHeight);}
-  float footer=bottom+(pager?38:0);
+  float footer=bottom+(pager?ActionHeight+12:0);
   var back=view switch {NativeHuntPage.Number=>NativeHuntPage.Advanced,NativeHuntPage.Advanced=>NativeHuntPage.Settings,NativeHuntPage.Target or NativeHuntPage.Filters=>NativeHuntPage.Targets,NativeHuntPage.Expansions or NativeHuntPage.Zones=>NativeHuntPage.Filters,_=>NativeHuntPage.Hunt};
   if(settingsList)Set(11,8,0,Page("advanced","Параметры",NativeHuntPage.Advanced),controlX,footer,footerWidth,ActionHeight);
   else if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),controlX,footer,footerWidth,ActionHeight);
   if(!mini)Set(12,8,1,new("close","Закрыть",new("close")),controlX+controlWidth-footerWidth,footer,footerWidth,ActionHeight);
-  return new(new(width,footer+(mini?4:36)),new(new(Margin,titleY),new(inner,titleHeight)),
+  return new(new(width,footer+(mini?4:ActionHeight+10)),new(new(Margin,titleY),new(inner,titleHeight)),
    new(new(Margin,summaryY),new(textWidth,summaryHeight)),new(new(width-Margin-PortraitSize,summaryY),new(PortraitSize,PortraitSize)),
    new(new(Margin,progressY),new(textWidth,18)),new(new(Margin,progressY+19),new(textWidth,mini?0:5)),
    new(new(controlX+(controlWidth-74)/2,bottom+6),new(74,22)),
