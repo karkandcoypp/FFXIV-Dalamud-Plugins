@@ -1,3 +1,9 @@
+# 0.4.24
+
+- Keep new-contract notices eligible after the login continuation prompt.
+- Show brief travel and pause states on the native mini panel. Use focusable zone rows and compact numeric controls.
+- Run offline board and notification regressions in release CI.
+
 # 0.4.0
 
 - Main Hunt Route and mini panel now use native FFXIV window, text, image and button nodes via the existing KamiToolKit integration. The default `/huntroute` and plugin Open action open native UI; `/huntroute classic` opens the previous mouse UI as a fallback.

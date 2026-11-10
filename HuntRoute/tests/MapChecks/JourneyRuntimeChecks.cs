@@ -12,6 +12,38 @@ static class JourneyRuntimeChecks {
  static void Set(object target,string name,object? value){var type=target.GetType();var f=type.GetField(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);if(f!=null)f.SetValue(target,value);else type.GetProperty(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)!.SetValue(target,value);}
  static T Get<T>(object target,string name){var type=target.GetType();var f=type.GetField(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);return (T)(f!=null?f.GetValue(target):type.GetProperty(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)!.GetValue(target))!;}
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> call)where T:class{var proxy=DispatchProxy.Create<T,ServiceProxy>();((ServiceProxy)(object)proxy).Handler=call;return proxy;}
+ public static void RunOffline(){
+  static void Check(bool yes,string message){if(!yes)throw new Exception(message);}
+  var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+  Set(plugin,"Ready",true);Set(plugin,"character",123UL);Set(plugin,"contractRevision",2L);
+  Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>());
+  Set(plugin,"Mobs",new List<MobHuntEntry>{new(){BillNumber=1,NeededKills=1}});
+  Set(plugin,"BillStates",new Dictionary<byte,BillState>{{6,new(true,false,0,1,false)},{9,new(true,false,0,1,false)}});
+  var bridge=RuntimeHelpers.GetUninitializedObject(typeof(Plugin).Assembly.GetType("HuntRoute.NativeDialogService")!);
+  var queue=new ConfirmationQueue();Set(bridge,"queue",queue);Set(plugin,"NativeDialogs",bridge);
+  Service.Condition=Proxy<ICondition>((_,_)=>false);
+  Service.ObjectTable=Proxy<IObjectTable>((_,_)=>null);
+  var flow=Get<JourneyFlow>(plugin,"Flow");
+  var saved=Get<SavedJourney>(plugin,"CharacterSave");
+  Call(plugin,"CheckResetNotice");
+  var login=queue.Activate(true)??throw new Exception("Login prompt missing");
+  Check(login.Key.EndsWith(":taken"),"Unfinished contract must offer continuation");
+  login.OnShown!();queue.Resolve(login.Key,false);
+  Check(saved.DailyNotice==0&&saved.WeeklyNotice==0,"Continuation acknowledged categories it did not show");
+  flow.Active=true;Call(plugin,"CheckResetNotice");
+  Check(queue.Activate(true)==null,"Pickup prompt interrupts an active hunt");
+  flow.Pauses=PauseReason.User;Call(plugin,"CheckResetNotice");
+  var pickup=queue.Activate(true)??throw new Exception("New daily and weekly bills suppressed after login");
+  Check(pickup.Key.StartsWith("pickup:"),"Expected new-contract prompt after pause");
+  pickup.OnShown!();queue.Resolve(pickup.Key,false);
+  Check(saved.DailyNotice!=0&&saved.WeeklyNotice!=0,"Showing pickup must acknowledge both available categories");
+  Call(plugin,"CheckResetNotice");
+  Check(queue.Activate(true)==null,"Later repeated pickup for the same periods");
+  saved.DailyNotice-=86400;Call(plugin,"CheckResetNotice");
+  var daily=queue.Activate(true)??throw new Exception("New daily period is still suppressed");
+  Check(daily.Key.EndsWith(":0"),"New daily period incorrectly included acknowledged weekly bills");
+  Console.WriteLine("PASS offline login, reset, pause and Later regressions");
+ }
  public static int Run(GameData game){
   int checks=0;void Check(bool yes,string message){checks++;if(!yes)throw new Exception(message);}
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
@@ -177,8 +209,9 @@ static class JourneyRuntimeChecks {
   Check(request?.Key.StartsWith("login:")==true,"New login resets session suppression despite same character and daily period");
   queue.Clear();Set(plugin,"Mobs",new List<MobHuntEntry>{a});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
   Check(request?.Presentation?.ConfirmLabel=="Продолжить","Obtained incomplete bills offer continuation instead of another board trip");
-  savedNotice.DailyNotice=0;request!.OnShown!();queue.Resolve(request.Key,false);Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null&&savedNotice.DailyNotice==0,"Continuation offer suppresses same-session reset duplicate without falsely persisting board-category acknowledgement");
-  queue.Clear();Set(plugin,"loginDailyPeriod",ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()-86400);Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Key.StartsWith("pickup:")==true,"A new reset period remains eligible after session login proposal");
+  savedNotice=Get<SavedJourney>(plugin,"CharacterSave");
+  savedNotice.DailyNotice=0;request!.OnShown!();queue.Resolve(request.Key,false);Call(plugin,"CheckResetNotice");request=queue.Activate(true);
+  Check(request?.Key.StartsWith("pickup:")==true&&savedNotice.DailyNotice==0,"Continuation must not acknowledge available contracts");
   queue.Clear();Set(plugin,"loginNoticeShown",false);Set(plugin,"Mobs",new List<MobHuntEntry>());Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,1,1,true)}});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
   Check(request?.Presentation?.ConfirmLabel=="Открыть"&&request.Presentation.Context=="Новых контрактов пока нет.","Completed day still gets login summary without claiming new contracts exist");
   Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,1,1,true)},{5,new(true,false,0,1,false)}});

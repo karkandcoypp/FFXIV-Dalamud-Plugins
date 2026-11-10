@@ -25,7 +25,6 @@ public sealed partial class Plugin {
  internal long Now=>Clock?.Invoke()??Environment.TickCount64;
  private bool stateLoadPending;
  private bool loginNoticeShown;
- private long loginDailyPeriod,loginWeeklyPeriod;
  private HuntStore? store;
  internal HuntStore Store=>store??=new();
  private JourneyFlow? flow;
@@ -80,7 +79,7 @@ public sealed partial class Plugin {
   return true;
  }
  private void LoadJourney(){
-  loginNoticeShown=false;loginDailyPeriod=0;loginWeeklyPeriod=0;
+  loginNoticeShown=false;
   billGuard=new();uncertainBills.Clear();unreadBills.Clear();KillCounts=new();BillStates=new();Mobs=new();Routes=new();
   contractRevision=0;contractAt=0;flow=new();Flow.Load(CharacterSave);ordinaryActor=null;ordinaryKind=null;context=null;ownedMarker=null;pendingJourney=null;
   if(Flow.Active)Flow.Status="Сохранённый маршрут на паузе. Проверьте контракты и нажмите «Продолжить».";
@@ -302,13 +301,20 @@ public sealed partial class Plugin {
    ()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),
    ()=>{if(mode=="taken")ResumeJourney();else PickupOpen=mode=="pickup";Open();return true;},
    TravelDialogContent.Login(mode),
-   ()=>{loginNoticeShown=true;var now=DateTimeOffset.UtcNow;loginDailyPeriod=ResetClock.Period(now,false).ToUnixTimeSeconds();loginWeeklyPeriod=ResetClock.Period(now,true).ToUnixTimeSeconds();if(mode=="pickup"){if(Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=loginDailyPeriod;if(Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=loginWeeklyPeriod;}SaveJourney(true);}));
+   ()=>{
+    loginNoticeShown=true;
+    if(mode!="pickup")return;
+    var now=DateTimeOffset.UtcNow;
+    if(Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=ResetClock.Period(now,false).ToUnixTimeSeconds();
+    if(Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=ResetClock.Period(now,true).ToUnixTimeSeconds();
+    SaveJourney(true);
+   }));
  }
  private void CheckResetNotice(){
   if(!Settings.ResetNotifications||!Ready||contractRevision<2)return;
   if(!loginNoticeShown){OfferLoginNotice();return;}
   var now=DateTimeOffset.UtcNow;long daily=ResetClock.Period(now,false).ToUnixTimeSeconds(),weekly=ResetClock.Period(now,true).ToUnixTimeSeconds();
-  bool d=CharacterSave.DailyNotice!=daily&&loginDailyPeriod!=daily&&Boards.Any(b=>CanPickup(b,false));bool w=CharacterSave.WeeklyNotice!=weekly&&loginWeeklyPeriod!=weekly&&Boards.Any(b=>CanPickup(b,true));
+  bool d=CharacterSave.DailyNotice!=daily&&Boards.Any(b=>CanPickup(b,false));bool w=CharacterSave.WeeklyNotice!=weekly&&Boards.Any(b=>CanPickup(b,true));
   if(!d&&!w)return;
   if(Flow.Active&&Flow.Pauses==PauseReason.None){NoticeText="Доступны новые контракты — выберите доску в сводке.";return;}
   if(TravelBusy || pendingJourney!=null || Flow.Pauses.HasFlag(PauseReason.Marker))return;

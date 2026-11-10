@@ -40,11 +40,16 @@ Bill removal/replacement is confirmed by two consistent reads at least 750 ms ap
 ```
 dotnet run --project HuntRoute/tests/RouteChecks -c Release
 dotnet build HuntRoute/HuntRoute/HuntRoute.csproj -c Release --warnaserror
+dotnet run --project HuntRoute/tests/MapChecks -c Release -- --offline
 dotnet run --project HuntRoute/tests/MapChecks -c Release -- "<game/sqpack>" HuntRoute/data/elite-spawns.json
 dotnet run --project HuntRoute/tests/UiChecks -c Release -- "<preview directory>"
 ```
 
 MapChecks uses real game sheets and substituted clock/transport/flag services for controller scenarios. It verifies map links, boards, portrait availability, instance death/credit, route continuation, deferrals, resets, casts and restoration without controlling the game. UiChecks renders offline compositions at different sizes, including mini/settings/selection/elite states. These checks do not replace live FFXIV NPC streaming, native UI, sound or teleport testing.
+
+Release CI runs the offline mode against the production notification controller and the five reviewed board destinations and pins. Run the full mode locally with installed game data before release.
+
+For in-game acceptance with a gamepad, repeat at normal and enlarged UI scales: open a focused board row and verify that the dialog starts on Later and returns focus to that row after dismissal; page through targets and settings; move between the numeric step rows; close the mini panel and confirm the route keeps running. Verify text and controls stay inside each window.
 
 ## Ordinary world labels
 

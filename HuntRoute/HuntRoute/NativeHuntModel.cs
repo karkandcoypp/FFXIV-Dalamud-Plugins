@@ -129,6 +129,12 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     continue;
    }
    if(button.Goal is {} goal){
+    if(view==NativeHuntPage.Zones){
+     Set(i+3,++rows,0,button,controlX,bottom,controlWidth,28);
+     Cell(goal.Name,controlX+8,bottom+5,controlWidth-16,Vector4.One);
+     bottom+=30;
+     continue;
+    }
     if(goal.Zone!=lastZone){
      lastZone=goal.Zone;
      Cell(goal.Zone,Margin+8,bottom,inner-16,NativeHuntColors.Tracking);
@@ -145,6 +151,17 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     bottom+=28;
     continue;
    }
+   if(view==NativeHuntPage.Number){
+    const int columns=3;
+    float x=(width-(columns*ActionWidth+(columns-1)*Gap))/2;
+    int count=Math.Min(columns,visible.Length-i);
+    rows++;
+    for(int column=0;column<count;column++)
+     Set(i+column+3,rows,column,visible[i+column],x+column*(ActionWidth+Gap),bottom,ActionWidth,ActionHeight);
+    i+=count-1;
+    bottom+=ActionHeight+Gap;
+    continue;
+   }
    float gridWidth=mini?3*ActionWidth+2*Gap:controlWidth;
    float gridX=controlX;
    if(!button.Label.Contains('\n')&&button.Label.Length<=25){
@@ -154,7 +171,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     while(i+count<visible.Length){
      var item=visible[i+count];
      if(item.Board!=null||item.Goal!=null||item.Checked.HasValue||item.Label.Contains('\n')||item.Label.Length>25)break;
-     float w=view is NativeHuntPage.Number or NativeHuntPage.Target?LongActionWidth:CompactWidth(item);
+     float w=view==NativeHuntPage.Target?LongActionWidth:CompactWidth(item);
      if(used+w>gridWidth)break;
      Set(i+count+3,rows,count,item,gridX+used,bottom,w,ActionHeight);
      used+=w+Gap;count++;

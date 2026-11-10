@@ -10,6 +10,14 @@ internal static class NativeHuntPreviewChecks {
   var samples=new List<(string Name,NativeHuntPage Page,NativeHuntScreen Screen,bool Mini,int Offset)>();
   foreach(var page in Enum.GetValues<NativeHuntPage>()){if(page==NativeHuntPage.Target)controller.FocusGoal();else controller.Navigate(page);samples.Add((page.ToString(),page,controller.Build(),false,0));}
   samples.Add(("mini",NativeHuntPage.Hunt,controller.Build(true),true,0));
+  var flow=(JourneyFlow)typeof(Plugin).GetProperty("Flow",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(plugin)!;
+  var priorPauses=flow.Pauses;
+  try{
+   flow.Pauses=PauseReason.Marker;
+   var paused=controller.Build(true);
+   if(paused.Summary!="Метка изменена")throw new Exception("Mini panel lost the pause reason");
+   samples.Add(("mini-paused",NativeHuntPage.Hunt,paused,true,0));
+  }finally{flow.Pauses=priorPauses;}
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,0),false,1));
   var portraits=new Dictionary<uint,(string File,int Width,int Height)>();
@@ -35,6 +43,20 @@ internal static class NativeHuntPreviewChecks {
     var r=entry.Rect;
     if(r.Position.X<0||r.Position.Y<0||r.Position.X+r.Size.X>layout.Size.X||r.Position.Y+r.Size.Y>layout.Size.Y)
      throw new Exception("Native button exceeds its window: "+entry.Button.Key);
+   }
+   if(sample.Page==NativeHuntPage.Number){
+    var steps=layout.Buttons.Where(b=>b.Button.Action.Kind=="step").ToArray();
+    if(steps.Length!=6||steps.GroupBy(b=>b.Row).Select(g=>g.Count()).ToArray() is not [3,3]||steps.Any(b=>b.Rect.Size.X!=NativeHuntLayout.ActionWidth))
+     throw new Exception("Numeric controls must fit two compact rows");
+    var links=NativeHuntNavigation.Build(steps.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key)));
+    for(int column=0;column<3;column++)
+     if(links[column].Down!=links[column+3].Index||links[column+3].Up!=links[column].Index)
+      throw new Exception("Numeric focus must stay in the same column");
+   }
+   if(sample.Page==NativeHuntPage.Zones){
+    var zones=layout.Buttons.Where(b=>b.Button.Action.Kind=="filter-zone").ToArray();
+    if(zones.Length<2||zones.Any(b=>b.Button.Goal==null)||zones.Select(b=>b.Row).Distinct().Count()!=zones.Length)
+     throw new Exception("Zones must be rendered as separate focusable rows");
    }
    ImGui.End();ImGui.EndFrame();io.DisplaySize=layout.Size;
    for(int frame=0;frame<3;frame++){

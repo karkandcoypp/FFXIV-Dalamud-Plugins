@@ -55,6 +55,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
           dotnet build HuntRoute/tests/MapChecks/MapChecks.csproj -c Release --warnaserror
           if ($LASTEXITCODE -ne 0) { throw 'Map-check harness build failed' }
+          dotnet run --no-build --project HuntRoute/tests/MapChecks/MapChecks.csproj -c Release -- --offline
+          if ($LASTEXITCODE -ne 0) { throw 'Offline map and notification checks failed' }
           dotnet run --project HuntRoute/tests/UiChecks/UiChecks.csproj -c Release -- "$env:RUNNER_TEMP/HuntRoute-ui"
           if ($LASTEXITCODE -ne 0) { throw 'UI layout checks failed' }
           python -m pip install numpy pillow

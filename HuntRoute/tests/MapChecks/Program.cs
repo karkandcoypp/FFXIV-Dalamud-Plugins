@@ -22,7 +22,21 @@ class Program {
  static void Main(string[] args) {
   string home=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"XIVLauncher/addon/Hooks/dev");
   AssemblyLoadContext.Default.Resolving+=(_,n)=>File.Exists(Path.Combine(home,n.Name+".dll"))?AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(home,n.Name+".dll")):null;
+  if(args is ["--offline"]){RunOffline();return;}
   Run(args);
+ }
+ static void RunOffline(){
+  JourneyRuntimeChecks.RunOffline();
+  (string Name,uint Aetheryte,uint Territory,uint Map,Vector2 Point)[] expected=[
+   ("Heavensward",70,418,218,new(12.718168f,11.681350f)),
+   ("Stormblood",111,628,370,new(10.609598f,10.362924f)),
+   ("Shadowbringers",133,819,497,new(9.568138f,9.425624f)),
+   ("Endwalker",182,962,693,new(11.834738f,13.205691f)),
+   ("Dawntrail",216,1185,855,new(13.891332f,13.685839f))
+  ];
+  if(!Plugin.Boards.Select(b=>(b.Name,b.Aetheryte,b.Territory,b.Map,b.Position)).SequenceEqual(expected))
+   throw new Exception("Hunt board destination or map pin changed; verify against installed game data");
+  Console.WriteLine("PASS five board destination and map-pin fixtures");
  }
  static void Run(string[] args) {
   using var game=new GameData(args[0]);
