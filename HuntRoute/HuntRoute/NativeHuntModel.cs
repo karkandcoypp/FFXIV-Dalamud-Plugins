@@ -94,11 +94,23 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   var close=new NativeHuntButton("close","Закрыть",new("close"));
   float closeWidth=Button(close.Label);
   bool huntActions=!mini&&view==NativeHuntPage.Hunt&&pageCount==1&&visible.Length>0&&visible.All(IsCompact);
+  bool compactActive=false;
   if(!mini){
-   float tabWidth=new[]{"Охота","Доски","Настройки"}.Max(Button);
-   Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),Margin,37,tabWidth,ActionHeight);
-   Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),Margin+tabWidth+Gap,37,tabWidth,ActionHeight);
-   Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),Margin+2*(tabWidth+Gap),37,tabWidth,ActionHeight);
+   string[] tabLabels=["Охота","Доски","Настройки"];
+   float[] tabWidths=tabLabels.Select(Button).ToArray();
+   bool activeActions=huntActions&&visible is [{Key:"primary",Action.Kind:"pause" or "resume"},{Key:"map"},{Key:"actions"},{Key:"targets"}]
+    &&visible.Skip(1).Sum(Compact)+closeWidth+3*Gap<=inner;
+   float primaryWidth=activeActions?Compact(visible[0]):0;
+   if(activeActions&&measureButton!=null&&tabWidths.Sum()+primaryWidth+3*Gap>inner)
+    tabWidths=tabLabels.Select(label=>Math.Max(72,MathF.Ceiling(measureButton(label))+16)).ToArray();
+   compactActive=activeActions&&tabWidths.Sum()+primaryWidth+3*Gap<=inner;
+   if(!compactActive)tabWidths=tabLabels.Select(Button).ToArray();
+   float tabWidth=tabWidths.Max();
+   if(!compactActive||3*tabWidth+primaryWidth+3*Gap<=inner)Array.Fill(tabWidths,tabWidth);
+   Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),Margin,37,tabWidths[0],ActionHeight);
+   Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),Margin+tabWidths[0]+Gap,37,tabWidths[1],ActionHeight);
+   Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),Margin+tabWidths[0]+tabWidths[1]+2*Gap,37,tabWidths[2],ActionHeight);
+   if(compactActive)Set(3,0,3,visible[0],width-Margin-Compact(visible[0]),37,Compact(visible[0]),ActionHeight);
   }
   float controlWidth=mini?inner:4*ActionWidth+3*Gap;
   float controlX=Margin;
@@ -107,7 +119,14 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   string? lastZone=null;
   int rows=0;
   float bottom=bodyY;
-  if(huntActions){
+  if(compactActive){
+   float x=Margin;
+   for(int i=1;i<visible.Length;i++){
+    float w=Compact(visible[i]);Set(i+3,1,i-1,visible[i],x,bodyY,w,ActionHeight);x+=w+Gap;
+   }
+   Set(12,1,3,close,width-Margin-closeWidth,bodyY,closeWidth,ActionHeight);
+   bottom=bodyY+ActionHeight+Gap;
+  }else if(huntActions){
    var actions=visible.Append(close).ToArray();
    float Span(int start,int count)=>actions.Skip(start).Take(count).Sum(Compact)+(count-1)*Gap;
    bool Place(int start,int row){

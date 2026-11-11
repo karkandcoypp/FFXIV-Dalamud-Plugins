@@ -40,10 +40,26 @@ static class NativeNavigationChecks {
    var rightOfMap=actions;
    check(map.Row==rightOfMap.Row&&map.Rect.Position.X+map.Rect.Size.X<rightOfMap.Rect.Position.X,"Hunt actions fit side by side");
    check(!mini||primary.Row==map.Row,"Mini panel puts all three hunt actions in one row");
-   check(actions.Row==primary.Row,"Route actions share the hunt action row");
-   check(layout.ProgressTrack.Position.Y+layout.ProgressTrack.Size.Y<primary.Rect.Position.Y,"Hunt progress does not overlap the primary action");
+   check(mini?actions.Row==primary.Row:primary.Row==0&&actions.Row==map.Row&&map.Row==layout.Buttons.Single(b=>b.Button.Key=="close").Row,"Main hunt places Pause above the single bottom action row; mini keeps one row");
+   check(layout.ProgressTrack.Position.Y+layout.ProgressTrack.Size.Y<map.Rect.Position.Y,"Hunt progress does not overlap the bottom action row");
    var paired=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
    check(paired.Single(n=>n.Index==map.Slot+1).Right==rightOfMap.Slot+1,"D-pad right moves from Map to the adjacent action");
+  }
+  foreach(var (label,kind) in new[]{("Пауза","pause"),("Продолжить","resume")}){
+   var russian=active with {Buttons=[
+    new("primary",label,new(kind)),new("map","Карта",new("map")),new("actions","Маршрут",new("page")),new("targets","Все цели",new("page"))
+   ]};
+   static float Measure(string text)=>text.Length*9.5f;
+   var layout=NativeHuntLayout.Build(russian,NativeHuntPage.Hunt,0,30,38,false,Measure);
+   var row=layout.Buttons.Where(b=>b.Row>0).OrderBy(b=>b.Column).ToArray();
+   check(row.Select(b=>b.Button.Key).SequenceEqual(new[]{"map","actions","targets","close"})&&row.All(b=>b.Row==1),"All four Russian hunt actions fit the same bottom row");
+   check(row.All(b=>b.Rect.Position.X>=16&&b.Rect.Position.X+b.Rect.Size.X<=layout.Size.X-16&&b.Rect.Size.X>=Measure(b.Button.Label)+16)&&
+    row.Zip(row.Skip(1)).All(p=>p.First.Rect.Position.X+p.First.Rect.Size.X<p.Second.Rect.Position.X),"Bottom actions retain measured label padding and do not overlap");
+   var nav=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+   for(int i=0;i<row.Length;i++){
+    var link=nav.Single(n=>n.Index==row[i].Slot+1);
+    check(link.Left==row[(i+3)%4].Slot+1&&link.Right==row[(i+1)%4].Slot+1,"D-pad cycles through all four bottom actions in both directions");
+   }
   }
   foreach(string action in new[]{"Пауза","Продолжить"})foreach(float glyphWidth in new[]{7f,9.5f,12f}){
    var miniScreen=new NativeHuntScreen("Цель","",[
