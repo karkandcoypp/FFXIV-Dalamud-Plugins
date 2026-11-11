@@ -613,8 +613,20 @@
       "text": "Место назначения NPC неоднозначно или не нанесено на карту: Капюшон чистилища ударов",
       "provider": "MyMemory",
       "machine": true
+    },
+    "a409b515426b55ff3c767657fab30b94d078af0d954f87f62a8cacebac21f5b5": {
+      "source": "Price unknown or exchange is ambiguous: Blowfish",
+      "text": "Цена неизвестна или обмен неоднозначен: Blowfish",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "a3dd223311e67b87469c00aa199da358f607dc4e27ebc652381d4e0e509cefa5": {
+      "source": "NPC destination is ambiguous or not mapped: Blowfish",
+      "text": "Пункт назначения NPC неоднозначен или не нанесен на карту: Blowfish",
+      "provider": "MyMemory",
+      "machine": true
     }
   },
-  "day": "2026-11-10",
-  "used": 0
+  "day": "2026-11-11",
+  "used": 100
 }
