@@ -3,15 +3,19 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag matching the current manifest; validation only, no publication"
+        description: "Release tag matching the manifest"
         required: true
         type: string
+      publish:
+        description: "Publish an existing release tag after all checks pass"
+        type: boolean
+        default: false
   push:
     tags: ['hr-v*']
 permissions:
   contents: write
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ (github.event_name == 'push' || inputs.publish) && (inputs.tag || github.ref_name) || github.run_id }}
   cancel-in-progress: false
 jobs:
   release:
@@ -22,9 +26,13 @@ jobs:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       RELEASE_REPO: ${{ github.repository }}
     steps:
+      - name: Validate release tag
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^hr-v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Expected a Hunt Route release tag such as hr-v0.4.59' }
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ inputs.publish && format('refs/tags/{0}', inputs.tag) || github.ref }}
       - uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: '10.0.x'
@@ -72,7 +80,7 @@ jobs:
           python tools/verify_release.py --zip "$env:RUNNER_TEMP/HuntRoute.zip" --manifest "$env:RUNNER_TEMP/HuntRoute.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG --index "$env:RUNNER_TEMP/pluginmaster.json"
           if ($LASTEXITCODE -ne 0) { throw 'Package verification failed' }
       - name: Upload validation package
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && !inputs.publish
         uses: actions/upload-artifact@v7.0.2
         with:
           name: validated-huntroute-package
@@ -82,10 +90,10 @@ jobs:
             ${{ runner.temp }}/pluginmaster.json
           if-no-files-found: error
       - name: Publish release asset
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.publish
         run: ./tools/publish_asset.ps1 -Archive "$env:RUNNER_TEMP/HuntRoute.zip" -Manifest "$env:RUNNER_TEMP/HuntRoute.json" -Notes "HuntRoute/RELEASE-NOTES.md"
       - name: Update shared plugin repository
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.publish
         run: |
           python tools/publish_index.py --manifest "$env:RUNNER_TEMP/HuntRoute.json" --repository $env:RELEASE_REPO --tag $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Index publication failed after retries' }
