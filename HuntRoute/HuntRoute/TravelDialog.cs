@@ -44,7 +44,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
     public static Vector2 ClampPosition(Vector2 origin,Vector2 size,Vector2 viewport) =>
         Vector2.Clamp(origin,Vector2.Zero,Vector2.Max(Vector2.Zero,viewport-size));
 
-    public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure,Func<string,float>? measureButton=null) {
+    public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure,Func<string,float>? measureButton=null,Func<string,float>? measureTitleWidth=null) {
         const float width=DialogWidth,left=18,inner=width-2*left,top=38,portraitSize=160,portraitGap=14;
         NativeHuntRect? portrait=content.PortraitIcon!=0?new(new(width-left-portraitSize,top),new(portraitSize,portraitSize)):null;
         float textWidth=portrait.HasValue?inner-portraitSize-portraitGap:inner;
@@ -55,11 +55,18 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             if(!float.IsFinite(height) || height<0)throw new ArgumentException("Invalid text measurement");
             texts.Add(new(value,new(x,y),new(w,height),font,color,centered&&height<=font+8));return height;
         }
+        bool useSideHeading=content.NextZone&&portrait.HasValue
+            &&measureTitleWidth?.Invoke(content.Title)<=textWidth-8;
+        int firstColumnText=0;
         float y=top;
         if(content.NextZone) {
-            y+=Text(content.Eyebrow,left,y,inner,NativeHuntLayout.SecondaryFont,Brand)+2;
-            y+=Text(content.Title,left,y,inner,NativeHuntLayout.TitleFont,White)+8;
-            if(portrait is {} nextImage)portrait=nextImage with {Position=new(nextImage.Position.X,y)};
+            float headingWidth=useSideHeading?textWidth:inner;
+            y+=Text(content.Eyebrow,left,y,headingWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
+            y+=Text(content.Title,left,y,headingWidth,NativeHuntLayout.TitleFont,White)+8;
+            if(!useSideHeading&&portrait is {} nextImage) {
+                portrait=nextImage with {Position=new(nextImage.Position.X,y)};
+                firstColumnText=texts.Count;
+            }
         } else {
             if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,textWidth,NativeHuntLayout.SecondaryFont,Brand,centerNotice)+2;
             y+=Text(content.Title,left,y,textWidth,NativeHuntLayout.TitleFont,White,centerNotice)+4;
@@ -80,6 +87,14 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         if(portrait is {} image) {
             float below=image.Position.Y+image.Size.Y+4;
             if(captionUnderPortrait)below+=Text(content.Subject,image.Position.X,below,image.Size.X,NativeHuntLayout.BodyFont,Brand,centered:true)+4;
+            if(content.NextZone&&y<below) {
+                float offset=MathF.Floor((below-y)/2);
+                int leftTextEnd=captionUnderPortrait?texts.Count-1:texts.Count;
+                for(int i=firstColumnText;i<leftTextEnd;i++) {
+                    var text=texts[i];
+                    texts[i]=text with {Position=text.Position+new Vector2(0,offset)};
+                }
+            }
             y=Math.Max(y,below);
         }
         if(content.Metrics.Length>0) {

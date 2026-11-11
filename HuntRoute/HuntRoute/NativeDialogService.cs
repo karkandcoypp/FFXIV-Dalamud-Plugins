@@ -141,7 +141,11 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
                 String=text };
             node.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);
             textNodes.Add(node);AddFixedNode(node);return node.GetTextDrawSize(considerScale:false).Y;
-        },label=>NativeButtonText.Measure(measureButton,label));
+        },label=>NativeButtonText.Measure(measureButton,label),title=> {
+            measureButton.FontSize=NativeHuntLayout.TitleFont;
+            try { return measureButton.GetTextDrawSize(title,considerScale:false).X; }
+            finally { measureButton.FontSize=NativeHuntLayout.ButtonFont; }
+        });
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color;if(spec.Centered)node.AlignmentType=AlignmentType.Top; }
         portraitRect=layout.Portrait;
         RefreshPortrait();
