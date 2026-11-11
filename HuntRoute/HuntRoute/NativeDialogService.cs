@@ -72,6 +72,7 @@ internal sealed class NativeDialogService : IDisposable {
                 ImGui.TextWrapped(content.Title);
                 if(content.Destination.Length>0&&content.Destination!=content.Title)ImGui.TextWrapped(content.Destination);
                 if(content.Context.Length>0)ImGui.TextWrapped(content.Context);
+                if(content.Fare.HasValue)ImGui.TextUnformatted(content.FareLabel);
                 if(content.Subject.Length>0)ImGui.TextWrapped(content.SubjectLabel.Length>0?$"{content.SubjectLabel} · {content.Subject}":content.Subject);
                 if(content.Detail.Length>0)ImGui.TextWrapped(content.Detail);
                 foreach(var metric in content.Metrics)ImGui.TextWrapped($"{metric.Label} · {metric.Value}");
@@ -119,6 +120,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     private TextButtonNode? yesButton,noButton;
     private TextNode? yesCaption,noCaption;
     private IconImageNode? portrait;
+    private TextNode? portraitCaption;
     private NativeHuntRect? portraitRect;
 
     protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values) {
@@ -148,6 +150,14 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         });
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color;if(spec.Centered)node.AlignmentType=AlignmentType.Top; }
         portraitRect=layout.Portrait;
+        if(portraitRect is {} portraitBounds&&presentation.NextZone) {
+            for(int i=0;i<layout.Texts.Count;i++) {
+                if(layout.Texts[i].Position.X==portraitBounds.Position.X) {
+                    portraitCaption=textNodes[i];
+                    break;
+                }
+            }
+        }
         RefreshPortrait();
         yesButton=new TextButtonNode { Position=layout.Confirm.Position,Size=layout.Confirm.Size,String="",
             NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true,true) };
@@ -184,10 +194,31 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     private void RefreshPortrait(){
         if(portrait is not {IsVisible:false,IsTextureReady:true} image||portraitRect is not {} bounds)return;
         var texture=image.ActualTextureSize;
-        var fitted=bounds.FitImage(texture);
-        if(fitted.Size.X<=0||fitted.Size.Y<=0)return;
-        image.TextureSize=texture;
-        image.Position=fitted.Position;image.Size=fitted.Size;image.IsVisible=true;
+        if(texture.X<=0||texture.Y<=0)return;
+        var crop=ReadPortraitCrop(image,texture);
+        var fitted=bounds.FitImage(crop.Size);
+        image.TextureCoordinates=crop.Position;
+        image.TextureSize=crop.Size;
+        image.Position=fitted.Position;
+        image.Size=fitted.Size;
+        if(portraitCaption is {} caption)
+            caption.Position=TravelDialogLayout.PortraitCaptionPosition(bounds,fitted);
+        image.IsVisible=true;
+    }
+    private NativeHuntRect ReadPortraitCrop(IconImageNode image,Vector2 texture) {
+        var full=new NativeHuntRect(Vector2.Zero,texture);
+        try {
+            string path=image.TexturePath;
+            if(string.IsNullOrEmpty(path))
+                path=Service.TextureProvider.GetIconPath(new Dalamud.Interface.Textures.GameIconLookup(content.PortraitIcon,itemHq:false,hiRes:false));
+            var file=Service.DataManager.GetFile<Lumina.Data.Files.TexFile>(path);
+            int width=(int)texture.X,height=(int)texture.Y;
+            if(file==null||file.Header.Width!=width||file.Header.Height!=height)return full;
+            return TravelDialogLayout.PortraitCrop(file.ImageData,width,height);
+        } catch(Exception e) {
+            Service.PluginLog.Debug(e,"Не удалось обрезать прозрачные поля портрета");
+            return full;
+        }
     }
     private void RefreshCaptions(){
         if(yesButton==null||noButton==null||yesCaption==null||noCaption==null)return;

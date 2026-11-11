@@ -227,7 +227,7 @@ public sealed partial class Plugin {
    ()=>Ready && Service.ClientState.TerritoryType!=target.TerritoryType&&Eligible(target)&&Flow.Active&&Session.RunId==run&&Session.Phase==RoutePhase.AwaitingTravel&&Session.Target is {} planned&&JourneyFlow.Key(planned)==key&&Mobs.Any(m=>JourneyFlow.Key(m)==key)&&EntryFor(target)?.Id==entry.Id&&Price(entry.Id)<=quote,
    ()=>!TravelBusy && NavigationAllowed,
    ()=>{var current=EntryFor(target);if(current?.Id!=entry.Id || Price(entry.Id)>quote)return false;Travel(target);return Session.Target is {} t&&JourneyFlow.Key(t)==key&&Session.Phase is RoutePhase.WaitingForZone or RoutePhase.Following;},
-   TravelDialogContent.Next(CurrentTerritory.ToString(),target.TerritoryName??"Зона",target.Name??"Цель",target.Icon) with {Context=$"{entry.Name} · {quote} гил",Detail=TravelHint(target,entry)}),true);
+   TravelDialogContent.Next(CurrentTerritory.ToString(),target.TerritoryName??"Зона",target.Name??"Цель",target.Icon) with {Context=entry.Name,Fare=quote,Detail=TravelHint(target,entry)}),true);
  }
  internal string TravelHint(MobHuntEntry target,EntryPoint? entry){
   if(entry!=null&&Service.DataManager.GetExcelSheet<Aetheryte>().GetRow(entry.Id).Territory.RowId!=target.TerritoryType)return "Эфирит в соседней зоне. Дальше — своим ходом.";

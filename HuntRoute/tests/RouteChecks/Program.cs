@@ -354,6 +354,17 @@ Console.WriteLine($"PASS persisted completion audit: {checks} checks");
 
 // Dialog presentation changes must not change the confirmation queue or travel callbacks.
 float MeasureDialog(string text,float width,uint font) => text.Split('\n').Sum(line=>Math.Max(1,(int)Math.Ceiling(line.Length*font*.62f/width)))*(font+4);
+var portraitPixels=new byte[8*8*4];
+for(int y=3;y<=4;y++)
+ for(int x=1;x<=6;x++)portraitPixels[(y*8+x)*4+3]=255;
+var croppedPortrait=TravelDialogLayout.PortraitCrop(portraitPixels,8,8);
+Check(croppedPortrait.Position==new Vector2(1,3)&&croppedPortrait.Size==new Vector2(6,2),"Portrait crop keeps the entire visible silhouette and removes transparent margins");
+Check(TravelDialogLayout.PortraitCrop(new byte[8*8*4],8,8).Size==new Vector2(8,8),"Empty texture uses the full portrait bounds");
+var portraitArea=new NativeHuntRect(new(222,38),new(192,192));
+var fittedPortrait=portraitArea.FitImage(croppedPortrait.Size);
+Check(fittedPortrait.Size==new Vector2(192,64)
+ &&TravelDialogLayout.PortraitCaptionPosition(portraitArea,fittedPortrait)==new Vector2(222,170),
+ "Cropped silhouette fills the portrait width and its caption sits four units below it");
 var nextDialog=TravelDialogContent.Next("Kozama'uka","Yak T'el","mourner");
 var shortcutDialog=TravelDialogContent.Shortcut(new(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40),"Amh Araeng","gnome");
 Check(nextDialog.Destination=="Yak T'el" && nextDialog.Subject=="mourner" && nextDialog.Metrics.Length==0,"Next-zone dialog names the correct zone and first mob");

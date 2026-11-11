@@ -4,7 +4,8 @@ using System.Numerics;
 namespace HuntRoute;
 
 public sealed record DialogMetric(string Label,string Value,bool Highlight=false);
-public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null,uint PortraitIcon=0,bool CenterNoticeText=false,bool NextZone=false,string Summary="") {
+public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null,uint PortraitIcon=0,bool CenterNoticeText=false,bool NextZone=false,string Summary="",uint? Fare=null) {
+    public string FareLabel => Fare is {} gil?$"{gil} гил":"";
     public string ConfirmLabel => ActionLabel ?? "Телепорт";
     public string DeclineLabel => "Позже";
     public static TravelDialogContent Login(string mode) => mode switch {
@@ -45,9 +46,28 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
     public static Vector2 ClampPosition(Vector2 origin,Vector2 size,Vector2 viewport) =>
         Vector2.Clamp(origin,Vector2.Zero,Vector2.Max(Vector2.Zero,viewport-size));
 
+    internal static Vector2 PortraitCaptionPosition(NativeHuntRect bounds,NativeHuntRect fitted) =>
+        new(bounds.Position.X,fitted.Position.Y+fitted.Size.Y+4);
+
+    internal static NativeHuntRect PortraitCrop(ReadOnlySpan<byte> pixels,int width,int height) {
+        var full=new NativeHuntRect(Vector2.Zero,new(width,height));
+        if(width<=0||height<=0||(long)width*height*4>pixels.Length)return full;
+        int left=width,top=height,right=-1,bottom=-1;
+        for(int y=0;y<height;y++) {
+            for(int x=0;x<width;x++) {
+                if(pixels[(y*width+x)*4+3]==0)continue;
+                left=Math.Min(left,x);
+                right=Math.Max(right,x);
+                top=Math.Min(top,y);
+                bottom=Math.Max(bottom,y);
+            }
+        }
+        return right<0?full:new(new(left,top),new(right-left+1,bottom-top+1));
+    }
+
     public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure,Func<string,float>? measureButton=null,Func<string,float>? measureTitleWidth=null) {
-        const float left=18,top=38,portraitSize=176,portraitGap=14;
-        float width=content.PortraitIcon!=0?DialogWidth+16:DialogWidth;
+        const float left=18,top=38,portraitSize=192,portraitGap=14;
+        float width=content.PortraitIcon!=0?DialogWidth+32:DialogWidth;
         float inner=width-2*left;
         NativeHuntRect? portrait=content.PortraitIcon!=0?new(new(width-left-portraitSize,top),new(portraitSize,portraitSize)):null;
         float textWidth=portrait.HasValue?inner-portraitSize-portraitGap:inner;
@@ -81,6 +101,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White)+2;
         }
         if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,left,y,textWidth,NativeHuntLayout.SecondaryFont,hasSummary?Muted:Mint,centerNotice)+4;
+        if(content.Fare.HasValue)y+=Text(content.FareLabel,left,y,textWidth,NativeHuntLayout.BodyFont,Mint)+4;
         bool captionUnderPortrait=content.NextZone&&portrait.HasValue&&content.Subject.Length>0;
         if(content.HasSubject) {
             y+=2;
