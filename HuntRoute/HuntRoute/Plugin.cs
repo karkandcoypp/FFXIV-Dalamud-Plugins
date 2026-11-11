@@ -58,6 +58,27 @@ public sealed partial class Plugin : IDalamudPlugin {
     private ulong character;
     private string routeSignature="";
     private readonly Dictionary<uint,IReadOnlyDictionary<uint,uint>> observedFares=[];
+    private IReadOnlyDictionary<uint,uint>? fareSnapshot=new Dictionary<uint,uint>();
+    // Dalamud's enumerator refreshes the native list at both Length and index access.
+    // Copy the native entries once on the framework thread, never retain native references.
+    private unsafe IReadOnlyDictionary<uint,uint> RefreshFares(){
+        var prices=new Dictionary<uint,uint>();
+        if(Service.ObjectTable.LocalPlayer!=null&&Telepo.Instance() is var telepo&&telepo!=null){
+            telepo->UpdateAetheryteList();
+            ref var list=ref telepo->TeleportList;
+            for(int i=0,count=list.Count;i<count;i++){
+                ref var entry=ref list[i];
+                var id=entry.AetheryteId;
+                if(entry.SubIndex!=0)continue; // All Hunt Route teleports use subindex 0.
+                prices[id]=Math.Min(prices.GetValueOrDefault(id,uint.MaxValue),entry.GilCost);
+            }
+        }
+        return fareSnapshot=prices;
+    }
+    // Uninitialized offline integration fixtures supply a managed list instead.
+    private IEnumerable<uint> UnlockedAetherytes()=>fareSnapshot?.Keys??Service.Aetherytes?.Select(a=>a.AetheryteId)??[];
+    private bool IsAetheryteUnlocked(uint id)=>fareSnapshot?.ContainsKey(id)??Service.Aetherytes?.Any(a=>a.AetheryteId==id)??false;
+
     private long nextTeleportAllowed;
     internal uint CurrentTerritory;
     internal uint CurrentMap;
@@ -92,7 +113,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         NativeMain?.CloseAll();
         SaveJourney(true);
         SaveHistory(true);
-        Ready=false; observedFares.Clear(); character=0; signature=""; routeSignature=""; nextScan=0; nextTeleportAllowed=0;
+        Ready=false; fareSnapshot=new Dictionary<uint,uint>(); observedFares.Clear(); character=0; signature=""; routeSignature=""; nextScan=0; nextTeleportAllowed=0;
         wasLoading=false; Timing.Reset(); CurrentTerritory=0; CurrentMap=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear();
         Elite.Selected=null; Session.Stop(); NativeDialogs.CancelAll(); NextZone.Sync(); Shortcut.Sync();
     }
@@ -127,13 +148,13 @@ public sealed partial class Plugin : IDalamudPlugin {
                 var kills=new int[5];for(byte mob=0;mob<5;mob++)kills[mob]=hunt->GetKillCount(bill,mob);
                 AcceptBillSnapshot(bill,new((hunt->ObtainedFlags&(1<<bill))!=0,hunt->ObtainedMarkId[bill],kills),Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(bill).OrderAmount);
             }
-            string current = string.Join(",",Enumerable.Range(0,22).Select(i=>$"{Guard.Current((byte)i)?.Taken}:{Guard.Current((byte)i)?.Order}")) + ":" + string.Join(",", Service.Aetherytes.Select(a=>a.AetheryteId).Order());
+            var fares=RefreshFares();
+            string current = string.Join(",",Enumerable.Range(0,22).Select(i=>$"{Guard.Current((byte)i)?.Taken}:{Guard.Current((byte)i)?.Order}")) + ":" + string.Join(",", fares.Keys.Order());
             if (current != signature || unreadBills.Count>0) {
                 ReadBills(); signature = current; routeSignature="";
                 if(Elite.Selected is {} old) Elite.Selected=Mobs.FirstOrDefault(m=>m.BillNumber==old.BillNumber && m.MobIndex==old.MobIndex && m.MobHuntId==old.MobHuntId);
             }
             CurrentTerritory=Service.ClientState.TerritoryType; CurrentMap=Service.ClientState.MapId;
-            var fares=Service.Aetherytes.GroupBy(a=>a.AetheryteId).ToDictionary(g=>g.Key,g=>g.Min(a=>a.GilCost));
             if(fares.Count>0)observedFares[CurrentTerritory]=fares;
             string routeKey=current+":"+string.Join(",",fares.OrderBy(p=>p.Key).Select(p=>$"{p.Key}={p.Value}"))+":"+CurrentTerritory+":"+CurrentMap+":"+string.Join(",",Mobs.Where(Done).Select(m=>$"{m.BillNumber}-{m.MobIndex}"));
             if(routeSignature!=routeKey) { BuildRoutes(fares); routeSignature=routeKey; }
@@ -190,7 +211,7 @@ public sealed partial class Plugin : IDalamudPlugin {
     internal List<EntryPoint> Entries(uint mapId, uint territory) {
         var map = Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(mapId);
         if(map.TerritoryType.RowId!=territory) return [];
-        var unlocked = Service.Aetherytes.Select(a => a.AetheryteId).ToHashSet();
+        var unlocked = UnlockedAetherytes().ToHashSet();
         var result = new List<EntryPoint>();
         if(!Service.DataManager.GetSubrowExcelSheet<MapMarker>().TryGetRow(map.MapMarkerRange,out var markers)) return result;
         foreach (var marker in markers) {
@@ -211,7 +232,7 @@ public sealed partial class Plugin : IDalamudPlugin {
                 var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(group.Key.MapId);
                 Vector2[] origins=entries.Select(e=>MapCoordinates.ToWorld(e.Position,map)).ToArray();
                 if(here&&CurrentMap==group.Key.MapId&&Service.ObjectTable.LocalPlayer is {} player)origins=[new(player.Position.X,player.Position.Z)];
-                bool reachable=here||entries.Count>0||group.Key.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75);
+                bool reachable=here||entries.Count>0||group.Key.TerritoryType==399&&IsAetheryteUnlocked(75);
                 var(order,start,cost)=RoutePlanner.Zone(targets,m=>!reachable||Done(m)||Flow.Excluded(m),m=>m.IsEliteMark,PlanningPoints,origins,here?null:entries.Select(e=>fares.GetValueOrDefault(e.Id,uint.MaxValue)).ToArray(),here?0:RoutePlanner.GilPerSecond);
                 EntryPoint? entry=!here&&start>=0?entries[start]:null;
                 if(!here&&entry==null&&order.FirstOrDefault(m=>!Done(m)&&!Flow.Excluded(m)) is {} first)entry=NearestEntryFor(first);
@@ -237,7 +258,7 @@ public sealed partial class Plugin : IDalamudPlugin {
             Service.Chat.PrintError("Неизвестный эфирит."); return false;
         }
         var decision=TravelPolicy.Decide(Service.ClientState.TerritoryType,destination.Territory.RowId,
-            Ready && Service.ClientState.IsLoggedIn,Service.Aetherytes.Any(a=>a.AetheryteId==id),TravelBusy,allowSameZone);
+            Ready && Service.ClientState.IsLoggedIn,IsAetheryteUnlocked(id),TravelBusy,allowSameZone);
         if(decision==TravelDecision.AlreadyThere) return true;
         if(decision!=TravelDecision.Teleport) {
             Service.Chat.PrintError(decision==TravelDecision.Locked?"Эфирит не открыт.":decision==TravelDecision.NotReady?"Данные персонажа ещё не готовы.":"Телепорт сейчас недоступен или уже запрошен.");
@@ -374,7 +395,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         else return null;
         var here=new Vector2(player.Position.X,player.Position.Z);
 
-        var prices=Service.Aetherytes.GroupBy(a=>a.AetheryteId).ToDictionary(g=>g.Key,g=>g.Min(a=>a.GilCost));
+        var prices=fareSnapshot??Service.Aetherytes.GroupBy(a=>a.AetheryteId).ToDictionary(g=>g.Key,g=>g.Min(a=>a.GilCost));
         var candidates=Entries(target.MapId,target.TerritoryType).Where(e=>prices.ContainsKey(e.Id))
             .Select(e=>new ShortcutCandidate(e.Id,e.Name,MapCoordinates.ToWorld(e.Position,map),prices[e.Id]));
         return ShortcutAdvisor.Evaluate(Session.RunId,target,here,destination,candidates,Timing.OverheadSeconds,Settings.MaxGil,Settings.MinSeconds,Settings.MinPercent/100f);

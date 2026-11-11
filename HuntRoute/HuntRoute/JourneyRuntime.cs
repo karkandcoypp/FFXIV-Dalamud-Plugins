@@ -101,6 +101,7 @@ public sealed partial class Plugin {
  internal void SaveJourney(bool force=false){
   SaveSettings(force);
   if(stateLoadPending || stateFile==null || character==0 || (!force && Now<nextStateSave))return;
+  nextStateSave=Now+2000;
   var s=CharacterSave;s.Context=context;s.Active=Flow.Active;s.Manual=Flow.Manual;s.Target=Session.Target is {} t?JourneyFlow.Key(t):Flow.RestoreTarget;
   s.Deferred=Flow.Deferred.ToHashSet();s.Zones=Flow.Zones.ToHashSet();s.LongNotified=Flow.LongNotified.ToHashSet();
   if(!Flow.Restored){s.SearchTarget=searchKey;s.Search=Session.Target is {IsEliteMark:true} currentSearch&&searchKey==SearchIdentity(currentSearch)?Search.Capture():null;}
@@ -111,6 +112,7 @@ public sealed partial class Plugin {
  private void SaveSettings(bool force=false){
   if(settingsFile==null||stateLoadPending&&settingsLoadPending||!force&&Now<nextSettingsSave)return;
   if(settingsLoadPending)try{settingsStore=HuntSettingsFile.Load(settingsFile,Store.Settings);settingsLoadPending=false;}catch(Exception e){nextSettingsSave=Now+10000;SettingsSaveError="Настройки недоступны для чтения. Исходный файл не перезаписан.";Service.PluginLog.Debug(e,"Повторное чтение настроек");return;}
+  nextSettingsSave=Now+2000;
   settingsStore??=new(){Settings=Store.Settings};string value=JsonSerializer.Serialize(settingsStore);
   if(!force&&lastSettingsSaved==value&&SettingsSaveError==null)return;
   try{settingsStore.Save(settingsFile);Store.PreserveLegacySettings=false;lastSettingsSaved=value;nextSettingsSave=Now+2000;SettingsSaveError=null;}catch(Exception e){nextSettingsSave=Now+10000;SettingsSaveError="Не удалось сохранить настройки: изменения могут пропасть после перезапуска.";Service.PluginLog.Error(e,"Сохранение настроек");}
@@ -195,11 +197,11 @@ public sealed partial class Plugin {
  }
  internal EntryPoint? EntryFor(MobHuntEntry m){
   var route=Routes.FirstOrDefault(r=>r.Mobs.Any(t=>JourneyFlow.Key(t)==JourneyFlow.Key(m)));
-  if(route?.Start is {} planned&&route.Mobs.FirstOrDefault(t=>!Done(t)&&!Flow.Excluded(t)&&PlanningPoints(t).Length>0) is {} first&&JourneyFlow.Key(first)==JourneyFlow.Key(m)&&Service.Aetherytes.Any(a=>a.AetheryteId==planned.Id))return planned;
+  if(route?.Start is {} planned&&route.Mobs.FirstOrDefault(t=>!Done(t)&&!Flow.Excluded(t)&&PlanningPoints(t).Length>0) is {} first&&JourneyFlow.Key(first)==JourneyFlow.Key(m)&&IsAetheryteUnlocked(planned.Id))return planned;
   return NearestEntryFor(m);
  }
- private EntryPoint? NearestEntryFor(MobHuntEntry m){var positions=m.IsEliteMark?EliteSpawns.For(m):Position(m) is {} p?new[]{p}:Array.Empty<Vector2>();return Entries(m.MapId,m.TerritoryType).OrderBy(e=>Price(e.Id)).ThenBy(e=>positions.Length==0?float.MaxValue:positions.Min(p=>Vector2.DistanceSquared(e.Position,p))).ThenBy(e=>e.Id).FirstOrDefault() ?? (m.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75)?new(75,"Idyllshire",Vector2.Zero):null);}
- internal uint Price(uint id)=>Service.Aetherytes.Where(a=>a.AetheryteId==id).Select(a=>a.GilCost).DefaultIfEmpty(uint.MaxValue).Min();
+ private EntryPoint? NearestEntryFor(MobHuntEntry m){var positions=m.IsEliteMark?EliteSpawns.For(m):Position(m) is {} p?new[]{p}:Array.Empty<Vector2>();return Entries(m.MapId,m.TerritoryType).OrderBy(e=>Price(e.Id)).ThenBy(e=>positions.Length==0?float.MaxValue:positions.Min(p=>Vector2.DistanceSquared(e.Position,p))).ThenBy(e=>e.Id).FirstOrDefault() ?? (m.TerritoryType==399&&IsAetheryteUnlocked(75)?new(75,"Idyllshire",Vector2.Zero):null);}
+ internal uint Price(uint id)=>fareSnapshot?.GetValueOrDefault(id,uint.MaxValue)??Service.Aetherytes.Where(a=>a.AetheryteId==id).Select(a=>a.GilCost).DefaultIfEmpty(uint.MaxValue).Min();
  private void OfferTravel(MobHuntEntry target,bool starting,EntryPoint? reviewedEntry=null){
   if(Service.ClientState.TerritoryType==target.TerritoryType){
    NativeDialogs.Cancel("travel");NativeDialogs.Cancel("next");
@@ -324,7 +326,7 @@ public sealed partial class Plugin {
  internal void Export(){if(stateFile==null)return;string path=Path.Combine(Path.GetDirectoryName(stateFile)!,"hunt-diagnostics.txt");try{File.WriteAllLines(path,new[]{"Hunt Route "+typeof(Plugin).Assembly.GetName().Version}.Concat(journal));NoticeText="Диагностика сохранена: "+path;}catch(Exception e){NoticeText="Не удалось сохранить диагностику: "+e.Message;}}
  internal bool PersistenceBlocked=>settingsLoadPending;
  internal bool CompletionUncertain(Board board,bool weekly)=>(completionLoadPending||History.RequiresPickupEvidence)&&(weekly?new[]{board.Weekly}:board.Daily).Any(i=>BillStates.TryGetValue(i,out var s)&&s.CompletedCurrentSet&&!History.IsComplete(character,i,weekly,DateTimeOffset.UtcNow,s.AvailableId)&&!RepeatedSetAvailable(i,weekly,DateTimeOffset.UtcNow,s));
- internal bool BoardReachable(Board b)=>CurrentTerritory==b.Territory||Service.Aetherytes is not null&&Service.Aetherytes.Any(a=>a.AetheryteId==b.Aetheryte);
+ internal bool BoardReachable(Board b)=>CurrentTerritory==b.Territory||IsAetheryteUnlocked(b.Aetheryte);
  internal string LocationLabel=>Session.Target is {IsEliteMark:true}?Search.Lost?"Последняя известная позиция":Search.ActorId!=null?"Элита обнаружена":"Предполагаемые места появления":ordinaryActor!=null&&Session.Target is {} goal&&ordinaryKind==JourneyFlow.Key(goal)?"Моб обнаружен":"Известная точка охоты";
  private bool RepeatedSetAvailable(byte bill,bool weekly,DateTimeOffset now,BillState state)=>
   !completionLoadPending&&!state.Taken&&state.CompletedCurrentSet

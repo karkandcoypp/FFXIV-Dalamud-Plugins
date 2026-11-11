@@ -15,6 +15,18 @@ static class JourneyRuntimeChecks {
  public static void RunOffline(){
   static void Check(bool yes,string message){if(!yes)throw new Exception(message);}
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+  var priorList=Service.Aetherytes;
+  try{
+   Service.Aetherytes=Proxy<IAetheryteList>((_,_)=>throw new Exception("Snapshot lookup must not enumerate the native service"));
+   Set(plugin,"fareSnapshot",new Dictionary<uint,uint>{{70,0},{75,100}});
+   for(int i=0;i<100;i++){
+    Check((uint)Call(plugin,"Price",70u)! ==0u&&(uint)Call(plugin,"Price",75u)! ==100u,"Cached quote preserves free and paid teleports");
+    Check((bool)Call(plugin,"IsAetheryteUnlocked",75u)!&&!(bool)Call(plugin,"IsAetheryteUnlocked",76u)!,"Unlock checks use the same snapshot");
+   }
+   Set(plugin,"fareSnapshot",new Dictionary<uint,uint>{{75,250}});
+   Check((uint)Call(plugin,"Price",75u)! ==250u&&(uint)Call(plugin,"Price",70u)! ==uint.MaxValue,"Replacement snapshot invalidates old fares and unlocks");
+  }finally{Set(plugin,"fareSnapshot",null);Service.Aetherytes=priorList;}
+
   Set(plugin,"Ready",true);Set(plugin,"character",123UL);Set(plugin,"contractRevision",2L);
   Set(plugin,"KillCounts",new Dictionary<(byte,byte),int>());
   Set(plugin,"Mobs",new List<MobHuntEntry>{new(){BillNumber=1,NeededKills=1}});

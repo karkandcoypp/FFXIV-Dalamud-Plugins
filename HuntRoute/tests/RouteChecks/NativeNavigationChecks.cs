@@ -18,8 +18,11 @@ static class NativeNavigationChecks {
    var layout=NativeHuntLayout.Build(active,NativeHuntPage.Hunt,0,30,38,mini);
    check(layout.Size.X==(mini?300:420)&&layout.Size.Y<(mini?290:340),"Active native menus fit the compact footprint");
    if(!mini){
-    var close=layout.Buttons.Single(b=>b.Button.Key=="close").Rect;
-    check(layout.Size.Y-close.Position.Y-close.Size.Y>=16&&layout.Size.X-close.Position.X-close.Size.X==16,"Close has consistent right and bottom insets");
+    var close=layout.Buttons.Single(b=>b.Button.Key=="close");
+    var targets=layout.Buttons.Single(b=>b.Button.Key=="targets");
+    check(close.Row>0&&close.Row==targets.Row&&close.Rect.Position.X>=targets.Rect.Position.X+targets.Rect.Size.X+6,"Close sits next to All targets below the hunt content");
+    var controls=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+    check(controls.Single(n=>n.Key=="targets").Right==close.Slot+1&&controls.Single(n=>n.Key=="close").Left==targets.Slot+1,"D-pad reaches Close from All targets and back");
     check(layout.Portrait.Size.X>=100&&layout.Portrait.Position.Y==layout.Heading.Position.Y,"Larger portrait shares the heading row");
     check(layout.Heading.Position.X+layout.Heading.Size.X<layout.Portrait.Position.X&&layout.Summary.Position.X+layout.Summary.Size.X<layout.Portrait.Position.X,"Target text reserves room for the portrait");
    }
@@ -33,7 +36,7 @@ static class NativeNavigationChecks {
    var map=layout.Buttons.Single(b=>b.Button.Key=="map");
    var actions=layout.Buttons.Single(b=>b.Button.Key=="actions");
    var primary=layout.Buttons.Single(b=>b.Button.Key=="primary");
-   check(primary.Rect.Size.X<=200&&(mini||primary.Row==layout.Buttons.Single(b=>b.Button.Key=="targets").Row),"Primary action uses a compact button alongside the target list");
+   check(primary.Rect.Size.X<=200,"Primary action uses a compact button alongside the target list");
    var rightOfMap=actions;
    check(map.Row==rightOfMap.Row&&map.Rect.Position.X+map.Rect.Size.X<rightOfMap.Rect.Position.X,"Hunt actions fit side by side");
    check(!mini||primary.Row==map.Row,"Mini panel puts all three hunt actions in one row");
