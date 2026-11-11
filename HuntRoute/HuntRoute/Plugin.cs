@@ -83,6 +83,9 @@ public sealed partial class Plugin : IDalamudPlugin {
     internal uint CurrentTerritory;
     internal uint CurrentMap;
     internal bool HideDone = true;
+    private IReadOnlyList<MobHuntEntry>? completedGoals;
+    internal IReadOnlyList<MobHuntEntry> CompletedGoals {get=>completedGoals??[];private set=>completedGoals=value;}
+    private readonly Dictionary<(byte Bill,byte Order),IReadOnlyList<MobHuntEntry>> completedGoalCache=new();
     internal readonly RouteSession Session = new();
     public Plugin(IDalamudPluginInterface pi) {
         pi.Create<Service>();
@@ -114,7 +117,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         SaveJourney(true);
         SaveHistory(true);
         Ready=false; fareSnapshot=new Dictionary<uint,uint>(); observedFares.Clear(); character=0; signature=""; routeSignature=""; nextScan=0; nextTeleportAllowed=0;
-        wasLoading=false; Timing.Reset(); CurrentTerritory=0; CurrentMap=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear();
+        wasLoading=false; Timing.Reset(); CurrentTerritory=0; CurrentMap=0; Mobs.Clear(); Routes.Clear(); KillCounts.Clear(); BillStates.Clear(); CompletedGoals=[]; completedGoalCache.Clear();
         Elite.Selected=null; Session.Stop(); NativeDialogs.CancelAll(); NextZone.Sync(); Shortcut.Sync();
     }
     private void OnTerritoryChanged(uint territory) {
@@ -177,6 +180,7 @@ public sealed partial class Plugin : IDalamudPlugin {
             foreach(var pair in snapshots.Where(p=>!unreadBills.Contains(p.Key))) ObserveCompletion(character,pair.Key,Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(pair.Key).Type==2,observedAt,pair.Value);
             SaveHistory();
             BillStates=snapshots;
+            RefreshCompletedGoals(observedAt);
             contractAt=Now;contractRevision++;
             Ready = true; Error = null;
             ReconcileContext();ReconcileTravel();if(pendingJourney==null)Timing.Ready(contractAt);CheckMarker();AdvanceRoute();CheckExpansionCompletionNotices();CheckResetNotice();NativeDialogs.Pump();AuditState();SaveJourney();
@@ -190,16 +194,7 @@ public sealed partial class Plugin : IDalamudPlugin {
                 if(uncertainBills.Contains(bill)){unreadBills.Add(bill);result.AddRange(previous.Where(m=>m.BillNumber==bill));continue;}
                 var accepted=Guard.Current(bill);if(accepted is not {Taken:true,Order:>0})continue;
                 var type=Service.DataManager.GetExcelSheet<MobHuntOrderType>().GetRow(bill);
-                byte orderId=accepted.Order;
-                if(orderId>type.OrderAmount || !orders.TryGetRow(type.OrderStart.RowId+orderId-1u,out var rows))throw new InvalidOperationException("Контракт ещё не доступен в данных игры");
-                var batch=new List<MobHuntEntry>();
-                foreach(var order in rows) {
-                    if(order.Target.RowId==0||order.NeededKills==0||order.SubrowId>=5)continue;
-                    var target=order.Target.Value;var map=target.Map.Value;
-                    batch.Add(new(){Generation=CharacterSave.Contracts.GetValueOrDefault(bill)?.Generation??0,OrderId=orderId,Name=target.Name.Value.Singular.ToString(),TerritoryName=map.PlaceName.Value.Name.ToString(),ExpansionName=map.TerritoryType.Value.ExVersion.Value.Name.ToString(),ExpansionId=map.TerritoryType.Value.ExVersion.RowId,TerritoryType=map.TerritoryType.RowId,MapId=map.RowId,MobHuntId=target.Name.RowId,IsEliteMark=type.Type==2,BillNumber=bill,MobIndex=(byte)order.SubrowId,NeededKills=order.NeededKills,Icon=target.Icon});
-                }
-                if(batch.Count==0)throw new InvalidOperationException("Цели контракта ещё не загружены");
-                result.AddRange(batch);
+                result.AddRange(ReadGoalBatch(bill,accepted.Order,type,orders));
             } catch(Exception e) {
                 unreadBills.Add(bill);result.AddRange(previous.Where(m=>m.BillNumber==bill));
                 Flow.Status=$"Данные контракта {bill} недоступны: {e.Message}. Остальные цели продолжают работать.";NoticeText=Flow.Status;foreach(var old in previous.Where(m=>m.BillNumber==bill))Flow.Unavailable[JourneyFlow.Key(old)]="Данные контракта временно недоступны";
@@ -207,6 +202,34 @@ public sealed partial class Plugin : IDalamudPlugin {
             }
         }
         Mobs=result;
+    }
+    private IReadOnlyList<MobHuntEntry> ReadGoalBatch(byte bill,byte orderId,MobHuntOrderType type,Lumina.Excel.SubrowExcelSheet<MobHuntOrder> orders) {
+        if(orderId>type.OrderAmount || !orders.TryGetRow(type.OrderStart.RowId+orderId-1u,out var rows))throw new InvalidOperationException("Контракт ещё не доступен в данных игры");
+        var batch=new List<MobHuntEntry>();
+        foreach(var order in rows) {
+            if(order.Target.RowId==0||order.NeededKills==0||order.SubrowId>=5)continue;
+            var target=order.Target.Value;var map=target.Map.Value;
+            batch.Add(new(){Generation=CharacterSave.Contracts.GetValueOrDefault(bill)?.Generation??0,OrderId=orderId,Name=target.Name.Value.Singular.ToString(),TerritoryName=map.PlaceName.Value.Name.ToString(),ExpansionName=map.TerritoryType.Value.ExVersion.Value.Name.ToString(),ExpansionId=map.TerritoryType.Value.ExVersion.RowId,TerritoryType=map.TerritoryType.RowId,MapId=map.RowId,MobHuntId=target.Name.RowId,IsEliteMark=type.Type==2,BillNumber=bill,MobIndex=(byte)order.SubrowId,NeededKills=order.NeededKills,Icon=target.Icon});
+        }
+        if(batch.Count==0)throw new InvalidOperationException("Цели контракта ещё не загружены");
+        return batch;
+    }
+    private void RefreshCompletedGoals(DateTimeOffset now) {
+        var result=new List<MobHuntEntry>();
+        var types=Service.DataManager.GetExcelSheet<MobHuntOrderType>();
+        var orders=Service.DataManager.GetSubrowExcelSheet<MobHuntOrder>();
+        foreach(var board in Boards)foreach(byte bill in board.Daily.Append(board.Weekly)) {
+            if(unreadBills.Contains(bill)||!BillStates.TryGetValue(bill,out var state))continue;
+            byte order=History.ArchivedOrder(character,bill,bill==board.Weekly,now,state);
+            if(order==0)continue;
+            try{
+                var key=(bill,order);
+                if(!completedGoalCache.TryGetValue(key,out var goals))
+                    completedGoalCache[key]=goals=ReadGoalBatch(bill,order,types.GetRow(bill),orders);
+                result.AddRange(goals);
+            }catch(Exception e){Service.PluginLog.Debug(e,"Цели завершённого контракта {Bill} недоступны",bill);}
+        }
+        CompletedGoals=result;
     }
     internal List<EntryPoint> Entries(uint mapId, uint territory) {
         var map = Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(mapId);

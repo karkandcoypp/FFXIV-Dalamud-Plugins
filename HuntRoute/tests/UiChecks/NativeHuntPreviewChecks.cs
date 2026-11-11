@@ -81,10 +81,44 @@ internal static class NativeHuntPreviewChecks {
 
   var filters=new NativeHuntButton("filters","Фильтры",new("page","Filters"));
   var goals=new[]{"trimmer","weeper","downfall alarum","almasty","automated roader","snow dhruva","scavenger","dynamite","caretaker","wanderer","lunatender"}
-   .Select((name,i)=>new NativeHuntButton($"goal-{i}",name,new("target",name),Goal:new(i<3?"Mare Lamentorum":i<8?"Garlemald":"Mare Lamentorum",name,i==0?"0/2":"0/1")));
-  var targetList=new NativeHuntScreen("Цели маршрута · 11","",new[]{filters}.Concat(goals).ToArray());
+   .Select((name,i)=>new NativeHuntButton($"goal-{i}",name,new("target",name),Goal:new(i<3?"Mare Lamentorum":i<8?"Garlemald":"Mare Lamentorum",name,i==0?"2/2 · готово":i<4?"1/1 · готово":"0/1"),LabelColor:i<4?NativeHuntColors.Ready:null));
+  var targetList=new NativeHuntScreen("Цели маршрута · 11","",new[]{filters}.Concat(goals).ToArray(),Progress:new(5,12,Aggregate:true));
   samples.Add(("Targets-paged-first",NativeHuntPage.Targets,targetList,false,0));
   samples.Add(("Targets-paged-last",NativeHuntPage.Targets,targetList,false,1));
+  var completedProp=typeof(Plugin).GetProperty("CompletedGoals",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!;
+  var liveMobs=(List<MobHuntEntry>)mobField.GetValue(plugin)!;
+  var liveCounts=(Dictionary<(byte,byte),int>)typeof(Plugin).GetField("KillCounts",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(plugin)!;
+  try{
+   mobField.SetValue(plugin,liveMobs.Concat(new MobHuntEntry[]{
+    new(){BillNumber=15,OrderId=1,MobIndex=0,MobHuntId=999997,Name="trimmer",TerritoryName="Mare Lamentorum",NeededKills=3},
+    new(){BillNumber=15,OrderId=1,MobIndex=1,MobHuntId=999996,Name="weeper",TerritoryName="Mare Lamentorum",NeededKills=2},
+    new(){BillNumber=6,OrderId=1,MobHuntId=999995,Name="unstarted",TerritoryName="Yanxia",NeededKills=2}
+   }).ToList());
+   liveCounts[(15,0)]=1;
+   completedProp.SetValue(plugin,new MobHuntEntry[]{
+    new(){BillNumber=14,OrderId=1,MobHuntId=999999,Name="caretaker",TerritoryName="Mare Lamentorum",NeededKills=2},
+    new(){BillNumber=1,OrderId=1,MobHuntId=999998,Name="wooly yak",TerritoryName="Coerthas",NeededKills=1}
+   });
+   var progressController=new NativeHuntController(plugin);
+   progressController.Execute(new("filter-expansion","Endwalker"));
+   progressController.Navigate(NativeHuntPage.Targets);
+   var completed=progressController.Build();
+   if(completed.Progress is not {Kills:3,Required:7,Percent:42}
+      ||completed.Buttons.Single(b=>b.Goal?.Name=="caretaker") is not {Enabled:false,Goal.Count:"2/2 · готово"}
+      ||completed.Buttons.Single(b=>b.Goal?.Name=="caretaker").LabelColor!=NativeHuntColors.Ready
+      ||completed.Buttons.Single(b=>b.Goal?.Name=="trimmer").LabelColor!=NativeHuntColors.Attention
+      ||completed.Buttons.Single(b=>b.Goal?.Name=="weeper").LabelColor!=NativeHuntColors.Muted)
+    throw new Exception("Expansion totals or completed / partial / unstarted colors are wrong");
+   samples.Add(("Targets-completed",NativeHuntPage.Targets,completed,false,0));
+   progressController.Execute(new("filter-done"));
+   var hidden=progressController.Build();
+   if(hidden.Buttons.Any(b=>b.Goal?.Name=="caretaker")||hidden.Progress!=completed.Progress)
+    throw new Exception("Hiding completed rows must preserve the progress totals");
+   progressController.Execute(new("filter-expansion","Stormblood"));
+   progressController.Navigate(NativeHuntPage.Targets);
+   if(progressController.Build().Progress is not {Kills:0,Required:2,Percent:0})
+    throw new Exception("Progress leaked between expansions");
+  }finally{liveCounts.Remove((15,0));mobField.SetValue(plugin,liveMobs);completedProp.SetValue(plugin,Array.Empty<MobHuntEntry>());}
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,0),false,1));
   var active=samples.Single(s=>s.Name=="Hunt").Screen;
@@ -183,6 +217,8 @@ internal static class NativeHuntPreviewChecks {
        ||links.Single(n=>n.Key==direction.Button.Key).Right!=close.Slot+1
        ||links.Single(n=>n.Key=="close").Left!=direction.Slot+1)
      throw new Exception("Target list heading or footer is misaligned or unreachable");
+    if(layout.ProgressTrack.Position.Y+layout.ProgressTrack.Size.Y>layout.TableText.Min(t=>t.Rect.Position.Y))
+     throw new Exception("Progress bar overlaps the target list");
     if(layout.Buttons.Count(b=>b.Button.Goal!=null)!=(sample.Offset==0?6:5))
      throw new Exception("Pinned filter must not consume a target slot");
    }

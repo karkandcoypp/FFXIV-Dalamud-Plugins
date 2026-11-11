@@ -94,7 +94,7 @@ public sealed partial class Plugin {
   expansionCompletionNotice.Reset();
   if(noticeTarget!=null)NoticeText=null;
   loginNoticeShown=false;
-  billGuard=new();uncertainBills.Clear();unreadBills.Clear();KillCounts=new();BillStates=new();Mobs=new();Routes=new();
+  billGuard=new();uncertainBills.Clear();unreadBills.Clear();KillCounts=new();BillStates=new();Mobs=new();Routes=new();CompletedGoals=[];completedGoalCache?.Clear();
   contractRevision=0;contractAt=0;flow=new();Flow.Load(CharacterSave);ordinaryActor=null;ordinaryKind=null;context=null;ownedMarker=null;pendingJourney=null;
   if(Flow.Active)Flow.Status="Сохранённый маршрут на паузе. Проверьте контракты и нажмите «Продолжить».";
  }

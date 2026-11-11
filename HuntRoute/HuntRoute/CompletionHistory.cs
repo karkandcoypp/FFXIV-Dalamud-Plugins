@@ -45,6 +45,11 @@ public sealed class CompletionHistory {
         character!=0 && Characters.TryGetValue(character,out var bills) && bills.TryGetValue(bill,out var record)
         && record.CompletedPeriod==Period(now,weekly) && record.CompletedOrder!=0
         && (available==0 || available==record.CompletedOrder);
+    internal byte ArchivedOrder(ulong character,byte bill,bool weekly,DateTimeOffset now,BillState state) {
+        if(!state.Unlocked||!IsComplete(character,bill,weekly,now,state.AvailableId))return 0;
+        byte order=Characters[character][bill].CompletedOrder;
+        return state.Taken&&state.ObtainedId==order?(byte)0:order;
+    }
     public bool IsPreviousCompletion(ulong character,byte bill,bool weekly,DateTimeOffset now,byte order) =>
         order!=0 && Characters.TryGetValue(character,out var bills) && bills.TryGetValue(bill,out var record)
         && record.CompletedOrder==order && record.CompletedPeriod!=0 && record.CompletedPeriod<Period(now,weekly);

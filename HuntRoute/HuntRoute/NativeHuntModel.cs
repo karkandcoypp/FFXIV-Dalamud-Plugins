@@ -21,8 +21,9 @@ public static class NativeHuntColors {
  public static readonly Vector4 Focus=new(.80f,.92f,1,1), PrimarySurface=new(.65f,.81f,1,1);
  public static readonly Vector4 Ready=new(.50f,1,.64f,1), Attention=new(1,.83f,.48f,1), Tracking=new(.62f,.84f,1,1), Muted=new(.78f,.81f,.85f,1);
 }
-public sealed record NativeHuntProgress(int Kills,uint Required){
- public string Label=>$"Прогресс  {Kills} / {Required}";
+public sealed record NativeHuntProgress(int Kills,uint Required,bool Aggregate=false){
+ public string Label=>Aggregate?$"Убито: {Kills}  ·  Осталось: {Math.Max(0,(long)Required-Kills)}  ·  {Percent}%":$"Прогресс  {Kills} / {Required}";
+ public uint Percent=>Required==0?0:(uint)(100L*Math.Clamp((long)Kills,0,Required)/Required);
  public float Fraction=>Required>0?Math.Clamp((float)Kills/Required,0,1):0;
 }
 public readonly record struct NativeNavItem(int Index,int Row,int Column,string Key,bool Enabled=true,bool Visible=true);
@@ -215,8 +216,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
      bottom+=20;
     }
     Set(i+3,++rows,0,button,Margin,bottom,inner,24);
-    Cell(goal.Name,Margin+16,bottom+3,inner-116,button.LabelColor??Vector4.One);
-    Cell(goal.Count,width-Margin-98,bottom+3,90,button.LabelColor??NativeHuntColors.Muted,right:true);
+    Cell(goal.Name,Margin+16,bottom+3,inner-128,button.LabelColor??Vector4.One);
+    Cell(goal.Count,width-Margin-108,bottom+3,100,button.LabelColor??NativeHuntColors.Muted,right:true);
     bottom+=26;
     continue;
    }
