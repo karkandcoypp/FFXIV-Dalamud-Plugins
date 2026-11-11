@@ -82,7 +82,7 @@ internal static class NativeHuntPreviewChecks {
   var filters=new NativeHuntButton("filters","Фильтры",new("page","Filters"));
   var goals=new[]{"trimmer","weeper","downfall alarum","almasty","automated roader","snow dhruva","scavenger","dynamite","caretaker","wanderer","lunatender"}
    .Select((name,i)=>new NativeHuntButton($"goal-{i}",name,new("target",name),Goal:new(i<3?"Mare Lamentorum":i<8?"Garlemald":"Mare Lamentorum",name,i==0?"2/2 · готово":i<4?"1/1 · готово":"0/1"),LabelColor:i<4?NativeHuntColors.Ready:null));
-  var targetList=new NativeHuntScreen("Цели маршрута · 11","",new[]{filters}.Concat(goals).ToArray(),Progress:new(5,12,Aggregate:true));
+  var targetList=new NativeHuntScreen("Цели маршрута","",new[]{filters}.Concat(goals).ToArray(),Progress:new(5,12,Aggregate:true));
   samples.Add(("Targets-paged-first",NativeHuntPage.Targets,targetList,false,0));
   samples.Add(("Targets-paged-last",NativeHuntPage.Targets,targetList,false,1));
   var completedProp=typeof(Plugin).GetProperty("CompletedGoals",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!;
@@ -103,13 +103,24 @@ internal static class NativeHuntPreviewChecks {
    progressController.Execute(new("filter-expansion","Endwalker"));
    progressController.Navigate(NativeHuntPage.Targets);
    var completed=progressController.Build();
-   if(completed.Progress is not {Kills:3,Required:7,Percent:42}
+   if(completed.Title!="Endwalker"||completed.Progress is not {Kills:3,Required:7,Percent:42}
       ||completed.Buttons.Single(b=>b.Goal?.Name=="caretaker") is not {Enabled:false,Goal.Count:"2/2 · готово"}
       ||completed.Buttons.Single(b=>b.Goal?.Name=="caretaker").LabelColor!=NativeHuntColors.Ready
       ||completed.Buttons.Single(b=>b.Goal?.Name=="trimmer").LabelColor!=NativeHuntColors.Attention
       ||completed.Buttons.Single(b=>b.Goal?.Name=="weeper").LabelColor!=NativeHuntColors.Muted)
     throw new Exception("Expansion totals or completed / partial / unstarted colors are wrong");
    samples.Add(("Targets-completed",NativeHuntPage.Targets,completed,false,0));
+   liveCounts[(15,0)]=3;
+   liveCounts[(15,1)]=2;
+   var allDone=progressController.Build();
+   if(allDone.Title!="Endwalker"||allDone.Progress is not {Kills:7,Required:7,Percent:100}
+      ||allDone.Progress.Label!="Убито: 7  ·  Осталось: 0  ·  100%"
+      ||allDone.Buttons.Count(b=>b.Goal!=null)!=3
+      ||allDone.Buttons.Where(b=>b.Goal!=null).Any(b=>!b.Goal!.Count.EndsWith(" · готово")||b.LabelColor!=NativeHuntColors.Ready))
+    throw new Exception("A fully completed expansion must retain its finished rows and show zero remaining");
+   samples.Add(("Targets-all-done",NativeHuntPage.Targets,allDone,false,0));
+   liveCounts[(15,0)]=1;
+   liveCounts.Remove((15,1));
    progressController.Execute(new("filter-done"));
    var hidden=progressController.Build();
    if(hidden.Buttons.Any(b=>b.Goal?.Name=="caretaker")||hidden.Progress!=completed.Progress)
@@ -118,7 +129,7 @@ internal static class NativeHuntPreviewChecks {
    progressController.Navigate(NativeHuntPage.Targets);
    if(progressController.Build().Progress is not {Kills:0,Required:2,Percent:0})
     throw new Exception("Progress leaked between expansions");
-  }finally{liveCounts.Remove((15,0));mobField.SetValue(plugin,liveMobs);completedProp.SetValue(plugin,Array.Empty<MobHuntEntry>());}
+  }finally{liveCounts.Remove((15,0));liveCounts.Remove((15,1));mobField.SetValue(plugin,liveMobs);completedProp.SetValue(plugin,Array.Empty<MobHuntEntry>());}
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,0),false,1));
   var active=samples.Single(s=>s.Name=="Hunt").Screen;
