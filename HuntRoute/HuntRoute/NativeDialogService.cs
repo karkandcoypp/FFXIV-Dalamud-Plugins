@@ -70,6 +70,7 @@ internal sealed class NativeDialogService : IDisposable {
             ImGui.PushTextWrapPos(ImGui.GetCursorPosX()+360);
             try{
                 ImGui.TextWrapped(content.Title);
+                if(content.Summary.Length>0)ImGui.TextWrapped(content.Summary);
                 if(content.Destination.Length>0&&content.Destination!=content.Title)ImGui.TextWrapped(content.Destination);
                 if(content.Context.Length>0)ImGui.TextWrapped(content.Context);
                 if(content.Fare.HasValue)ImGui.TextUnformatted(content.FareLabel);
@@ -152,7 +153,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         portraitRect=layout.Portrait;
         if(portraitRect is {} portraitBounds&&presentation.NextZone) {
             for(int i=0;i<layout.Texts.Count;i++) {
-                if(layout.Texts[i].Position.X==portraitBounds.Position.X) {
+                if(layout.Texts[i].Position.X==portraitBounds.Position.X&&layout.Texts[i].Position.Y>=portraitBounds.Position.Y+portraitBounds.Size.Y) {
                     portraitCaption=textNodes[i];
                     break;
                 }

@@ -34,21 +34,23 @@ static class JourneyRuntimeChecks {
   states[21]=new(true,false,0,1,false);
   states[6]=taken; // Stormblood already taken.
   var printed=new List<SeString>();
+  int sounds=0;
+  System.Action playSound=()=>sounds++;
   var previous=Service.Chat;
   try{
    Service.Chat=Proxy<IChatGui>((method,args)=>{
     if(method.Name!="Print"||args?[0] is not SeString message)throw new Exception("Unexpected completion notification channel");
     printed.Add(message);return null;
    });
-   Call(plugin,"CheckExpansionCompletionNotices");
-   if(printed.Count!=0)throw new Exception("A taken bill is not a completed expansion");
+   Call(plugin,"CheckExpansionCompletionNotices",playSound);
+   if(printed.Count!=0||sounds!=0)throw new Exception("A taken bill is not a completed expansion");
    foreach(byte bill in heavensward){
     states[bill]=done;
     history.Observe(123,bill,bill==5,DateTimeOffset.UtcNow,done);
    }
-   Call(plugin,"CheckExpansionCompletionNotices");
-   Call(plugin,"CheckExpansionCompletionNotices");
-   if(printed.Count!=1)throw new Exception("Completion must print exactly one chat message");
+   Call(plugin,"CheckExpansionCompletionNotices",playSound);
+   Call(plugin,"CheckExpansionCompletionNotices",playSound);
+   if(printed.Count!=1||sounds!=1)throw new Exception("Completion must print one chat message and play one sound");
    var text=printed[0];
    if(text.Payloads.OfType<NewLinePayload>().Count()!=3 ||
       text.TextValue.Replace("\r\n","\n")!="[Hunt Route] Heavensward — выполнено\nShadowbringers — можно взять: элитный\nEndwalker — можно взять: обычные\nDawntrail — можно взять: обычные и элитный")

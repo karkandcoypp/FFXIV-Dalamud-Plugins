@@ -25,12 +25,10 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
         $"Доска охоты · {expansion}",city,"Эфирит",local||aetheryte==city?"":aetheryte,
         local?"Вы уже в городе · поставим метку":gil==0?"Телепорт бесплатный":$"Стоимость телепорта: {gil.ToString("N0",System.Globalization.CultureInfo.InvariantCulture).Replace(',', '\u00A0')} гил",
         "","","","",[],local?"К доске":null,CenterNoticeText:local||aetheryte==city);
-    public static TravelDialogContent Shortcut(ShortcutOffer offer,string zone,string target) => new(
-        "","Сократить перелёт?","Эфирит",offer.Name,
-        zone,"Цель",target,$"≈{offer.FinalDistance:F0} м от эфирита",
-        "",
-        [new("Напрямую",$"≈{offer.DirectSeconds:F0} с"),new("С телепортом",$"≈{offer.TeleportSeconds:F0} с")],
-        Summary:$"Экономия ≈{offer.SavedSeconds:F0} с · {offer.GilCost} гил");
+    public static TravelDialogContent Shortcut(ShortcutOffer offer,string target) => new(
+        "","Сократить перелёт?","",$"{offer.Name} → {target}",
+        "","","","","",[],
+        Summary:$"На ~{offer.SavedSeconds:F0} с быстрее · {offer.GilCost} гил");
     public static TravelDialogContent Plain(string text) => Notice(string.IsNullOrWhiteSpace(text)?"Продолжить?":text,"Продолжить");
 }
 public sealed record DialogText(string Text,Vector2 Position,Vector2 Size,uint Font,Vector4 Color,bool Centered=false);
@@ -69,8 +67,10 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         const float left=18,top=38,portraitSize=192,portraitGap=14;
         float width=content.PortraitIcon!=0?DialogWidth+32:DialogWidth;
         float inner=width-2*left;
-        NativeHuntRect? portrait=content.PortraitIcon!=0?new(new(width-left-portraitSize,top),new(portraitSize,portraitSize)):null;
-        float textWidth=portrait.HasValue?inner-portraitSize-portraitGap:inner;
+        NativeHuntRect? portrait=content.PortraitIcon!=0?new(new((width-portraitSize)/2,top),new(portraitSize,portraitSize)):null;
+        float textWidth=inner;
+        float detailsX=left;
+        float headingBottom=top;
         var texts=new List<DialogText>();
         bool centerNotice=content.CenterNoticeText&&!portrait.HasValue;
         float Text(string value,float x,float y,float w,uint font,Vector4 color,bool centered=false) {
@@ -78,17 +78,19 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             if(!float.IsFinite(height) || height<0)throw new ArgumentException("Invalid text measurement");
             texts.Add(new(value,new(x,y),new(w,height),font,color,centered&&height<=font+8));return height;
         }
-        bool useSideHeading=content.NextZone&&portrait.HasValue
-            &&measureTitleWidth?.Invoke(content.Title)<=textWidth-8;
-        int firstColumnText=0;
         float y=top;
         if(content.NextZone) {
-            float headingWidth=useSideHeading?textWidth:inner;
+            const float detailsWidth=160;
+            float titleColumnWidth=inner-detailsWidth-portraitGap;
+            bool sideDetails=portrait.HasValue&&measureTitleWidth?.Invoke(content.Title)<=titleColumnWidth-8;
+            float headingWidth=sideDetails?titleColumnWidth:inner;
             y+=Text(content.Eyebrow,left,y,headingWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
             y+=Text(content.Title,left,y,headingWidth,NativeHuntLayout.TitleFont,White)+8;
-            if(!useSideHeading&&portrait is {} nextImage) {
-                portrait=nextImage with {Position=new(nextImage.Position.X,y)};
-                firstColumnText=texts.Count;
+            headingBottom=y;
+            if(sideDetails) {
+                textWidth=detailsWidth;
+                detailsX=width-left-detailsWidth;
+                y=top;
             }
         } else {
             if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,textWidth,NativeHuntLayout.SecondaryFont,Brand,centerNotice)+2;
@@ -100,29 +102,22 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";
             y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White)+2;
         }
-        if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,left,y,textWidth,NativeHuntLayout.SecondaryFont,hasSummary?Muted:Mint,centerNotice)+4;
-        if(content.Fare.HasValue)y+=Text(content.FareLabel,left,y,textWidth,NativeHuntLayout.BodyFont,Mint)+4;
+        if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,hasSummary?Muted:Mint,centerNotice)+4;
+        if(content.Fare.HasValue)y+=Text(content.FareLabel,detailsX,y,textWidth,NativeHuntLayout.BodyFont,Mint)+4;
         bool captionUnderPortrait=content.NextZone&&portrait.HasValue&&content.Subject.Length>0;
         if(content.HasSubject) {
             y+=2;
             string subject=string.IsNullOrEmpty(content.SubjectLabel)?content.Subject:$"{content.SubjectLabel} · {content.Subject}";
-            if(hasSummary&&content.Detail.Length>0)subject+=" · "+content.Detail;
             if(!captionUnderPortrait)y+=Text(subject,left,y,textWidth,NativeHuntLayout.BodyFont,Brand);
-            if(!hasSummary&&!string.IsNullOrEmpty(content.Detail)) y+=4+Text(content.Detail,left,y+4,textWidth,NativeHuntLayout.SecondaryFont,Muted);
+            if(!string.IsNullOrEmpty(content.Detail)) y+=4+Text(content.Detail,detailsX,y+4,textWidth,NativeHuntLayout.SecondaryFont,Muted);
             y+=4;
         }
         if(portrait is {} image) {
-            float below=image.Position.Y+image.Size.Y+4;
-            if(captionUnderPortrait)below+=Text(content.Subject,image.Position.X,below,image.Size.X,NativeHuntLayout.BodyFont,Brand,centered:true)+4;
-            if(content.NextZone&&y<below) {
-                float offset=MathF.Floor((below-y)/2);
-                int leftTextEnd=captionUnderPortrait?texts.Count-1:texts.Count;
-                for(int i=firstColumnText;i<leftTextEnd;i++) {
-                    var text=texts[i];
-                    texts[i]=text with {Position=text.Position+new Vector2(0,offset)};
-                }
-            }
-            y=Math.Max(y,below);
+            float imageTop=Math.Max(y,headingBottom)+6;
+            image=image with {Position=new(image.Position.X,imageTop)};
+            portrait=image;
+            y=imageTop+image.Size.Y+4;
+            if(captionUnderPortrait)y+=Text(content.Subject,image.Position.X,y,image.Size.X,NativeHuntLayout.BodyFont,Brand,centered:true)+4;
         }
         if(content.Metrics.Length>0) {
             float cardWidth=(inner-(content.Metrics.Length-1)*8)/content.Metrics.Length,rowHeight=0;

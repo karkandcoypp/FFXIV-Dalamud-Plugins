@@ -348,7 +348,7 @@ public sealed partial class Plugin {
   return ids.Any(i=>!unreadBills.Contains(i)&&BillStates.TryGetValue(i,out var state)&&state.Unlocked&&state.AvailableId>0&&!state.Taken
    &&(!state.CompletedCurrentSet||RepeatedSetAvailable(i,weekly,now,state))&&!History.IsComplete(character,i,weekly,now,state.AvailableId));
  }
- private void CheckExpansionCompletionNotices(){
+ private void CheckExpansionCompletionNotices(System.Action playSound){
   if(!Ready||completionLoadPending)return;
   List<Board>? completed=null;
   foreach(var board in Boards){
@@ -375,6 +375,7 @@ public sealed partial class Plugin {
    AddStatus(board,"можно взять: "+available,availableYellow);
   }
   Service.Chat.Print(message.Build());
+  playSound();
  }
  private string LoginMode()=>Mobs.Any(m=>AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m))?"taken":Boards.Any(b=>CanPickup(b,false)||CanPickup(b,true))?"pickup":"summary";
  private void OfferLoginNotice(){

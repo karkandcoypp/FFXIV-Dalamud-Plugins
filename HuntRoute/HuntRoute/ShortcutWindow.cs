@@ -11,6 +11,6 @@ public sealed class ShortcutWindow(Plugin plugin) {
             ()=>plugin.ShortcutStillValid(offer),
             ()=>!plugin.TravelBusy && plugin.NavigationAllowed,
             ()=>plugin.AcceptShortcut(offer),
-            TravelDialogContent.Shortcut(offer,plugin.Session.Target?.TerritoryName ?? "Текущая зона",plugin.Session.Target?.Name ?? "Цель контракта")));
+            TravelDialogContent.Shortcut(offer,plugin.Session.Target?.Name ?? "Цель контракта")));
     }
 }

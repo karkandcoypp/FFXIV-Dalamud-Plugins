@@ -184,7 +184,7 @@ public sealed partial class Plugin : IDalamudPlugin {
             RefreshCompletedGoals(observedAt);
             contractAt=Now;contractRevision++;
             Ready = true; Error = null;
-            ReconcileContext();ReconcileTravel();if(pendingJourney==null)Timing.Ready(contractAt);CheckMarker();AdvanceRoute();CheckExpansionCompletionNotices();CheckResetNotice();NativeDialogs.Pump();AuditState();SaveJourney();
+            ReconcileContext();ReconcileTravel();if(pendingJourney==null)Timing.Ready(contractAt);CheckMarker();AdvanceRoute();CheckExpansionCompletionNotices(PlayHuntSound);CheckResetNotice();NativeDialogs.Pump();AuditState();SaveJourney();
         } catch (Exception e) { Ready = false; Error = e.Message; nextScan=Now+10000; Service.PluginLog.Error(e, "Reading hunt bills"); }
     }
     private unsafe void ReadBills() {
