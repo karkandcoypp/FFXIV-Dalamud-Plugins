@@ -132,7 +132,16 @@ public sealed class NativeHuntController {
  private NativeHuntScreen Number(){var (label,value)=NumberValue(numberKey);return new(label,$"{value}",new[]{-1,-10,-50,1,10,50}.Select(d=>Button("step:"+d,(d<0?"-":"+")+(numberKey=="seconds"?$"{Math.Abs(d)/10f:F1} с":Math.Abs(d).ToString()),"step",numberKey,!plugin.PersistenceBlocked,d)).ToArray());}
  private NativeHuntScreen Actions(){
   var buttons=new List<NativeHuntButton>();
-  if(plugin.Flow.Active){buttons.Add(Button("resume",plugin.Flow.Pauses==PauseReason.None||plugin.Flow.Pauses==PauseReason.Marker?"Вернуть метку":"Продолжить маршрут","resume"));if(!plugin.Flow.Pauses.HasFlag(PauseReason.User))buttons.Add(Button("pause","Пауза маршрута","pause"));buttons.Add(Button("stop","Остановить маршрут","stop"));}
+  if(plugin.Flow.Active){
+   string travel=plugin.Flow.Pauses==PauseReason.None?plugin.Session.Phase switch{
+    RoutePhase.AwaitingTravel=>"planned",RoutePhase.NextZone=>"next",_=>""
+   }:"";
+   if(travel.Length>0)buttons.Add(Button("primary","Телепорт",travel));
+   else if(plugin.Flow.Pauses!=PauseReason.None)buttons.Add(Button("resume",plugin.Flow.Pauses==PauseReason.Marker?"Вернуть метку":"Продолжить маршрут","resume"));
+   else if(plugin.Session.Phase!=RoutePhase.WaitingForZone)buttons.Add(Button("resume","Вернуть метку","resume"));
+   if(!plugin.Flow.Pauses.HasFlag(PauseReason.User))buttons.Add(Button("pause","Пауза маршрута","pause"));
+   buttons.Add(Button("stop","Остановить","stop"));
+  }
   if(plugin.Flow.Manual!=null)buttons.Add(Button("auto","Вернуться в авторежим","auto"));
   if(plugin.Search.Lost&&!plugin.Search.AwaitingCredit)buttons.Add(Button("release","Снять закрепление элиты","release"));
   if(plugin.Session.Target!=null)buttons.Add(Button("focus","К цели","focus"));

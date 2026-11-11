@@ -20,6 +20,14 @@ internal static class NativeHuntPreviewChecks {
    if(paused.Summary!="Метка изменена")throw new Exception("Mini panel lost the pause reason");
    samples.Add(("mini-paused",NativeHuntPage.Hunt,paused,true,0));
   }finally{flow.Pauses=priorPauses;}
+  var session=(RouteSession)typeof(Plugin).GetField("Session",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(plugin)!;
+  var current=session.Target??throw new Exception("Expected active hunt target");
+  controller.Navigate(NativeHuntPage.Actions);
+  session.PlanTravel(current,[current.BillNumber]);
+  samples.Add(("Actions-planned",NativeHuntPage.Actions,controller.Build(),false,0));
+  session.RequestNext(current);
+  samples.Add(("Actions-next",NativeHuntPage.Actions,controller.Build(),false,0));
+  session.Retarget(current);
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,0),false,1));
   var portraits=new Dictionary<uint,(string File,int Width,int Height)>();
@@ -41,6 +49,16 @@ internal static class NativeHuntPreviewChecks {
    float Height(string value,float width,float font){ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(value,false,width).Y+4;}
    float width=NativeHuntLayout.ContentWidth(sample.Mini);
    var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.SummaryFont(sample.Page,sample.Mini)),sample.Mini,label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return Math.Max(ImGui.CalcTextSize(label).X,label.EnumerateRunes().Count()*9.5f);});
+   if(sample.Name is "Actions-planned" or "Actions-next"){
+    string kind=sample.Name=="Actions-planned"?"planned":"next";
+    if(!layout.Buttons.Any(b=>b.Button.Action.Kind==kind&&b.Button.Key=="primary")||layout.Buttons.Any(b=>b.Button.Key=="resume"))
+     throw new Exception("Pending travel must offer the correct teleport action");
+    var focus=layout.Buttons.Single(b=>b.Button.Key=="focus");
+    var targets=layout.Buttons.Single(b=>b.Button.Key=="targets");
+    var nav=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+    if(focus.Row!=targets.Row||nav.Single(n=>n.Key=="focus").Right!=targets.Slot+1||nav.Single(n=>n.Key=="targets").Left!=focus.Slot+1)
+     throw new Exception("Focus and All targets must share a row and be adjacent on the D-pad");
+   }
    var visibleRects=layout.Buttons.Select(b=>b.Rect).Concat(layout.TableText.Select(t=>t.Rect))
     .Append(layout.Heading).Append(layout.Summary);
    if(sample.Screen.Progress!=null)visibleRects=visibleRects.Append(layout.ProgressLabel);

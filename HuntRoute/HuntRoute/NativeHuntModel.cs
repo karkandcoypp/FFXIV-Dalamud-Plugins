@@ -217,6 +217,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     rows++;
     while(i+count<visible.Length){
      var item=visible[i+count];
+     if(view==NativeHuntPage.Actions&&count>0&&item.Key=="focus"&&visible.Skip(i+count+1).FirstOrDefault()?.Key=="targets"
+        &&used+Compact(item)+Gap+Compact(visible[i+count+1])>gridWidth)break;
      if(item.Board!=null||item.Goal!=null||item.Checked.HasValue||item.Label.Contains('\n')||item.Label.Length>25)break;
      float w=Math.Max(view==NativeHuntPage.Target?LongActionWidth:0,Compact(item));
      if(used+w>gridWidth)break;
