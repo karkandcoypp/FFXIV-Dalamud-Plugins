@@ -79,9 +79,12 @@ public sealed class EliteWindow : Window {
         map->OpenMap(Selected.MapId,Selected.TerritoryType,Selected.Name+" — possible spawns",FFXIVClientStructs.FFXIV.Client.UI.Agent.MapType.GatheringLog);
     }
     internal void DrawWorld() {
+        bool playSound=false;
         foreach(var marker in plugin.ReadWorldHuntMarkers()) {
-            if(!Service.GameGui.WorldToScreen(marker.Position+new Vector3(0,3,0),out var screen))continue;
+            if(!Service.GameGui.WorldToScreen(marker.Position+new Vector3(0,3,0),out var screen)||!float.IsFinite(screen.X)||!float.IsFinite(screen.Y))continue;
             WorldHuntPainter.Draw(marker,screen);
+            playSound|=plugin.ObserveRenderedMarker(marker);
         }
+        if(playSound)Plugin.PlayHuntSound();
     }
 }

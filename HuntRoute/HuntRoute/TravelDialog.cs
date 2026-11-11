@@ -13,8 +13,8 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
         _=>Notice("Открыть сводку охоты?","Открыть","Новых контрактов пока нет.")
     };
     public static TravelDialogContent Pickup() => Notice("Доступны новые контракты","К доскам");
-    private static TravelDialogContent Notice(string title,string action,string context="",bool centered=true) =>
-        new("",title,"","",context,"","","","",[],action,CenterNoticeText:centered);
+    private static TravelDialogContent Notice(string title,string action,string context="") =>
+        new("",title,"","",context,"","","","",[],action,CenterNoticeText:true);
     public bool HasSubject => Subject.Length>0 || Detail.Length>0;
     public static TravelDialogContent Next(string from,string zone,string target,uint portraitIcon=0) => new(
         "Следующая зона",zone,"",zone,
@@ -23,13 +23,13 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
     public static TravelDialogContent Board(string city,string aetheryte,string expansion,uint gil,bool local) => new(
         $"Доска охоты · {expansion}",city,"Эфирит",local||aetheryte==city?"":aetheryte,
         local?"Вы уже в городе · поставим метку":gil==0?"Телепорт бесплатный":$"Стоимость телепорта: {gil.ToString("N0",System.Globalization.CultureInfo.InvariantCulture).Replace(',', '\u00A0')} гил",
-        "","","","",[],local?"К доске":null);
+        "","","","",[],local?"К доске":null,CenterNoticeText:local||aetheryte==city);
     public static TravelDialogContent Shortcut(ShortcutOffer offer,string zone,string target) => new(
         "","Сократить перелёт?","",offer.Name,
         $"{zone} · {offer.GilCost} гил","Цель",target,$"От эфирита ~{offer.FinalDistance:F0} м",
         "Каст и загрузка учтены.",
         [new("Перелёт",$"~{offer.DirectSeconds:F0} с"),new("Телепорт",$"~{offer.TeleportSeconds:F0} с"),new("Экономия",$"~{offer.SavedSeconds:F0} с",true)]);
-    public static TravelDialogContent Plain(string text) => Notice(string.IsNullOrWhiteSpace(text)?"Продолжить?":text,"Продолжить",centered:false);
+    public static TravelDialogContent Plain(string text) => Notice(string.IsNullOrWhiteSpace(text)?"Продолжить?":text,"Продолжить");
 }
 public sealed record DialogText(string Text,Vector2 Position,Vector2 Size,uint Font,Vector4 Color,bool Centered=false);
 public sealed record DialogButton(Vector2 Position,Vector2 Size);
@@ -53,10 +53,10 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         float Text(string value,float x,float y,float w,uint font,Vector4 color,bool centered=false) {
             float height=Math.Max(font+3,measure(value,w,font));
             if(!float.IsFinite(height) || height<0)throw new ArgumentException("Invalid text measurement");
-            texts.Add(new(value,new(x,y),new(w,height),font,color,centered));return height;
+            texts.Add(new(value,new(x,y),new(w,height),font,color,centered&&height<=font+8));return height;
         }
         float y=top;
-        if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,textWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
+        if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,textWidth,NativeHuntLayout.SecondaryFont,Brand,centerNotice)+2;
         y+=Text(content.Title,left,y,textWidth,NativeHuntLayout.TitleFont,White,centerNotice)+4;
         if(!string.IsNullOrEmpty(content.Destination)&&content.Destination!=content.Title) {
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";

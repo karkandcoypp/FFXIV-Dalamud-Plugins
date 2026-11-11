@@ -20,6 +20,14 @@ public sealed record WorldHuntMarker(ulong ActorId,Vector3 Position,string Name,
  public float Radius=>Current?9:Elite?8:5;
  public float Thickness=>Current?3:1.5f;
 }
+// Only rendered marks are submitted. Keep the history across frames and
+// temporary loss of visibility, and clear it when the character changes.
+internal sealed class EliteMarkerSound {
+ private readonly HashSet<(uint Territory,uint Map,ulong Actor)> announced=new();
+ internal bool Observe(WorldHuntMarker marker,bool enabled,uint territory,uint map) =>
+  enabled&&marker.Elite&&announced.Add((territory,map,marker.ActorId));
+ internal void Reset()=>announced.Clear();
+}
 public static class WorldHuntMarkers {
  public static WorldHuntMarker[] Build(IEnumerable<WorldHuntGoal> goals,IReadOnlyList<WorldHuntActor> actors,Vector3 player,uint territory,uint map,HuntSettings settings,string? currentKey=null,ulong? currentActor=null){
   if(territory==0||map==0||!Finite(player)||!settings.WorldMarkers&&!settings.OrdinaryWorldMarkers)return [];

@@ -9,6 +9,16 @@ static class WorldMarkerChecks {
   WorldHuntMarker[] Build(WorldHuntGoal[]? goals=null,WorldHuntActor[]? npcs=null,string? key=null,ulong? id=null)=>WorldHuntMarkers.Build(goals??[ordinary,elite],npcs??actors,Vector3.Zero,10,20,settings,key,id);
   check(Build().Length==3,"Only alive required ordinary/elite instances are labelled");
   var selected=Build(key:"daily",id:11);check(selected[0].ActorId==11&&selected.Count(m=>m.Current)==1&&selected[0].Radius>selected.Single(m=>m.ActorId==10).Radius,"Exactly the tracked ordinary instance is emphasized, even when another is closer");
+  var sound=new EliteMarkerSound();
+  var shown=selected.Single(m=>m.Elite);
+  check(!shown.Current&&sound.Observe(shown,true,10,20),"A rendered elite alerts even with an ordinary target selected");
+  check(!sound.Observe(shown,true,10,20)&&!sound.Observe(shown with {Current=true},true,10,20),"Repeated frames and retargeting stay silent");
+  check(Build(npcs:[actors[0]]).All(m=>!m.Elite)&&!sound.Observe(shown,true,10,20),"A missing frame does not rearm a previously shown elite");
+  check(!sound.Observe(selected[0],true,10,20),"Ordinary marks are silent");
+  var newElite=shown with {ActorId=90};
+  check(!sound.Observe(newElite,false,10,20)&&sound.Observe(newElite,true,10,20),"Muted marks do not play or consume a later enabled alert");
+  check(sound.Observe(shown,true,11,21)&&!sound.Observe(shown,true,10,20),"Different maps keep separate alerts without rearming the original map");
+  sound.Reset();check(sound.Observe(shown,true,10,20),"A new character session can receive its own alert");
   uint[] colors=[0xff62d24d,0xff81ecad,0xff63eaff,0xff539eff,0xff6666ff];
   float[] distances=[0,15,15.1f,35,35.1f,65,65.1f,100,100.1f];
   int[] bands=[0,0,1,1,2,2,3,3,4];

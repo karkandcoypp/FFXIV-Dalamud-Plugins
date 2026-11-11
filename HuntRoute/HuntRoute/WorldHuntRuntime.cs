@@ -5,6 +5,10 @@ using Dalamud.Game.ClientState.Objects.Types;
 namespace HuntRoute;
 
 public sealed partial class Plugin {
+ private readonly EliteMarkerSound eliteMarkerSound=new();
+ internal bool ObserveRenderedMarker(WorldHuntMarker marker) =>
+  eliteMarkerSound.Observe(marker,Settings.EliteSound,Service.ClientState.TerritoryType,Service.ClientState.MapId);
+
  internal WorldHuntMarker[] ReadWorldHuntMarkers(){
   if(!Ready||!Settings.WorldMarkers&&!Settings.OrdinaryWorldMarkers||!Service.ClientState.IsLoggedIn||Service.ObjectTable.LocalPlayer is not {} player||Service.Condition.Any(ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.Unconscious))return [];
   uint territory=Service.ClientState.TerritoryType,map=Service.ClientState.MapId;

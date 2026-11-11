@@ -7,7 +7,7 @@ using HuntRoute;
 internal static class DialogPreviewChecks {
     internal static unsafe void Run(string directory) {
         var offer=new ShortcutOffer(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40);
-        foreach(var sample in new[]{("login",TravelDialogContent.Login("taken")),("login-summary",TravelDialogContent.Login("summary")),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("The Ruby Sea","Mare Lamentorum","caretaker",1) with {Context="Bestways Burrow · 1854 гил"}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands",new string('Ж',100),1)),("shortcut",TravelDialogContent.Shortcut(offer,"Amh Araeng","gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
+        foreach(var sample in new[]{("login",TravelDialogContent.Login("taken")),("login-summary",TravelDialogContent.Login("summary")),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("plain-long",TravelDialogContent.Plain(string.Concat(Enumerable.Repeat("Продолжить охоту по оставшимся контрактам? ",4)))),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("The Ruby Sea","Mare Lamentorum","caretaker",1) with {Context="Bestways Burrow · 1854 гил"}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands",new string('Ж',100),1)),("shortcut",TravelDialogContent.Shortcut(offer,"Amh Araeng","gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
             ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(520,900);io.DeltaTime=1f/60;
             io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
@@ -17,6 +17,11 @@ internal static class DialogPreviewChecks {
                 throw new Exception("Board prompt must identify the expansion, city and price once");
             if(sample.Item1=="board-local"&&(sample.Item2.ConfirmLabel!="К доске"||layout.Texts.Any(t=>t.Text.Contains("гил"))))
                 throw new Exception("Local board prompt must offer a marker without a fare");
+            bool compact=sample.Item1 is "login" or "login-summary" or "pickup" or "plain" or "board" or "board-free" or "board-local";
+            if(layout.Texts.Any(t=>t.Centered!=compact || (t.Centered&&Math.Abs(t.Position.X+t.Size.X/2-layout.Width/2)>0.5f)))
+                throw new Exception("Unexpected dialog text alignment: "+sample.Item1);
+            if(layout.Confirm.Position.Y!=layout.Decline.Position.Y||Math.Abs(layout.Confirm.Position.X+layout.Decline.Position.X+layout.Decline.Size.X-layout.Width)>0.5f)
+                throw new Exception("Dialog buttons must form a centered row: "+sample.Item1);
             if(layout.Portrait.HasValue!=(sample.Item2.PortraitIcon!=0))throw new Exception("Dialog portrait visibility mismatch");
             if(layout.Portrait is {} portrait){
                 NativeResizeChecks.Check(new(layout.Width,layout.Height),[portrait]);
@@ -39,7 +44,11 @@ internal static class DialogPreviewChecks {
                 foreach(var text in layout.Texts) {
                     ImGui.SetWindowFontScale(text.Font/17f);
                     var position=text.Position;
-                    if(text.Centered)position.X+=Math.Max(0,(text.Size.X-ImGui.CalcTextSize(text.Text).X)/2);
+                    if(text.Centered) {
+                        float measured=ImGui.CalcTextSize(text.Text).X;
+                        if(measured>text.Size.X)throw new Exception("Centered caption exceeds its width: "+text.Text);
+                        position.X+=(text.Size.X-measured)/2;
+                    }
                     ImGui.SetCursorScreenPos(position);ImGui.PushTextWrapPos(text.Position.X+text.Size.X);
                     ImGui.TextColored(text.Color,text.Text);ImGui.PopTextWrapPos();
                     if(ImGui.GetItemRectMax().Y>text.Position.Y+text.Size.Y+1)throw new Exception("Dialog text exceeds its measured block");

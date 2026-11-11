@@ -330,7 +330,8 @@ public sealed partial class Plugin {
   if(changed)PlaceFlag(target.TerritoryType,target.MapId,position);
   return true;
  }
- private unsafe void Ping(string text,bool sound=false,MobHuntEntry? target=null){NoticeText=text;if(target!=null)noticeTarget=SearchIdentity(target);if(sound){try{FFXIVClientStructs.FFXIV.Client.UI.UIGlobals.PlaySoundEffect(0x29);}catch(Exception e){Service.PluginLog.Debug(e,"Сигнал охоты недоступен");}}}
+ private void Ping(string text,bool sound=false,MobHuntEntry? target=null){NoticeText=text;if(target!=null)noticeTarget=SearchIdentity(target);if(sound)PlayHuntSound();}
+ internal static unsafe void PlayHuntSound(){try{FFXIVClientStructs.FFXIV.Client.UI.UIGlobals.PlaySoundEffect(0x29);}catch(Exception e){Service.PluginLog.Debug(e,"Сигнал охоты недоступен");}}
  private void AuditState(){string value=$"{Session.Phase}|{Session.Target?.MobHuntId}|{Flow.Pauses}|{Flow.Status}";if(value==lastJournal)return;lastJournal=value;journal.Enqueue(DateTimeOffset.UtcNow.ToString("O")+" "+value);while(journal.Count>200)journal.Dequeue();}
  internal void Export(){if(stateFile==null)return;string path=Path.Combine(Path.GetDirectoryName(stateFile)!,"hunt-diagnostics.txt");try{File.WriteAllLines(path,new[]{"Hunt Route "+typeof(Plugin).Assembly.GetName().Version}.Concat(journal));NoticeText="Диагностика сохранена: "+path;}catch(Exception e){NoticeText="Не удалось сохранить диагностику: "+e.Message;}}
  internal bool PersistenceBlocked=>settingsLoadPending;
