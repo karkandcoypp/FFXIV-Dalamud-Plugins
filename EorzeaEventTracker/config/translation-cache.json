@@ -625,8 +625,122 @@
       "text": "Пункт назначения NPC неоднозначен или не нанесен на карту: Blowfish",
       "provider": "MyMemory",
       "machine": true
+    },
+    "fa17049e560ba821797eb8cc719a29d5cd4cb0a6dd559e27bbac80c27558d44e": {
+      "source": "FINAL FANTASY XIV x FINAL FANTASY XVI Crossover Event Returns!",
+      "text": "Возвращается кроссовер FINAL FANTASY XIV x FINAL FANTASY XVI!",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "4649d781844f7b7d9dc4c76b52edf5a65344acb5fb4a41a8700f7f853938ea31": {
+      "source": "MGP",
+      "text": "МГ",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "a1ea97a0b1ce17928c86e1321a84c02455746c77ab3da49c60c0ff1ac9fb1abd": {
+      "source": "Ul'dah - Steps of Thal",
+      "text": "Уль'дах — Ступени Тала",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "c91f4ca3febdff6954bf7de228303dc1186de865e62f2289d4f2eeb6cf5b638f": {
+      "source": "Price unknown or exchange is ambiguous: Metian Vest",
+      "text": "Цена неизвестна или обмен неясен: жилет метианцев",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "1e05b29573921c4c370f58926b738f335230d7476842a8091e1e838982da3a5a": {
+      "source": "Price unknown or exchange is ambiguous: Metian Gauntlets",
+      "text": "Цена неизвестна или обмен неоднозначен: перчатки Метиана",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "6e27e463512a0272a2d0eeccd0772aee2bdebbefafba61e53ece4e56f306d8fa": {
+      "source": "Price unknown or exchange is ambiguous: Metian Chausses",
+      "text": "Цена неизвестна или обмен неясен: Metian Chausses",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "8cb0b76edd64cb766561a1a8d9b62da55ad0963a5b09f5668d874ba493657440": {
+      "source": "Price unknown or exchange is ambiguous: Metian Sollerets",
+      "text": "Цена неизвестна или обмен неясен: Наголенники Метиана",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "3dca78a080d5f6707e3ed17be4ac7901ac1c23e7f64e2cb6e43798a6a4967798": {
+      "source": "Price unknown or exchange is ambiguous: Tonitrua ex Machina Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: валик для оркестриона «Tonitrua ex Machina»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "ec74f1381baebafe6d6c5a15fe86e70b4965c072f48549a80f0c85ba77bbc973": {
+      "source": "Price unknown or exchange is ambiguous: Idylls of the Empire Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неясен: Валик для оркестриона «Идиллии Империи»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "a3f84e8a9712ad9f58a2adc2e6726989b1419db62eb23e94ebbe2c8e8d4b3a41": {
+      "source": "Price unknown or exchange is ambiguous: Forevermore - The Grand Duchy of Rosaria Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неясен: Вечно — Валик для оркестриона «Великое герцогство Розария»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "051b040c05f81189bca205766427e606a233aab6805e8ad1ba4bd97c4446e999": {
+      "source": "Price unknown or exchange is ambiguous: Before the Storm - Caer Norvent Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: Перед бурей — Валик для оркестриона «Каэр Норвент»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "840273cadd14a36843b9e2a2f5d1fb7596d19ea578b0b9c8edd373c274b1f02f": {
+      "source": "Price unknown or exchange is ambiguous: The State of the Realm Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: Валик для оркестриона «Состояние королевства»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "7a1425b68e265eaada2b40d810cb273eb7fcf830e8c0b3d9aaad87588c0f5d66": {
+      "source": "Price unknown or exchange is ambiguous: Who I Really Am Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неясен: валик для оркестриона «Кто я на самом деле»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "fedfbc879b1e708f0f577c847cc5d23f22b3d96e4e419c854219e888101f3299": {
+      "source": "Price unknown or exchange is ambiguous: Away (Refrain) Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: Вальс «Вдали» (припев) (вал. для оркестриона)",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "9fcf76d62d946257093f408742d5473afbe3b2ed8187c5d5883f560a13c5c098": {
+      "source": "Price unknown or exchange is ambiguous: To Sail Forbidden Seas Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неясен: Валик для оркестриона «По запретным морям»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "0e747352bcca39d95c76b705b73b402d72e6c2132e3df47cda6eff2bcf97e124": {
+      "source": "Price unknown or exchange is ambiguous: Find the Flame Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неоднозначен: нотная валик «Пламя»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "336d6d2535444123893f247a59da20af5b545422919af3bdf0d82212ba2fa752": {
+      "source": "Price unknown or exchange is ambiguous: Land of Eikons Orchestrion Roll",
+      "text": "Цена неизвестна или обмен неясен: Валик для оркестриона «Земля Эйконов»",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "3e14b9b26ccc895c77304e68c747189beb82ebcf5e6531e0fc26c880b79d4781": {
+      "source": "NPC destination is ambiguous or not mapped: Metian Vest",
+      "text": "Пункт назначения NPC неясен или не отмечен на карте: Западный Метиан",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "6540a6af93970de64e56805b44a2b2e8357ca62fdba5d6f7a66bc17cef29dbe9": {
+      "source": "NPC destination is ambiguous or not mapped: Metian Chausses",
+      "text": "Место назначения NPC неоднозначно или не обозначено на карте: Метианские дороги",
+      "provider": "MyMemory",
+      "machine": true
     }
   },
   "day": "2026-11-11",
-  "used": 100
+  "used": 1300
 }

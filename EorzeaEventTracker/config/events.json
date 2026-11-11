@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-11T06:48:30.959546+00:00",
+  "generatedAt": "2026-11-11T19:45:44.548308+00:00",
   "events": [
     {
       "id": "e9da20a481813c2f",
@@ -269,33 +269,33 @@
           "Blunderville Square": "Площадь Blunderville",
           "Wy — entrance to Blunderville Square": "Wy — entrance to Blunderville Square",
           "To reach MGF Trader in Blunderville Square (X:3.8 Y:3.1), speak with Wy in The Gold Saucer (X:6.1 Y:7.4). The map button points to the entrance, not the merchant inside.": "Чтобы попасть к MGF Trader в Площадь Blunderville (X:3.8 Y:3.1), поговорите с Wy в Золотое блюдце (X:6.1 Y:7.4). Кнопка «Куда идти» ведёт ко входу, а не к торговцу внутри.",
-          "Blunderville Hammer": "Blunderville Hammer",
-          "Everybody Falls (Fall Guys Theme) Orchestrion Roll": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
-          "Pink Bean": "Pink Bean",
-          "Blunderville Crown": "Blunderville Crown",
-          "Wide Spectrum #1 Dye": "Wide Spectrum #1 Dye",
-          "Glossy Winner's Crown": "Glossy Winner's Crown",
-          "Gentlebean Bottoms": "Gentlebean Bottoms",
-          "Blunderous Framer's Kit": "Blunderous Framer's Kit",
-          "Blunderville Rainbow": "Blunderville Rainbow",
+          "Blunderville Donut Bumper": "Blunderville Donut Bumper",
           "Gold Saucer Aetheryte Ticket": "Gold Saucer Aetheryte Ticket",
-          "Matte Winner's Crown": "Matte Winner's Crown",
           "Blunderville Padded Wall": "Blunderville Padded Wall",
           "Just Crowning Around": "Just Crowning Around",
-          "Rhiyes Identification Key": "Rhiyes Identification Key",
-          "Blunderful Framer's Kit": "Blunderful Framer's Kit",
-          "Gentlebean Shoes": "Gentlebean Shoes",
-          "Blunder-villed Framer's Kit": "Blunder-villed Framer's Kit",
-          "Blunderville Donut Bumper": "Blunderville Donut Bumper",
           "Pegwin": "Pegwin",
-          "Blunderville Flag": "Blunderville Flag",
-          "It Could Happen to You": "It Could Happen to You",
-          "Lewena": "Lewena",
-          "Standard Rationing Manual": "Standard Rationing Manual",
-          "Ballroom Etiquette - Embracing Blunders": "Ballroom Etiquette - Embracing Blunders",
+          "Matte Winner's Crown": "Matte Winner's Crown",
+          "Everybody Falls (Fall Guys Theme) Orchestrion Roll": "Everybody Falls (Fall Guys Theme) Orchestrion Roll",
+          "Rhiyes Identification Key": "Rhiyes Identification Key",
+          "Blunderville Hammer": "Blunderville Hammer",
+          "Glossy Winner's Crown": "Glossy Winner's Crown",
           "Well-heeled Youth": "Well-heeled Youth",
+          "Gentlebean Knit Cap": "Gentlebean Knit Cap",
+          "It Could Happen to You": "It Could Happen to You",
+          "Blunder-villed Framer's Kit": "Blunder-villed Framer's Kit",
+          "Blunderous Framer's Kit": "Blunderous Framer's Kit",
           "Gentlebean Parka": "Gentlebean Parka",
-          "Gentlebean Knit Cap": "Gentlebean Knit Cap"
+          "Blunderville Crown": "Blunderville Crown",
+          "Wide Spectrum #1 Dye": "Wide Spectrum #1 Dye",
+          "Blunderville Flag": "Blunderville Flag",
+          "Lewena": "Lewena",
+          "Gentlebean Bottoms": "Gentlebean Bottoms",
+          "Ballroom Etiquette - Embracing Blunders": "Ballroom Etiquette - Embracing Blunders",
+          "Standard Rationing Manual": "Standard Rationing Manual",
+          "Pink Bean": "Pink Bean",
+          "Gentlebean Shoes": "Gentlebean Shoes",
+          "Blunderful Framer's Kit": "Blunderful Framer's Kit",
+          "Blunderville Rainbow": "Blunderville Rainbow"
         }
       },
       "locations": [
@@ -359,8 +359,8 @@
       },
       "validation": {
         "status": "passed",
-        "checkedAt": "2026-11-11T06:48:31.129683+00:00",
-        "lastVerifiedAt": "2026-11-11T06:48:31.129683+00:00",
+        "checkedAt": "2026-11-11T19:45:44.725969+00:00",
+        "lastVerifiedAt": "2026-11-11T19:45:44.725969+00:00",
         "fingerprint": "8582aba2346a4cf984f00ad37f9f928a6d65a0cbd765998dbe529687ac0c704e",
         "checks": 133,
         "issues": []
@@ -490,17 +490,17 @@
           "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
           "MGF Trader": "Торговец MGF",
           "Blunderville Square": "Площадь Blunderville",
-          "All Saints' Wake MMXVI Advertisement": "All Saints' Wake MMXVI Advertisement",
           "Grisly Bear Suit": "Grisly Bear Suit",
+          "Grim and Grisly Games": "Grim and Grisly Games",
+          "We Scare Bears": "We Scare Bears",
           "Staring Wakeshroom": "Staring Wakeshroom",
           "Pattin": "Pattin",
-          "We Scare Bears": "We Scare Bears",
-          "Smiling Wakeshroom": "Smiling Wakeshroom",
           "Grisly Bear Head": "Grisly Bear Head",
-          "Tabletop All Saints' Wake MMXXV Advertisement": "Tabletop All Saints' Wake MMXXV Advertisement",
-          "Grim and Grisly Games": "Grim and Grisly Games",
           "Wakesoul Buggy": "Wakesoul Buggy",
-          "All Saints' Wake MMXXV Advertisement": "All Saints' Wake MMXXV Advertisement"
+          "Tabletop All Saints' Wake MMXXV Advertisement": "Tabletop All Saints' Wake MMXXV Advertisement",
+          "Smiling Wakeshroom": "Smiling Wakeshroom",
+          "All Saints' Wake MMXXV Advertisement": "All Saints' Wake MMXXV Advertisement",
+          "All Saints' Wake MMXVI Advertisement": "All Saints' Wake MMXVI Advertisement"
         }
       },
       "locations": [
@@ -547,7 +547,7 @@
       },
       "validation": {
         "status": "partial",
-        "checkedAt": "2026-11-11T06:48:31.129683+00:00",
+        "checkedAt": "2026-11-11T19:45:44.725969+00:00",
         "lastVerifiedAt": null,
         "fingerprint": "d853871f65f5427c265baf25f76296d96f6a3a0c02acda17b286b81a60ca4e30",
         "checks": 56,
@@ -565,56 +565,42 @@
       "description": "",
       "requirements": [],
       "steps": [],
-      "rewards": [
-        "Blowfish"
-      ],
+      "rewards": [],
       "verified": false,
       "notes": [
         "Dates extracted automatically from official site.",
         "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
-        "Price unknown or exchange is ambiguous: Blowfish",
+        "No explicit reward database links found; image-only rewards need review.",
         "No quest could be identified unambiguously.",
-        "NPC destination is ambiguous or not mapped: Blowfish",
         "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips."
       ],
       "imageUrl": "https://img.finalfantasyxiv.com/t/378ff35cd6769fc2d8bb0c3dd1003f7b90c9811a.png?1792775210",
       "tracking": {
         "eventId": "3e17caab8166b3f6",
         "quests": [],
-        "rewards": [
-          {
-            "id": 4886,
-            "name": "Blowfish",
-            "icon": 29007,
-            "price": 0
-          }
-        ]
+        "rewards": []
       },
       "locations": [],
       "automation": {
         "status": "partial",
         "sources": [
-          "https://na.finalfantasyxiv.com/lodestone/topics/detail/378ff35cd6769fc2d8bb0c3dd1003f7b90c9811a",
-          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/2cc339576d4/"
+          "https://na.finalfantasyxiv.com/lodestone/topics/detail/378ff35cd6769fc2d8bb0c3dd1003f7b90c9811a"
         ],
         "gameVersion": "a72e645591e5bf8b",
         "schema": "exdschema@2:rev:e773c41a90aed788cf4c1c48469fa85618ef01fb",
         "issues": [
           "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
-          "Price unknown or exchange is ambiguous: Blowfish",
-          "No quest could be identified unambiguously.",
-          "NPC destination is ambiguous or not mapped: Blowfish"
+          "No explicit reward database links found; image-only rewards need review.",
+          "No quest could be identified unambiguously."
         ],
         "npc": {
           "mapped": 0,
           "locations": 0,
-          "issues": [
-            "NPC destination is ambiguous or not mapped: Blowfish"
-          ]
+          "issues": []
         },
         "russian": {
           "status": "complete",
-          "translated": 5,
+          "translated": 4,
           "pending": 0,
           "provider": "MyMemory + reviewed glossary"
         }
@@ -622,24 +608,400 @@
       "translations": {
         "ru": {
           "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.": "Автоматически собранные сведения могут быть неполными. Основная цель не определяется автоматически; точки NPC добавляются только при точной связи в игровых данных.",
-          "Blowfish": "Blowfish",
           "Announcing the Fan Festival Group Pose Screenshot Campaign!": "Объявляем кампанию по созданию позы для группы фан-фестиваля!",
           "Dates extracted automatically from official site.": "Даты, автоматически извлекаемые с официального сайта.",
-          "Price unknown or exchange is ambiguous: Blowfish": "Цена неизвестна или обмен неоднозначен: Blowfish",
+          "No explicit reward database links found; image-only rewards need review.": "Не найдено явных ссылок на базу данных вознаграждений; награды только для изображений нуждаются в проверке.",
           "No quest could be identified unambiguously.": "Ни один квест не мог быть идентифицирован однозначно.",
-          "NPC destination is ambiguous or not mapped: Blowfish": "Пункт назначения NPC неоднозначен или не нанесен на карту: Blowfish",
           "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках."
         }
       },
       "validation": {
         "status": "partial",
-        "checkedAt": "2026-11-11T06:48:31.129683+00:00",
+        "checkedAt": "2026-11-11T19:45:44.725969+00:00",
         "lastVerifiedAt": null,
-        "fingerprint": "ff6f42a9775b8794f1fcce9d1b96b5fa00e4d9196f0f61e5137c5e8a06c037ba",
-        "checks": 1,
+        "fingerprint": "6009ef9ca8a586063fad41e0cdfbcad2934ab545417c842d3fdfe35973042da5",
+        "checks": 0,
         "issues": [
-          "Quest or reward coverage is incomplete",
-          "Reward merchant is missing: Blowfish"
+          "Quest or reward coverage is incomplete"
+        ]
+      }
+    },
+    {
+      "id": "4b2b8d23a671260d",
+      "title": "FINAL FANTASY XIV x FINAL FANTASY XVI Crossover Event Returns!",
+      "url": "https://na.finalfantasyxiv.com/lodestone/topics/detail/44d7f515b6157602c144c5dba37a110bdecda702",
+      "startsAt": "2026-11-18T08:00:00Z",
+      "endsAt": "2026-12-09T14:59:00Z",
+      "description": "",
+      "requirements": [],
+      "steps": [],
+      "rewards": [
+        "Metian Vest",
+        "Metian Gauntlets",
+        "Metian Chausses",
+        "Metian Sollerets",
+        "Torgal Whistle",
+        "Torgal Pup",
+        "Clive Rosfield Card",
+        "Tonitrua ex Machina Orchestrion Roll",
+        "Idylls of the Empire Orchestrion Roll",
+        "Forevermore - The Grand Duchy of Rosaria Orchestrion Roll",
+        "Before the Storm - Caer Norvent Orchestrion Roll",
+        "The State of the Realm Orchestrion Roll",
+        "Who I Really Am Orchestrion Roll",
+        "Away (Refrain) Orchestrion Roll",
+        "To Sail Forbidden Seas Orchestrion Roll",
+        "Find the Flame Orchestrion Roll",
+        "Land of Eikons Orchestrion Roll"
+      ],
+      "verified": false,
+      "notes": [
+        "Dates extracted automatically from official site.",
+        "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
+        "Price unknown or exchange is ambiguous: Metian Vest",
+        "Price unknown or exchange is ambiguous: Metian Gauntlets",
+        "Price unknown or exchange is ambiguous: Metian Chausses",
+        "Price unknown or exchange is ambiguous: Metian Sollerets",
+        "Price unknown or exchange is ambiguous: Tonitrua ex Machina Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Idylls of the Empire Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Forevermore - The Grand Duchy of Rosaria Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Before the Storm - Caer Norvent Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: The State of the Realm Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Who I Really Am Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Away (Refrain) Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: To Sail Forbidden Seas Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Find the Flame Orchestrion Roll",
+        "Price unknown or exchange is ambiguous: Land of Eikons Orchestrion Roll",
+        "NPC destination is ambiguous or not mapped: Metian Vest",
+        "NPC destination is ambiguous or not mapped: Metian Gauntlets",
+        "NPC destination is ambiguous or not mapped: Metian Chausses",
+        "NPC destination is ambiguous or not mapped: Metian Sollerets",
+        "NPC destination is ambiguous or not mapped: Clive Rosfield Card",
+        "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.",
+        "Some Russian translations are pending; English text is shown until they are available."
+      ],
+      "imageUrl": "https://lds-img.finalfantasyxiv.com/h/O/23fYwJxNiO-vMh3cO4ZM_pwJbs.jpg",
+      "tracking": {
+        "eventId": "4b2b8d23a671260d",
+        "quests": [
+          {
+            "id": 70332,
+            "name": "A Land on Fire",
+            "icon": 101290,
+            "locationId": "npc-1046043-map-13"
+          },
+          {
+            "id": 70333,
+            "name": "Pain to Recall",
+            "icon": 101291,
+            "locationId": "npc-1046046-map-73"
+          },
+          {
+            "id": 70334,
+            "name": "The Path Infernal",
+            "icon": 101292,
+            "locationId": "npc-1046050-map-3"
+          }
+        ],
+        "rewards": [
+          {
+            "id": 41555,
+            "name": "Metian Vest",
+            "icon": 42995,
+            "price": 0
+          },
+          {
+            "id": 41556,
+            "name": "Metian Gauntlets",
+            "icon": 56129,
+            "price": 0
+          },
+          {
+            "id": 41557,
+            "name": "Metian Chausses",
+            "icon": 57530,
+            "price": 0
+          },
+          {
+            "id": 41558,
+            "name": "Metian Sollerets",
+            "icon": 49624,
+            "price": 0
+          },
+          {
+            "id": 41487,
+            "name": "Torgal Whistle",
+            "icon": 26039,
+            "price": 0,
+            "earnedByQuest": 70334,
+            "locationId": "npc-1046050-map-3"
+          },
+          {
+            "id": 41478,
+            "name": "Torgal Pup",
+            "icon": 59898,
+            "price": 0,
+            "earnedByQuest": 70334,
+            "locationId": "npc-1046050-map-3"
+          },
+          {
+            "id": 41397,
+            "name": "Clive Rosfield Card",
+            "icon": 27671,
+            "price": 200000,
+            "currencyItemId": 29,
+            "currency": "MGP"
+          },
+          {
+            "id": 41619,
+            "name": "Tonitrua ex Machina Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          },
+          {
+            "id": 41620,
+            "name": "Idylls of the Empire Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          },
+          {
+            "id": 41621,
+            "name": "Forevermore - The Grand Duchy of Rosaria Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          },
+          {
+            "id": 41622,
+            "name": "Before the Storm - Caer Norvent Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          },
+          {
+            "id": 41701,
+            "name": "The State of the Realm Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          },
+          {
+            "id": 41702,
+            "name": "Who I Really Am Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          },
+          {
+            "id": 41703,
+            "name": "Away (Refrain) Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          },
+          {
+            "id": 41704,
+            "name": "To Sail Forbidden Seas Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          },
+          {
+            "id": 41705,
+            "name": "Find the Flame Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          },
+          {
+            "id": 41706,
+            "name": "Land of Eikons Orchestrion Roll",
+            "icon": 25945,
+            "price": 0,
+            "locationId": "npc-1011039-map-196"
+          }
+        ]
+      },
+      "locations": [
+        {
+          "id": "npc-1046043-map-13",
+          "npc": "neophyte adventurer",
+          "zone": "Ul'dah - Steps of Nald",
+          "territoryId": 130,
+          "mapId": 13,
+          "x": 8.895,
+          "y": 9.906
+        },
+        {
+          "id": "npc-1046046-map-73",
+          "npc": "Clive",
+          "zone": "Ul'dah - Steps of Thal",
+          "territoryId": 131,
+          "mapId": 73,
+          "x": 9.51,
+          "y": 12.575
+        },
+        {
+          "id": "npc-1046050-map-3",
+          "npc": "Clive",
+          "zone": "Old Gridania",
+          "territoryId": 133,
+          "mapId": 3,
+          "x": 8.324,
+          "y": 10.586
+        },
+        {
+          "id": "npc-1011039-map-196",
+          "npc": "Gold Saucer attendant",
+          "zone": "The Gold Saucer",
+          "territoryId": 144,
+          "mapId": 196,
+          "x": 5.145,
+          "y": 6.683
+        }
+      ],
+      "automation": {
+        "status": "partial",
+        "sources": [
+          "https://na.finalfantasyxiv.com/lodestone/topics/detail/44d7f515b6157602c144c5dba37a110bdecda702",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/880ccee8353/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/abf54f46f2a/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/08bfdaa0749/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/eb53e05cec2/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/6bbfd03b991/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/3b504c17fe3/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/d61d33400a8/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/520cfe96812/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/34bc1402c1c/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/b4bcb142f94/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/c710258e2f6/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/55f12afb5d7/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/342406e34ea/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/ac50d97fe64/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/5707fe275a9/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/04da31edc21/",
+          "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/3cdb662f5c6/",
+          "https://na.finalfantasyxiv.com/lodestone/special/ffxvi/e86ytg2ko3"
+        ],
+        "gameVersion": "a72e645591e5bf8b",
+        "schema": "exdschema@2:rev:e773c41a90aed788cf4c1c48469fa85618ef01fb",
+        "issues": [
+          "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.",
+          "Price unknown or exchange is ambiguous: Metian Vest",
+          "Price unknown or exchange is ambiguous: Metian Gauntlets",
+          "Price unknown or exchange is ambiguous: Metian Chausses",
+          "Price unknown or exchange is ambiguous: Metian Sollerets",
+          "Price unknown or exchange is ambiguous: Tonitrua ex Machina Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Idylls of the Empire Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Forevermore - The Grand Duchy of Rosaria Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Before the Storm - Caer Norvent Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: The State of the Realm Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Who I Really Am Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Away (Refrain) Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: To Sail Forbidden Seas Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Find the Flame Orchestrion Roll",
+          "Price unknown or exchange is ambiguous: Land of Eikons Orchestrion Roll",
+          "NPC destination is ambiguous or not mapped: Metian Vest",
+          "NPC destination is ambiguous or not mapped: Metian Gauntlets",
+          "NPC destination is ambiguous or not mapped: Metian Chausses",
+          "NPC destination is ambiguous or not mapped: Metian Sollerets",
+          "NPC destination is ambiguous or not mapped: Clive Rosfield Card"
+        ],
+        "npc": {
+          "mapped": 13,
+          "locations": 4,
+          "issues": [
+            "NPC destination is ambiguous or not mapped: Metian Vest",
+            "NPC destination is ambiguous or not mapped: Metian Gauntlets",
+            "NPC destination is ambiguous or not mapped: Metian Chausses",
+            "NPC destination is ambiguous or not mapped: Metian Sollerets",
+            "NPC destination is ambiguous or not mapped: Clive Rosfield Card"
+          ]
+        },
+        "russian": {
+          "status": "partial",
+          "translated": 23,
+          "pending": 3,
+          "provider": "MyMemory + reviewed glossary"
+        }
+      },
+      "translations": {
+        "ru": {
+          "Automatic details may be incomplete. The main objective is not inferred; NPC destinations require exact game-data links.": "Автоматически собранные сведения могут быть неполными. Основная цель не определяется автоматически; точки NPC добавляются только при точной связи в игровых данных.",
+          "The State of the Realm Orchestrion Roll": "The State of the Realm Orchestrion Roll",
+          "Metian Chausses": "Metian Chausses",
+          "To Sail Forbidden Seas Orchestrion Roll": "To Sail Forbidden Seas Orchestrion Roll",
+          "Idylls of the Empire Orchestrion Roll": "Idylls of the Empire Orchestrion Roll",
+          "Metian Gauntlets": "Metian Gauntlets",
+          "neophyte adventurer": "neophyte adventurer",
+          "Who I Really Am Orchestrion Roll": "Who I Really Am Orchestrion Roll",
+          "Metian Vest": "Metian Vest",
+          "The Path Infernal": "The Path Infernal",
+          "Forevermore - The Grand Duchy of Rosaria Orchestrion Roll": "Forevermore - The Grand Duchy of Rosaria Orchestrion Roll",
+          "Metian Sollerets": "Metian Sollerets",
+          "Clive": "Clive",
+          "Torgal Pup": "Torgal Pup",
+          "Before the Storm - Caer Norvent Orchestrion Roll": "Before the Storm - Caer Norvent Orchestrion Roll",
+          "A Land on Fire": "A Land on Fire",
+          "Gold Saucer attendant": "Gold Saucer attendant",
+          "Find the Flame Orchestrion Roll": "Find the Flame Orchestrion Roll",
+          "Land of Eikons Orchestrion Roll": "Land of Eikons Orchestrion Roll",
+          "Tonitrua ex Machina Orchestrion Roll": "Tonitrua ex Machina Orchestrion Roll",
+          "Torgal Whistle": "Torgal Whistle",
+          "Away (Refrain) Orchestrion Roll": "Away (Refrain) Orchestrion Roll",
+          "Clive Rosfield Card": "Clive Rosfield Card",
+          "Pain to Recall": "Pain to Recall",
+          "FINAL FANTASY XIV x FINAL FANTASY XVI Crossover Event Returns!": "Возвращается кроссовер FINAL FANTASY XIV x FINAL FANTASY XVI!",
+          "MGP": "МГ",
+          "Ul'dah - Steps of Nald": "Уль’да — Ступени Нальда",
+          "Ul'dah - Steps of Thal": "Уль'дах — Ступени Тала",
+          "Old Gridania": "Старая Гридания",
+          "The Gold Saucer": "Золотое блюдце",
+          "Dates extracted automatically from official site.": "Даты, автоматически извлекаемые с официального сайта.",
+          "Price unknown or exchange is ambiguous: Metian Vest": "Цена неизвестна или обмен неясен: жилет метианцев",
+          "Price unknown or exchange is ambiguous: Metian Gauntlets": "Цена неизвестна или обмен неоднозначен: перчатки Метиана",
+          "Price unknown or exchange is ambiguous: Metian Chausses": "Цена неизвестна или обмен неясен: Metian Chausses",
+          "Price unknown or exchange is ambiguous: Metian Sollerets": "Цена неизвестна или обмен неясен: Наголенники Метиана",
+          "Price unknown or exchange is ambiguous: Tonitrua ex Machina Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: валик для оркестриона «Tonitrua ex Machina»",
+          "Price unknown or exchange is ambiguous: Idylls of the Empire Orchestrion Roll": "Цена неизвестна или обмен неясен: Валик для оркестриона «Идиллии Империи»",
+          "Price unknown or exchange is ambiguous: Forevermore - The Grand Duchy of Rosaria Orchestrion Roll": "Цена неизвестна или обмен неясен: Вечно — Валик для оркестриона «Великое герцогство Розария»",
+          "Price unknown or exchange is ambiguous: Before the Storm - Caer Norvent Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: Перед бурей — Валик для оркестриона «Каэр Норвент»",
+          "Price unknown or exchange is ambiguous: The State of the Realm Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: Валик для оркестриона «Состояние королевства»",
+          "Price unknown or exchange is ambiguous: Who I Really Am Orchestrion Roll": "Цена неизвестна или обмен неясен: валик для оркестриона «Кто я на самом деле»",
+          "Price unknown or exchange is ambiguous: Away (Refrain) Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: Вальс «Вдали» (припев) (вал. для оркестриона)",
+          "Price unknown or exchange is ambiguous: To Sail Forbidden Seas Orchestrion Roll": "Цена неизвестна или обмен неясен: Валик для оркестриона «По запретным морям»",
+          "Price unknown or exchange is ambiguous: Find the Flame Orchestrion Roll": "Цена неизвестна или обмен неоднозначен: нотная валик «Пламя»",
+          "Price unknown or exchange is ambiguous: Land of Eikons Orchestrion Roll": "Цена неизвестна или обмен неясен: Валик для оркестриона «Земля Эйконов»",
+          "NPC destination is ambiguous or not mapped: Metian Vest": "Пункт назначения NPC неясен или не отмечен на карте: Западный Метиан",
+          "NPC destination is ambiguous or not mapped: Metian Chausses": "Место назначения NPC неоднозначно или не обозначено на карте: Метианские дороги",
+          "Russian text includes automatic translation by MyMemory; original English reward names are retained in tooltips.": "Русский текст включает машинный перевод MyMemory; исходные английские названия наград сохранены во всплывающих подсказках.",
+          "Some Russian translations are pending; English text is shown until they are available.": "Часть русского перевода ещё не готова. До его получения показывается английский текст."
+        }
+      },
+      "validation": {
+        "status": "partial",
+        "checkedAt": "2026-11-11T19:45:44.725969+00:00",
+        "lastVerifiedAt": null,
+        "fingerprint": "abd06ee0a1be745466b7b96e7925633af9fb8b294aab64a82d5234903df35aee",
+        "checks": 67,
+        "issues": [
+          "Reward merchant is missing: Metian Vest",
+          "Reward merchant is missing: Metian Gauntlets",
+          "Reward merchant is missing: Metian Chausses",
+          "Reward merchant is missing: Metian Sollerets",
+          "Reward merchant is missing: Clive Rosfield Card",
+          "Merchant/price relationship is not fully supported or known: Tonitrua ex Machina Orchestrion Roll",
+          "Merchant/price relationship is not fully supported or known: Idylls of the Empire Orchestrion Roll",
+          "Merchant/price relationship is not fully supported or known: Forevermore - The Grand Duchy of Rosaria Orchestrion Roll",
+          "Merchant/price relationship is not fully supported or known: Before the Storm - Caer Norvent Orchestrion Roll",
+          "Merchant/price relationship is not fully supported or known: The State of the Realm Orchestrion Roll",
+          "Merchant/price relationship is not fully supported or known: Who I Really Am Orchestrion Roll",
+          "Merchant/price relationship is not fully supported or known: Away (Refrain) Orchestrion Roll",
+          "Merchant/price relationship is not fully supported or known: To Sail Forbidden Seas Orchestrion Roll",
+          "Merchant/price relationship is not fully supported or known: Find the Flame Orchestrion Roll",
+          "Merchant/price relationship is not fully supported or known: Land of Eikons Orchestrion Roll"
         ]
       }
     }
