@@ -9,6 +9,9 @@ internal static class NativeHuntPreviewChecks {
   var controller=new NativeHuntController(plugin);
   var samples=new List<(string Name,NativeHuntPage Page,NativeHuntScreen Screen,bool Mini,int Offset)>();
   foreach(var page in Enum.GetValues<NativeHuntPage>()){if(page==NativeHuntPage.Target)controller.FocusGoal();else controller.Navigate(page);samples.Add((page.ToString(),page,controller.Build(),false,0));}
+  var boards=samples.Single(s=>s.Page==NativeHuntPage.Boards);
+  var longest=TimeSpan.FromMinutes(23*60+59);
+  samples.Add(("Boards-max-timers",boards.Page,boards.Screen with {BoardTimers=NativeBoardTimers.FromRemaining(longest,longest)},false,0));
   var number=samples.Single(s=>s.Page==NativeHuntPage.Number);
   samples.Add(("Number-lower",number.Page,number.Screen,false,0));
   samples.Add(("mini",NativeHuntPage.Hunt,controller.Build(true),true,0));

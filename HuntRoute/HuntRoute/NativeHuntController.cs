@@ -105,8 +105,7 @@ public sealed class NativeHuntController {
   var now=DateTimeOffset.UtcNow;
   var day=ResetClock.Next(now,false)-now;
   var week=ResetClock.Next(now,true)-now;
-  string weekly=week.Days>0?$"{week.Days} д {week.Hours} ч":$"{week.Hours} ч {week.Minutes} мин";
-  return new("Доски охоты","",buttons,BoardTimers:new($"{(int)day.TotalHours} ч {day.Minutes} мин",weekly));
+  return new("Доски охоты","",buttons,BoardTimers:NativeBoardTimers.FromRemaining(day,week));
  }
  private NativeBoardStatus Progress(Board b,bool weekly){
   if(plugin.CompletionUncertain(b,weekly))return new("неизвестно");

@@ -11,7 +11,11 @@ public sealed record NativeHuntButton(string Key,string Label,NativeHuntAction A
 public sealed record NativeBoardStatus(string Label,Vector4? Color=null);
 public sealed record NativeBoardRow(string Name,NativeBoardStatus Daily,NativeBoardStatus Weekly);
 public sealed record NativeGoalRow(string Zone,string Name,string Count);
-public sealed record NativeBoardTimers(string Daily,string Weekly);
+public sealed record NativeBoardTimers(string Daily,string Weekly){
+ public static NativeBoardTimers FromRemaining(TimeSpan daily,TimeSpan weekly)=>
+  new(Compact(daily),Compact(weekly));
+ private static string Compact(TimeSpan time)=>time.Days>0?$"{time.Days}д {time.Hours}ч":$"{time.Hours}ч {time.Minutes}м";
+}
 public sealed record NativeHuntScreen(string Title,string Summary,IReadOnlyList<NativeHuntButton> Buttons,uint Icon=0,NativeHuntProgress? Progress=null,Vector4? SummaryColor=null,NativeBoardTimers? BoardTimers=null);
 public static class NativeHuntColors {
  public static readonly Vector4 Focus=new(.80f,.92f,1,1), PrimarySurface=new(.65f,.81f,1,1);
