@@ -37,7 +37,10 @@ internal static class DialogPreviewChecks {
                 var draw=ImGui.GetWindowDrawList();draw.AddRectFilled(Vector2.Zero,io.DisplaySize,ImGui.GetColorU32(new Vector4(.25f,.25f,.25f,1)),12);
                 ImGui.SetWindowFontScale(14f/17);ImGui.SetCursorScreenPos(new(18,9));ImGui.TextColored(TravelDialogLayout.White,"Hunt Route");
                 foreach(var text in layout.Texts) {
-                    ImGui.SetWindowFontScale(text.Font/17f);ImGui.SetCursorScreenPos(text.Position);ImGui.PushTextWrapPos(text.Position.X+text.Size.X);
+                    ImGui.SetWindowFontScale(text.Font/17f);
+                    var position=text.Position;
+                    if(text.Centered)position.X+=Math.Max(0,(text.Size.X-ImGui.CalcTextSize(text.Text).X)/2);
+                    ImGui.SetCursorScreenPos(position);ImGui.PushTextWrapPos(text.Position.X+text.Size.X);
                     ImGui.TextColored(text.Color,text.Text);ImGui.PopTextWrapPos();
                     if(ImGui.GetItemRectMax().Y>text.Position.Y+text.Size.Y+1)throw new Exception("Dialog text exceeds its measured block");
                 }
