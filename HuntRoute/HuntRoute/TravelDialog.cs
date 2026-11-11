@@ -4,17 +4,17 @@ using System.Numerics;
 namespace HuntRoute;
 
 public sealed record DialogMetric(string Label,string Value,bool Highlight=false);
-public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null,uint PortraitIcon=0,bool CenterTitle=false) {
+public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null,uint PortraitIcon=0,bool CenterNoticeText=false) {
     public string ConfirmLabel => ActionLabel ?? "Телепорт";
     public string DeclineLabel => "Позже";
     public static TravelDialogContent Login(string mode) => mode switch {
-        "taken"=>Notice("Продолжить охоту?","Продолжить") with {CenterTitle=true},
+        "taken"=>Notice("Продолжить охоту?","Продолжить"),
         "pickup"=>Pickup(),
         _=>Notice("Открыть сводку охоты?","Открыть","Новых контрактов пока нет.")
     };
     public static TravelDialogContent Pickup() => Notice("Доступны новые контракты","К доскам");
-    private static TravelDialogContent Notice(string title,string action,string context="") =>
-        new("",title,"","",context,"","","","",[],action);
+    private static TravelDialogContent Notice(string title,string action,string context="",bool centered=true) =>
+        new("",title,"","",context,"","","","",[],action,CenterNoticeText:centered);
     public bool HasSubject => Subject.Length>0 || Detail.Length>0;
     public static TravelDialogContent Next(string from,string zone,string target,uint portraitIcon=0) => new(
         "Следующая зона",zone,"",zone,
@@ -29,7 +29,7 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
         $"{zone} · {offer.GilCost} гил","Цель",target,$"От эфирита ~{offer.FinalDistance:F0} м",
         "Каст и загрузка учтены.",
         [new("Перелёт",$"~{offer.DirectSeconds:F0} с"),new("Телепорт",$"~{offer.TeleportSeconds:F0} с"),new("Экономия",$"~{offer.SavedSeconds:F0} с",true)]);
-    public static TravelDialogContent Plain(string text) => Notice(string.IsNullOrWhiteSpace(text)?"Продолжить?":text,"Продолжить");
+    public static TravelDialogContent Plain(string text) => Notice(string.IsNullOrWhiteSpace(text)?"Продолжить?":text,"Продолжить",centered:false);
 }
 public sealed record DialogText(string Text,Vector2 Position,Vector2 Size,uint Font,Vector4 Color,bool Centered=false);
 public sealed record DialogButton(Vector2 Position,Vector2 Size);
@@ -49,6 +49,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         NativeHuntRect? portrait=content.PortraitIcon!=0?new(new(width-left-portraitSize,top),new(portraitSize,portraitSize)):null;
         float textWidth=portrait.HasValue?inner-portraitSize-portraitGap:inner;
         var texts=new List<DialogText>();
+        bool centerNotice=content.CenterNoticeText&&!portrait.HasValue;
         float Text(string value,float x,float y,float w,uint font,Vector4 color,bool centered=false) {
             float height=Math.Max(font+3,measure(value,w,font));
             if(!float.IsFinite(height) || height<0)throw new ArgumentException("Invalid text measurement");
@@ -56,12 +57,12 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         }
         float y=top;
         if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,textWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
-        y+=Text(content.Title,left,y,textWidth,NativeHuntLayout.TitleFont,White,content.CenterTitle&&!portrait.HasValue)+4;
+        y+=Text(content.Title,left,y,textWidth,NativeHuntLayout.TitleFont,White,centerNotice)+4;
         if(!string.IsNullOrEmpty(content.Destination)&&content.Destination!=content.Title) {
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";
             y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White)+2;
         }
-        if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,left,y,textWidth,NativeHuntLayout.SecondaryFont,Mint)+4;
+        if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,left,y,textWidth,NativeHuntLayout.SecondaryFont,Mint,centerNotice)+4;
         if(content.HasSubject) {
             y+=2;
             string subject=string.IsNullOrEmpty(content.SubjectLabel)?content.Subject:$"{content.SubjectLabel} · {content.Subject}";
