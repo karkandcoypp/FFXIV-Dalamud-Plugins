@@ -11,11 +11,11 @@ public sealed class NativeHuntController {
  public bool DeferredOnly {get;private set;}
  public bool OnlyNewBoards {get;private set;}
  private string? selected;
- private string? feedback;
+ private string? feedback,routeMessage;
  private string expansion="",zone="";
  private string numberKey="ordinary-distance";
  public NativeHuntController(Plugin plugin)=>this.plugin=plugin;
- public void Navigate(NativeHuntPage page){Page=page;Offset=0;OnlyNewBoards=false;}
+ public void Navigate(NativeHuntPage page){Page=page;Offset=0;OnlyNewBoards=false;routeMessage=null;}
  public void Boards(bool onlyNew){Navigate(NativeHuntPage.Boards);OnlyNewBoards=onlyNew;}
  public void FocusGoal(){selected=plugin.Session.Target is {} m?JourneyFlow.Key(m):null;Navigate(NativeHuntPage.Target);}
  public void Turn(int delta,int count)=>Offset=NativeHuntNavigation.ClampPage(Offset+delta,count);
@@ -46,7 +46,7 @@ public sealed class NativeHuntController {
    int count=plugin.Mobs.Count(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m));summary=count>0?$"Осталось целей: {count}":"Нет незавершённых целей.";
    buttons.Add(remaining?Button("primary","Начать охоту","resume"):Button("primary","Доски охоты","page",NativeHuntPage.Boards.ToString()));
   }
-  if(!mini){buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));if(feedback!=null)summary+="\n"+feedback;else if(plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
+  if(!mini){buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));if(!plugin.Flow.Active&&plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
   return new(title,summary,buttons,target?.Icon??0,target==null?null:new(plugin.Kills(target),target.NeededKills),summaryColor);
  }
  private string MiniStatus(){
@@ -151,7 +151,8 @@ public sealed class NativeHuntController {
   buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));string status=plugin.Flow.Active&&plugin.Flow.Pauses==PauseReason.None
    ?plugin.Session.Phase switch {RoutePhase.AwaitingTravel or RoutePhase.NextZone=>"Ожидается подтверждение перехода",RoutePhase.WaitingForZone=>"Ожидается прибытие",_=>"Сопровождение активно"}
    :plugin.Flow.Status;
-  return new("Действия маршрута",status,buttons);
+  if(routeMessage==null&&plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));
+  return new("Действия маршрута",routeMessage??status,buttons);
  }
  public void Execute(NativeHuntAction action){
   var goal=plugin.Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==action.Argument);
@@ -159,7 +160,7 @@ public sealed class NativeHuntController {
    case "page":if(Enum.TryParse<NativeHuntPage>(action.Argument,out var page))Navigate(page);break;
    case "target":if(goal!=null){selected=action.Argument;plugin.Selected=selected;Navigate(NativeHuntPage.Target);}break;
    case "focus":FocusGoal();break;
-   case "resume":plugin.ResumeJourney();feedback=plugin.NoticeText??plugin.Flow.Status;Navigate(NativeHuntPage.Hunt);break;
+   case "resume":plugin.ResumeJourney();Navigate(NativeHuntPage.Hunt);break;
    case "pause":if(!plugin.Flow.Pauses.HasFlag(PauseReason.User))plugin.TogglePause();break;case "stop":plugin.StopJourney();Navigate(NativeHuntPage.Hunt);break;
    case "planned":plugin.OfferPlannedTravel();break;case "next":plugin.OfferNext();break;
    case "map":if(goal!=null)plugin.ShowMap(goal);break;case "track":if(goal!=null){plugin.Track(goal);Navigate(NativeHuntPage.Hunt);}break;
@@ -173,7 +174,7 @@ public sealed class NativeHuntController {
    case "toggle":Toggle(action.Argument);break;case "step":Step(action.Argument,action.Delta);break;
    case "edit-number":if(!plugin.PersistenceBlocked&&NumberValue(action.Argument).Value.Length>0){numberKey=action.Argument;Navigate(NativeHuntPage.Number);}break;
    case "refresh":plugin.Refresh();break;case "retry-save":plugin.RetryPersistence();feedback=plugin.NoticeText;break;
-   case "export":plugin.Export();feedback=plugin.NoticeText;break;case "message":feedback=plugin.NoticeText;Navigate(NativeHuntPage.Actions);break;
+   case "export":plugin.Export();feedback=plugin.NoticeText;break;case "message":Navigate(NativeHuntPage.Actions);routeMessage=plugin.NoticeText;break;
    case "classic":plugin.OpenClassic();break;
   }
  }

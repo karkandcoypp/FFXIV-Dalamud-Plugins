@@ -31,6 +31,24 @@ internal static class NativeHuntPreviewChecks {
   session.RequestNext(current);
   samples.Add(("Actions-next",NativeHuntPage.Actions,controller.Build(),false,0));
   session.Retarget(current);
+  controller.Navigate(NativeHuntPage.Hunt);
+  var notice=typeof(Plugin).GetField("NoticeText",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Public)
+   ?? throw new Exception("Missing notice field");
+  var oldNotice=notice.GetValue(plugin);
+  try{
+   notice.SetValue(plugin,null);
+   var clean=controller.Build();
+   notice.SetValue(plugin,"Доступна следующая зона.");
+   var arrived=controller.Build();
+   if(arrived.Summary!=clean.Summary||!arrived.Buttons.SequenceEqual(clean.Buttons))
+    throw new Exception("The old zone notice must not change the current target summary or layout after arrival");
+   controller.Navigate(NativeHuntPage.Actions);
+   controller.Execute(controller.Build().Buttons.Single(b=>b.Key=="message").Action);
+   if(controller.Build().Summary!="Доступна следующая зона.")
+    throw new Exception("The route notice must be readable from Route actions");
+   Console.WriteLine("PASS after-arrival summary stays compact and route notice remains accessible");
+  }finally{notice.SetValue(plugin,oldNotice);}
+
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,0),false,1));
   var portraits=new Dictionary<uint,(string File,int Width,int Height)>();
