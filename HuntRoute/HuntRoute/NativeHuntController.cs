@@ -47,7 +47,7 @@ public sealed class NativeHuntController {
    buttons.Add(remaining?Button("primary","Начать охоту","resume"):Button("primary","Доски охоты","page",NativeHuntPage.Boards.ToString()));
   }
   if(!mini){buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));if(!plugin.Flow.Active&&plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
-  return new(title,summary,buttons,target?.Icon??0,target==null?null:new(plugin.Kills(target),target.NeededKills),summaryColor);
+  return new(title,summary,buttons,target?.Icon??0,target==null?null:new(plugin.Kills(target),target.NeededKills),summaryColor,Elite:target?.IsEliteMark==true&&plugin.Flow.Active);
  }
  private string MiniStatus(){
   var pauses=plugin.Flow.Pauses;
@@ -94,7 +94,7 @@ public sealed class NativeHuntController {
   if(excluded)summary+="\nОтложено";
   var buttons=new List<NativeHuntButton>{Button("track","Сопровождать","track",selected!,!excluded&&!plugin.Done(goal)),Button("map","Карта","map",selected!),Button("defer",excluded?"Вернуть в маршрут":"Отложить цель",excluded?"restore":"defer",selected!)};
   if(!excluded)buttons.Add(Button("defer-zone","Отложить зону","defer-zone",selected!));
-  buttons.Add(Button("targets","К списку целей","page",NativeHuntPage.Targets.ToString()));return new(goal.Name??"Цель",summary,buttons,goal.Icon,new(plugin.Kills(goal),goal.NeededKills));
+  buttons.Add(Button("targets","К списку целей","page",NativeHuntPage.Targets.ToString()));return new(goal.Name??"Цель",summary,buttons,goal.Icon,new(plugin.Kills(goal),goal.NeededKills),Elite:goal.IsEliteMark);
  }
  private NativeHuntScreen BoardScreen(){
   var buttons=Plugin.Boards.Select(b=>{

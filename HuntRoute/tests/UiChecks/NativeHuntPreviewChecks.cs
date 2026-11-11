@@ -51,6 +51,12 @@ internal static class NativeHuntPreviewChecks {
 
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,0),false,1));
+  var active=samples.Single(s=>s.Page==NativeHuntPage.Hunt&&!s.Mini).Screen;
+  foreach(bool mini in new[]{false,true}){
+   var sample=mini?samples.Single(s=>s.Name=="mini").Screen:active;
+   samples.Add(($"elite-{mini}-short",NativeHuntPage.Hunt,sample with {Title="Manes",Elite=true},mini,0));
+   samples.Add(($"elite-{mini}-long",NativeHuntPage.Hunt,sample with {Title=new string('Ж',100),Elite=true},mini,0));
+  }
   var portraits=new Dictionary<uint,(string File,int Width,int Height)>();
   if(game!=null){
    foreach(uint icon in samples.Where(s=>!s.Mini&&s.Screen.Icon!=0).Select(s=>s.Screen.Icon).Distinct()){
@@ -69,7 +75,21 @@ internal static class NativeHuntPreviewChecks {
    ImGui.NewFrame();ImGui.Begin("measure");
    float Height(string value,float width,float font){ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(value,false,width).Y+4;}
    float width=NativeHuntLayout.ContentWidth(sample.Mini);
-   var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.SummaryFont(sample.Page,sample.Mini)),sample.Mini,label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return Math.Max(ImGui.CalcTextSize(label).X,label.EnumerateRunes().Count()*9.5f);});
+   ImGui.SetWindowFontScale(NativeHuntLayout.TitleFont/17f);
+   float titleWidth=ImGui.CalcTextSize(title).X;
+   var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,NativeHuntLayout.TitleWidth(sample.Screen,sample.Mini),NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.SummaryFont(sample.Page,sample.Mini)),sample.Mini,label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return Math.Max(ImGui.CalcTextSize(label).X,label.EnumerateRunes().Count()*9.5f);},titleWidth);
+   if(layout.EliteBadge.HasValue!=sample.Screen.Elite)throw new Exception("Elite badge visibility mismatch");
+   if(layout.EliteBadge is {} badge){
+    if(badge.Position.X<layout.Heading.Position.X+layout.Heading.Size.X+NativeHuntLayout.EliteBadgeGap||
+       badge.Position.X+badge.Size.X>layout.Summary.Position.X+NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini)||
+       badge.Position.Y+badge.Size.Y>layout.Summary.Position.Y)
+     throw new Exception("Elite badge collides with the heading, portrait or summary");
+    if(sample.Name.EndsWith("-short")&&badge.Position.X>layout.Heading.Position.X+titleWidth+NativeHuntLayout.EliteBadgeGap+3)
+     throw new Exception("Short elite badge is not adjacent to the name");
+    ImGui.SetWindowFontScale(NativeHuntLayout.SecondaryFont/17f);
+    if(ImGui.CalcTextSize(NativeHuntLayout.EliteLabel).X+8>badge.Size.X)
+     throw new Exception("Elite badge label cannot fit");
+   }
    if(sample.Name is "Actions-planned" or "Actions-next"){
     string kind=sample.Name=="Actions-planned"?"planned":"next";
     if(!layout.Buttons.Any(b=>b.Button.Action.Kind==kind&&b.Button.Key=="primary")||layout.Buttons.Any(b=>b.Button.Key=="resume"))
@@ -82,6 +102,7 @@ internal static class NativeHuntPreviewChecks {
    }
    var visibleRects=layout.Buttons.Select(b=>b.Rect).Concat(layout.TableText.Select(t=>t.Rect))
     .Append(layout.Heading).Append(layout.Summary);
+   if(layout.EliteBadge is {} visibleBadge)visibleRects=visibleRects.Append(visibleBadge);
    if(sample.Screen.Progress!=null)visibleRects=visibleRects.Append(layout.ProgressLabel);
    if(!sample.Mini&&sample.Screen.Progress!=null)visibleRects=visibleRects.Append(layout.ProgressTrack);
    if(!sample.Mini&&sample.Screen.Icon!=0)visibleRects=visibleRects.Append(layout.Portrait);
@@ -153,6 +174,12 @@ internal static class NativeHuntPreviewChecks {
      return new(rect.Position+new Vector2(inset,0),rect.Size-new Vector2(inset,0));
     }
     Text(title,layout.Heading,NativeHuntLayout.TitleFont,sample.Screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One);if(summary.Length>0)Text(summary,layout.Summary,NativeHuntLayout.SummaryFont(sample.Page,sample.Mini),sample.Screen.SummaryColor??NativeHuntColors.Muted);
+    if(layout.EliteBadge is {} badgeRect){
+     draw.AddRectFilled(badgeRect.Position,badgeRect.Position+badgeRect.Size,0xff30424d,4);
+     draw.AddRect(badgeRect.Position,badgeRect.Position+badgeRect.Size,0xff427d9c,4);
+     var labelRect=new NativeHuntRect(badgeRect.Position+new Vector2(0,2),badgeRect.Size-new Vector2(0,2));
+     Text(NativeHuntLayout.EliteLabel,Center(NativeHuntLayout.EliteLabel,labelRect,NativeHuntLayout.SecondaryFont),NativeHuntLayout.SecondaryFont,NativeHuntLayout.EliteGold);
+    }
     if(!sample.Mini&&sample.Screen.Icon!=0)draw.AddRectFilled(layout.Portrait.Position,layout.Portrait.Position+layout.Portrait.Size,0xff3b3631,6);
     if(sample.Screen.Progress is {} progress){
      var r=layout.ProgressTrack;

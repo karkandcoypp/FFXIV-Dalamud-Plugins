@@ -16,7 +16,7 @@ public sealed record NativeBoardTimers(string Daily,string Weekly){
   new(Compact(daily),Compact(weekly));
  private static string Compact(TimeSpan time)=>time.Days>0?$"{time.Days}д {time.Hours}ч":$"{time.Hours}ч {time.Minutes}м";
 }
-public sealed record NativeHuntScreen(string Title,string Summary,IReadOnlyList<NativeHuntButton> Buttons,uint Icon=0,NativeHuntProgress? Progress=null,Vector4? SummaryColor=null,NativeBoardTimers? BoardTimers=null);
+public sealed record NativeHuntScreen(string Title,string Summary,IReadOnlyList<NativeHuntButton> Buttons,uint Icon=0,NativeHuntProgress? Progress=null,Vector4? SummaryColor=null,NativeBoardTimers? BoardTimers=null,bool Elite=false);
 public static class NativeHuntColors {
  public static readonly Vector4 Focus=new(.80f,.92f,1,1), PrimarySurface=new(.65f,.81f,1,1);
  public static readonly Vector4 Ready=new(.50f,1,.64f,1), Attention=new(1,.83f,.48f,1), Tracking=new(.62f,.84f,1,1), Muted=new(.78f,.81f,.85f,1);
@@ -52,7 +52,7 @@ public readonly record struct NativeHuntRect(Vector2 Position,Vector2 Size){
 }
 public sealed record NativeHuntPlacement(int Slot,int Row,int Column,NativeHuntButton Button,NativeHuntRect Rect);
 public sealed record NativeHuntText(string Label,NativeHuntRect Rect,Vector4 Color,byte Font);
-public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,NativeHuntRect Summary,NativeHuntRect Portrait,NativeHuntRect ProgressLabel,NativeHuntRect ProgressTrack,NativeHuntRect PageLabel,string PageText,IReadOnlyList<NativeHuntPlacement> Buttons,IReadOnlyList<NativeHuntText> TableText){
+public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,NativeHuntRect Summary,NativeHuntRect Portrait,NativeHuntRect ProgressLabel,NativeHuntRect ProgressTrack,NativeHuntRect PageLabel,string PageText,IReadOnlyList<NativeHuntPlacement> Buttons,IReadOnlyList<NativeHuntText> TableText,NativeHuntRect? EliteBadge){
  public const int ButtonCapacity=13;
  private const float Margin=16,Gap=6;
  public const float ActionHeight=32, ActionWidth=84, LongActionWidth=2*ActionWidth+Gap;
@@ -61,6 +61,10 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  // Axis typography with slightly larger labels for legibility.
  public const byte TitleFont=18, BodyFont=14, ButtonFont=13, SecondaryFont=12;
  public static float ContentWidth(bool mini)=>(mini?300:420)-2*Margin;
+ public const string EliteLabel="Элита";
+ public static readonly Vector4 EliteGold=new(.99f,.88f,.62f,1),EliteBorder=new(.61f,.49f,.26f,1),EliteBackground=new(.30f,.26f,.19f,1);
+ public const float EliteBadgeWidth=55,EliteBadgeHeight=20,EliteBadgeGap=8;
+ public static float TitleWidth(NativeHuntScreen screen,bool mini)=>SummaryWidth(screen,mini)-(screen.Elite?EliteBadgeWidth+EliteBadgeGap:0);
  public static byte SummaryFont(NativeHuntPage view,bool mini)=>SecondaryFont;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Goal==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;
@@ -73,7 +77,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  }
  public static float ButtonWidth(string label)=>label.Length<=11?ActionWidth:LongActionWidth;
  public static string FitLabel(string value,int length=64)=>value.Length<=length?value:string.Concat(value.EnumerateRunes().Take(length-1).Select(r=>r.ToString()))+"…";
- public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false,Func<string,float>? measureButton=null){
+ public static NativeHuntLayout Build(NativeHuntScreen screen,NativeHuntPage view,int requestedPage,float titleHeight,float summaryHeight,bool mini=false,Func<string,float>? measureButton=null,float titleWidth=0){
   float Button(string label)=>Math.Max(ButtonWidth(label),measureButton==null?0:MathF.Ceiling(measureButton(label))+16);
   float Compact(NativeHuntButton button)=>Button(button.Label);
   float inner=ContentWidth(mini),width=inner+2*Margin,titleY=mini?38:37+ActionHeight+8;
@@ -264,10 +268,13 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   if(settingsList)Set(11,8,0,Page("advanced","Параметры",NativeHuntPage.Advanced),controlX,footer,Button("Параметры"),FooterHeight);
   else if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),controlX,footer,Button("Назад"),FooterHeight);
   if(!mini&&!huntActions)Set(12,8,1,close,width-Margin-closeWidth,footer,closeWidth,FooterHeight);
-  return new(new(width,footer+(mini?4:huntActions?FooterBottomInset-Gap:FooterHeight+FooterBottomInset)),new(new(Margin,titleY),new(textWidth,titleHeight)),
+  float headingWidth=TitleWidth(screen,mini);
+  float titleEnd=float.IsFinite(titleWidth)&&titleWidth>0?Math.Min(MathF.Ceiling(titleWidth)+2,headingWidth):headingWidth;
+  NativeHuntRect? eliteBadge=screen.Elite?new(new(Margin+titleEnd+EliteBadgeGap,titleY+1),new(EliteBadgeWidth,EliteBadgeHeight)):null;
+  return new(new(width,footer+(mini?4:huntActions?FooterBottomInset-Gap:FooterHeight+FooterBottomInset)),new(new(Margin,titleY),new(screen.Elite?titleEnd:headingWidth,titleHeight)),
    new(new(Margin,summaryY),new(textWidth,summaryHeight)),new(new(width-Margin-PortraitSize,titleY),new(PortraitSize,PortraitSize)),
    new(new(Margin,progressY),new(textWidth,18)),new(new(Margin,progressY+19),new(textWidth,mini?0:5)),
    new(new(controlX+(controlWidth-74)/2,bottom+6),new(74,22)),
-   pager?$"Стр. {page+1} / {pageCount}":"",buttons,tableText);
+   pager?$"Стр. {page+1} / {pageCount}":"",buttons,tableText,eliteBadge);
  }
 }

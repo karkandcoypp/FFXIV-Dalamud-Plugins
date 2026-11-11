@@ -83,7 +83,9 @@ public sealed partial class Plugin {
   LoadJourney();
   return true;
  }
+ private readonly ExpansionCompletionNotice expansionCompletionNotice=new();
  private void LoadJourney(){
+  expansionCompletionNotice.Reset();
   loginNoticeShown=false;
   billGuard=new();uncertainBills.Clear();unreadBills.Clear();KillCounts=new();BillStates=new();Mobs=new();Routes=new();
   contractRevision=0;contractAt=0;flow=new();Flow.Load(CharacterSave);ordinaryActor=null;ordinaryKind=null;context=null;ownedMarker=null;pendingJourney=null;
@@ -337,6 +339,21 @@ public sealed partial class Plugin {
   var now=DateTimeOffset.UtcNow;
   return ids.Any(i=>!unreadBills.Contains(i)&&BillStates.TryGetValue(i,out var state)&&state.Unlocked&&state.AvailableId>0&&!state.Taken
    &&(!state.CompletedCurrentSet||RepeatedSetAvailable(i,weekly,now,state))&&!History.IsComplete(character,i,weekly,now,state.AvailableId));
+ }
+ private void CheckExpansionCompletionNotices(){
+  if(!Ready||completionLoadPending)return;
+  foreach(var board in Boards){
+   bool reliable=board.Daily.Append(board.Weekly).All(i=>BillStates.ContainsKey(i)&&!unreadBills.Contains(i))
+    &&!CompletionUncertain(board,false)&&!CompletionUncertain(board,true);
+   if(!reliable||!expansionCompletionNotice.Observe(board.Name,CollectionProgress(board,false),CollectionProgress(board,true),reliable))continue;
+   if(!Settings.ResetNotifications)continue;
+   bool more=Boards.Any(b=>b!=board&&(CanPickup(b,false)||CanPickup(b,true)));
+   Service.Notifications.AddNotification(new Dalamud.Interface.ImGuiNotification.Notification{
+    Title=$"{board.Name}: контракты выполнены",
+    Content=more?"Новые контракты других дополнений — в разделе «Доски».":"Статусы и время сброса — в разделе «Доски».",
+    Type=Dalamud.Interface.ImGuiNotification.NotificationType.Success
+   });
+  }
  }
  private string LoginMode()=>Mobs.Any(m=>AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m))?"taken":Boards.Any(b=>CanPickup(b,false)||CanPickup(b,true))?"pickup":"summary";
  private void OfferLoginNotice(){

@@ -26,6 +26,20 @@ public readonly record struct ContractProgress(int Total,int Taken,int Completed
     }
 }
 
+internal sealed class ExpansionCompletionNotice {
+    private readonly HashSet<string> armed=new();
+    public void Reset()=>armed.Clear();
+
+    public bool Observe(string expansion,ContractProgress daily,ContractProgress weekly,bool reliable) {
+        if(!reliable)return false;
+        var total=daily.Total+weekly.Total;
+        var complete=total>0 && daily.Completed+weekly.Completed==total && daily.NewSets+weekly.NewSets==0;
+        if(complete)return armed.Remove(expansion);
+        if(daily.Taken+weekly.Taken>0)armed.Add(expansion);
+        return false;
+    }
+}
+
 public readonly record struct BillRequirement(byte Mob,uint Kills);
 public static class BillCompletion {
     public static bool IsComplete(byte id,uint orderCount,IEnumerable<BillRequirement> requirements,System.Func<byte,int> kills) {

@@ -20,6 +20,8 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  private string?[] keys=new string?[NativeHuntLayout.ButtonCapacity];
  private NativeHuntAction?[] commands=new NativeHuntAction?[NativeHuntLayout.ButtonCapacity];
  private TextNode? heading,summary,pageLabel,progressLabel;
+ private TextNode? eliteLabel;
+ private ColorImageNode? eliteBorder,eliteBackground;
  private ColorImageNode? progressTrack,progressFill;
  private readonly TextNode?[] tableCells=new TextNode?[NativeHuntLayout.ButtonCapacity*3];
  private IconImageNode? portrait;
@@ -43,6 +45,9 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(mini)native->DisableFocusOnShow=true;
   buttonMeasure=new TextNode{FontSize=NativeHuntLayout.ButtonFont,Size=new(4096,64),IsVisible=false};AddFixedNode(buttonMeasure);
   heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route"};heading.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddFixedNode(heading);
+  eliteBorder=new ColorImageNode{Color=NativeHuntLayout.EliteBorder,IsVisible=false};AddFixedNode(eliteBorder);
+  eliteBackground=new ColorImageNode{Color=NativeHuntLayout.EliteBackground,IsVisible=false};AddFixedNode(eliteBackground);
+  eliteLabel=new TextNode{FontSize=NativeHuntLayout.SecondaryFont,TextColor=NativeHuntLayout.EliteGold,AlignmentType=AlignmentType.Center,String=NativeHuntLayout.EliteLabel,IsVisible=false};AddFixedNode(eliteLabel);
   summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=18};summary.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddFixedNode(summary);
   portrait=new IconImageNode{FitTexture=true,IsVisible=false};AddFixedNode(portrait);
   progressLabel=new TextNode{FontSize=NativeHuntLayout.SecondaryFont,TextColor=new(.68f,.88f,.80f,1)};AddFixedNode(progressLabel);
@@ -108,11 +113,19 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   summary.FontSize=NativeHuntLayout.SummaryFont(controller.Page,mini);
   summary.LineSpacing=summary.FontSize+3;
   float textWidth=NativeHuntLayout.SummaryWidth(screen,mini);
-  heading.Size=new(textWidth,110);summary.Size=new(textWidth,200);
-  var layout=NativeHuntLayout.Build(screen,controller.Page,controller.Offset,heading.GetTextDrawSize(considerScale:false).Y,summary.GetTextDrawSize(considerScale:false).Y,mini,label=>NativeButtonText.Measure(buttonMeasure!,label));
+  float titleWidth=0;
+  if(screen.Elite){heading.Size=new(4096,110);titleWidth=heading.GetTextDrawSize(considerScale:false).X;}
+  heading.Size=new(NativeHuntLayout.TitleWidth(screen,mini),110);summary.Size=new(textWidth,200);
+  var layout=NativeHuntLayout.Build(screen,controller.Page,controller.Offset,heading.GetTextDrawSize(considerScale:false).Y,summary.GetTextDrawSize(considerScale:false).Y,mini,label=>NativeButtonText.Measure(buttonMeasure!,label),titleWidth);
   heading.TextColor=screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One;
   summary.TextColor=screen.SummaryColor??NativeHuntColors.Muted;
   heading.Position=layout.Heading.Position;heading.Size=layout.Heading.Size;
+  eliteBorder!.IsVisible=eliteBackground!.IsVisible=eliteLabel!.IsVisible=layout.EliteBadge.HasValue;
+  if(layout.EliteBadge is {} badge){
+   eliteBorder.Position=badge.Position;eliteBorder.Size=badge.Size;
+   eliteBackground.Position=badge.Position+Vector2.One;eliteBackground.Size=badge.Size-2*Vector2.One;
+   eliteLabel.Position=badge.Position;eliteLabel.Size=badge.Size;
+  }
   summary.Position=layout.Summary.Position;summary.Size=layout.Summary.Size;
   var progress=screen.Progress;
   progressLabel.IsVisible=progress!=null;
