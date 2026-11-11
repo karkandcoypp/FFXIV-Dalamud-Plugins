@@ -82,6 +82,20 @@ internal static class NativeHuntPreviewChecks {
    }
    var links=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
    if(sample.Page==NativeHuntPage.Boards){
+    var refresh=layout.Buttons.Single(b=>b.Button.Action.Kind=="refresh");
+    var settings=layout.Buttons.Single(b=>b.Button.Key=="tab:settings");
+    if(refresh.Button.Label!="Обновить"||refresh.Row!=0||refresh.Rect.Position.Y!=settings.Rect.Position.Y||
+       refresh.Rect.Position.X<settings.Rect.Position.X+settings.Rect.Size.X+6||refresh.Rect.Position.X+refresh.Rect.Size.X>layout.Size.X-16||
+       links.Single(n=>n.Index==settings.Slot+1).Right!=refresh.Slot+1||links.Single(n=>n.Index==refresh.Slot+1).Left!=settings.Slot+1)
+     throw new Exception("Refresh must fit after Settings and be reachable in both directions");
+    const System.Reflection.BindingFlags fields=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+    var nextScan=typeof(Plugin).GetField("nextScan",fields)!;
+    var signature=typeof(Plugin).GetField("signature",fields)!;
+    nextScan.SetValue(plugin,long.MaxValue);signature.SetValue(plugin,"stale");
+    controller.Execute(refresh.Button.Action);
+    if(nextScan.GetValue(plugin) is not 0L||(string?)signature.GetValue(plugin)!="")
+     throw new Exception("Refresh must schedule a fresh read of board statuses");
+    Console.WriteLine("PASS board refresh placement, D-pad links and immediate rescan scheduling");
     var board=layout.Buttons.First(b=>b.Button.Enabled&&b.Button.Board!=null);
     var queue=new ConfirmationQueue();
     queue.Offer(new("travel","board-preview","К доске охоты?",()=>true,()=>true,()=>throw new Exception("Later must not teleport")));
