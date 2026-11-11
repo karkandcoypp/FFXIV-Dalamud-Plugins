@@ -118,6 +118,8 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     private Vector2 measuredSize;
     private TextButtonNode? yesButton,noButton;
     private TextNode? yesCaption,noCaption;
+    private IconImageNode? portrait;
+    private NativeHuntRect? portraitRect;
 
     protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values) {
         if(WindowNode is WindowNode window) {
@@ -127,13 +129,22 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         var measureButton=new TextNode{FontSize=NativeHuntLayout.ButtonFont,Size=new(4096,64),IsVisible=false};
         AddFixedNode(measureButton);
         var textNodes=new List<TextNode>();
-        var layout=TravelDialogLayout.Build(content,(text,width,font)=> {
+        var presentation=content;
+        if(content.PortraitIcon!=0){
+            var image=new IconImageNode{FitTexture=true,IsVisible=false};
+            AddFixedNode(image);
+            try{image.IconId=content.PortraitIcon;portrait=image;}
+            catch(Exception e){Service.PluginLog.Debug(e,"Портрет следующей цели недоступен");presentation=content with {PortraitIcon=0};}
+        }
+        var layout=TravelDialogLayout.Build(presentation,(text,width,font)=> {
             var node=new TextNode { Size=new Vector2(width,4096),FontSize=font,LineSpacing=font+3,
                 String=text };
             node.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);
             textNodes.Add(node);AddFixedNode(node);return node.GetTextDrawSize(considerScale:false).Y;
         },label=>NativeButtonText.Measure(measureButton,label));
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color; }
+        portraitRect=layout.Portrait;
+        RefreshPortrait();
         yesButton=new TextButtonNode { Position=layout.Confirm.Position,Size=layout.Confirm.Size,String="",
             NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true,true) };
         yesButton.BackgroundNode.Color=NativeHuntColors.PrimarySurface;
@@ -163,7 +174,16 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     protected override void OnUpdate(AtkUnitBase* native) {
         if(answered||yesButton==null||noButton==null)return;
         yesButton.IsEnabled=ready();
+        RefreshPortrait();
         RefreshCaptions();
+    }
+    private void RefreshPortrait(){
+        if(portrait is not {IsVisible:false,IsTextureReady:true} image||portraitRect is not {} bounds)return;
+        var texture=image.ActualTextureSize;
+        var fitted=bounds.FitImage(texture);
+        if(fitted.Size.X<=0||fitted.Size.Y<=0)return;
+        image.TextureSize=texture;
+        image.Position=fitted.Position;image.Size=fitted.Size;image.IsVisible=true;
     }
     private void RefreshCaptions(){
         if(yesButton==null||noButton==null||yesCaption==null||noCaption==null)return;
