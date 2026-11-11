@@ -71,11 +71,9 @@ public sealed partial class HuntWindow:Window {
    bool pickup=Plugin.Boards.Any(b=>plugin.CanPickup(b,false)||plugin.CanPickup(b,true));
    bool completed=Plugin.Boards.Any(b=>plugin.CollectionProgress(b,false).AllCompleted||plugin.CollectionProgress(b,true).AllCompleted);
    HuntTheme.Heading(available>0?"Готовы к охоте?":remaining.Length>0?"Цели отложены":pickup?"Новые контракты":completed?"Взятые цели выполнены":"Нет взятых контрактов");
-   ImGui.TextWrapped(available>0?$"Осталось целей: {available} · зон: {remaining.Select(m=>m.TerritoryType).Distinct().Count()}":remaining.Length>0?$"Незавершённых целей: {remaining.Length}":pickup?"Выберите дополнение и возьмите контракты.":"Проверьте сводку контрактов и следующий сброс.");
+   ImGui.TextWrapped(available>0?$"Осталось целей: {available} · зон: {remaining.Select(m=>m.TerritoryType).Distinct().Count()}":remaining.Length>0?$"Незавершённых целей: {remaining.Length}":pickup?"Выберите дополнение на вкладке «Доски».":"Статусы и время сброса — на вкладке «Доски».");
    ImGui.Spacing();
-   if(HuntTheme.Primary(available>0?"Начать охоту":remaining.Length>0?"Посмотреть цели":"К доскам охоты",new(-1,36))){
-    if(available>0)StartHunt();else if(remaining.Length>0)page=HuntPage.Targets;else{page=HuntPage.Boards;onlyNewBoards=pickup;}
-   }
+   if(available>0&&HuntTheme.Primary("Начать охоту",new(-1,36)))StartHunt();
    HuntTheme.EndCard();
   }
   if(startFeedback!=null){ImGui.TextWrapped(startFeedback);if(ImGui.SmallButton("Скрыть пояснение"))startFeedback=null;}
@@ -85,7 +83,6 @@ public sealed partial class HuntWindow:Window {
    if(first!=null){ImGui.Spacing();ImGui.TextDisabled("ПЕРВАЯ ЗОНА");ImGui.TextWrapped(first.TerritoryName??"Зона охоты");}
   }
   if(plugin.NoticeText!=null&&ImGui.CollapsingHeader("Сообщение")){ImGui.TextWrapped(plugin.NoticeText);if(ImGui.SmallButton("Прочитано"))plugin.NoticeText=null;}
-  if(active&&Plugin.Boards.Any(b=>plugin.CanPickup(b,false)||plugin.CanPickup(b,true))&&ImGui.SmallButton("Есть новые контракты")){page=HuntPage.Boards;onlyNewBoards=true;}
  }
  private void DrawBoards(){
   HuntTheme.Heading("Доски охоты");var now=DateTimeOffset.UtcNow;

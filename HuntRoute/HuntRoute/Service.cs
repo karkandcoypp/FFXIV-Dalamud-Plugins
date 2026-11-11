@@ -5,7 +5,6 @@ namespace HuntRoute;
 public sealed class Service {
     [PluginService] public static IDalamudPluginInterface PluginInterface { get; set; }=null!;
     [PluginService] public static ICommandManager Commands { get; set; }=null!;
-    [PluginService] public static INotificationManager Notifications { get; set; }=null!;
     [PluginService] public static IChatGui Chat { get; set; }=null!;
     [PluginService] public static IDataManager DataManager { get; set; }=null!;
     [PluginService] public static IGameGui GameGui { get; set; }=null!;

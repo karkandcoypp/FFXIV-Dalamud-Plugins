@@ -104,19 +104,16 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   float closeWidth=Button(close.Label);
   bool huntActions=!mini&&view==NativeHuntPage.Hunt&&pageCount==1&&visible.Length>0&&visible.All(IsCompact);
   bool compactActive=false;
-  int refreshIndex=!mini&&view==NativeHuntPage.Boards?Array.FindIndex(visible,b=>b is {Key:"boards-all",Action.Kind:"refresh"}):-1;
-  bool refreshInHeader=false;
   if(!mini){
    string[] tabLabels=["Охота","Доски","Настройки"];
    float[] tabWidths=tabLabels.Select(Button).ToArray();
    bool activeActions=huntActions&&visible is [{Key:"primary"},{Key:"map"},{Key:"actions"},{Key:"targets"}]
     &&visible.Skip(1).Sum(Compact)+closeWidth+3*Gap<=inner;
-   float extraWidth=activeActions?Compact(visible[0]):refreshIndex>=0?Compact(visible[refreshIndex]):0;
+   float extraWidth=activeActions?Compact(visible[0]):0;
    if(extraWidth>0&&measureButton!=null&&tabWidths.Sum()+extraWidth+3*Gap>inner)
     tabWidths=tabLabels.Select(label=>Math.Max(72,MathF.Ceiling(measureButton(label))+16)).ToArray();
    bool fitsExtra=extraWidth>0&&tabWidths.Sum()+extraWidth+3*Gap<=inner;
    compactActive=activeActions&&fitsExtra;
-   refreshInHeader=refreshIndex>=0&&fitsExtra;
    if(!fitsExtra)tabWidths=tabLabels.Select(Button).ToArray();
    float tabWidth=tabWidths.Max();
    if(!fitsExtra||3*tabWidth+extraWidth+3*Gap<=inner)Array.Fill(tabWidths,tabWidth);
@@ -124,16 +121,14 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
    Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),Margin+tabWidths[0]+Gap,37,tabWidths[1],ActionHeight);
    Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),Margin+tabWidths[0]+tabWidths[1]+2*Gap,37,tabWidths[2],ActionHeight);
    if(compactActive)Set(3,0,3,visible[0],width-Margin-extraWidth,37,extraWidth,ActionHeight);
-   if(refreshInHeader)Set(refreshIndex+3,0,3,visible[refreshIndex],width-Margin-extraWidth,37,extraWidth,ActionHeight);
   }
   float controlWidth=mini?inner:4*ActionWidth+3*Gap;
   float controlX=Margin;
   var tableText=new List<NativeHuntText>();
   void Cell(string label,float x,float y,float w,Vector4 color,byte font=ButtonFont)=>tableText.Add(new(FitLabel(label,46),new(new(x,y),new(w,21)),color,font));
   string? lastZone=null;
-  bool boardRefresh=refreshIndex>=0&&!refreshInHeader;
-  int rows=boardRefresh?1:0;
-  float bottom=boardRefresh?Math.Max(bodyY,titleY+ActionHeight+Gap):bodyY;
+  int rows=0;
+  float bottom=bodyY;
   if(compactActive){
    float x=Margin;
    for(int i=1;i<visible.Length;i++){
@@ -165,12 +160,6 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   }
   for(int i=0;!huntActions&&i<visible.Length;i++){
    var button=visible[i];
-   if(i==refreshIndex){
-    if(refreshInHeader)continue;
-    float w=Compact(button);
-    Set(i+3,1,0,button,width-Margin-w,titleY,w,ActionHeight);
-    continue;
-   }
    if(miniStrip&&i==0){
     float x=(width-visible.Sum(Compact)-(visible.Length-1)*Gap)/2;
     rows++;
@@ -266,7 +255,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   float footer=bottom+(pager?ActionHeight+12:0);
   var back=view switch {NativeHuntPage.Number=>NativeHuntPage.Advanced,NativeHuntPage.Advanced=>NativeHuntPage.Settings,NativeHuntPage.Target or NativeHuntPage.Filters=>NativeHuntPage.Targets,NativeHuntPage.Expansions or NativeHuntPage.Zones=>NativeHuntPage.Filters,_=>NativeHuntPage.Hunt};
   if(settingsList)Set(11,8,0,Page("advanced","Параметры",NativeHuntPage.Advanced),controlX,footer,Button("Параметры"),FooterHeight);
-  else if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),controlX,footer,Button("Назад"),FooterHeight);
+  else if(!mini&&back is not (NativeHuntPage.Hunt or NativeHuntPage.Boards or NativeHuntPage.Settings))Set(11,8,0,Page("back","Назад",back),controlX,footer,Button("Назад"),FooterHeight);
   if(!mini&&!huntActions)Set(12,8,1,close,width-Margin-closeWidth,footer,closeWidth,FooterHeight);
   float headingWidth=TitleWidth(screen,mini);
   float titleEnd=float.IsFinite(titleWidth)&&titleWidth>0?Math.Min(MathF.Ceiling(titleWidth)+2,headingWidth):headingWidth;

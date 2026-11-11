@@ -45,7 +45,7 @@ public sealed class NativeHuntController {
    buttons.Add(Button("actions","Маршрут","page",NativeHuntPage.Actions.ToString()));
   }else{
    int count=plugin.Mobs.Count(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m));summary=count>0?$"Осталось целей: {count}":"Нет незавершённых целей.";
-   buttons.Add(remaining?Button("primary","Начать охоту","resume"):Button("primary","Доски охоты","page",NativeHuntPage.Boards.ToString()));
+   if(remaining)buttons.Add(Button("primary","Начать охоту","resume"));
   }
   if(!mini){buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));if(!plugin.Flow.Active&&plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
   return new(title,summary,buttons,target?.Icon??0,target==null?null:new(plugin.Kills(target),target.NeededKills),summaryColor,Elite:target?.IsEliteMark==true&&plugin.Flow.Active);
@@ -69,7 +69,7 @@ public sealed class NativeHuntController {
   var goals=plugin.Routes.SelectMany(r=>r.Mobs).Where(m=>Plugin.AllTiers.Contains(m.BillNumber)&&MatchesExpansion(m)&&(zone==""||m.TerritoryName==zone)&&(!plugin.HideDone||!plugin.Done(m))&&(!DeferredOnly||plugin.Flow.Excluded(m)||plugin.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m)))).DistinctBy(JourneyFlow.Key).ToArray();
   var buttons=new List<NativeHuntButton>{Button("filters","Фильтры","page",NativeHuntPage.Filters.ToString())};
   if(!plugin.Flow.Active&&goals.Any(m=>!plugin.Done(m)&&!plugin.Flow.Excluded(m)))buttons.Add(Button("start","Начать охоту","resume"));
-  if(plugin.Flow.Active&&plugin.Session.Target!=null)buttons.Add(Button("focus","К цели","focus"));
+  if(plugin.Flow.Active&&plugin.Session.Target is {} current&&!goals.Any(m=>JourneyFlow.Key(m)==JourneyFlow.Key(current)))buttons.Add(Button("focus","К цели","focus"));
   foreach(var group in goals.GroupBy(goal=>goal.TerritoryName??"Зона неизвестна"))
   foreach(var goal in group){
    bool deferred=plugin.Flow.Excluded(goal);
@@ -83,26 +83,26 @@ public sealed class NativeHuntController {
  private bool MatchesExpansion(MobHuntEntry m)=>expansion==""||Plugin.Boards.Any(b=>b.Name==expansion&&(b.Daily.Contains(m.BillNumber)||b.Weekly==m.BillNumber));
  private NativeHuntScreen Filters()=>new("Фильтры целей","",[
   Button("expansion","Дополнение: "+(expansion==""?"Все":expansion),"page",NativeHuntPage.Expansions.ToString()),Button("zone","Зона: "+(zone==""?"Все":zone),"page",NativeHuntPage.Zones.ToString()),
-  Button("done-filter",plugin.HideDone?"Показать выполненные":"Скрыть выполненные","filter-done"),Button("deferred-filter",DeferredOnly?"Показать все цели":"Отложенные / недоступные","filter-deferred"),Button("reset-filters","Сбросить фильтры","filter-reset"),Button("targets","К целям","page",NativeHuntPage.Targets.ToString())]);
+  Button("done-filter",plugin.HideDone?"Показать выполненные":"Скрыть выполненные","filter-done"),Button("deferred-filter",DeferredOnly?"Показать все цели":"Отложенные / недоступные","filter-deferred"),Button("reset-filters","Сбросить фильтры","filter-reset")]);
  private NativeHuntScreen Expansions()=>new("Дополнение","Выберите дополнение для списка целей.",new[]{Button("all-expansions","Все дополнения","filter-expansion")}.Concat(Plugin.Boards.Select(b=>Button("expansion:"+b.Name,b.Name,"filter-expansion",b.Name))).ToArray());
  private static NativeHuntButton ZoneRow(string key,string label,string zone)=>Button(key,label,"filter-zone",zone) with {Goal=new("",label,"")};
  private NativeHuntScreen Zones()=>new("Зона","Выберите зону для списка целей.",new[]{ZoneRow("all-zones","Все зоны","")}.Concat(plugin.Mobs.Where(MatchesExpansion).Select(m=>m.TerritoryName).OfType<string>().Distinct().Order(StringComparer.Ordinal).Select(name=>ZoneRow("zone:"+name,name,name))).ToArray());
  private NativeHuntScreen Target(){
   var goal=plugin.Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==selected);
-  if(goal==null)return new("Цель недоступна","Контракт изменился или завершён.",[Button("targets","К списку целей","page",NativeHuntPage.Targets.ToString())]);
+  if(goal==null)return new("Цель недоступна","Контракт изменился или завершён.",[]);
   bool excluded=plugin.Flow.Excluded(goal);string summary=goal.TerritoryName??"";
   if(plugin.Flow.Unavailable.TryGetValue(JourneyFlow.Key(goal),out var reason))summary+="\n"+reason;
   if(excluded)summary+="\nОтложено";
   var buttons=new List<NativeHuntButton>{Button("track","Сопровождать","track",selected!,!excluded&&!plugin.Done(goal)),Button("map","Карта","map",selected!),Button("defer",excluded?"Вернуть в маршрут":"Отложить цель",excluded?"restore":"defer",selected!)};
   if(!excluded)buttons.Add(Button("defer-zone","Отложить зону","defer-zone",selected!));
-  buttons.Add(Button("targets","К списку целей","page",NativeHuntPage.Targets.ToString()));return new(goal.Name??"Цель",summary,buttons,goal.Icon,new(plugin.Kills(goal),goal.NeededKills),Elite:goal.IsEliteMark);
+  return new(goal.Name??"Цель",summary,buttons,goal.Icon,new(plugin.Kills(goal),goal.NeededKills),Elite:goal.IsEliteMark);
  }
  private NativeHuntScreen BoardScreen(){
   var buttons=Plugin.Boards.Select(b=>{
    var row=new NativeBoardRow(b.Name,Progress(b,false),Progress(b,true));
    return Button("board:"+b.Name,row.Name,"board",b.Name,plugin.BoardReachable(b)&&(!OnlyNewBoards||plugin.CanPickup(b,false)||plugin.CanPickup(b,true))) with {Board=row};
   }).ToList();
-  buttons.Add(Button("boards-all",OnlyNewBoards?"Показать все доски":"Обновить",OnlyNewBoards?"boards-all":"refresh"));
+  if(OnlyNewBoards)buttons.Add(Button("boards-all","Показать все доски","boards-all"));
   var now=DateTimeOffset.UtcNow;
   var day=ResetClock.Next(now,false)-now;
   var week=ResetClock.Next(now,true)-now;

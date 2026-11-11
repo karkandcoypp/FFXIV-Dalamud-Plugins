@@ -25,6 +25,15 @@ internal static class NativeHuntPreviewChecks {
   }finally{flow.Pauses=priorPauses;}
   var session=(RouteSession)typeof(Plugin).GetField("Session",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(plugin)!;
   var current=session.Target??throw new Exception("Expected active hunt target");
+  var mobField=typeof(Plugin).GetField("Mobs",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!;
+  var mobs=mobField.GetValue(plugin);
+  try{
+   flow.Active=false;mobField.SetValue(plugin,new List<MobHuntEntry>());
+   controller.Navigate(NativeHuntPage.Hunt);
+   samples.Add(("Hunt-empty",controller.Page,controller.Build(),false,0));
+   controller.FocusGoal();
+   samples.Add(("Target-missing",controller.Page,controller.Build(),false,0));
+  }finally{flow.Active=true;mobField.SetValue(plugin,mobs);}
   controller.Navigate(NativeHuntPage.Actions);
   session.PlanTravel(current,[current.BillNumber]);
   samples.Add(("Actions-planned",NativeHuntPage.Actions,controller.Build(),false,0));
@@ -72,7 +81,7 @@ internal static class NativeHuntPreviewChecks {
 
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,0),false,1));
-  var active=samples.Single(s=>s.Page==NativeHuntPage.Hunt&&!s.Mini).Screen;
+  var active=samples.Single(s=>s.Name=="Hunt").Screen;
   foreach(bool mini in new[]{false,true}){
    var sample=mini?samples.Single(s=>s.Name=="mini").Screen:active;
    samples.Add(($"elite-{mini}-short",NativeHuntPage.Hunt,sample with {Title="Manes",Elite=true},mini,0));
@@ -99,6 +108,14 @@ internal static class NativeHuntPreviewChecks {
    ImGui.SetWindowFontScale(NativeHuntLayout.TitleFont/17f);
    float titleWidth=ImGui.CalcTextSize(title).X;
    var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,NativeHuntLayout.TitleWidth(sample.Screen,sample.Mini),NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.SummaryFont(sample.Page,sample.Mini)),sample.Mini,label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return Math.Max(ImGui.CalcTextSize(label).X,label.EnumerateRunes().Count()*9.5f);},titleWidth);
+   var distinctDestinations=layout.Buttons.Where(b=>b.Button.Key.StartsWith("tab:")||b.Button.Key=="back")
+    .Select(b=>b.Button.Action).Concat(sample.Screen.Buttons.Select(b=>b.Action));
+   if(distinctDestinations.GroupBy(a=>a).Any(g=>g.Count()>1))
+    throw new Exception("Duplicate control actions on "+sample.Name);
+   if(sample.Name=="Hunt-empty"&&layout.Buttons.Count(b=>b.Button.Action is {Kind:"page",Argument:"Boards"})!=1)
+    throw new Exception("Empty hunt must have one entry to Boards");
+   if(sample.Page is NativeHuntPage.Target or NativeHuntPage.Filters && !layout.Buttons.Any(b=>b.Button.Key=="back"&&b.Button.Action.Argument=="Targets"))
+    throw new Exception("Subpage lost its only return to the target list");
    if(layout.EliteBadge.HasValue!=sample.Screen.Elite)throw new Exception("Elite badge visibility mismatch");
    if(layout.EliteBadge is {} badge){
     if(badge.Position.X<layout.Heading.Position.X+layout.Heading.Size.X+NativeHuntLayout.EliteBadgeGap||
@@ -144,21 +161,37 @@ internal static class NativeHuntPreviewChecks {
      throw new Exception("Native button exceeds its window: "+entry.Button.Key);
    }
    var links=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+   foreach(var startLink in links){
+    var byIndex=links.ToDictionary(link=>link.Index);
+    var visited=new HashSet<int>();
+    var pending=new Queue<int>();
+    pending.Enqueue(startLink.Index);
+    while(pending.TryDequeue(out int index)){
+     if(!visited.Add(index))continue;
+     if(!byIndex.TryGetValue(index,out var link))throw new Exception("D-pad points to a hidden or disabled control: "+sample.Name);
+     foreach(int next in new[]{link.Up,link.Down,link.Left,link.Right})pending.Enqueue(next);
+    }
+    if(visited.Count!=links.Length)throw new Exception("Unreachable control in "+sample.Name);
+   }
    if(sample.Page==NativeHuntPage.Boards){
-    var refresh=layout.Buttons.Single(b=>b.Button.Action.Kind=="refresh");
-    var settings=layout.Buttons.Single(b=>b.Button.Key=="tab:settings");
-    if(refresh.Button.Label!="Обновить"||refresh.Row!=0||refresh.Rect.Position.Y!=settings.Rect.Position.Y||
-       refresh.Rect.Position.X<settings.Rect.Position.X+settings.Rect.Size.X+6||refresh.Rect.Position.X+refresh.Rect.Size.X>layout.Size.X-16||
-       links.Single(n=>n.Index==settings.Slot+1).Right!=refresh.Slot+1||links.Single(n=>n.Index==refresh.Slot+1).Left!=settings.Slot+1)
-     throw new Exception("Refresh must fit after Settings and be reachable in both directions");
+    if(layout.Buttons.Count(b=>b.Row==0)!=3||sample.Screen.Buttons.Any(b=>b.Action.Kind=="refresh"))
+     throw new Exception("Boards must rely on background updates and show only three tabs");
+    controller.Boards(true);
+    if(controller.Build().Buttons.Count(b=>b.Action.Kind=="boards-all")!=1)
+     throw new Exception("Filtered board view must still allow showing all boards");
+    controller.Execute(new("boards-all"));
+    if(controller.Build().Buttons.Any(b=>b.Action.Kind=="boards-all"))
+     throw new Exception("Show all boards must disappear when already showing all boards");
+    controller.Navigate(NativeHuntPage.Advanced);
+    var refresh=controller.Build().Buttons.Single(b=>b.Action.Kind=="refresh");
     const System.Reflection.BindingFlags fields=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
     var nextScan=typeof(Plugin).GetField("nextScan",fields)!;
     var signature=typeof(Plugin).GetField("signature",fields)!;
     nextScan.SetValue(plugin,long.MaxValue);signature.SetValue(plugin,"stale");
-    controller.Execute(refresh.Button.Action);
+    controller.Execute(refresh.Action);
     if(nextScan.GetValue(plugin) is not 0L||(string?)signature.GetValue(plugin)!="")
-     throw new Exception("Refresh must schedule a fresh read of board statuses");
-    Console.WriteLine("PASS board refresh placement, D-pad links and immediate rescan scheduling");
+     throw new Exception("Advanced manual refresh must still schedule a fresh read");
+    Console.WriteLine("PASS automatic boards layout and advanced manual refresh");
     var board=layout.Buttons.First(b=>b.Button.Enabled&&b.Button.Board!=null);
     var queue=new ConfirmationQueue();
     queue.Offer(new("travel","board-preview","К доске охоты?",()=>true,()=>true,()=>throw new Exception("Later must not teleport")));

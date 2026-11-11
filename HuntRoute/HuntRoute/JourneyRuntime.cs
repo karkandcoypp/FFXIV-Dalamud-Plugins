@@ -7,6 +7,7 @@ using System.Text.Json;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Utility;
+using Dalamud.Game.Text.SeStringHandling;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.Sheets;
@@ -348,18 +349,27 @@ public sealed partial class Plugin {
  }
  private void CheckExpansionCompletionNotices(){
   if(!Ready||completionLoadPending)return;
+  List<Board>? completed=null;
   foreach(var board in Boards){
    bool reliable=board.Daily.Append(board.Weekly).All(i=>BillStates.ContainsKey(i)&&!unreadBills.Contains(i))
     &&!CompletionUncertain(board,false)&&!CompletionUncertain(board,true);
    if(!reliable||!expansionCompletionNotice.Observe(board.Name,CollectionProgress(board,false),CollectionProgress(board,true),reliable))continue;
-   if(!Settings.ResetNotifications)continue;
-   bool more=Boards.Any(b=>b!=board&&(CanPickup(b,false)||CanPickup(b,true)));
-   Service.Notifications.AddNotification(new Dalamud.Interface.ImGuiNotification.Notification{
-    Title=$"{board.Name}: контракты выполнены",
-    Content=more?"Новые контракты других дополнений — в разделе «Доски».":"Статусы и время сброса — в разделе «Доски».",
-    Type=Dalamud.Interface.ImGuiNotification.NotificationType.Success
-   });
+   (completed??=[]).Add(board);
   }
+  if(completed==null||!Settings.ResetNotifications)return;
+  const ushort completedGreen=45, availableYellow=31;
+  var message=new SeStringBuilder().AddText("[Hunt Route] ");
+  bool first=true;
+  void AddStatus(Board board,string status,ushort color){
+   if(!first)message.AddText("  ·  ");
+   first=false;
+   message.AddText(board.Name+" — ").AddUiForeground(status,color);
+  }
+  foreach(var board in completed)AddStatus(board,"выполнено",completedGreen);
+  foreach(var board in Boards)
+   if(!completed.Contains(board)&&(CanPickup(board,false)||CanPickup(board,true)))
+    AddStatus(board,"можно взять",availableYellow);
+  Service.Chat.Print(message.Build());
  }
  private string LoginMode()=>Mobs.Any(m=>AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m))?"taken":Boards.Any(b=>CanPickup(b,false)||CanPickup(b,true))?"pickup":"summary";
  private void OfferLoginNotice(){

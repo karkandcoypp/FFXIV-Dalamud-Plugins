@@ -2,6 +2,8 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Dalamud.Plugin.Services;
+using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using HuntRoute;
@@ -12,7 +14,48 @@ static class JourneyRuntimeChecks {
  static void Set(object target,string name,object? value){var type=target.GetType();var f=type.GetField(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);if(f!=null)f.SetValue(target,value);else type.GetProperty(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)!.SetValue(target,value);}
  static T Get<T>(object target,string name){var type=target.GetType();var f=type.GetField(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);return (T)(f!=null?f.GetValue(target):type.GetProperty(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)!.GetValue(target))!;}
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> call)where T:class{var proxy=DispatchProxy.Create<T,ServiceProxy>();((ServiceProxy)(object)proxy).Handler=call;return proxy;}
+ static void CheckCompletionChat(){
+  var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+  var tracker=typeof(Plugin).Assembly.GetType("HuntRoute.ExpansionCompletionNotice")!;
+  Set(plugin,"expansionCompletionNotice",Activator.CreateInstance(tracker));
+  Set(plugin,"Ready",true);
+  Set(plugin,"character",123UL);
+  var states=new Dictionary<byte,BillState>();
+  Set(plugin,"BillStates",states);
+  var history=new CompletionHistory();
+  Set(plugin,"completionHistory",history);
+  var done=new BillState(true,false,1,1,true);
+  var taken=new BillState(true,true,1,1,false);
+  byte[] heavensward=[1,2,3,5];
+  foreach(byte bill in heavensward)states[bill]=taken;
+  states[14]=new(true,false,0,1,false); // Endwalker is available.
+  states[6]=taken; // Stormblood already taken.
+  var printed=new List<SeString>();
+  var previous=Service.Chat;
+  try{
+   Service.Chat=Proxy<IChatGui>((method,args)=>{
+    if(method.Name!="Print"||args?[0] is not SeString message)throw new Exception("Unexpected completion notification channel");
+    printed.Add(message);return null;
+   });
+   Call(plugin,"CheckExpansionCompletionNotices");
+   if(printed.Count!=0)throw new Exception("A taken bill is not a completed expansion");
+   foreach(byte bill in heavensward){
+    states[bill]=done;
+    history.Observe(123,bill,bill==5,DateTimeOffset.UtcNow,done);
+   }
+   Call(plugin,"CheckExpansionCompletionNotices");
+   Call(plugin,"CheckExpansionCompletionNotices");
+   if(printed.Count!=1)throw new Exception("Completion must print exactly one chat message");
+   var text=printed[0];
+   if(text.TextValue!="[Hunt Route] Heavensward — выполнено  ·  Endwalker — можно взять")
+    throw new Exception("Chat status includes the wrong boards: "+text.TextValue);
+   if(!text.Payloads.OfType<UIForegroundPayload>().Select(p=>p.ColorKey).SequenceEqual(new ushort[]{45,0,31,0}))
+    throw new Exception("Completion and availability colors are wrong or leak into chat");
+   Console.WriteLine("PASS one colored completion chat message with only available follow-up boards");
+  }finally{Service.Chat=previous;}
+ }
  public static void RunOffline(){
+  CheckCompletionChat();
   static void Check(bool yes,string message){if(!yes)throw new Exception(message);}
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
   var priorList=Service.Aetherytes;

@@ -6,7 +6,6 @@ namespace HuntRoute;
 
 public sealed partial class HuntWindow {
  private void DrawTargets(){
-  if(ImGui.SmallButton("Назад"))page=HuntPage.Hunt;
   ImGui.SameLine();ImGui.TextUnformatted("Все цели");
   Colored(HuntTheme.Muted,"Нажмите на имя для действий");
   if(!plugin.Flow.Active&&plugin.Mobs.Any(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m)&&!plugin.Flow.Excluded(m))&&HuntTheme.Primary("Начать охоту",new(-1,34)))StartHunt();
@@ -35,7 +34,7 @@ public sealed partial class HuntWindow {
   if(shown.Length==0){
    var empty=EmptyView.Describe(true,all.Length,remaining.Length,remaining.Count(plugin.Flow.Excluded),remaining.Count(m=>!plugin.Flow.Excluded(m)&&plugin.Flow.Unavailable.ContainsKey(JourneyFlow.Key(m))),0);
    ImGui.TextWrapped(empty.Text);
-   if(ImGui.Button(empty.Action)){if(empty.Kind is EmptyKind.NoBills or EmptyKind.Completed)page=HuntPage.Boards;else{expansion=-1;zone="";plugin.HideDone=false;plugin.DeferredOpen=empty.Kind is EmptyKind.Deferred or EmptyKind.Unavailable;}}
+   if(empty.Kind is not (EmptyKind.NoBills or EmptyKind.Completed)&&ImGui.Button(empty.Action)){expansion=-1;zone="";plugin.HideDone=false;plugin.DeferredOpen=empty.Kind is EmptyKind.Deferred or EmptyKind.Unavailable;}
   }
   foreach(var group in shown.GroupBy(m=>(m.TerritoryType,m.MapId))){
    var first=group.First();int left=group.Count(m=>!plugin.Done(m));
