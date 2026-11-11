@@ -45,7 +45,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         Vector2.Clamp(origin,Vector2.Zero,Vector2.Max(Vector2.Zero,viewport-size));
 
     public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure,Func<string,float>? measureButton=null) {
-        const float width=DialogWidth,left=18,inner=width-2*left,top=38,portraitSize=128,portraitGap=14;
+        const float width=DialogWidth,left=18,inner=width-2*left,top=38,portraitSize=160,portraitGap=14;
         NativeHuntRect? portrait=content.PortraitIcon!=0?new(new(width-left-portraitSize,top),new(portraitSize,portraitSize)):null;
         float textWidth=portrait.HasValue?inner-portraitSize-portraitGap:inner;
         var texts=new List<DialogText>();
@@ -57,7 +57,9 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         }
         float y=top;
         if(content.NextZone) {
-            y+=Text($"{content.Eyebrow} · {content.Title}",left,y,textWidth,NativeHuntLayout.TitleFont,White)+4;
+            y+=Text(content.Eyebrow,left,y,inner,NativeHuntLayout.SecondaryFont,Brand)+2;
+            y+=Text(content.Title,left,y,inner,NativeHuntLayout.TitleFont,White)+8;
+            if(portrait is {} nextImage)portrait=nextImage with {Position=new(nextImage.Position.X,y)};
         } else {
             if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,textWidth,NativeHuntLayout.SecondaryFont,Brand,centerNotice)+2;
             y+=Text(content.Title,left,y,textWidth,NativeHuntLayout.TitleFont,White,centerNotice)+4;

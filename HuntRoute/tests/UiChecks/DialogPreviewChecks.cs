@@ -7,7 +7,7 @@ using HuntRoute;
 internal static class DialogPreviewChecks {
     internal static unsafe void Run(string directory) {
         var offer=new ShortcutOffer(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40);
-        foreach(var sample in new[]{("login",TravelDialogContent.Login("taken")),("login-summary",TravelDialogContent.Login("summary")),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("plain-long",TravelDialogContent.Plain(string.Concat(Enumerable.Repeat("Продолжить охоту по оставшимся контрактам? ",4)))),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("The Ruby Sea","Elpis","monoceros",1) with {Context="Anagnorisis · 1064 гил"}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands",new string('Ж',100),1)),("shortcut",TravelDialogContent.Shortcut(offer,"Amh Araeng","gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
+        foreach(var sample in new[]{("login",TravelDialogContent.Login("taken")),("login-summary",TravelDialogContent.Login("summary")),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-long",TravelDialogContent.Board("The Crystarium — The Mean and the Dossal Gate","The Dossal Gate and the Crystalline Mean","Shadowbringers",1854,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("plain-long",TravelDialogContent.Plain(string.Concat(Enumerable.Repeat("Продолжить охоту по оставшимся контрактам? ",4)))),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("Elpis","The Ruby Sea","coralshell",1) with {Context="Onokoro · 287 гил"}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands",new string('Ж',100),1) with {Context="The Crystalline Mean and The Dossal Gate · 1854 гил",Detail="Эфирит в соседней зоне. Дальше — своим ходом."}),("shortcut",TravelDialogContent.Shortcut(offer,"Amh Araeng","gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
             ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(520,900);io.DeltaTime=1f/60;
             io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
@@ -22,23 +22,26 @@ internal static class DialogPreviewChecks {
                 throw new Exception("Unexpected dialog text alignment: "+sample.Item1);
             if(layout.Confirm.Position.Y!=layout.Decline.Position.Y||Math.Abs(layout.Confirm.Position.X+layout.Decline.Position.X+layout.Decline.Size.X-layout.Width)>0.5f)
                 throw new Exception("Dialog buttons must form a centered row: "+sample.Item1);
+            if(layout.Texts.Any(t=>t.Position.Y+t.Size.Y>=layout.Confirm.Position.Y))
+                throw new Exception("Dialog text must finish above the button row: "+sample.Item1);
             if(layout.Portrait.HasValue!=(sample.Item2.PortraitIcon!=0))throw new Exception("Dialog portrait visibility mismatch");
-            if(sample.Item2.NextZone && layout.Texts.Count(t=>t.Text==$"Следующая зона · {sample.Item2.Title}")!=1)
+            if(sample.Item2.NextZone && layout.Texts.Count(t=>t.Text==sample.Item2.Title&&t.Size.X==layout.Width-36)!=1)
                 throw new Exception("Next zone should have one heading");
             if(sample.Item2.NextZone&&!layout.Portrait.HasValue&&!layout.Texts.Any(t=>t.Text==$"Первая цель · {sample.Item2.Subject}"))
                 throw new Exception("Next zone without a portrait must retain the first target");
             if(layout.Portrait is {} portrait){
                 var caption=layout.Texts.Single(t=>t.Text==sample.Item2.Subject);
                 if(caption.Position.Y<portrait.Position.Y+portrait.Size.Y||caption.Position.X!=portrait.Position.X
-                    ||caption.Size.X!=portrait.Size.X||caption.Position.Y+caption.Size.Y>=layout.Confirm.Position.Y
+                    ||caption.Size.X!=portrait.Size.X||caption.Position.Y+caption.Size.Y>layout.Height-12
                     ||(sample.Item1=="next-portrait"&&!caption.Centered))
-                    throw new Exception("Next target caption must fit under the portrait and above buttons");
+                    throw new Exception("Next target caption must fit under the portrait");
                 NativeResizeChecks.Check(new(layout.Width,layout.Height),[portrait]);
-                if(layout.Texts.Any(t=>t.Position.X+t.Size.X>portrait.Position.X&&t.Position.Y<portrait.Position.Y+portrait.Size.Y)
-                    ||layout.Confirm.Position.Y<portrait.Position.Y+portrait.Size.Y)
+                if(layout.Texts.Any(t=>t.Position.X+t.Size.X>portrait.Position.X&&t.Position.Y<portrait.Position.Y+portrait.Size.Y&&t.Position.Y+t.Size.Y>portrait.Position.Y)
+                    ||layout.Confirm.Position.Y<=portrait.Position.Y+portrait.Size.Y
+                    ||(sample.Item1=="next-portrait"&&layout.Texts.Single(t=>t.Text==sample.Item2.Title).Size.Y>NativeHuntLayout.TitleFont+8))
                     throw new Exception("Dialog portrait overlaps text or buttons");
                 var tall=portrait.FitImage(new(32,128));
-                if(tall.Size!=new Vector2(32,128)||portrait.FitImage(new(256,64)).Size!=new Vector2(128,32))throw new Exception("Portrait aspect ratio changed");
+                if(tall.Size!=new Vector2(40,160)||portrait.FitImage(new(256,64)).Size!=new Vector2(160,40))throw new Exception("Portrait aspect ratio changed");
             }
             NativeResizeChecks.Check(new(layout.Width,layout.Height),
                 layout.Texts.Select(t=>new NativeHuntRect(t.Position,t.Size))
