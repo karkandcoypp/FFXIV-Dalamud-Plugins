@@ -55,6 +55,14 @@ static class PlanAuditChecks {
   journey.Tick(Ranked(),finished.Contains,_=>true,zone);
   journey.Suggest(Ranked().First(m=>m.TerritoryType!=zone&&!finished.Contains(m)));
   check(journey.Suggested==legs[3],"Fresh fares from the arrival zone reverse the remaining zone order");
+  RoutePlanner.Stop[] stops=[new(2,10,20,100,0),new(3,20,30,140,0),new(4,20,40,300,0)];
+  uint? Seen(uint from,uint to)=>(from,to) switch{(2,30) or (2,40)=>1000,(3,40)=>100,(4,20)=>100,_=>null};
+  var whole=RoutePlanner.PlanJourney(stops,1,0,18,Seen);
+  check(whole.SequenceEqual(new[]{1,2,0}),"Whole-route planner takes a slightly dearer first hop to avoid an expensive later crossing");
+  var remaining=RoutePlanner.PlanJourney([stops[0] with {Fare=850},stops[2] with {Fare=100}],3,20,18,Seen);
+  check(remaining.SequenceEqual(new[]{1,0}),"New origin and live prices replan remaining stops after arrival");
+  var balanced=RoutePlanner.Zone(new[]{1},_=>false,_=>false,_=>[new Vector2(0,0)],[new(2000,0),new(0,0)],[100,300],RoutePlanner.GilPerSecond);
+  check(balanced.Entry==1,"A slightly dearer etherite wins when it avoids a substantially longer flight");
   var passive=new EliteSearch();passive.Start([new(0,0),new(200,0)]);
   check(passive.Observe(new(0,0),[],false,0,false,0,0,true,false)==null&&passive.Round==1&&passive.Capture().Current==null,"Passive observation cannot visit or advance a spawn");
   check(passive.Observe(new(0,0),[new(50,new(2,0),false)],false,100,false,0,100,true,false)==null&&passive.ActorId==50,"Passive detection locks actual elite without returning a flag write");
