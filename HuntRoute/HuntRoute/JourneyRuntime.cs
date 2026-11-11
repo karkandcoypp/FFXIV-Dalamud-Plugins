@@ -49,7 +49,12 @@ public sealed partial class Plugin {
  internal string? Selected;
  internal bool FocusRequested;
  internal void FocusTarget(){if(Session.Target!=null)Selected=JourneyFlow.Key(Session.Target);if(NativeMain?.Available==true)NativeMain.FocusTarget();else{FocusRequested=true;if(window!=null)window.IsOpen=true;}}
- internal string? NoticeText;
+ private string? noticeText,noticeTarget;
+ internal string? NoticeText {
+  get=>noticeTarget==null||Flow.Active&&Session.Phase==RoutePhase.Following
+   &&Session.Target is {IsEliteMark:true} target&&noticeTarget==SearchIdentity(target)&&!Done(target)?noticeText:null;
+  set{noticeText=value;noticeTarget=null;}
+ }
  internal bool PickupOpen,SettingsOpen,DeferredOpen;
  private readonly Queue<string> journal=new();
  private string? lastJournal;
@@ -86,6 +91,7 @@ public sealed partial class Plugin {
  private readonly ExpansionCompletionNotice expansionCompletionNotice=new();
  private void LoadJourney(){
   expansionCompletionNotice.Reset();
+  if(noticeTarget!=null)NoticeText=null;
   loginNoticeShown=false;
   billGuard=new();uncertainBills.Clear();unreadBills.Clear();KillCounts=new();BillStates=new();Mobs=new();Routes=new();
   contractRevision=0;contractAt=0;flow=new();Flow.Load(CharacterSave);ordinaryActor=null;ordinaryKind=null;context=null;ownedMarker=null;pendingJourney=null;
@@ -323,7 +329,7 @@ public sealed partial class Plugin {
   if(changed)PlaceFlag(target.TerritoryType,target.MapId,position);
   return true;
  }
- private unsafe void Ping(string text,bool sound=false){NoticeText=text;if(sound){try{FFXIVClientStructs.FFXIV.Client.UI.UIGlobals.PlaySoundEffect(0x29);}catch(Exception e){Service.PluginLog.Debug(e,"Сигнал охоты недоступен");}}}
+ private unsafe void Ping(string text,bool sound=false,MobHuntEntry? target=null){NoticeText=text;if(target!=null)noticeTarget=SearchIdentity(target);if(sound){try{FFXIVClientStructs.FFXIV.Client.UI.UIGlobals.PlaySoundEffect(0x29);}catch(Exception e){Service.PluginLog.Debug(e,"Сигнал охоты недоступен");}}}
  private void AuditState(){string value=$"{Session.Phase}|{Session.Target?.MobHuntId}|{Flow.Pauses}|{Flow.Status}";if(value==lastJournal)return;lastJournal=value;journal.Enqueue(DateTimeOffset.UtcNow.ToString("O")+" "+value);while(journal.Count>200)journal.Dequeue();}
  internal void Export(){if(stateFile==null)return;string path=Path.Combine(Path.GetDirectoryName(stateFile)!,"hunt-diagnostics.txt");try{File.WriteAllLines(path,new[]{"Hunt Route "+typeof(Plugin).Assembly.GetName().Version}.Concat(journal));NoticeText="Диагностика сохранена: "+path;}catch(Exception e){NoticeText="Не удалось сохранить диагностику: "+e.Message;}}
  internal bool PersistenceBlocked=>settingsLoadPending;

@@ -32,7 +32,7 @@ internal static class NativeHuntPreviewChecks {
   samples.Add(("Actions-next",NativeHuntPage.Actions,controller.Build(),false,0));
   session.Retarget(current);
   controller.Navigate(NativeHuntPage.Hunt);
-  var notice=typeof(Plugin).GetField("NoticeText",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Public)
+  var notice=typeof(Plugin).GetProperty("NoticeText",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Public)
    ?? throw new Exception("Missing notice field");
   var oldNotice=notice.GetValue(plugin);
   try{
@@ -46,6 +46,27 @@ internal static class NativeHuntPreviewChecks {
    controller.Execute(controller.Build().Buttons.Single(b=>b.Key=="message").Action);
    if(controller.Build().Summary!="Доступна следующая зона.")
     throw new Exception("The route notice must be readable from Route actions");
+   var manes=new MobHuntEntry{Name="Manes",IsEliteMark=true,BillNumber=19,NeededKills=1};
+   var counts=(Dictionary<(byte,byte),int>)typeof(Plugin).GetField("KillCounts",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(plugin)!;
+   var ping=typeof(Plugin).GetMethod("Ping",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!;
+   try{
+    session.Retarget(manes);
+    ping.Invoke(plugin,["Элита обнаружена: Manes",false,manes]);
+    controller.Navigate(NativeHuntPage.Actions);
+    controller.Execute(controller.Build().Buttons.Single(b=>b.Key=="message").Action);
+    if(!controller.Build().Summary.Contains("Manes"))throw new Exception("Current elite notice missing");
+    counts[(19,0)]=1;
+    if(controller.Build().Summary.Contains("Manes"))throw new Exception("Credited elite notice is still visible");
+    counts.Remove((19,0));
+    session.PlanTravel(current,[current.BillNumber]);
+    if(controller.Build().Summary.Contains("Manes"))throw new Exception("Old elite notice followed a new contract");
+    controller.Navigate(NativeHuntPage.Hunt);
+    if(controller.Build().Summary.Contains("Manes"))throw new Exception("Old elite notice is visible under a new target");
+    flow.Active=false;
+    var stopped=controller.Build();
+    if(stopped.Elite||stopped.Progress!=null||stopped.Icon!=0)throw new Exception("Stopped route shows old target data");
+   }finally{counts.Remove((19,0));flow.Active=true;session.Retarget(current);}
+   Console.WriteLine("PASS credited elite notice expires before the next contract");
    Console.WriteLine("PASS after-arrival summary stays compact and route notice remains accessible");
   }finally{notice.SetValue(plugin,oldNotice);}
 

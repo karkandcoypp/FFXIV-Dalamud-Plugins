@@ -374,8 +374,8 @@ public sealed partial class Plugin : IDalamudPlugin {
             .Select(n=>new EliteActor(n.GameObjectId,new Vector2(n.Position.X,n.Position.Z),n.IsDead)).ToArray();
         ulong? previous=Search.ActorId;
         var point=Search.Observe(new Vector2(player.Position.X,player.Position.Z),actors,Service.Condition[ConditionFlag.InCombat] || player.IsCasting,Now,Done(target),contractRevision,contractAt,!unreadBills.Contains(target.BillNumber),NavigationAllowed);
-        if(previous!=Search.ActorId && Search.ActorId!=null && Flow.Active)Ping("Элита обнаружена: "+target.Name,Settings.EliteSound);
-        if(Search.Round>=4 && Flow.LongNotified.Add(JourneyFlow.Key(target)))Ping("Три круга без цели: "+target.Name+". Поиск продолжается.");
+        if(previous!=Search.ActorId && Search.ActorId!=null && Flow.Active)Ping("Элита обнаружена: "+target.Name,Settings.EliteSound,target);
+        if(Search.Round>=4 && Flow.LongNotified.Add(JourneyFlow.Key(target)))Ping("Три круга без цели: "+target.Name+". Поиск продолжается.",target:target);
         if(point is {} position && !PlaceFlag(target.TerritoryType,target.MapId,position))Search.Retry();
     }
 
