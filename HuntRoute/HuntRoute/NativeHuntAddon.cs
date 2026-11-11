@@ -95,7 +95,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  private void Clicked(int slot){
   if(modal()||slot<0||slot>=buttons.Length||!(checks[slot] is {IsVisible:true} check?check.IsEnabled:buttons[slot] is {IsVisible:true,IsEnabled:true})||commands[slot] is not {} command)return;
   focusedKey=keys[slot];
-  if(command.Kind=="previous"||command.Kind=="next-page"){controller.Turn(command.Delta,controller.Build(mini).Buttons.Count);focusFirstBody=true;focusRequested=true;}
+  if(command.Kind=="previous"||command.Kind=="next-page"){controller.Turn(command.Delta,NativeHuntLayout.PagedButtonCount(controller.Build(mini)));focusFirstBody=true;focusRequested=true;}
   else if(command.Kind=="close")Close();
   else execute(command);
   nextUpdate=0;
@@ -188,13 +188,13 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    node.IsVisible=i<layout.TableText.Count;
    if(!node.IsVisible)continue;
    var cell=layout.TableText[i];
-   node.Position=cell.Rect.Position;node.Size=cell.Rect.Size;node.TextColor=cell.Color;node.FontSize=cell.Font;
+   node.Position=cell.Rect.Position;node.Size=cell.Rect.Size;node.TextColor=cell.Color;node.FontSize=cell.Font;node.AlignmentType=cell.RightAligned?AlignmentType.Right:AlignmentType.Left;
    if(node.String.ToString()!=cell.Label)node.String=cell.Label;
   }
   var focused=layout.Buttons.FirstOrDefault(p=>p.Button.Enabled&&IsFocused(Control(p.Slot),global));
   links=NativeHuntNavigation.Build(items);foreach(var link in links){var b=Control(link.Index-1)!;b.NavIndex=link.Index;b.NavUp=link.Up;b.NavDown=link.Down;b.NavLeft=link.Left;b.NavRight=link.Right;}
   if(focusedKey==null&&controller.Page==NativeHuntPage.Hunt&&links.Any(n=>n.Key=="primary"))focusedKey="primary";
-  if(focusFirstBody){focusedKey=items.FirstOrDefault(n=>n.Row is >0 and <=6&&n.Enabled).Key;focusFirstBody=false;}
+  if(focusFirstBody){focusedKey=items.FirstOrDefault(n=>n.Row>0&&n.Enabled&&n.Key is not ("filters" or "previous" or "next-page" or "back" or "close")).Key;focusFirstBody=false;}
   if(ownsFocus&&(changed||links.All(n=>n.Key!=focusedKey)))focusRequested=true;
   if(Size!=layout.Size)SetWindowSize(layout.Size);
   FitViewport(native);

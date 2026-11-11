@@ -78,7 +78,7 @@ public sealed class NativeHuntController {
    buttons.Add(Button("goal:"+JourneyFlow.Key(goal),name,"target",JourneyFlow.Key(goal)) with {
     Goal=row,LabelColor=plugin.Done(goal)?NativeHuntColors.Ready:deferred?NativeHuntColors.Attention:null});
   }
-  return new("Цели маршрута",$"Целей: {goals.Length}",buttons);
+  return new($"Цели маршрута · {goals.Length}",goals.Length==0?"Нет целей по этим фильтрам.":"",buttons);
  }
  private bool MatchesExpansion(MobHuntEntry m)=>expansion==""||Plugin.Boards.Any(b=>b.Name==expansion&&(b.Daily.Contains(m.BillNumber)||b.Weekly==m.BillNumber));
  private NativeHuntScreen Filters()=>new("Фильтры целей","",[

@@ -79,6 +79,12 @@ internal static class NativeHuntPreviewChecks {
    Console.WriteLine("PASS after-arrival summary stays compact and route notice remains accessible");
   }finally{notice.SetValue(plugin,oldNotice);}
 
+  var filters=new NativeHuntButton("filters","Фильтры",new("page","Filters"));
+  var goals=new[]{"trimmer","weeper","downfall alarum","almasty","automated roader","snow dhruva","scavenger","dynamite","caretaker","wanderer","lunatender"}
+   .Select((name,i)=>new NativeHuntButton($"goal-{i}",name,new("target",name),Goal:new(i<3?"Mare Lamentorum":i<8?"Garlemald":"Mare Lamentorum",name,i==0?"0/2":"0/1")));
+  var targetList=new NativeHuntScreen("Цели маршрута · 11","",new[]{filters}.Concat(goals).ToArray());
+  samples.Add(("Targets-paged-first",NativeHuntPage.Targets,targetList,false,0));
+  samples.Add(("Targets-paged-last",NativeHuntPage.Targets,targetList,false,1));
   var longButtons=Enumerable.Range(0,13).Select(i=>new NativeHuntButton("goal:"+i,$"1/3 · {new string('Ж',100)}",new("target",i.ToString()),i!=6)).ToArray();
   samples.Add(("long-paged",NativeHuntPage.Targets,new(new string('Ж',100),"Текущая цель · длинная подпись\nСопровождение сохранено. Маршрут продолжается после подтверждения.",longButtons,0),false,1));
   var active=samples.Single(s=>s.Name=="Hunt").Screen;
@@ -161,6 +167,25 @@ internal static class NativeHuntPreviewChecks {
      throw new Exception("Native button exceeds its window: "+entry.Button.Key);
    }
    var links=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+   if(sample.Name.StartsWith("Targets-paged-")){
+    var filter=layout.Buttons.Single(b=>b.Button.Key=="filters");
+    var prev=layout.Buttons.Single(b=>b.Button.Key=="previous");
+    var next=layout.Buttons.Single(b=>b.Button.Key=="next-page");
+    var close=layout.Buttons.Single(b=>b.Button.Key=="close");
+    var direction=sample.Offset==0?next:prev;
+    var settingsTab=layout.Buttons.Single(b=>b.Button.Key=="tab:settings");
+    if(filter.Row!=0||filter.Rect.Position.Y!=settingsTab.Rect.Position.Y
+       ||filter.Rect.Position.X<settingsTab.Rect.Position.X+settingsTab.Rect.Size.X+6
+       ||links.Single(n=>n.Key=="tab:settings").Right!=filter.Slot+1
+       ||links.Single(n=>n.Key=="filters").Left!=settingsTab.Slot+1
+       ||prev.Row!=next.Row||next.Row!=close.Row
+       ||next.Rect.Position.Y!=close.Rect.Position.Y||next.Rect.Position.X+next.Rect.Size.X>close.Rect.Position.X
+       ||links.Single(n=>n.Key==direction.Button.Key).Right!=close.Slot+1
+       ||links.Single(n=>n.Key=="close").Left!=direction.Slot+1)
+     throw new Exception("Target list heading or footer is misaligned or unreachable");
+    if(layout.Buttons.Count(b=>b.Button.Goal!=null)!=(sample.Offset==0?6:5))
+     throw new Exception("Pinned filter must not consume a target slot");
+   }
    foreach(var startLink in links){
     var byIndex=links.ToDictionary(link=>link.Index);
     var visited=new HashSet<int>();
@@ -273,7 +298,12 @@ internal static class NativeHuntPreviewChecks {
      ImGui.SetWindowFontScale(cell.Font/17f);
      if(ImGui.CalcTextSize(cell.Label).X>cell.Rect.Size.X&&sample.Page==NativeHuntPage.Boards)
       throw new Exception("Board cell label exceeds its column: "+cell.Label);
-     Text(cell.Label,cell.Rect,cell.Font,cell.Color);
+     var cellRect=cell.Rect;
+     if(cell.RightAligned){
+      float inset=Math.Max(0,cellRect.Size.X-ImGui.CalcTextSize(cell.Label).X-1);
+      cellRect=new(cellRect.Position+new Vector2(inset,0),cellRect.Size-new Vector2(inset,0));
+     }
+     Text(cell.Label,cellRect,cell.Font,cell.Color);
     }
 
     ImGui.End();ImGui.Render();
