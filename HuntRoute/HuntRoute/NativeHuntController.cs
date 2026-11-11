@@ -34,7 +34,7 @@ public sealed class NativeHuntController {
   System.Numerics.Vector4? summaryColor=null;
   if(plugin.Flow.Active){
    title=target?.Name??"Маршрут охоты";
-   string status=(plugin.Flow.Pauses!=PauseReason.None?plugin.Flow.Status:plugin.Session.Phase==RoutePhase.AwaitingTravel?"Подтвердите телепорт":plugin.Session.Phase==RoutePhase.NextZone?"Зона завершена":target is {IsEliteMark:true}?plugin.Search.AwaitingCredit?"Проверяем зачёт":plugin.Search.Lost?"Последняя позиция элиты":plugin.Search.ActorId!=null?"Элита обнаружена":$"Поиск элиты · круг {Math.Max(1,plugin.Search.Round)}":plugin.LocationLabel);
+   string status=(plugin.Flow.Pauses.HasFlag(PauseReason.NoZone)?"Нет целей в этой зоне":plugin.Flow.Pauses!=PauseReason.None?plugin.Flow.Status:plugin.Session.Phase==RoutePhase.AwaitingTravel?"Подтвердите телепорт":plugin.Session.Phase==RoutePhase.NextZone?"Зона завершена":target is {IsEliteMark:true}?plugin.Search.AwaitingCredit?"Проверяем зачёт":plugin.Search.Lost?"Последняя позиция элиты":plugin.Search.ActorId!=null?"Элита обнаружена":$"Поиск элиты · круг {Math.Max(1,plugin.Search.Round)}":plugin.LocationLabel);
    summary=mini&&target!=null?MiniStatus():target==null?status:$"{target.TerritoryName} · {status}";
    summaryColor=plugin.Flow.Pauses!=PauseReason.None||plugin.Session.Phase is RoutePhase.AwaitingTravel or RoutePhase.NextZone or RoutePhase.WaitingForZone
     ?NativeHuntColors.Attention:NativeHuntColors.Tracking;

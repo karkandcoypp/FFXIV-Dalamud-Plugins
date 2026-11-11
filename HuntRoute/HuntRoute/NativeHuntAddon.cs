@@ -45,10 +45,10 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route"};heading.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddFixedNode(heading);
   summary=new TextNode{FontSize=NativeHuntLayout.BodyFont,LineSpacing=18};summary.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddFixedNode(summary);
   portrait=new IconImageNode{FitTexture=true,IsVisible=false};AddFixedNode(portrait);
-  progressLabel=new TextNode{FontSize=NativeHuntLayout.BodyFont,TextColor=new(.68f,.88f,.80f,1)};AddFixedNode(progressLabel);
+  progressLabel=new TextNode{FontSize=NativeHuntLayout.SecondaryFont,TextColor=new(.68f,.88f,.80f,1)};AddFixedNode(progressLabel);
   progressTrack=new ColorImageNode{Color=new(.24f,.27f,.28f,1)};AddFixedNode(progressTrack);
   progressFill=new ColorImageNode{Color=new(.38f,.76f,.64f,1)};AddFixedNode(progressFill);
-  pageLabel=new TextNode{Size=new(240,24),FontSize=NativeHuntLayout.BodyFont};AddFixedNode(pageLabel);
+  pageLabel=new TextNode{Size=new(240,24),FontSize=NativeHuntLayout.SecondaryFont};AddFixedNode(pageLabel);
 
   for(int i=0;i<buttons.Length;i++){
    int slot=i;var button=new TextButtonNode{NavIndex=i+1,OnClick=()=>Clicked(slot)};
@@ -101,13 +101,14 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   bool ownsFocus=false;var global=AtkStage.Instance()->AtkInputManager->FocusedNode;
   for(int i=0;i<buttons.Length;i++)if(IsFocused(Control(i),global)){focusedKey=keys[i];ownsFocus=true;}
   var screen=controller.Build(mini);
-  bool hasIcon=!mini&&screen.Icon!=0;float inner=NativeHuntLayout.ContentWidth(mini);
+  bool hasIcon=!mini&&screen.Icon!=0;
   string title=NativeHuntLayout.FitLabel(screen.Title,110),description=NativeHuntLayout.FitLabel(screen.Summary,420);
   if(titleText!=title){heading.String=title;titleText=title;}
   if(summaryText!=description){summary.String=description;summaryText=description;}
   summary.FontSize=NativeHuntLayout.SummaryFont(controller.Page,mini);
   summary.LineSpacing=summary.FontSize+3;
-  heading.Size=new(inner,110);summary.Size=new(NativeHuntLayout.SummaryWidth(screen,mini),200);
+  float textWidth=NativeHuntLayout.SummaryWidth(screen,mini);
+  heading.Size=new(textWidth,110);summary.Size=new(textWidth,200);
   var layout=NativeHuntLayout.Build(screen,controller.Page,controller.Offset,heading.GetTextDrawSize(considerScale:false).Y,summary.GetTextDrawSize(considerScale:false).Y,mini,label=>NativeButtonText.Measure(buttonMeasure!,label));
   heading.TextColor=screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One;
   summary.TextColor=screen.SummaryColor??NativeHuntColors.Muted;

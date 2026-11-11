@@ -5,6 +5,9 @@ using System.Numerics;
 namespace HuntRoute;
 
 public static class RoutePlanner {
+    public static IOrderedEnumerable<T> RankZones<T>(IEnumerable<T> zones,Func<T,bool> local,Func<T,uint> fare,Func<T,float> distance,Func<T,uint> id) =>
+        zones.OrderByDescending(local).ThenBy(fare).ThenBy(distance).ThenBy(id);
+
     // Daily anchors first, then the known spawn circuit. This estimates flying
     // distance only, never an invented duration for finding an elite.
     public static float Distance<T>(IEnumerable<T> order,Func<T,Vector2[]> points,Vector2? origin) {
@@ -14,7 +17,9 @@ public static class RoutePlanner {
         }
         return cost;
     }
-    public static (T[] Order,int Entry,float Cost) Zone<T>(IReadOnlyList<T> targets,Func<T,bool> excluded,Func<T,bool> elite,Func<T,Vector2[]> points,Vector2[] origins) {
+    public static (T[] Order,int Entry,float Cost) Zone<T>(IReadOnlyList<T> targets,Func<T,bool> excluded,Func<T,bool> elite,Func<T,Vector2[]> points,Vector2[] origins,IReadOnlyList<uint>? fares=null) {
+        if(fares!=null&&fares.Count!=origins.Length)throw new ArgumentException("Each origin needs a fare",nameof(fares));
+        uint bestFare=uint.MaxValue;
         T[]? best=null;int entry=-1;float cost=float.PositiveInfinity;
         for(int i=0;i<Math.Max(1,origins.Length);i++){
             var available=targets.Where(t=>!excluded(t)&&points(t).Length>0).ToArray();
@@ -22,7 +27,8 @@ public static class RoutePlanner {
             var (ordinary,_)=Order(daily,_=>false,t=>points(t).FirstOrDefault(),origins.Length==0?[]:[origins[i]]);
             var ordered=ordinary.Concat(available.Where(elite)).ToArray();
             float candidate=Distance(ordered,points,origins.Length==0?null:origins[i]);
-            if(best==null||candidate<cost){best=ordered;entry=origins.Length==0?-1:i;cost=candidate;}
+            uint fare=fares is {Count:>0}?fares[i]:0;
+            if(best==null||fare<bestFare||fare==bestFare&&candidate<cost){best=ordered;entry=origins.Length==0?-1:i;cost=candidate;bestFare=fare;}
         }
         best??=[];var used=best.ToHashSet();
         return (best.Concat(targets.Where(t=>!used.Contains(t))).ToArray(),entry,cost);

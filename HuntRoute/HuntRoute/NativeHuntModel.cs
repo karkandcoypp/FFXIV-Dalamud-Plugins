@@ -51,16 +51,20 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  public const int ButtonCapacity=13;
  private const float Margin=16,Gap=6;
  public const float ActionHeight=32, ActionWidth=84, LongActionWidth=2*ActionWidth+Gap;
- public const float PortraitSize=68;
+ public const float PortraitSize=108;
+ private const float FooterHeight=30, FooterBottomInset=16;
  // Axis typography with slightly larger labels for legibility.
- public const byte TitleFont=18, BodyFont=15, ButtonFont=14;
+ public const byte TitleFont=18, BodyFont=14, ButtonFont=13, SecondaryFont=12;
  public static float ContentWidth(bool mini)=>(mini?300:420)-2*Margin;
- public static byte SummaryFont(NativeHuntPage view,bool mini)=>!mini&&view==NativeHuntPage.Boards?(byte)13:BodyFont;
+ public static byte SummaryFont(NativeHuntPage view,bool mini)=>SecondaryFont;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Goal==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;
  public static NativeHuntRect ButtonCaption(Vector2 position,Vector2 size,Vector2 measured){
   var fitted=Vector2.Min(Vector2.Max(Vector2.Zero,measured),new(Math.Max(0,size.X-16),Math.Max(0,size.Y)));
-  return new(position+(size-fitted)/2,fitted);
+  var inset=(size-fitted)/2;
+  // The game font's line box places the visible glyphs below its midpoint.
+  inset.Y-=Math.Clamp(inset.Y-2,0,3);
+  return new(position+inset,fitted);
  }
  public static float ButtonWidth(string label)=>label.Length<=11?ActionWidth:LongActionWidth;
  public static string FitLabel(string value,int length=64)=>value.Length<=length?value:string.Concat(value.EnumerateRunes().Take(length-1).Select(r=>r.ToString()))+"…";
@@ -73,7 +77,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   float summaryY=titleY+titleHeight+4;bool portrait=!mini&&screen.Icon!=0;
   float textWidth=SummaryWidth(screen,mini);
   float progressY=summaryY+summaryHeight+4;
-  float bodyY=summaryY+Math.Max(portrait?PortraitSize:0,summaryHeight+(screen.Progress!=null?(mini?22:30):0))+7;
+  float bodyY=summaryY+Math.Max(portrait?Math.Max(0,PortraitSize-(summaryY-titleY)):0,summaryHeight+(screen.Progress!=null?(mini?22:30):0))+7;
   int page=mini?0:NativeHuntNavigation.ClampPage(requestedPage,screen.Buttons.Count);
   int pageCount=Math.Max(1,(screen.Buttons.Count+5)/6);
   var visible=screen.Buttons.Skip(page*6).Take(mini?3:6).ToArray();
@@ -136,8 +140,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     }
     Set(i+3,++rows,0,button,Margin,bottom,inner,28);
     Cell(board.Name,Margin+8,bottom+5,140,NativeHuntColors.Tracking,16);
-    Cell(board.Daily.Label,Margin+154,bottom+5,104,board.Daily.Color??Vector4.One);
-    Cell(board.Weekly.Label,Margin+266,bottom+5,110,board.Weekly.Color??Vector4.One);
+    Cell(board.Daily.Label,Margin+154,bottom+5,104,board.Daily.Color??Vector4.One,SecondaryFont);
+    Cell(board.Weekly.Label,Margin+266,bottom+5,110,board.Weekly.Color??Vector4.One,SecondaryFont);
     bottom+=32;
     continue;
    }
@@ -199,15 +203,15 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   }
   bool pager=!mini&&pageCount>1;
   float pagerWidth=Math.Max(Button("Пред."),Button("Далее"));
-  float footerWidth=new[]{"Назад","Закрыть",settingsList?"Параметры":""}.Max(Button);
+  float closeWidth=Button("Закрыть");
   if(pager){Set(9,7,0,new("previous","Пред.",new("previous",Delta:-1),page>0),controlX,bottom,pagerWidth,ActionHeight);Set(10,7,1,new("next-page","Далее",new("next-page",Delta:1),page+1<pageCount),controlX+controlWidth-pagerWidth,bottom,pagerWidth,ActionHeight);}
   float footer=bottom+(pager?ActionHeight+12:0);
   var back=view switch {NativeHuntPage.Number=>NativeHuntPage.Advanced,NativeHuntPage.Advanced=>NativeHuntPage.Settings,NativeHuntPage.Target or NativeHuntPage.Filters=>NativeHuntPage.Targets,NativeHuntPage.Expansions or NativeHuntPage.Zones=>NativeHuntPage.Filters,_=>NativeHuntPage.Hunt};
-  if(settingsList)Set(11,8,0,Page("advanced","Параметры",NativeHuntPage.Advanced),controlX,footer,footerWidth,ActionHeight);
-  else if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),controlX,footer,footerWidth,ActionHeight);
-  if(!mini)Set(12,8,1,new("close","Закрыть",new("close")),controlX+controlWidth-footerWidth,footer,footerWidth,ActionHeight);
-  return new(new(width,footer+(mini?4:ActionHeight+10)),new(new(Margin,titleY),new(inner,titleHeight)),
-   new(new(Margin,summaryY),new(textWidth,summaryHeight)),new(new(width-Margin-PortraitSize,summaryY),new(PortraitSize,PortraitSize)),
+  if(settingsList)Set(11,8,0,Page("advanced","Параметры",NativeHuntPage.Advanced),controlX,footer,Button("Параметры"),FooterHeight);
+  else if(!mini&&view!=NativeHuntPage.Hunt)Set(11,8,0,Page("back","Назад",back),controlX,footer,Button("Назад"),FooterHeight);
+  if(!mini)Set(12,8,1,new("close","Закрыть",new("close")),width-Margin-closeWidth,footer,closeWidth,FooterHeight);
+  return new(new(width,footer+(mini?4:FooterHeight+FooterBottomInset)),new(new(Margin,titleY),new(textWidth,titleHeight)),
+   new(new(Margin,summaryY),new(textWidth,summaryHeight)),new(new(width-Margin-PortraitSize,titleY),new(PortraitSize,PortraitSize)),
    new(new(Margin,progressY),new(textWidth,18)),new(new(Margin,progressY+19),new(textWidth,mini?0:5)),
    new(new(controlX+(controlWidth-74)/2,bottom+6),new(74,22)),
    pager?$"Стр. {page+1} / {pageCount}":"",buttons,tableText);

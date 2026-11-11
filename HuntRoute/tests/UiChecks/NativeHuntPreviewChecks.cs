@@ -40,7 +40,7 @@ internal static class NativeHuntPreviewChecks {
    ImGui.NewFrame();ImGui.Begin("measure");
    float Height(string value,float width,float font){ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(value,false,width).Y+4;}
    float width=NativeHuntLayout.ContentWidth(sample.Mini);
-   var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,width,NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.SummaryFont(sample.Page,sample.Mini)),sample.Mini,label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return Math.Max(ImGui.CalcTextSize(label).X,label.EnumerateRunes().Count()*9.5f);});
+   var layout=NativeHuntLayout.Build(sample.Screen,sample.Page,sample.Offset,Height(title,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.TitleFont),Height(summary,NativeHuntLayout.SummaryWidth(sample.Screen,sample.Mini),NativeHuntLayout.SummaryFont(sample.Page,sample.Mini)),sample.Mini,label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return Math.Max(ImGui.CalcTextSize(label).X,label.EnumerateRunes().Count()*9.5f);});
    var visibleRects=layout.Buttons.Select(b=>b.Rect).Concat(layout.TableText.Select(t=>t.Rect))
     .Append(layout.Heading).Append(layout.Summary);
    if(sample.Screen.Progress!=null)visibleRects=visibleRects.Append(layout.ProgressLabel);
@@ -103,7 +103,7 @@ internal static class NativeHuntPreviewChecks {
     if(!sample.Mini&&sample.Screen.Icon!=0)draw.AddRectFilled(layout.Portrait.Position,layout.Portrait.Position+layout.Portrait.Size,0xff3b3631,6);
     if(sample.Screen.Progress is {} progress){
      var r=layout.ProgressTrack;
-     Text(progress.Label,layout.ProgressLabel,NativeHuntLayout.BodyFont,new(.68f,.88f,.80f,1));
+     Text(progress.Label,layout.ProgressLabel,NativeHuntLayout.SecondaryFont,new(.68f,.88f,.80f,1));
      if(r.Size.Y>0)draw.AddRectFilled(r.Position,r.Position+r.Size,0xff47453d,3);
      if(r.Size.Y>0)draw.AddRectFilled(r.Position,r.Position+new Vector2(r.Size.X*progress.Fraction,r.Size.Y),0xffa3c261,3);
     }

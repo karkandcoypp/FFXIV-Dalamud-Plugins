@@ -1,12 +1,12 @@
 using HuntRoute;
 static class NativeNavigationChecks {
  public static void Run(Action<bool,string> check){
-  foreach(float height in new[]{NativeHuntLayout.ActionHeight,44,56})
+  foreach(float height in new[]{30f,NativeHuntLayout.ActionHeight,44,56})
   foreach(var measured in new System.Numerics.Vector2[]{new(50,14),new(78,18),new(104,20)}){
    var rect=NativeHuntLayout.ButtonCaption(new(10,20),new(120,height),measured);
    float top=rect.Position.Y-20,bottom=20+height-rect.Position.Y-rect.Size.Y;
    float left=rect.Position.X-10,right=130-rect.Position.X-rect.Size.X;
-   check(top>=6&&Math.Abs(top-bottom)<.01f,"Measured captions are vertically centered with breathing room");
+   check(top>=2&&Math.Abs(bottom-top-6)<.01f,"Measured captions are raised three units to optically center the game glyphs");
    check(left>=8&&Math.Abs(left-right)<.01f,"Measured captions are horizontally centered");
    check(rect.Size==measured,"Caption positioning preserves the measured glyph size");
   }
@@ -17,6 +17,12 @@ static class NativeNavigationChecks {
   foreach(bool mini in new[]{false,true}){
    var layout=NativeHuntLayout.Build(active,NativeHuntPage.Hunt,0,30,38,mini);
    check(layout.Size.X==(mini?300:420)&&layout.Size.Y<(mini?290:340),"Active native menus fit the compact footprint");
+   if(!mini){
+    var close=layout.Buttons.Single(b=>b.Button.Key=="close").Rect;
+    check(layout.Size.Y-close.Position.Y-close.Size.Y>=16&&layout.Size.X-close.Position.X-close.Size.X==16,"Close has consistent right and bottom insets");
+    check(layout.Portrait.Size.X>=100&&layout.Portrait.Position.Y==layout.Heading.Position.Y,"Larger portrait shares the heading row");
+    check(layout.Heading.Position.X+layout.Heading.Size.X<layout.Portrait.Position.X&&layout.Summary.Position.X+layout.Summary.Size.X<layout.Portrait.Position.X,"Target text reserves room for the portrait");
+   }
    foreach(var texture in new System.Numerics.Vector2[]{new(256,128),new(128,256),new(512,512)}){
     var image=layout.Portrait.FitImage(texture);
     var end=image.Position+image.Size;

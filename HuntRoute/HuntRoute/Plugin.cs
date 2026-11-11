@@ -13,7 +13,7 @@ namespace HuntRoute;
 
 public record Board(string Name, byte[] Daily, byte Weekly, uint Aetheryte, uint Territory, uint Map, Vector2 Position);
 public record EntryPoint(uint Id, string Name, Vector2 Position);
-public record ZoneRoute(string Name, List<MobHuntEntry> Mobs, EntryPoint? Start, bool StartsHere=false,float EstimatedCost=0);
+public record ZoneRoute(string Name, List<MobHuntEntry> Mobs, EntryPoint? Start, bool StartsHere=false,float EstimatedCost=0,uint GilCost=uint.MaxValue);
 
 public sealed partial class Plugin : IDalamudPlugin {
     public static readonly Board[] Boards = [
@@ -132,8 +132,9 @@ public sealed partial class Plugin : IDalamudPlugin {
                 if(Elite.Selected is {} old) Elite.Selected=Mobs.FirstOrDefault(m=>m.BillNumber==old.BillNumber && m.MobIndex==old.MobIndex && m.MobHuntId==old.MobHuntId);
             }
             CurrentTerritory=Service.ClientState.TerritoryType; CurrentMap=Service.ClientState.MapId;
-            string routeKey=current+":"+CurrentTerritory+":"+CurrentMap+":"+string.Join(",",Mobs.Where(Done).Select(m=>$"{m.BillNumber}-{m.MobIndex}"));
-            if(routeSignature!=routeKey) { BuildRoutes(); routeSignature=routeKey; }
+            var fares=Service.Aetherytes.GroupBy(a=>a.AetheryteId).ToDictionary(g=>g.Key,g=>g.Min(a=>a.GilCost));
+            string routeKey=current+":"+string.Join(",",fares.OrderBy(p=>p.Key).Select(p=>$"{p.Key}={p.Value}"))+":"+CurrentTerritory+":"+CurrentMap+":"+string.Join(",",Mobs.Where(Done).Select(m=>$"{m.BillNumber}-{m.MobIndex}"));
+            if(routeSignature!=routeKey) { BuildRoutes(fares); routeSignature=routeKey; }
             var snapshots=new Dictionary<byte,BillState>();
             for(byte bill=0;bill<22;bill++) {
                 if(unreadBills.Contains(bill)){if(BillStates.TryGetValue(bill,out var known))snapshots[bill]=known;continue;}
@@ -198,7 +199,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         // Hinterlands can only be entered via Idyllshire; do not fabricate an in-zone distance.
         return result;
     }
-    private void BuildRoutes() {
+    private void BuildRoutes(IReadOnlyDictionary<uint,uint> fares) {
         var result=new List<ZoneRoute>();
         foreach(var group in Mobs.GroupBy(m=>(m.TerritoryType,m.MapId)).OrderBy(g=>g.Key.TerritoryType)) {
             try {
@@ -209,13 +210,13 @@ public sealed partial class Plugin : IDalamudPlugin {
                 Vector2[] origins=entries.Select(e=>MapCoordinates.ToWorld(e.Position,map)).ToArray();
                 if(here&&CurrentMap==group.Key.MapId&&Service.ObjectTable.LocalPlayer is {} player)origins=[new(player.Position.X,player.Position.Z)];
                 bool reachable=here||entries.Count>0||group.Key.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75);
-                var(order,start,cost)=RoutePlanner.Zone(targets,m=>!reachable||Done(m)||Flow.Excluded(m),m=>m.IsEliteMark,PlanningPoints,origins);
+                var(order,start,cost)=RoutePlanner.Zone(targets,m=>!reachable||Done(m)||Flow.Excluded(m),m=>m.IsEliteMark,PlanningPoints,origins,here?null:entries.Select(e=>fares.GetValueOrDefault(e.Id,uint.MaxValue)).ToArray());
                 EntryPoint? entry=!here&&start>=0?entries[start]:null;
                 if(!here&&entry==null&&order.FirstOrDefault(m=>!Done(m)&&!Flow.Excluded(m)) is {} first)entry=NearestEntryFor(first);
-                result.Add(new(group.First().TerritoryName??"Зона",order.ToList(),entry,here,cost));
+                result.Add(new(group.First().TerritoryName??"Зона",order.ToList(),entry,here,cost,here?0:entry!=null?fares.GetValueOrDefault(entry.Id,uint.MaxValue):uint.MaxValue));
             }catch(Exception e){foreach(var m in group)Flow.Unavailable[JourneyFlow.Key(m)]="Ошибка связи карты и координат: "+e.Message;result.Add(new(group.First().TerritoryName??"Зона",group.ToList(),null));Service.PluginLog.Debug(e,"Проверка зоны {Territory}",group.Key.TerritoryType);}
         }
-        Routes=result.OrderBy(r=>r.StartsHere?0:1).ThenBy(r=>r.EstimatedCost).ThenBy(r=>r.Mobs.First().TerritoryType).ToList();
+        Routes=RoutePlanner.RankZones(result,r=>r.StartsHere,r=>r.GilCost,r=>r.EstimatedCost,r=>r.Mobs.First().TerritoryType).ToList();
     }
     internal int Kills(MobHuntEntry m) => Math.Clamp(KillCounts.GetValueOrDefault((m.BillNumber,m.MobIndex)),0,(int)Math.Min(m.NeededKills,(uint)int.MaxValue));
     internal bool Done(MobHuntEntry m) => Kills(m) >= m.NeededKills;

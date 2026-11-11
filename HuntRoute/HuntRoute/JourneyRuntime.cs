@@ -198,7 +198,7 @@ public sealed partial class Plugin {
   if(route?.Start is {} planned&&route.Mobs.FirstOrDefault(t=>!Done(t)&&!Flow.Excluded(t)&&PlanningPoints(t).Length>0) is {} first&&JourneyFlow.Key(first)==JourneyFlow.Key(m)&&Service.Aetherytes.Any(a=>a.AetheryteId==planned.Id))return planned;
   return NearestEntryFor(m);
  }
- private EntryPoint? NearestEntryFor(MobHuntEntry m){var positions=m.IsEliteMark?EliteSpawns.For(m):Position(m) is {} p?new[]{p}:Array.Empty<Vector2>();return Entries(m.MapId,m.TerritoryType).OrderBy(e=>positions.Length==0?float.MaxValue:positions.Min(p=>Vector2.DistanceSquared(e.Position,p))).ThenBy(e=>e.Id).FirstOrDefault() ?? (m.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75)?new(75,"Idyllshire",Vector2.Zero):null);}
+ private EntryPoint? NearestEntryFor(MobHuntEntry m){var positions=m.IsEliteMark?EliteSpawns.For(m):Position(m) is {} p?new[]{p}:Array.Empty<Vector2>();return Entries(m.MapId,m.TerritoryType).OrderBy(e=>Price(e.Id)).ThenBy(e=>positions.Length==0?float.MaxValue:positions.Min(p=>Vector2.DistanceSquared(e.Position,p))).ThenBy(e=>e.Id).FirstOrDefault() ?? (m.TerritoryType==399&&Service.Aetherytes.Any(a=>a.AetheryteId==75)?new(75,"Idyllshire",Vector2.Zero):null);}
  internal uint Price(uint id)=>Service.Aetherytes.Where(a=>a.AetheryteId==id).Select(a=>a.GilCost).DefaultIfEmpty(uint.MaxValue).Min();
  private void OfferTravel(MobHuntEntry target,bool starting,EntryPoint? reviewedEntry=null){
   if(Service.ClientState.TerritoryType==target.TerritoryType){

@@ -1,3 +1,8 @@
+# 0.4.38
+
+- Следующая зона и эфирит выбираются по текущей цене телепорта; при равной цене учитывается длина перелёта.
+- Подписи на нативных кнопках подняты, у кнопки «Закрыть» больше места от рамки, портрет цели увеличен. Таймеры, статусы и пояснения набраны меньшим шрифтом.
+
 # 0.4.37
 
 - Center independent native button captions using their measured text dimensions on both axes, avoiding a second alignment inside a fixed line box.

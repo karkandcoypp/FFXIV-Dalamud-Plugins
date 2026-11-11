@@ -53,31 +53,31 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             texts.Add(new(value,new(x,y),new(w,height),font,color));return height;
         }
         float y=38;
-        if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,inner,13,Brand)+2;
+        if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,inner,NativeHuntLayout.SecondaryFont,Brand)+2;
         y+=Text(content.Title,left,y,inner,NativeHuntLayout.TitleFont,White)+4;
         if(!string.IsNullOrEmpty(content.Destination)&&content.Destination!=content.Title) {
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";
             y+=Text(destination,left,y,inner,NativeHuntLayout.BodyFont,White)+2;
         }
-        if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,left,y,inner,NativeHuntLayout.BodyFont,Mint)+4;
+        if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,left,y,inner,NativeHuntLayout.SecondaryFont,Mint)+4;
         if(content.HasSubject) {
             y+=2;
             string subject=string.IsNullOrEmpty(content.SubjectLabel)?content.Subject:$"{content.SubjectLabel} · {content.Subject}";
             y+=Text(subject,left,y,inner,NativeHuntLayout.BodyFont,Brand);
-            if(!string.IsNullOrEmpty(content.Detail)) y+=4+Text(content.Detail,left,y+4,inner,13,Muted);
+            if(!string.IsNullOrEmpty(content.Detail)) y+=4+Text(content.Detail,left,y+4,inner,NativeHuntLayout.SecondaryFont,Muted);
             y+=4;
         }
         if(content.Metrics.Length>0) {
             float cardWidth=(inner-(content.Metrics.Length-1)*8)/content.Metrics.Length,rowHeight=0;
             for(int i=0;i<content.Metrics.Length;i++) {
                 var metric=content.Metrics[i];float x=left+i*(cardWidth+8),my=y+4;
-                my+=Text(metric.Label,x,my,cardWidth,13,Muted)+2;
+                my+=Text(metric.Label,x,my,cardWidth,NativeHuntLayout.SecondaryFont,Muted)+2;
                 my+=Text(metric.Value,x,my,cardWidth,metric.Highlight?NativeHuntLayout.TitleFont:NativeHuntLayout.BodyFont,metric.Highlight?Mint:White)+4;
                 rowHeight=Math.Max(rowHeight,my-y);
             }
             y+=rowHeight+4;
         }
-        if(!string.IsNullOrEmpty(content.Footer)) y+=Text(content.Footer,left,y,inner,13,Muted)+4;
+        if(!string.IsNullOrEmpty(content.Footer)) y+=Text(content.Footer,left,y,inner,NativeHuntLayout.SecondaryFont,Muted)+4;
         const float buttonHeight=NativeHuntLayout.ActionHeight;
         float confirmWidth=Math.Max(NativeHuntLayout.ButtonWidth(content.ConfirmLabel),measureButton==null?0:MathF.Ceiling(measureButton(content.ConfirmLabel))+16);
         float declineWidth=Math.Max(NativeHuntLayout.ActionWidth,measureButton==null?0:MathF.Ceiling(measureButton(content.DeclineLabel))+16);
