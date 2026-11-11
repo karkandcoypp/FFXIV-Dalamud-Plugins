@@ -21,9 +21,9 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
         "Завершены цели: "+from,"Первая цель",target,"",
         "",[]);
     public static TravelDialogContent Board(string city,string aetheryte,string expansion,uint gil,bool local) => new(
-        "Доска охоты",city,"",city,
-        local?"Вы уже в городе":$"{(aetheryte==city?"":aetheryte+" · ")}{gil} гил",
-        "",expansion,"","",[],local?"К доске":null);
+        $"Доска охоты · {expansion}",city,"Эфирит",local||aetheryte==city?"":aetheryte,
+        local?"Вы уже в городе · поставим метку":gil==0?"Телепорт бесплатный":$"Стоимость телепорта: {gil.ToString("N0",System.Globalization.CultureInfo.InvariantCulture).Replace(',', '\u00A0')} гил",
+        "","","","",[],local?"К доске":null);
     public static TravelDialogContent Shortcut(ShortcutOffer offer,string zone,string target) => new(
         "","Сократить перелёт?","",offer.Name,
         $"{zone} · {offer.GilCost} гил","Цель",target,$"От эфирита ~{offer.FinalDistance:F0} м",

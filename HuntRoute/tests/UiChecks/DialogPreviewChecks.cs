@@ -7,12 +7,16 @@ using HuntRoute;
 internal static class DialogPreviewChecks {
     internal static unsafe void Run(string directory) {
         var offer=new ShortcutOffer(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40);
-        foreach(var sample in new[]{("login",TravelDialogContent.Login("taken")),("login-summary",TravelDialogContent.Login("summary")),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",100,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("shortcut",TravelDialogContent.Shortcut(offer,"Amh Araeng","gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
+        foreach(var sample in new[]{("login",TravelDialogContent.Login("taken")),("login-summary",TravelDialogContent.Login("summary")),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("shortcut",TravelDialogContent.Shortcut(offer,"Amh Araeng","gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
             ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(520,900);io.DeltaTime=1f/60;
             io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
             ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);ImGui.Begin("measure",ImGuiWindowFlags.NoDecoration);
             var layout=TravelDialogLayout.Build(sample.Item2,(text,width,font)=> { ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(text,false,width).Y+4; },label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return Math.Max(ImGui.CalcTextSize(label).X,label.EnumerateRunes().Count()*9.5f);});
+            if(sample.Item1=="board"&&!layout.Texts.Select(t=>t.Text).SequenceEqual(new[]{"Доска охоты · Endwalker","Old Sharlayan","Стоимость телепорта: 1\u00A0235 гил"}))
+                throw new Exception("Board prompt must identify the expansion, city and price once");
+            if(sample.Item1=="board-local"&&(sample.Item2.ConfirmLabel!="К доске"||layout.Texts.Any(t=>t.Text.Contains("гил"))))
+                throw new Exception("Local board prompt must offer a marker without a fare");
             NativeResizeChecks.Check(new(layout.Width,layout.Height),
                 layout.Texts.Select(t=>new NativeHuntRect(t.Position,t.Size))
                 .Append(new(layout.Confirm.Position,layout.Confirm.Size)).Append(new(layout.Decline.Position,layout.Decline.Size)));
