@@ -98,7 +98,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   if(!mini){
    string[] tabLabels=["Охота","Доски","Настройки"];
    float[] tabWidths=tabLabels.Select(Button).ToArray();
-   bool activeActions=huntActions&&visible is [{Key:"primary",Action.Kind:"pause" or "resume"},{Key:"map"},{Key:"actions"},{Key:"targets"}]
+   bool activeActions=huntActions&&visible is [{Key:"primary"},{Key:"map"},{Key:"actions"},{Key:"targets"}]
     &&visible.Skip(1).Sum(Compact)+closeWidth+3*Gap<=inner;
    float primaryWidth=activeActions?Compact(visible[0]):0;
    if(activeActions&&measureButton!=null&&tabWidths.Sum()+primaryWidth+3*Gap>inner)

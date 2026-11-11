@@ -45,12 +45,13 @@ static class NativeNavigationChecks {
    var paired=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
    check(paired.Single(n=>n.Index==map.Slot+1).Right==rightOfMap.Slot+1,"D-pad right moves from Map to the adjacent action");
   }
-  foreach(var (label,kind) in new[]{("Пауза","pause"),("Продолжить","resume")}){
+  foreach(var (label,kind) in new[]{("Пауза","pause"),("Продолжить","resume"),("Телепорт","planned"),("Телепорт","next")}){
    var russian=active with {Buttons=[
     new("primary",label,new(kind)),new("map","Карта",new("map")),new("actions","Маршрут",new("page")),new("targets","Все цели",new("page"))
    ]};
    static float Measure(string text)=>text.Length*9.5f;
    var layout=NativeHuntLayout.Build(russian,NativeHuntPage.Hunt,0,30,38,false,Measure);
+   check(layout.Buttons.Single(b=>b.Button.Key=="primary").Row==0,$"Primary action stays beside tabs in state {kind}");
    var row=layout.Buttons.Where(b=>b.Row>0).OrderBy(b=>b.Column).ToArray();
    check(row.Select(b=>b.Button.Key).SequenceEqual(new[]{"map","actions","targets","close"})&&row.All(b=>b.Row==1),"All four Russian hunt actions fit the same bottom row");
    check(row.All(b=>b.Rect.Position.X>=16&&b.Rect.Position.X+b.Rect.Size.X<=layout.Size.X-16&&b.Rect.Size.X>=Measure(b.Button.Label)+16)&&
