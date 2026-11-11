@@ -28,7 +28,10 @@ static class JourneyRuntimeChecks {
   var taken=new BillState(true,true,1,1,false);
   byte[] heavensward=[1,2,3,5];
   foreach(byte bill in heavensward)states[bill]=taken;
-  states[14]=new(true,false,0,1,false); // Endwalker is available.
+  states[14]=new(true,false,0,1,false); // Endwalker: daily only.
+  states[13]=new(true,false,0,1,false); // Shadowbringers: weekly only.
+  states[18]=new(true,false,0,1,false); // Dawntrail: both.
+  states[21]=new(true,false,0,1,false);
   states[6]=taken; // Stormblood already taken.
   var printed=new List<SeString>();
   var previous=Service.Chat;
@@ -47,9 +50,10 @@ static class JourneyRuntimeChecks {
    Call(plugin,"CheckExpansionCompletionNotices");
    if(printed.Count!=1)throw new Exception("Completion must print exactly one chat message");
    var text=printed[0];
-   if(text.TextValue!="[Hunt Route] Heavensward — выполнено  ·  Endwalker — можно взять")
+   if(text.Payloads.OfType<NewLinePayload>().Count()!=3 ||
+      text.TextValue.Replace("\r\n","\n")!="[Hunt Route] Heavensward — выполнено\nShadowbringers — можно взять: элитный\nEndwalker — можно взять: обычные\nDawntrail — можно взять: обычные и элитный")
     throw new Exception("Chat status includes the wrong boards: "+text.TextValue);
-   if(!text.Payloads.OfType<UIForegroundPayload>().Select(p=>p.ColorKey).SequenceEqual(new ushort[]{45,0,31,0}))
+   if(!text.Payloads.OfType<UIForegroundPayload>().Select(p=>p.ColorKey).SequenceEqual(new ushort[]{45,0,31,0,31,0,31,0}))
     throw new Exception("Completion and availability colors are wrong or leak into chat");
    Console.WriteLine("PASS one colored completion chat message with only available follow-up boards");
   }finally{Service.Chat=previous;}

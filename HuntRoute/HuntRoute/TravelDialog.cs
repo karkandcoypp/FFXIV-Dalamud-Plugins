@@ -4,7 +4,7 @@ using System.Numerics;
 namespace HuntRoute;
 
 public sealed record DialogMetric(string Label,string Value,bool Highlight=false);
-public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null,uint PortraitIcon=0,bool CenterNoticeText=false) {
+public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null,uint PortraitIcon=0,bool CenterNoticeText=false,bool NextZone=false) {
     public string ConfirmLabel => ActionLabel ?? "Телепорт";
     public string DeclineLabel => "Позже";
     public static TravelDialogContent Login(string mode) => mode switch {
@@ -19,7 +19,7 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
     public static TravelDialogContent Next(string from,string zone,string target,uint portraitIcon=0) => new(
         "Следующая зона",zone,"",zone,
         "Завершены цели: "+from,"Первая цель",target,"",
-        "",[],PortraitIcon:portraitIcon);
+        "",[],PortraitIcon:portraitIcon,NextZone:true);
     public static TravelDialogContent Board(string city,string aetheryte,string expansion,uint gil,bool local) => new(
         $"Доска охоты · {expansion}",city,"Эфирит",local||aetheryte==city?"":aetheryte,
         local?"Вы уже в городе · поставим метку":gil==0?"Телепорт бесплатный":$"Стоимость телепорта: {gil.ToString("N0",System.Globalization.CultureInfo.InvariantCulture).Replace(',', '\u00A0')} гил",
@@ -45,7 +45,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         Vector2.Clamp(origin,Vector2.Zero,Vector2.Max(Vector2.Zero,viewport-size));
 
     public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure,Func<string,float>? measureButton=null) {
-        const float width=DialogWidth,left=18,inner=width-2*left,top=38,portraitSize=96,portraitGap=10;
+        const float width=DialogWidth,left=18,inner=width-2*left,top=38,portraitSize=128,portraitGap=14;
         NativeHuntRect? portrait=content.PortraitIcon!=0?new(new(width-left-portraitSize,top),new(portraitSize,portraitSize)):null;
         float textWidth=portrait.HasValue?inner-portraitSize-portraitGap:inner;
         var texts=new List<DialogText>();
@@ -56,21 +56,30 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             texts.Add(new(value,new(x,y),new(w,height),font,color,centered&&height<=font+8));return height;
         }
         float y=top;
-        if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,textWidth,NativeHuntLayout.SecondaryFont,Brand,centerNotice)+2;
-        y+=Text(content.Title,left,y,textWidth,NativeHuntLayout.TitleFont,White,centerNotice)+4;
+        if(content.NextZone) {
+            y+=Text($"{content.Eyebrow} · {content.Title}",left,y,textWidth,NativeHuntLayout.TitleFont,White)+4;
+        } else {
+            if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,textWidth,NativeHuntLayout.SecondaryFont,Brand,centerNotice)+2;
+            y+=Text(content.Title,left,y,textWidth,NativeHuntLayout.TitleFont,White,centerNotice)+4;
+        }
         if(!string.IsNullOrEmpty(content.Destination)&&content.Destination!=content.Title) {
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";
             y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White)+2;
         }
         if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,left,y,textWidth,NativeHuntLayout.SecondaryFont,Mint,centerNotice)+4;
+        bool captionUnderPortrait=content.NextZone&&portrait.HasValue&&content.Subject.Length>0;
         if(content.HasSubject) {
             y+=2;
             string subject=string.IsNullOrEmpty(content.SubjectLabel)?content.Subject:$"{content.SubjectLabel} · {content.Subject}";
-            y+=Text(subject,left,y,textWidth,NativeHuntLayout.BodyFont,Brand);
+            if(!captionUnderPortrait)y+=Text(subject,left,y,textWidth,NativeHuntLayout.BodyFont,Brand);
             if(!string.IsNullOrEmpty(content.Detail)) y+=4+Text(content.Detail,left,y+4,textWidth,NativeHuntLayout.SecondaryFont,Muted);
             y+=4;
         }
-        if(portrait.HasValue)y=Math.Max(y,top+portraitSize+4);
+        if(portrait is {} image) {
+            float below=image.Position.Y+image.Size.Y+4;
+            if(captionUnderPortrait)below+=Text(content.Subject,image.Position.X,below,image.Size.X,NativeHuntLayout.BodyFont,Brand,centered:true)+4;
+            y=Math.Max(y,below);
+        }
         if(content.Metrics.Length>0) {
             float cardWidth=(inner-(content.Metrics.Length-1)*8)/content.Metrics.Length,rowHeight=0;
             for(int i=0;i<content.Metrics.Length;i++) {
