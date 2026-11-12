@@ -4,7 +4,7 @@
 
 Плагины **Carcosa Lyuman** для Final Fantasy XIV
 
-[Каталог](#каталог) · [Установка](#установка) · [Сборка](#сборка) · [Релизы](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases)
+[Каталог](#каталог) · [Установка](#установка) · [Сборка](#сборка) · [Релизы](https://github.com/karkandcoypp/xiv/releases)
 
 </div>
 
@@ -26,7 +26,7 @@
 2. Добавьте адрес и сохраните настройки.
 
    ```text
-   https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/pluginmaster.json
+   https://raw.githubusercontent.com/karkandcoypp/xiv/main/pluginmaster.json
    ```
 
 3. Откройте `/xlplugins`, найдите плагин по названию и установите его. Для открытия используйте команду из каталога.
@@ -50,7 +50,7 @@
 
 ## Выпуски и данные
 
-- Каждый плагин выпускается независимо. Версии и архивы доступны в [GitHub Releases](https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases).
+- Каждый плагин выпускается независимо. Версии и архивы доступны в [GitHub Releases](https://github.com/karkandcoypp/xiv/releases).
 - [pluginmaster.json](pluginmaster.json) — общий индекс для установки и обновлений. При выпуске обновляется запись соответствующего плагина.
 - Общие скрипты публикации находятся в [tools/](tools/), а автоматизация сборок — в [.github/workflows/](.github/workflows/).
 - Event Tracker получает новые события без пересборки DLL. [Формат онлайн-ленты](EorzeaEventTracker/docs/ONLINE-FEED.md).
