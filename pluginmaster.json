@@ -152,12 +152,12 @@
     "LoadSync": false,
     "CanUnloadAsync": false,
     "LoadPriority": 0,
-    "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/HuntRoute/icon.png",
+    "IconUrl": "https://raw.githubusercontent.com/karkandcoypp/xiv/main/HuntRoute/icon.png",
     "Punchline": "Efficient hunt bill routes and reset dashboard.",
     "AcceptsFeedback": true,
-    "RepoUrl": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins",
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.4.63/HuntRoute.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.4.63/HuntRoute.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/FFXIV-Dalamud-Plugins/releases/download/hr-v0.4.63/HuntRoute.zip"
+    "RepoUrl": "https://github.com/karkandcoypp/xiv",
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/xiv/releases/download/hr-v0.4.63/HuntRoute.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/xiv/releases/download/hr-v0.4.63/HuntRoute.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/xiv/releases/download/hr-v0.4.63/HuntRoute.zip"
   }
 ]
