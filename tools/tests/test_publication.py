@@ -109,7 +109,13 @@ class PublicationTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError,'IconUrl'):verify(archive,manifest,'owner/plugins',tag,index)
                     doc['IconUrl']='https://example.com/wrong.png';package()
                     with self.assertRaisesRegex(ValueError,'IconUrl'):verify(archive,manifest,'owner/plugins',tag,index)
+                    doc['IconUrl']='https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/HuntRoute/icon.png'
+                    manifest.write_text(json.dumps(doc),encoding='utf8')
+                    package()
+                    verify(archive,manifest,'karkandcoypp/xiv',tag)
+                    with self.assertRaisesRegex(ValueError,'IconUrl'):verify(archive,manifest,'owner/plugins',tag)
                     doc['IconUrl']=icon
+                    manifest.write_text(json.dumps(doc),encoding='utf8')
                 package()
                 entries=json.loads(index.read_text(encoding='utf8'));entries[0]['DalamudApiLevel']=999
                 index.write_text(json.dumps(entries),encoding='utf8')

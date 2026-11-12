@@ -33,6 +33,9 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.publish && format('refs/tags/{0}', inputs.tag) || github.ref }}
+      - name: Use current publication tools for existing tags
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        run: git restore --source=$env:GITHUB_SHA --worktree -- tools
       - uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: '10.0.x'

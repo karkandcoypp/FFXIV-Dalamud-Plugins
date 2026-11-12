@@ -96,7 +96,10 @@ def verify(archive, manifest, repository, tag, index=None):
             raise ValueError('Missing plugin API')
         require_dll(package, name + '.dll')
         if name == 'HuntRoute':
-            if expected.get('IconUrl') != entry['IconUrl'] or actual.get('IconUrl') != entry['IconUrl']:
+            allowed_icons = {entry['IconUrl']}
+            if repository.casefold() == 'karkandcoypp/xiv':
+                allowed_icons.add('https://raw.githubusercontent.com/karkandcoypp/FFXIV-Dalamud-Plugins/main/HuntRoute/icon.png')
+            if expected.get('IconUrl') not in allowed_icons or actual.get('IconUrl') not in allowed_icons:
                 raise ValueError('Missing or mismatched Hunt Route package IconUrl')
             require_dll(package, 'KamiToolKit.dll')
     if index:
