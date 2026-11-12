@@ -24,35 +24,58 @@ class Program {
   AssemblyLoadContext.Default.Resolving+=(_,n)=>File.Exists(Path.Combine(home,n.Name+".dll"))?AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(home,n.Name+".dll")):null;
   if(args is ["--offline"]){RunOffline();return;}
   if(args is ["--scissorjaws",var sqpack]){CheckScissorjaws(sqpack);return;}
+  if(args is ["--portraits",var portraitSqpack]){CheckPortraits(portraitSqpack);return;}
   Run(args);
  }
  private delegate NativeHuntRect CropTexture(ReadOnlySpan<byte> pixels,int width,int height,Vector2 textureSize);
- static void CheckScissorjaws(string sqpack) {
+ static void CheckScissorjaws(string sqpack)=>CheckPortraits(sqpack,"scissorjaws");
+ static void CheckPortraits(string sqpack,string? name=null) {
   using var game=new GameData(sqpack);
-  var target=game.Excel.GetSubrowSheet<MobHuntOrder>().SelectMany(group=>group)
+  var targets=game.Excel.GetSubrowSheet<MobHuntOrder>().SelectMany(group=>group)
    .Where(order=>order.Target.RowId!=0).Select(order=>order.Target.Value)
-   .First(t=>string.Equals(t.Name.Value.Singular.ToString(),"scissorjaws",StringComparison.OrdinalIgnoreCase));
+   .Where(target=>target.Icon!=0&&(name==null||string.Equals(target.Name.Value.Singular.ToString(),name,StringComparison.OrdinalIgnoreCase)))
+   .DistinctBy(target=>target.Icon).OrderBy(target=>target.Icon).ToArray();
   const BindingFlags flags=BindingFlags.Static|BindingFlags.NonPublic;
   var crop=typeof(TravelDialogLayout).GetMethod("PortraitCrop",flags,null,
    [typeof(ReadOnlySpan<byte>),typeof(int),typeof(int),typeof(Vector2)],null)!.CreateDelegate<CropTexture>();
   var caption=typeof(TravelDialogLayout).GetMethod("PortraitCaptionPosition",flags)!
    .CreateDelegate<Func<NativeHuntRect,NativeHuntRect,Vector2>>();
   var bounds=new NativeHuntRect(new(120,96),new(192,192));
-  string icon=$"ui/icon/{target.Icon/1000*1000:D6}/{target.Icon:D6}";
-  int checkedTextures=0;
-  foreach(string suffix in new[]{".tex","_hr1.tex"}) {
-   if(game.GetFile<Lumina.Data.Files.TexFile>(icon+suffix) is not {} file)continue;
-   var texture=new Vector2(file.Header.Width,file.Header.Height);
-   var cropped=crop(file.ImageData,file.Header.Width,file.Header.Height,texture);
-   var fitted=bounds.FitImage(cropped.Size);
-   var label=caption(bounds,fitted);
-   if(cropped.Size.Y>=texture.Y||label.Y!=fitted.Position.Y+fitted.Size.Y+4||label.Y>=bounds.Position.Y+bounds.Size.Y)
-    throw new Exception($"Scissorjaws caption is not directly below the silhouette: {icon+suffix}");
-   Console.WriteLine($"PASS scissorjaws {icon+suffix}: texture {texture}, visible crop {cropped.Size}, caption gap 4");
-   checkedTextures++;
+  int standard=0,high=0,padded=0;
+  foreach(var target in targets) {
+   string icon=$"ui/icon/{target.Icon/1000*1000:D6}/{target.Icon:D6}";
+   int variants=0;
+   foreach(string suffix in new[]{".tex","_hr1.tex"}) {
+    if(game.GetFile<Lumina.Data.Files.TexFile>(icon+suffix) is not {} file)continue;
+    var texture=new Vector2(file.Header.Width,file.Header.Height);
+    var cropped=crop(file.ImageData,file.Header.Width,file.Header.Height,texture);
+    var fitted=bounds.FitImage(cropped.Size);
+    var label=caption(bounds,fitted);
+    if(cropped.Size.X<=0||cropped.Size.Y<=0||cropped.Position.X<0||cropped.Position.Y<0
+       ||cropped.Position.X+cropped.Size.X>texture.X||cropped.Position.Y+cropped.Size.Y>texture.Y
+       ||Math.Abs(label.Y-fitted.Position.Y-fitted.Size.Y-4)>0.01f
+       ||label.Y>bounds.Position.Y+bounds.Size.Y+4.01f)
+     throw new Exception($"Invalid crop or caption: {target.Name.Value.Singular} {icon+suffix}");
+    int bottom=-1;
+    var pixels=file.ImageData;
+    for(int i=pixels.Length-1;i>=3;i-=4) {
+     if(pixels[i]<16)continue;
+     bottom=(i/4)/file.Header.Width;
+     break;
+    }
+    if(bottom<0||cropped.Position.Y+cropped.Size.Y!=bottom+1)
+     throw new Exception($"Crop does not end at the visible silhouette: {target.Name.Value.Singular} {icon+suffix}");
+    if(cropped.Size!=texture)padded++;
+    if(suffix==".tex")standard++;else high++;
+    variants++;
+    if(name!=null)Console.WriteLine($"PASS {name} {icon+suffix}: texture {texture}, visible crop {cropped.Size}, caption gap 4");
+   }
+   if(variants==0)throw new Exception($"No portrait texture: {target.Name.Value.Singular} {icon}");
   }
-  if(checkedTextures==0)throw new Exception("No scissorjaws portrait found");
+  if(targets.Length==0)throw new Exception("No hunt portraits found");
+  Console.WriteLine($"PASS {targets.Length} hunt portraits: {standard} standard, {high} high resolution, {padded} with margins cropped");
  }
+
  static void RunOffline(){
   JourneyRuntimeChecks.RunOffline();
   (string Name,uint Aetheryte,uint Territory,uint Map,Vector2 Point)[] expected=[
