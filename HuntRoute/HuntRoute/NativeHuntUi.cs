@@ -35,7 +35,7 @@ internal sealed class NativeHuntUi:IDisposable {
     if(!main.IsOpen&&main.AddonId==0)main.Open();
    }
    if(showMini&&!blocked){
-    mini??=new(Controller,ExecuteMini,()=>{if(!miniAutoClose)plugin.SetMini(false);},Modal,true){InternalName="HuntRouteMiniNative",Title="Охота",Size=new(460,390),EnableContextMenu=false,DisableClamping=false};
+    mini??=new(Controller,ExecuteMini,()=>{if(!miniAutoClose)plugin.SetMini(false);},Modal,true){InternalName="HuntRouteMiniNative",Title="Hunt Route",Size=new(460,390),EnableContextMenu=false,DisableClamping=false};
     if(!mini.IsOpen&&mini.AddonId==0){miniAutoClose=false;mini.Open();}
    }else if(!showMini&&mini?.IsOpen==true){miniAutoClose=true;mini.Close();}
    bool modal=OwnModal();
