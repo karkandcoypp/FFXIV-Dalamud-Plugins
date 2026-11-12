@@ -139,7 +139,7 @@
     "Author": "Carcosa Lyuman",
     "Name": "Hunt Route",
     "InternalName": "HuntRoute",
-    "AssemblyVersion": "0.4.64.0",
+    "AssemblyVersion": "0.4.65.0",
     "Description": "Unified hunt-bill routes, instance-aware elite search, native travel confirmations, reset dashboard and paused per-character recovery. Based on HuntBuddy.",
     "ApplicableVersion": "any",
     "Tags": [
@@ -156,8 +156,8 @@
     "Punchline": "Efficient hunt bill routes and reset dashboard.",
     "AcceptsFeedback": true,
     "RepoUrl": "https://github.com/karkandcoypp/xiv",
-    "DownloadLinkInstall": "https://github.com/karkandcoypp/xiv/releases/download/hr-v0.4.64/HuntRoute.zip",
-    "DownloadLinkUpdate": "https://github.com/karkandcoypp/xiv/releases/download/hr-v0.4.64/HuntRoute.zip",
-    "DownloadLinkTesting": "https://github.com/karkandcoypp/xiv/releases/download/hr-v0.4.64/HuntRoute.zip"
+    "DownloadLinkInstall": "https://github.com/karkandcoypp/xiv/releases/download/hr-v0.4.65/HuntRoute.zip",
+    "DownloadLinkUpdate": "https://github.com/karkandcoypp/xiv/releases/download/hr-v0.4.65/HuntRoute.zip",
+    "DownloadLinkTesting": "https://github.com/karkandcoypp/xiv/releases/download/hr-v0.4.65/HuntRoute.zip"
   }
 ]
