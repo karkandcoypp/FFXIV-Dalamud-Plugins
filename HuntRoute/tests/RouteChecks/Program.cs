@@ -439,6 +439,30 @@ presentedQueue.Offer(presented);var activePresentation=presentedQueue.Activate(t
 Check(activePresentation?.Presentation==nextDialog && presentedAccepted==0,"Building/showing structured presentation cannot teleport");
 Check(presentedQueue.Resolve(presented.Key,false)==null && presentedAccepted==0,"Later declines the structured dialog without teleporting");
 Console.WriteLine($"PASS styled dialog audit: {checks} checks");
+foreach(string owner in new[]{"travel","next","shortcut"}){
+    var interrupted=new ConfirmationQueue();
+    bool combat=false,valid=true;
+    int teleports=0;
+    var offer=new ConfirmationRequest(owner,owner+":combat","",()=>valid,()=>!combat,()=>{teleports++;return true;},DeclineKey:owner+":target");
+    interrupted.Offer(offer);
+    Check(interrupted.Activate(true)==offer,"Teleport confirmation opens before combat");
+    combat=true;
+    interrupted.Interrupt(offer.Key);
+    Check(interrupted.Activate(true)==null&&!interrupted.IsDeclined(offer.DeclineKey!)&&teleports==0,"Combat suspends confirmation without accepting or declining it");
+    combat=false;
+    Check(interrupted.Activate(true)==offer&&teleports==0,"Evade restores the confirmation without teleporting");
+    interrupted.Resolve(offer.Key,false);
+    interrupted.Offer(offer);
+    Check(interrupted.Activate(true)==null,"Explicit Later still suppresses the confirmation");
+    interrupted.Clear();
+    interrupted.Offer(offer);
+    Check(interrupted.Activate(true)==offer,"Second combat scenario starts with an active offer");
+    combat=true;
+    interrupted.Interrupt(offer.Key);
+    valid=false;
+    combat=false;
+    Check(interrupted.Activate(true)==null&&teleports==0,"Invalidated offer does not return after combat");
+}
 var searchAudit=new EliteSearch();
 searchAudit.Start([new(100,0),new(0,0),new(0,0),new(200,0)]);
 Check(searchAudit.Tick(new(-100,0),null,false)==new Vector2(0,0),"Fly-by route starts nearest unique point");

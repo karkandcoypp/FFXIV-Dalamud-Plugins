@@ -40,6 +40,12 @@ public sealed class ConfirmationQueue {
         if(Active?.Owner!=owner) return false;
         Active=null;return true;
     }
+    public void Interrupt(string key) {
+        if(Active is not {} request || request.Key!=key) return;
+        Active=null;
+        shown.Remove(key);
+        if(request.Valid()&&!WasDeclined(request)) pending.TryAdd(request.Owner,request);
+    }
     public void Retry(ConfirmationRequest request) {
         if(WasDeclined(request)||!request.Valid()) return;
         shown.Remove(request.Key);pending[request.Owner]=request;

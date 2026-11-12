@@ -35,6 +35,10 @@ internal sealed class NativeDialogService : IDisposable {
             Service.PluginLog.Error("Не удалось подготовить игровой диалог Hunt Route: {Initialization}",initialization.Exception?.GetBaseException().Message??initialization.Status.ToString());
         }
         if(queue.Active is {} current && !current.Valid()) { queue.Resolve(current.Key,false,userResponse:false);addon?.CloseQuietly();addon=null; }
+        if(queue.Active is {} blocked && !blocked.Ready()) {
+            queue.Interrupt(blocked.Key);
+            addon?.CloseQuietly();addon=null;shownFallback=null;
+        }
         if(addon!=null||queue.Active!=null) return;
         bool available=Service.GameGui.GetAddonByName("SelectYesno").IsNull
             && Service.GameGui.GetAddonByName("HuntRouteConfirm").IsNull;
@@ -90,10 +94,12 @@ internal sealed class NativeDialogService : IDisposable {
     internal void AnswerFallback(string key,bool yes){
         if(useFallback&&shownFallback?.Key==key&&ReferenceEquals(shownFallback,queue.Active))Answered(key,yes);
     }
-    private void Answered(string key,bool yes) {
+    private void Answered(string key,bool? yes) {
         try {
             if(queue.Active?.Key!=key) return;
-            var request=queue.Resolve(key,yes);
+            ConfirmationRequest? request=null;
+            if(yes is {} response) request=queue.Resolve(key,response);
+            else queue.Interrupt(key);
             var retired=addon;
             shownFallback=null;
             uint generation=queueGeneration;
@@ -118,7 +124,7 @@ internal sealed class NativeDialogService : IDisposable {
         catch(Exception e) { Service.PluginLog.Error(e,"Очистка native UI Hunt Route"); }
     }
 }
-internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content,Func<bool> ready,Action<bool> answer) : NativeAddon {
+internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content,Func<bool> ready,Action<bool?> answer) : NativeAddon {
     private void AddFixedNode(NodeBase node)=>NativeFixedLayout.Attach(this,node);
     private bool answered;
     private Vector2 measuredSize;
@@ -247,10 +253,13 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         NativeButtonText.SetCaption(yesCaption,yesButton,content.ConfirmLabel,yesButton.IsEnabled?NativeHuntColors.Attention:NativeHuntColors.Muted);
         NativeButtonText.SetCaption(noCaption,noButton,content.DeclineLabel,Vector4.One);
     }
-    protected override void OnHide(AtkUnitBase* native)=>Complete(false);
-    protected override void OnFinalize(AtkUnitBase* native)=>Complete(false);
-    private void Complete(bool yes) {
-        if(answered || (yes&&!ready())) return;
+    protected override void OnHide(AtkUnitBase* native)=>Dismiss();
+    protected override void OnFinalize(AtkUnitBase* native)=>Dismiss();
+    private void Dismiss() {
+        if(!answered) Complete(ready()?false:null);
+    }
+    private void Complete(bool? yes) {
+        if(answered || (yes==true&&!ready())) return;
         // Keep gamepad focus until the input callback returns. The service closes the dialog on the next tick.
         answered=true;
         answer(yes);
