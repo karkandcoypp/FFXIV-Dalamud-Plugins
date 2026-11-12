@@ -739,8 +739,26 @@
       "text": "Место назначения NPC неоднозначно или не обозначено на карте: Метианские дороги",
       "provider": "MyMemory",
       "machine": true
+    },
+    "fa4a80ea7c60822614d9c1ae2d4508f13dfafdb68e9375435e0eed33f65dd701": {
+      "source": "NPC destination is ambiguous or not mapped: Metian Gauntlets",
+      "text": "Место назначения NPC неоднозначно или не сопоставлено: перчатки Метиана",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "4edab374ddcd88ca872d57806c641f34b4c08d031ce0b0549d2a2d37d87a47f7": {
+      "source": "NPC destination is ambiguous or not mapped: Metian Sollerets",
+      "text": "Пункт назначения NPC неоднозначен или не сопоставлен: Наголенники Метиана",
+      "provider": "MyMemory",
+      "machine": true
+    },
+    "284958edce150c15b21ce1e5f45f8691193625d75d967aecfcc297c9e858350a": {
+      "source": "NPC destination is ambiguous or not mapped: Clive Rosfield Card",
+      "text": "Место назначения НИП неоднозначно или не сопоставлено: карта Клайва Розфилда",
+      "provider": "MyMemory",
+      "machine": true
     }
   },
-  "day": "2026-11-11",
-  "used": 1300
+  "day": "2026-11-12",
+  "used": 183
 }
