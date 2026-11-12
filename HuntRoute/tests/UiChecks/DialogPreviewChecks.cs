@@ -8,7 +8,7 @@ internal static class DialogPreviewChecks {
     internal static unsafe void Run(string directory) {
         var fareLineCounts=new HashSet<int>();
         var offer=new ShortcutOffer(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40);
-        foreach(var sample in new[]{("login",TravelDialogContent.Login("taken")),("login-summary",TravelDialogContent.Login("summary")),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-long",TravelDialogContent.Board("The Crystarium — The Mean and the Dossal Gate","The Dossal Gate and the Crystalline Mean","Shadowbringers",1854,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("plain-long",TravelDialogContent.Plain(string.Concat(Enumerable.Repeat("Продолжить охоту по оставшимся контрактам? ",4)))),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("Elpis","The Ruby Sea","coralshell",1) with {Context="Onokoro",Fare=287}),("next-portrait-yanxia",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Inn at Journey's Head",Fare=210}),("next-portrait-fare-wrap",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=210}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands and the Coerthas Western Highlands",new string('Ж',100),1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=1854,Detail="Эфирит в соседней зоне. Дальше — своим ходом."}),("shortcut",TravelDialogContent.Shortcut(offer with {Name="Lydha Lran",DirectSeconds=59,TeleportSeconds=20},"rosebear")),("shortcut-long",TravelDialogContent.Shortcut(offer with {Name="The Dossal Gate and the Crystalline Mean at the Crystarium"},"northern highland crystalback gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
+        foreach(var sample in new[]{("login",TravelDialogContent.Login("taken")),("login-summary",TravelDialogContent.Login("summary")),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-long",TravelDialogContent.Board("The Crystarium — The Mean and the Dossal Gate of the Crystalline City of Norvrandt","The Dossal Gate and the Crystalline Mean of the Crystalline City of Norvrandt","Shadowbringers",1854,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("plain-long",TravelDialogContent.Plain(string.Concat(Enumerable.Repeat("Продолжить охоту по оставшимся контрактам? ",4)))),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("Elpis","The Ruby Sea","coralshell",1) with {Context="Onokoro",Fare=287}),("next-portrait-yanxia",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Inn at Journey's Head",Fare=210}),("next-portrait-fare-wrap",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=210}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands and the Coerthas Western Highlands",new string('Ж',100),1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=1854,Detail="Эфирит в соседней зоне. Дальше — своим ходом."}),("shortcut",TravelDialogContent.Shortcut(offer with {Name="Lydha Lran",DirectSeconds=59,TeleportSeconds=20},"rosebear")),("shortcut-long",TravelDialogContent.Shortcut(offer with {Name="The Dossal Gate and the Crystalline Mean at the Crystarium"},"northern highland crystalback gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
             ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(520,900);io.DeltaTime=1f/60;
             io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
@@ -62,6 +62,26 @@ internal static class DialogPreviewChecks {
                 layout.Texts.Select(t=>new NativeHuntRect(t.Position,t.Size))
                 .Append(new(layout.Confirm.Position,layout.Confirm.Size)).Append(new(layout.Decline.Position,layout.Decline.Size)));
 
+            if(sample.Item1 is "board-long" or "shortcut-long" or "next-portrait-long") {
+                int wrapped=0;
+                foreach(var text in layout.Texts) {
+                    ImGui.SetWindowFontScale(text.Font/17f);
+                    float lineHeight=ImGui.CalcTextSize("W").Y;
+                    if(ImGui.CalcTextSize(text.Text,false,text.Size.X).Y>lineHeight+1)wrapped++;
+                }
+                if(wrapped==0)throw new Exception("Stress fixture must actually wrap");
+                foreach(var column in layout.Texts.GroupBy(t=>t.Position.X)) {
+                    var ordered=column.OrderBy(t=>t.Position.Y).ToArray();
+                    foreach(var pair in ordered.Zip(ordered.Skip(1))) {
+                        float gap=pair.Second.Position.Y-pair.First.Position.Y-pair.First.Size.Y;
+                        if(gap<0||gap>18)throw new Exception($"Unexpected text gap {gap} in {sample.Item1}");
+                    }
+                }
+                float lowest=layout.Texts.Max(t=>t.Position.Y+t.Size.Y);
+                float footerGap=layout.Confirm.Position.Y-lowest;
+                if(footerGap<6||footerGap>10)throw new Exception($"Unexpected footer gap {footerGap} in {sample.Item1}");
+                Console.WriteLine($"PASS teleport stress {sample.Item1}: {wrapped} wrapped fields, footer gap {footerGap}");
+            }
             ImGui.End();ImGui.EndFrame();io.DisplaySize=new(layout.Width,MathF.Ceiling(layout.Height));
             for(int frame=0;frame<3;frame++) {
                 ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);
