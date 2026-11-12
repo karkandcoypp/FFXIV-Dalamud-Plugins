@@ -93,12 +93,16 @@ internal sealed class NativeDialogService : IDisposable {
     private void Answered(string key,bool yes) {
         try {
             if(queue.Active?.Key!=key) return;
-            var request=queue.Resolve(key,yes);var retired=addon;addon=null;
+            var request=queue.Resolve(key,yes);
+            var retired=addon;
             shownFallback=null;
             uint generation=queueGeneration;
             if(request==null && retired==null) return;
             Service.Framework.RunOnTick(()=> {
-                retired?.Dispose();
+                if(retired!=null&&ReferenceEquals(addon,retired)){
+                    addon=null;
+                    retired.Dispose();
+                }
                 if(disposed || generation!=queueGeneration || request==null || !request.Valid()) return;
                 if(!request.Ready() || !request.Accept()) queue.Retry(request);
             },delayTicks:1);
@@ -161,12 +165,12 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
             }
         }
         yesButton=new TextButtonNode { Position=layout.Confirm.Position,Size=layout.Confirm.Size,String="",
-            NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true,true) };
+            NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true) };
         yesButton.BackgroundNode.Color=NativeHuntColors.PrimarySurface;
         yesButton.LabelNode.TextColor=NativeHuntColors.Attention;
         yesButton.LabelNode.FontSize=NativeHuntLayout.ButtonFont;
         var no=noButton=new TextButtonNode { Position=layout.Decline.Position,Size=layout.Decline.Size,String="",
-            NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false,true) };
+            NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false) };
         no.LabelNode.FontSize=NativeHuntLayout.ButtonFont;
         AddFixedNode(yesButton);AddFixedNode(no);
         yesCaption=NativeButtonText.CreateCaption();noCaption=NativeButtonText.CreateCaption();
@@ -243,11 +247,13 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         NativeButtonText.SetCaption(yesCaption,yesButton,content.ConfirmLabel,yesButton.IsEnabled?NativeHuntColors.Attention:NativeHuntColors.Muted);
         NativeButtonText.SetCaption(noCaption,noButton,content.DeclineLabel,Vector4.One);
     }
-    protected override void OnHide(AtkUnitBase* native)=>Complete(false,false);
-    protected override void OnFinalize(AtkUnitBase* native)=>Complete(false,false);
-    private void Complete(bool yes,bool close) {
+    protected override void OnHide(AtkUnitBase* native)=>Complete(false);
+    protected override void OnFinalize(AtkUnitBase* native)=>Complete(false);
+    private void Complete(bool yes) {
         if(answered || (yes&&!ready())) return;
-        answered=true;if(close) Close();answer(yes);
+        // Keep gamepad focus until the input callback returns. The service closes the dialog on the next tick.
+        answered=true;
+        answer(yes);
     }
     internal void CloseQuietly() { answered=true;Dispose(); }
 }

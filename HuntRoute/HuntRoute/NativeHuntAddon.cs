@@ -27,6 +27,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
  private IconImageNode? portrait;
  private IReadOnlyList<NativeNavLink> links=[];
  private bool focusRequested,focusFirstBody;
+ private object? pendingClick;
  private string? titleText,summaryText;
  private string? focusedKey;
  private string? screenIdentity;
@@ -90,11 +91,23 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(Environment.TickCount64>=nextUpdate){nextUpdate=Environment.TickCount64+200;Refresh(native);}
   if(focusRequested&&IsOpen&&!modal()){int index=NativeHuntNavigation.RestoreFocus(links,focusedKey);if(index>0){if(checks[index-1] is {IsVisible:true} check)check.SetFocus();else buttons[index-1]?.SetFocus();}focusRequested=false;}
  }
- protected override void OnHide(AtkUnitBase* native)=>closed();
+ protected override void OnHide(AtkUnitBase* native){pendingClick=null;closed();}
  protected override void OnFinalize(AtkUnitBase* native){Array.Clear(buttons);Array.Clear(captions);Array.Clear(checks);Array.Clear(tableCells);buttonMeasure=null;heading=null;summary=null;portrait=null;pageLabel=progressLabel=null;progressTrack=progressFill=null;links=[];}
  private void Clicked(int slot){
-  if(modal()||slot<0||slot>=buttons.Length||!(checks[slot] is {IsVisible:true} check?check.IsEnabled:buttons[slot] is {IsVisible:true,IsEnabled:true})||commands[slot] is not {} command)return;
-  focusedKey=keys[slot];
+  if(pendingClick!=null||modal()||slot<0||slot>=buttons.Length||!(checks[slot] is {IsVisible:true} check?check.IsEnabled:buttons[slot] is {IsVisible:true,IsEnabled:true})||commands[slot] is not {} command)return;
+  var key=keys[slot];
+  var click=new object();
+  pendingClick=click;
+  // Actions may open a game window or close this addon. Let native input finish first.
+  _=Service.Framework.RunOnTick(()=>{
+   if(!ReferenceEquals(pendingClick,click))return;
+   pendingClick=null;
+   if(!IsOpen||modal()||keys[slot]!=key||commands[slot]!=command)return;
+   ExecuteClick(command,key);
+  },delayTicks:1);
+ }
+ private void ExecuteClick(NativeHuntAction command,string? key){
+  focusedKey=key;
   if(command.Kind=="previous"||command.Kind=="next-page"){controller.Turn(command.Delta,NativeHuntLayout.PagedButtonCount(controller.Build(mini)));focusFirstBody=true;focusRequested=true;}
   else if(command.Kind=="close")Close();
   else execute(command);
