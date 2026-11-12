@@ -374,6 +374,21 @@ var squarePortrait=TravelDialogLayout.FitPortrait(wideBounds,new(100,100));
 Check(widePortrait.Size.X>250&&Math.Abs(widePortrait.Size.X/widePortrait.Size.Y-3)<0.001f
  &&Math.Abs(widePortrait.Size.X*widePortrait.Size.Y-squarePortrait.Size.X*squarePortrait.Size.Y)<0.01f,
  "Wide and square silhouettes have comparable area without distorting the texture");
+var tallPortrait=TravelDialogLayout.FitPortrait(wideBounds,new(100,300));
+Check(widePortrait.Position.Y==wideBounds.Position.Y
+ &&TravelDialogLayout.UnusedPortraitHeight(wideBounds,widePortrait)>100
+ &&TravelDialogLayout.UnusedPortraitHeight(wideBounds,tallPortrait)==0,
+ "Only short silhouettes remove vertical space before the caption and buttons");
+foreach(var silhouette in new[]{new Vector2(406,225),new Vector2(119,236)}) {
+ var dialog=TravelDialogLayout.Build(TravelDialogContent.Next("","Test zone","Test target",1),(_,_,font)=>font+4);
+ var portraitBounds=dialog.Portrait!.Value;
+ var fitted=TravelDialogLayout.FitPortrait(portraitBounds,silhouette);
+ float reduction=TravelDialogLayout.UnusedPortraitHeight(portraitBounds,fitted);
+ var label=dialog.Texts.Single(t=>t.Text=="Test target");
+ float labelBottom=TravelDialogLayout.PortraitCaptionPosition(portraitBounds,fitted).Y+label.Size.Y;
+ Check(labelBottom<dialog.Confirm.Position.Y-reduction&&labelBottom<dialog.Decline.Position.Y-reduction,
+  "Compacted dialog buttons remain below the caption for wide and tall portraits");
+}
 var nextDialog=TravelDialogContent.Next("Kozama'uka","Yak T'el","mourner");
 var shortcutDialog=TravelDialogContent.Shortcut(new(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40),"gnome");
 Check(nextDialog.Destination=="Yak T'el" && nextDialog.Subject=="mourner" && nextDialog.Metrics.Length==0,"Next-zone dialog names the correct zone and first mob");

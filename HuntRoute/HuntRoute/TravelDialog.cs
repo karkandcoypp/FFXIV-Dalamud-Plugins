@@ -50,8 +50,11 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         float areaScale=targetSide/MathF.Sqrt(silhouette.X*silhouette.Y);
         float fitScale=MathF.Min(bounds.Size.X/silhouette.X,bounds.Size.Y/silhouette.Y);
         var size=silhouette*MathF.Min(areaScale,fitScale);
-        return new(bounds.Position+(bounds.Size-size)/2,size);
+        return new(bounds.Position+new Vector2((bounds.Size.X-size.X)/2,0),size);
     }
+
+    internal static float UnusedPortraitHeight(NativeHuntRect bounds,NativeHuntRect fitted) =>
+        MathF.Max(0,MathF.Floor(bounds.Size.Y-fitted.Size.Y));
 
     internal static Vector2 PortraitCaptionPosition(NativeHuntRect bounds,NativeHuntRect fitted) =>
         new(bounds.Position.X,fitted.Position.Y+fitted.Size.Y+4);

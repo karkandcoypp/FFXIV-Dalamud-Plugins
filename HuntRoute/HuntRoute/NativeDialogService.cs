@@ -159,7 +159,6 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
                 }
             }
         }
-        RefreshPortrait();
         yesButton=new TextButtonNode { Position=layout.Confirm.Position,Size=layout.Confirm.Size,String="",
             NavIndex=1,NavLeft=2,NavRight=2,OnClick=()=>Complete(true,true) };
         yesButton.BackgroundNode.Color=NativeHuntColors.PrimarySurface;
@@ -171,7 +170,10 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         AddFixedNode(yesButton);AddFixedNode(no);
         yesCaption=NativeButtonText.CreateCaption();noCaption=NativeButtonText.CreateCaption();
         AddFixedNode(yesCaption);AddFixedNode(noCaption);
-        RefreshCaptions();measuredSize=new(layout.Width,layout.Height);SetWindowSize(measuredSize);
+        measuredSize=new(layout.Width,layout.Height);
+        SetWindowSize(measuredSize);
+        RefreshPortrait();
+        RefreshCaptions();
         native->FocusNode=no.FocusNode;
     }
     protected override void OnShow(AtkUnitBase* native) {
@@ -204,6 +206,14 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         image.Size=fitted.Size;
         if(portraitCaption is {} caption)
             caption.Position=TravelDialogLayout.PortraitCaptionPosition(bounds,fitted);
+        float unusedHeight=TravelDialogLayout.UnusedPortraitHeight(bounds,fitted);
+        if(unusedHeight>0&&yesButton is {} confirm&&noButton is {} decline) {
+            var offset=new Vector2(0,unusedHeight);
+            confirm.Position-=offset;
+            decline.Position-=offset;
+            measuredSize-=offset;
+            SetWindowSize(measuredSize);
+        }
         image.IsVisible=true;
     }
     private NativeHuntRect ReadPortraitCrop(IconImageNode image,Vector2 texture) {
