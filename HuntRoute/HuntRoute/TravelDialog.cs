@@ -5,7 +5,7 @@ namespace HuntRoute;
 
 public sealed record DialogMetric(string Label,string Value,bool Highlight=false);
 public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null,uint PortraitIcon=0,bool CenterNoticeText=false,bool NextZone=false,string Summary="",uint? Fare=null) {
-    public string FareLabel => Fare is {} gil?$"{gil} гил":"";
+    public string FareLabel => Fare is {} gil?$"Цена · {gil} гил":"";
     public string ConfirmLabel => ActionLabel ?? "Телепорт";
     public string DeclineLabel => "Позже";
     public static TravelDialogContent Login(string mode) => mode switch {
@@ -44,6 +44,15 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
     public static Vector2 ClampPosition(Vector2 origin,Vector2 size,Vector2 viewport) =>
         Vector2.Clamp(origin,Vector2.Zero,Vector2.Max(Vector2.Zero,viewport-size));
 
+    internal static NativeHuntRect FitPortrait(NativeHuntRect bounds,Vector2 silhouette) {
+        const float targetSide=154;
+        if(silhouette.X<=0||silhouette.Y<=0)return bounds.FitImage(silhouette);
+        float areaScale=targetSide/MathF.Sqrt(silhouette.X*silhouette.Y);
+        float fitScale=MathF.Min(bounds.Size.X/silhouette.X,bounds.Size.Y/silhouette.Y);
+        var size=silhouette*MathF.Min(areaScale,fitScale);
+        return new(bounds.Position+(bounds.Size-size)/2,size);
+    }
+
     internal static Vector2 PortraitCaptionPosition(NativeHuntRect bounds,NativeHuntRect fitted) =>
         new(bounds.Position.X,fitted.Position.Y+fitted.Size.Y+4);
 
@@ -75,10 +84,10 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
     }
 
     public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure,Func<string,float>? measureButton=null,Func<string,float>? measureTitleWidth=null) {
-        const float left=18,top=38,portraitSize=192,portraitGap=14;
+        const float left=18,top=38,portraitWidth=304,portraitHeight=192,portraitGap=14;
         float width=content.PortraitIcon!=0?DialogWidth+32:DialogWidth;
         float inner=width-2*left;
-        NativeHuntRect? portrait=content.PortraitIcon!=0?new(new((width-portraitSize)/2,top),new(portraitSize,portraitSize)):null;
+        NativeHuntRect? portrait=content.PortraitIcon!=0?new(new((width-portraitWidth)/2,top),new(portraitWidth,portraitHeight)):null;
         float textWidth=inner;
         float detailsX=left;
         float headingBottom=top;
@@ -113,6 +122,8 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";
             y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White)+2;
         }
+        if(content.NextZone&&content.Fare.HasValue&&content.Context.Length>0)
+            y+=Text("Эфирит",detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
         if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,hasSummary?Muted:Mint,centerNotice)+4;
         if(content.Fare.HasValue)y+=Text(content.FareLabel,detailsX,y,textWidth,NativeHuntLayout.BodyFont,Mint)+4;
         bool captionUnderPortrait=content.NextZone&&portrait.HasValue&&content.Subject.Length>0;

@@ -40,7 +40,9 @@ class Program {
    [typeof(ReadOnlySpan<byte>),typeof(int),typeof(int),typeof(Vector2)],null)!.CreateDelegate<CropTexture>();
   var caption=typeof(TravelDialogLayout).GetMethod("PortraitCaptionPosition",flags)!
    .CreateDelegate<Func<NativeHuntRect,NativeHuntRect,Vector2>>();
-  var bounds=new NativeHuntRect(new(120,96),new(192,192));
+  var fit=typeof(TravelDialogLayout).GetMethod("FitPortrait",flags)!
+   .CreateDelegate<Func<NativeHuntRect,Vector2,NativeHuntRect>>();
+  var bounds=new NativeHuntRect(new(64,96),new(304,192));
   int standard=0,high=0,padded=0;
   foreach(var target in targets) {
    string icon=$"ui/icon/{target.Icon/1000*1000:D6}/{target.Icon:D6}";
@@ -49,10 +51,12 @@ class Program {
     if(game.GetFile<Lumina.Data.Files.TexFile>(icon+suffix) is not {} file)continue;
     var texture=new Vector2(file.Header.Width,file.Header.Height);
     var cropped=crop(file.ImageData,file.Header.Width,file.Header.Height,texture);
-    var fitted=bounds.FitImage(cropped.Size);
+    var fitted=fit(bounds,cropped.Size);
     var label=caption(bounds,fitted);
     if(cropped.Size.X<=0||cropped.Size.Y<=0||cropped.Position.X<0||cropped.Position.Y<0
        ||cropped.Position.X+cropped.Size.X>texture.X||cropped.Position.Y+cropped.Size.Y>texture.Y
+       ||fitted.Size.X>bounds.Size.X+0.01f||fitted.Size.Y>bounds.Size.Y+0.01f
+       ||Math.Abs(fitted.Size.X/fitted.Size.Y-cropped.Size.X/cropped.Size.Y)>0.001f
        ||Math.Abs(label.Y-fitted.Position.Y-fitted.Size.Y-4)>0.01f
        ||label.Y>bounds.Position.Y+bounds.Size.Y+4.01f)
      throw new Exception($"Invalid crop or caption: {target.Name.Value.Singular} {icon+suffix}");

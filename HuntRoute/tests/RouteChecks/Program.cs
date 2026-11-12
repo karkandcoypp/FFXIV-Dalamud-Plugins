@@ -368,6 +368,12 @@ var fittedPortrait=portraitArea.FitImage(croppedPortrait.Size);
 Check(fittedPortrait.Size==new Vector2(192,64)
  &&TravelDialogLayout.PortraitCaptionPosition(portraitArea,fittedPortrait)==new Vector2(222,170),
  "Cropped silhouette fills the portrait width and its caption sits four units below it");
+var wideBounds=new NativeHuntRect(Vector2.Zero,new(304,192));
+var widePortrait=TravelDialogLayout.FitPortrait(wideBounds,new(300,100));
+var squarePortrait=TravelDialogLayout.FitPortrait(wideBounds,new(100,100));
+Check(widePortrait.Size.X>250&&Math.Abs(widePortrait.Size.X/widePortrait.Size.Y-3)<0.001f
+ &&Math.Abs(widePortrait.Size.X*widePortrait.Size.Y-squarePortrait.Size.X*squarePortrait.Size.Y)<0.01f,
+ "Wide and square silhouettes have comparable area without distorting the texture");
 var nextDialog=TravelDialogContent.Next("Kozama'uka","Yak T'el","mourner");
 var shortcutDialog=TravelDialogContent.Shortcut(new(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40),"gnome");
 Check(nextDialog.Destination=="Yak T'el" && nextDialog.Subject=="mourner" && nextDialog.Metrics.Length==0,"Next-zone dialog names the correct zone and first mob");

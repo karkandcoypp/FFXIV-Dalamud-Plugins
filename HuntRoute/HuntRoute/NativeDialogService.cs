@@ -72,7 +72,7 @@ internal sealed class NativeDialogService : IDisposable {
                 ImGui.TextWrapped(content.Title);
                 if(content.Summary.Length>0)ImGui.TextWrapped(content.Summary);
                 if(content.Destination.Length>0&&content.Destination!=content.Title)ImGui.TextWrapped(content.Destination);
-                if(content.Context.Length>0)ImGui.TextWrapped(content.Context);
+                if(content.Context.Length>0)ImGui.TextWrapped(content.NextZone&&content.Fare.HasValue?$"Эфирит · {content.Context}":content.Context);
                 if(content.Fare.HasValue)ImGui.TextUnformatted(content.FareLabel);
                 if(content.Subject.Length>0)ImGui.TextWrapped(content.SubjectLabel.Length>0?$"{content.SubjectLabel} · {content.Subject}":content.Subject);
                 if(content.Detail.Length>0)ImGui.TextWrapped(content.Detail);
@@ -197,7 +197,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         var texture=image.ActualTextureSize;
         if(texture.X<=0||texture.Y<=0)return;
         var crop=ReadPortraitCrop(image,texture);
-        var fitted=bounds.FitImage(crop.Size);
+        var fitted=TravelDialogLayout.FitPortrait(bounds,crop.Size);
         image.TextureCoordinates=crop.Position;
         image.TextureSize=crop.Size;
         image.Position=fitted.Position;

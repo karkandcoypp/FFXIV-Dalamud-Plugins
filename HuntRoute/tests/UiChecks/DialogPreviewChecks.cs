@@ -48,7 +48,7 @@ internal static class DialogPreviewChecks {
                     ||(sample.Item1=="next-portrait"&&layout.Texts.Single(t=>t.Text==sample.Item2.Title).Size.Y>NativeHuntLayout.TitleFont+8))
                     throw new Exception("Dialog portrait overlaps text or buttons");
                 var tall=portrait.FitImage(new(32,128));
-                if(tall.Size!=new Vector2(48,192)||portrait.FitImage(new(256,64)).Size!=new Vector2(192,48))throw new Exception("Portrait aspect ratio changed");
+                if(tall.Size!=new Vector2(48,192)||portrait.FitImage(new(256,64)).Size!=new Vector2(304,76))throw new Exception("Portrait aspect ratio changed");
             }
             NativeResizeChecks.Check(new(layout.Width,layout.Height),
                 layout.Texts.Select(t=>new NativeHuntRect(t.Position,t.Size))
