@@ -134,8 +134,8 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         var textNodes=new List<TextNode>();
         var presentation=content;
         if(content.PortraitIcon!=0){
-            // AutoFit can replace the cropped texture dimensions. Stretch only the selected region.
-            var image=new IconImageNode{WrapMode=KamiToolKit.Enums.WrapMode.Stretch,IsVisible=false};
+            // Draw the selected texture region at its native size before applying uniform node scaling.
+            var image=new IconImageNode{WrapMode=KamiToolKit.Enums.WrapMode.None,IsVisible=false};
             AddFixedNode(image);
             try{image.IconId=content.PortraitIcon;portrait=image;}
             catch(Exception e){Service.PluginLog.Debug(e,"Портрет следующей цели недоступен");presentation=content with {PortraitIcon=0};}
@@ -204,7 +204,9 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         image.TextureCoordinates=crop.Position;
         image.TextureSize=crop.Size;
         image.Position=fitted.Position;
-        image.Size=fitted.Size;
+        image.Size=crop.Size;
+        image.Origin=Vector2.Zero;
+        image.Scale=new Vector2(fitted.Size.X/crop.Size.X);
         if(portraitCaption is {} caption)
             caption.Position=TravelDialogLayout.PortraitCaptionPosition(bounds,fitted);
         float unusedHeight=TravelDialogLayout.UnusedPortraitHeight(bounds,fitted);
