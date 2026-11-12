@@ -209,13 +209,15 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     private NativeHuntRect ReadPortraitCrop(IconImageNode image,Vector2 texture) {
         var full=new NativeHuntRect(Vector2.Zero,texture);
         try {
-            string path=image.TexturePath;
-            if(string.IsNullOrEmpty(path))
-                path=Service.TextureProvider.GetIconPath(new Dalamud.Interface.Textures.GameIconLookup(content.PortraitIcon,itemHq:false,hiRes:false));
-            var file=Service.DataManager.GetFile<Lumina.Data.Files.TexFile>(path);
-            int width=(int)texture.X,height=(int)texture.Y;
-            if(file==null||file.Header.Width!=width||file.Header.Height!=height)return full;
-            return TravelDialogLayout.PortraitCrop(file.ImageData,width,height);
+            var file=string.IsNullOrEmpty(image.TexturePath)?null:
+                Service.DataManager.GetFile<Lumina.Data.Files.TexFile>(image.TexturePath);
+            if(file==null) {
+                var lookup=new Dalamud.Interface.Textures.GameIconLookup(content.PortraitIcon,itemHq:false,hiRes:true);
+                string path=Service.TextureProvider.GetIconPath(lookup);
+                file=Service.DataManager.GetFile<Lumina.Data.Files.TexFile>(path);
+            }
+            if(file==null)return full;
+            return TravelDialogLayout.PortraitCrop(file.ImageData,file.Header.Width,file.Header.Height,texture);
         } catch(Exception e) {
             Service.PluginLog.Debug(e,"Не удалось обрезать прозрачные поля портрета");
             return full;

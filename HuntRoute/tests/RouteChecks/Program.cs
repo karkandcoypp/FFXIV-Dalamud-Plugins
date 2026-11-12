@@ -357,9 +357,12 @@ float MeasureDialog(string text,float width,uint font) => text.Split('\n').Sum(l
 var portraitPixels=new byte[8*8*4];
 for(int y=3;y<=4;y++)
  for(int x=1;x<=6;x++)portraitPixels[(y*8+x)*4+3]=255;
+portraitPixels[3]=1; // Ignore near-transparent pixels at the texture edge.
 var croppedPortrait=TravelDialogLayout.PortraitCrop(portraitPixels,8,8);
 Check(croppedPortrait.Position==new Vector2(1,3)&&croppedPortrait.Size==new Vector2(6,2),"Portrait crop keeps the entire visible silhouette and removes transparent margins");
 Check(TravelDialogLayout.PortraitCrop(new byte[8*8*4],8,8).Size==new Vector2(8,8),"Empty texture uses the full portrait bounds");
+var scaledCrop=TravelDialogLayout.PortraitCrop(portraitPixels,8,8,new(16,16));
+Check(scaledCrop.Position==new Vector2(2,6)&&scaledCrop.Size==new Vector2(12,4),"Portrait crop follows the loaded icon resolution");
 var portraitArea=new NativeHuntRect(new(222,38),new(192,192));
 var fittedPortrait=portraitArea.FitImage(croppedPortrait.Size);
 Check(fittedPortrait.Size==new Vector2(192,64)

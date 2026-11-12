@@ -53,7 +53,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         int left=width,top=height,right=-1,bottom=-1;
         for(int y=0;y<height;y++) {
             for(int x=0;x<width;x++) {
-                if(pixels[(y*width+x)*4+3]==0)continue;
+                if(pixels[(y*width+x)*4+3]<16)continue;
                 left=Math.Min(left,x);
                 right=Math.Max(right,x);
                 top=Math.Min(top,y);
@@ -61,6 +61,17 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             }
         }
         return right<0?full:new(new(left,top),new(right-left+1,bottom-top+1));
+    }
+
+    internal static NativeHuntRect PortraitCrop(ReadOnlySpan<byte> pixels,int width,int height,Vector2 textureSize) {
+        if(width<=0||height<=0||MathF.Abs(textureSize.X*height-textureSize.Y*width)>Math.Max(width,height))
+            return new(Vector2.Zero,textureSize);
+        var crop=PortraitCrop(pixels,width,height);
+        var scale=textureSize/new Vector2(width,height);
+        var min=crop.Position*scale; var max=(crop.Position+crop.Size)*scale;
+        var start=new Vector2(MathF.Floor(min.X),MathF.Floor(min.Y));
+        var end=Vector2.Min(textureSize,new Vector2(MathF.Ceiling(max.X),MathF.Ceiling(max.Y)));
+        return new(start,end-start);
     }
 
     public static TravelDialogLayout Build(TravelDialogContent content,Func<string,float,uint,float> measure,Func<string,float>? measureButton=null,Func<string,float>? measureTitleWidth=null) {

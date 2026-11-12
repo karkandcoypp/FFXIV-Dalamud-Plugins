@@ -23,7 +23,35 @@ class Program {
   string home=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"XIVLauncher/addon/Hooks/dev");
   AssemblyLoadContext.Default.Resolving+=(_,n)=>File.Exists(Path.Combine(home,n.Name+".dll"))?AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(home,n.Name+".dll")):null;
   if(args is ["--offline"]){RunOffline();return;}
+  if(args is ["--scissorjaws",var sqpack]){CheckScissorjaws(sqpack);return;}
   Run(args);
+ }
+ private delegate NativeHuntRect CropTexture(ReadOnlySpan<byte> pixels,int width,int height,Vector2 textureSize);
+ static void CheckScissorjaws(string sqpack) {
+  using var game=new GameData(sqpack);
+  var target=game.Excel.GetSubrowSheet<MobHuntOrder>().SelectMany(group=>group)
+   .Where(order=>order.Target.RowId!=0).Select(order=>order.Target.Value)
+   .First(t=>string.Equals(t.Name.Value.Singular.ToString(),"scissorjaws",StringComparison.OrdinalIgnoreCase));
+  const BindingFlags flags=BindingFlags.Static|BindingFlags.NonPublic;
+  var crop=typeof(TravelDialogLayout).GetMethod("PortraitCrop",flags,null,
+   [typeof(ReadOnlySpan<byte>),typeof(int),typeof(int),typeof(Vector2)],null)!.CreateDelegate<CropTexture>();
+  var caption=typeof(TravelDialogLayout).GetMethod("PortraitCaptionPosition",flags)!
+   .CreateDelegate<Func<NativeHuntRect,NativeHuntRect,Vector2>>();
+  var bounds=new NativeHuntRect(new(120,96),new(192,192));
+  string icon=$"ui/icon/{target.Icon/1000*1000:D6}/{target.Icon:D6}";
+  int checkedTextures=0;
+  foreach(string suffix in new[]{".tex","_hr1.tex"}) {
+   if(game.GetFile<Lumina.Data.Files.TexFile>(icon+suffix) is not {} file)continue;
+   var texture=new Vector2(file.Header.Width,file.Header.Height);
+   var cropped=crop(file.ImageData,file.Header.Width,file.Header.Height,texture);
+   var fitted=bounds.FitImage(cropped.Size);
+   var label=caption(bounds,fitted);
+   if(cropped.Size.Y>=texture.Y||label.Y!=fitted.Position.Y+fitted.Size.Y+4||label.Y>=bounds.Position.Y+bounds.Size.Y)
+    throw new Exception($"Scissorjaws caption is not directly below the silhouette: {icon+suffix}");
+   Console.WriteLine($"PASS scissorjaws {icon+suffix}: texture {texture}, visible crop {cropped.Size}, caption gap 4");
+   checkedTextures++;
+  }
+  if(checkedTextures==0)throw new Exception("No scissorjaws portrait found");
  }
  static void RunOffline(){
   JourneyRuntimeChecks.RunOffline();
