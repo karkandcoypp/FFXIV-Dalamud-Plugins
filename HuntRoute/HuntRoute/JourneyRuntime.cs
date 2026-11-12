@@ -40,6 +40,8 @@ public sealed partial class Plugin {
  private long nextStateSave,contractRevision,contractAt;
  private PendingJourney? pendingJourney;
  private MarkerStamp? ownedMarker;
+ private byte? ownedMarkerBill;
+ internal System.Action? MarkerClearer {get;set;}
  private ulong? ordinaryActor;
  private Vector2? ordinaryPosition;
  private EliteProgress? restoreSearch;
@@ -277,11 +279,11 @@ public sealed partial class Plugin {
  }
  private unsafe MarkerStamp? ReadFlag(){if(MarkerReader!=null)return MarkerReader();var map=AgentMap.Instance();if(map==null||map->FlagMarkerCount==0)return null;var flag=map->FlagMapMarkers[0];return new(flag.TerritoryId,flag.MapId,flag.XFloat,flag.YFloat);}
  private void CheckMarker(){if(ownedMarker is {} expected && Flow.CanNavigate&&pendingJourney==null&&!expected.Matches(ReadFlag())){Flow.Pauses|=PauseReason.Marker;Search.Suspend();Flow.Status="Игровая метка изменена. Нажмите «Вернуть сопровождение».";NativeDialogs.Cancel("next");NativeDialogs.Cancel("shortcut");NativeDialogs.Cancel("travel");}}
- private bool PlaceFlag(uint territory,uint map,Vector2 world){
+ private bool PlaceFlag(uint territory,uint map,Vector2 world,byte? bill=null){
   if(Flow.Active && Flow.Pauses!=PauseReason.None && !Flow.Pauses.HasFlag(PauseReason.Board))return false;
   var row=Service.DataManager.GetExcelSheet<Map>().GetRow(map);if(row.TerritoryType.RowId!=territory||!float.IsFinite(world.X)||!float.IsFinite(world.Y))return false;
   var expected=new MarkerStamp(territory,map,world.X,world.Y);
-  for(int i=0;i<3;i++)if((MarkerWriter?.Invoke(expected)??Location.SetWorldFlag(territory,map,world))&&expected.Matches(ReadFlag())){ownedMarker=expected;return true;}
+  for(int i=0;i<3;i++)if((MarkerWriter?.Invoke(expected)??Location.SetWorldFlag(territory,map,world))&&expected.Matches(ReadFlag())){ownedMarker=expected;ownedMarkerBill=bill;return true;}
   Flow.Pauses|=PauseReason.FlagError;Flow.Status="Не удалось поставить метку. Нажмите «Продолжить».";return false;
  }
  internal void ReleaseLostTarget(){
@@ -290,7 +292,7 @@ public sealed partial class Plugin {
   var actors=Service.ObjectTable.OfType<IBattleNpc>().Where(n=>n.NameId==target.MobHuntId).Select(n=>new EliteActor(n.GameObjectId,new(n.Position.X,n.Position.Z),n.IsDead)).ToArray();
   var point=Search.Observe(new(player.Position.X,player.Position.Z),actors,true,Now,Done(target),contractRevision,contractAt);
   if(Search.ReleaseLost()){Session.RetryMarker();if(Flow.CanNavigate)AdvanceRoute();}
-  else if(point is {} actual&&Flow.CanNavigate)PlaceFlag(target.TerritoryType,target.MapId,actual);
+  else if(point is {} actual&&Flow.CanNavigate)PlaceFlag(target.TerritoryType,target.MapId,actual,target.BillNumber);
  }
  internal void ShowMap(MobHuntEntry m){
   if(!Ready)return;try{
@@ -303,7 +305,7 @@ public sealed partial class Plugin {
   if(pos==null){NoticeText="Для цели нет координат.";return;}
   if(!Service.GameGui.OpenMapWithMapLink(MapCoordinates.CreateLink(m.TerritoryType,map,pos.Value))){NoticeText="Карту этой цели открыть не удалось.";return;}
   if(Flow.Active && !current){Flow.Pauses|=PauseReason.Marker;Flow.Status="Просмотр другой цели. Верните сопровождение для смены меток.";}
-  if(!Flow.Pauses.HasFlag(PauseReason.Marker)){var world=MapCoordinates.ToWorld(pos.Value,map);ownedMarker=new(m.TerritoryType,m.MapId,world.X,world.Y);}
+  if(!Flow.Pauses.HasFlag(PauseReason.Marker)){var world=MapCoordinates.ToWorld(pos.Value,map);ownedMarker=new(m.TerritoryType,m.MapId,world.X,world.Y);ownedMarkerBill=m.BillNumber;}
   }catch(Exception e){NoticeText="Карту этой цели открыть не удалось: "+e.Message;}
  }
  private void RefreshLive(){
@@ -327,7 +329,7 @@ public sealed partial class Plugin {
   bool changed=ordinaryActor!=ordinary.GameObjectId||ordinaryKind!=JourneyFlow.Key(target)
    ||ownedMarker is not {} flag||flag.Territory!=target.TerritoryType||flag.Map!=target.MapId||Vector2.Distance(new(flag.X,flag.Y),position)>=2;
   ordinaryActor=ordinary.GameObjectId;ordinaryKind=JourneyFlow.Key(target);ordinaryPosition=position;
-  if(changed)PlaceFlag(target.TerritoryType,target.MapId,position);
+  if(changed)PlaceFlag(target.TerritoryType,target.MapId,position,target.BillNumber);
   return true;
  }
  private void Ping(string text,bool sound=false,MobHuntEntry? target=null){NoticeText=text;if(target!=null)noticeTarget=SearchIdentity(target);if(sound)PlayHuntSound();}
@@ -348,6 +350,14 @@ public sealed partial class Plugin {
   return ids.Any(i=>!unreadBills.Contains(i)&&BillStates.TryGetValue(i,out var state)&&state.Unlocked&&state.AvailableId>0&&!state.Taken
    &&(!state.CompletedCurrentSet||RepeatedSetAvailable(i,weekly,now,state))&&!History.IsComplete(character,i,weekly,now,state.AvailableId));
  }
+ private unsafe void ClearCompletedMarker(){
+  var marker=ownedMarker;
+  ownedMarker=null;
+  ownedMarkerBill=null;
+  if(marker is not {} expected||!expected.Matches(ReadFlag()))return;
+  if(MarkerClearer is {} clear)clear();
+  else if(AgentMap.Instance()!=null)AgentMap.Instance()->FlagMarkerCount=0;
+ }
  private void CheckExpansionCompletionNotices(System.Action playSound){
   if(!Ready||completionLoadPending)return;
   List<Board>? completed=null;
@@ -357,7 +367,10 @@ public sealed partial class Plugin {
    if(!reliable||!expansionCompletionNotice.Observe(board.Name,CollectionProgress(board,false),CollectionProgress(board,true),reliable))continue;
    (completed??=[]).Add(board);
   }
-  if(completed==null||!Settings.ResetNotifications)return;
+  if(completed==null)return;
+  if(ownedMarkerBill is {} bill&&completed.Any(board=>board.Weekly==bill||board.Daily.Contains(bill)))
+   ClearCompletedMarker();
+  if(!Settings.ResetNotifications)return;
   const ushort completedGreen=45, availableYellow=31;
   var message=new SeStringBuilder().AddText("[Hunt Route] ");
   bool first=true;

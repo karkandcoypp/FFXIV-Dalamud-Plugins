@@ -372,7 +372,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         bool detected=DetectorNavigation();
         if(!detected && mark!=null && !mark.IsEliteMark && Session.Target==mark && Location.Database.TryGetValue(mark.MobHuntId,out var p)) {
             var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(mark.MapId);
-            if(!PlaceFlag(mark.TerritoryType,mark.MapId,MapCoordinates.ToWorld(p.Coordinate,map)))Session.RetryMarker();
+            if(!PlaceFlag(mark.TerritoryType,mark.MapId,MapCoordinates.ToWorld(p.Coordinate,map),mark.BillNumber))Session.RetryMarker();
         }
         UpdateEliteSearch();NextZone.Sync();Shortcut.Sync();
         if(Flow.Active && Session.Phase==RoutePhase.Finished){Flow.Active=false;Flow.Status="Доступный маршрут завершён. Отложенные цели показаны отдельно.";SaveJourney(true);}
@@ -400,7 +400,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         var point=Search.Observe(new Vector2(player.Position.X,player.Position.Z),actors,Service.Condition[ConditionFlag.InCombat] || player.IsCasting,Now,Done(target),contractRevision,contractAt,!unreadBills.Contains(target.BillNumber),NavigationAllowed);
         if(previous!=Search.ActorId && Search.ActorId!=null && Flow.Active)Ping("Элита обнаружена: "+target.Name,target:target);
         if(Search.Round>=4 && Flow.LongNotified.Add(JourneyFlow.Key(target)))Ping("Три круга без цели: "+target.Name+". Поиск продолжается.",target:target);
-        if(point is {} position && !PlaceFlag(target.TerritoryType,target.MapId,position))Search.Retry();
+        if(point is {} position && !PlaceFlag(target.TerritoryType,target.MapId,position,target.BillNumber))Search.Retry();
     }
 
     private unsafe bool FlightKnown()=>FlightCapability?.Invoke() ?? (Service.Condition[ConditionFlag.InFlight] || FFXIVClientStructs.FFXIV.Client.Game.Control.Control.CanFly);

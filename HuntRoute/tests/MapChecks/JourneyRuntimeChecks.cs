@@ -14,7 +14,7 @@ static class JourneyRuntimeChecks {
  static void Set(object target,string name,object? value){var type=target.GetType();var f=type.GetField(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);if(f!=null)f.SetValue(target,value);else type.GetProperty(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)!.SetValue(target,value);}
  static T Get<T>(object target,string name){var type=target.GetType();var f=type.GetField(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);return (T)(f!=null?f.GetValue(target):type.GetProperty(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)!.GetValue(target))!;}
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> call)where T:class{var proxy=DispatchProxy.Create<T,ServiceProxy>();((ServiceProxy)(object)proxy).Handler=call;return proxy;}
- static void CheckCompletionChat(){
+ static void CheckCompletionChat(bool manual=false,bool otherExpansion=false){
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
   var tracker=typeof(Plugin).Assembly.GetType("HuntRoute.ExpansionCompletionNotice")!;
   Set(plugin,"expansionCompletionNotice",Activator.CreateInstance(tracker));
@@ -34,6 +34,13 @@ static class JourneyRuntimeChecks {
   states[21]=new(true,false,0,1,false);
   states[6]=taken; // Stormblood already taken.
   var printed=new List<SeString>();
+  var owned=new MarkerStamp(10,20,100,200);
+  MarkerStamp? current=manual?new MarkerStamp(10,20,300,400):owned;
+  int cleared=0;
+  Set(plugin,"ownedMarker",owned);
+  Set(plugin,"ownedMarkerBill",otherExpansion?(byte)14:(byte)1);
+  Set(plugin,"MarkerReader",(Func<MarkerStamp?>)(()=>current));
+  Set(plugin,"MarkerClearer",(System.Action)(()=>{cleared++;current=null;}));
   int sounds=0;
   System.Action playSound=()=>sounds++;
   var previous=Service.Chat;
@@ -51,6 +58,8 @@ static class JourneyRuntimeChecks {
    Call(plugin,"CheckExpansionCompletionNotices",playSound);
    Call(plugin,"CheckExpansionCompletionNotices",playSound);
    if(printed.Count!=1||sounds!=1)throw new Exception("Completion must print one chat message and play one sound");
+   if(cleared!=(manual||otherExpansion?0:1)||((current==null)!=(!manual&&!otherExpansion)))
+    throw new Exception("Completion must clear only its own map flag");
    var text=printed[0];
    if(text.Payloads.OfType<NewLinePayload>().Count()!=3 ||
       text.TextValue.Replace("\r\n","\n")!="[Hunt Route] Heavensward — выполнено\nShadowbringers — можно взять: элитный\nEndwalker — можно взять: обычные\nDawntrail — можно взять: обычные и элитный")
@@ -62,6 +71,8 @@ static class JourneyRuntimeChecks {
  }
  public static void RunOffline(){
   CheckCompletionChat();
+  CheckCompletionChat(manual:true);
+  CheckCompletionChat(otherExpansion:true);
   static void Check(bool yes,string message){if(!yes)throw new Exception(message);}
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
   var priorList=Service.Aetherytes;
