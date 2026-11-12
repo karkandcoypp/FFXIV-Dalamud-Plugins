@@ -175,7 +175,7 @@ public sealed partial class Plugin {
   return Location.Database.TryGetValue(m.MobHuntId,out var anchor)?[MapCoordinates.ToWorld(anchor.Coordinate,map)]:[];
  }
  internal void SetMini(bool enabled){Settings.Mini=enabled;if(miniWindow!=null)miniWindow.IsOpen=enabled;SaveJourney(true);}
- internal void NextOffered(){if(Flow.Active)Ping("Доступна следующая зона.",Settings.NextZoneSound);}
+ internal void NextOffered(){if(Flow.Active&&Settings.NextZoneSound)PlayHuntSound();}
  internal MobHuntEntry? BestTarget()=>Routes.SelectMany(r=>r.Mobs).Where(Eligible).OrderBy(m=>m.TerritoryType==CurrentTerritory?0:1).FirstOrDefault();
  internal void Track(MobHuntEntry m){
   if(!Ready||Done(m)||Flow.Excluded(m))return;

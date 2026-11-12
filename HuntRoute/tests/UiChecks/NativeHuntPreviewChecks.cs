@@ -52,8 +52,7 @@ internal static class NativeHuntPreviewChecks {
    if(arrived.Summary!=clean.Summary||!arrived.Buttons.SequenceEqual(clean.Buttons))
     throw new Exception("The old zone notice must not change the current target summary or layout after arrival");
    controller.Navigate(NativeHuntPage.Actions);
-   controller.Execute(controller.Build().Buttons.Single(b=>b.Key=="message").Action);
-   if(controller.Build().Summary!="Доступна следующая зона.")
+   if(!controller.Build().Summary.Contains("Доступна следующая зона.")||controller.Build().Buttons.Any(b=>b.Key=="message"))
     throw new Exception("The route notice must be readable from Route actions");
    var manes=new MobHuntEntry{Name="Manes",IsEliteMark=true,BillNumber=19,NeededKills=1};
    var counts=(Dictionary<(byte,byte),int>)typeof(Plugin).GetField("KillCounts",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(plugin)!;
@@ -62,8 +61,7 @@ internal static class NativeHuntPreviewChecks {
     session.Retarget(manes);
     ping.Invoke(plugin,["Элита обнаружена: Manes",false,manes]);
     controller.Navigate(NativeHuntPage.Actions);
-    controller.Execute(controller.Build().Buttons.Single(b=>b.Key=="message").Action);
-    if(!controller.Build().Summary.Contains("Manes"))throw new Exception("Current elite notice missing");
+     if(!controller.Build().Summary.Contains("Manes"))throw new Exception("Current elite notice missing");
     counts[(19,0)]=1;
     if(controller.Build().Summary.Contains("Manes"))throw new Exception("Credited elite notice is still visible");
     counts.Remove((19,0));
@@ -73,7 +71,7 @@ internal static class NativeHuntPreviewChecks {
     if(controller.Build().Summary.Contains("Manes"))throw new Exception("Old elite notice is visible under a new target");
     flow.Active=false;
     var stopped=controller.Build();
-    if(stopped.Elite||stopped.Progress!=null||stopped.Icon!=0)throw new Exception("Stopped route shows old target data");
+    if(stopped.Elite||stopped.Progress!=null||stopped.Icon!=0||stopped.Buttons.Any(b=>b.Key=="message"))throw new Exception("Stopped route shows old target data");
    }finally{counts.Remove((19,0));flow.Active=true;session.Retarget(current);}
    Console.WriteLine("PASS credited elite notice expires before the next contract");
    Console.WriteLine("PASS after-arrival summary stays compact and route notice remains accessible");

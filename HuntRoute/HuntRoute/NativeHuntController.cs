@@ -12,11 +12,11 @@ public sealed class NativeHuntController {
  public bool OnlyNewBoards {get;private set;}
  private string? selected;
  private string? feedback;
- private bool showRouteMessage,hideCompleted;
+ private bool hideCompleted;
  private string expansion="",zone="";
  private string numberKey="ordinary-distance";
  public NativeHuntController(Plugin plugin)=>this.plugin=plugin;
- public void Navigate(NativeHuntPage page){Page=page;Offset=0;OnlyNewBoards=false;showRouteMessage=false;}
+ public void Navigate(NativeHuntPage page){Page=page;Offset=0;OnlyNewBoards=false;}
  public void Boards(bool onlyNew){Navigate(NativeHuntPage.Boards);OnlyNewBoards=onlyNew;}
  public void FocusGoal(){selected=plugin.Session.Target is {} m?JourneyFlow.Key(m):null;Navigate(NativeHuntPage.Target);}
  public void Turn(int delta,int count)=>Offset=NativeHuntNavigation.ClampPage(Offset+delta,count);
@@ -47,7 +47,7 @@ public sealed class NativeHuntController {
    int count=plugin.Mobs.Count(m=>Plugin.AllTiers.Contains(m.BillNumber)&&!plugin.Done(m));summary=count>0?$"Осталось целей: {count}":"Нет незавершённых целей.";
    if(remaining)buttons.Add(Button("primary","Начать охоту","resume"));
   }
-  if(!mini){buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));if(!plugin.Flow.Active&&plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));}
+  if(!mini)buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));
   return new(title,summary,buttons,target?.Icon??0,target==null?null:new(plugin.Kills(target),target.NeededKills),summaryColor,Elite:target?.IsEliteMark==true&&plugin.Flow.Active);
  }
  private string MiniStatus(){
@@ -161,9 +161,9 @@ public sealed class NativeHuntController {
   buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));string status=plugin.Flow.Active&&plugin.Flow.Pauses==PauseReason.None
    ?plugin.Session.Phase switch {RoutePhase.AwaitingTravel or RoutePhase.NextZone=>"Ожидается подтверждение перехода",RoutePhase.WaitingForZone=>"Ожидается прибытие",_=>"Сопровождение активно"}
    :plugin.Flow.Status;
-  var routeMessage=showRouteMessage?plugin.NoticeText:null;
-  if(routeMessage==null&&plugin.NoticeText!=null)buttons.Add(Button("message","Сообщение охоты","message"));
-  return new("Действия маршрута",routeMessage??status,buttons);
+  var notice=plugin.Flow.Active?plugin.NoticeText:null;
+  if(!string.IsNullOrEmpty(notice)&&notice!=status)status=string.IsNullOrEmpty(status)?notice:status+"\n"+notice;
+  return new("Действия маршрута",status,buttons);
  }
  public void Execute(NativeHuntAction action){
   var goal=plugin.Mobs.FirstOrDefault(m=>JourneyFlow.Key(m)==action.Argument);
@@ -185,7 +185,7 @@ public sealed class NativeHuntController {
    case "toggle":Toggle(action.Argument);break;case "step":Step(action.Argument,action.Delta);break;
    case "edit-number":if(!plugin.PersistenceBlocked&&NumberValue(action.Argument).Value.Length>0){numberKey=action.Argument;Navigate(NativeHuntPage.Number);}break;
    case "refresh":plugin.Refresh();break;case "retry-save":plugin.RetryPersistence();feedback=plugin.NoticeText;break;
-   case "export":plugin.Export();feedback=plugin.NoticeText;break;case "message":Navigate(NativeHuntPage.Actions);showRouteMessage=true;break;
+   case "export":plugin.Export();feedback=plugin.NoticeText;break;
    case "classic":plugin.OpenClassic();break;
   }
  }
