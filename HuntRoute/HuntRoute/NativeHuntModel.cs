@@ -253,9 +253,10 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     float cellWidth=Math.Max(144,visible.Max(item=>measureButton==null?Button(item.Label):MathF.Ceiling(measureButton(item.Label))+16));
     int count=2*cellWidth+Gap<=inner?Math.Min(2,visible.Length-i):1;
     cellWidth=Math.Min(cellWidth,inner);
+    float rowX=(width-count*cellWidth-(count-1)*Gap)/2;
     rows++;
     for(int column=0;column<count;column++)
-     Set(i+column+3,rows,column,visible[i+column],controlX+column*(cellWidth+Gap),bottom,cellWidth,ActionHeight);
+     Set(i+column+3,rows,column,visible[i+column],rowX+column*(cellWidth+Gap),bottom,cellWidth,ActionHeight);
     i+=count-1;
     bottom+=ActionHeight+Gap;
     continue;
@@ -287,9 +288,10 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   bool pager=!mini&&pageCount>1;
   float pagerWidth=Math.Max(Button("Пред."),Button("Далее"));
   bool compactPager=pager&&view==NativeHuntPage.Targets;
-  float pageLabelX=compactPager?Margin+pagerWidth+Gap:controlX+(controlWidth-74)/2;
+  float pagerX=view==NativeHuntPage.Advanced?(width-controlWidth)/2:controlX;
+  float pageLabelX=compactPager?Margin+pagerWidth+Gap:pagerX+(controlWidth-74)/2;
   int pagerRow=compactPager?rows+1:7;
-  if(pager){Set(9,pagerRow,0,new("previous","Пред.",new("previous",Delta:-1),page>0),controlX,bottom,pagerWidth,ActionHeight);Set(10,pagerRow,compactPager?2:1,new("next-page","Далее",new("next-page",Delta:1),page+1<pageCount),compactPager?pageLabelX+74+Gap:controlX+controlWidth-pagerWidth,bottom,pagerWidth,ActionHeight);}
+  if(pager){Set(9,pagerRow,0,new("previous","Пред.",new("previous",Delta:-1),page>0),pagerX,bottom,pagerWidth,ActionHeight);Set(10,pagerRow,compactPager?2:1,new("next-page","Далее",new("next-page",Delta:1),page+1<pageCount),compactPager?pageLabelX+74+Gap:pagerX+controlWidth-pagerWidth,bottom,pagerWidth,ActionHeight);}
   float footer=bottom+(pager&&!compactPager?ActionHeight+12:0);
   var back=view switch {NativeHuntPage.Number=>NativeHuntPage.Advanced,NativeHuntPage.Advanced=>NativeHuntPage.Settings,NativeHuntPage.Target or NativeHuntPage.Filters=>NativeHuntPage.Targets,NativeHuntPage.Expansions or NativeHuntPage.Zones=>NativeHuntPage.Filters,_=>NativeHuntPage.Hunt};
   if(settingsList)Set(11,8,0,Page("advanced","Параметры",NativeHuntPage.Advanced),controlX,footer,Button("Параметры"),FooterHeight);

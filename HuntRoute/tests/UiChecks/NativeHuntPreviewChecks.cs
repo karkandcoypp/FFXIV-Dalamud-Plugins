@@ -170,6 +170,14 @@ internal static class NativeHuntPreviewChecks {
     if(body.Length!=expected||body.GroupBy(b=>b.Row).Count()!=expected/2||
        body.GroupBy(b=>b.Row).Any(row=>row.Count()!=2)||body.Select(b=>b.Rect.Size.X).Distinct().Count()!=1)
      throw new Exception("Advanced settings must use aligned pairs of equal-width buttons");
+    void CheckCentered(NativeHuntRect left,NativeHuntRect right){
+     if(Math.Abs(left.Position.X-(layout.Size.X-right.Position.X-right.Size.X))>.01f)
+      throw new Exception("Advanced settings rows must have equal side margins");
+    }
+    foreach(var row in body.GroupBy(b=>b.Row))
+     CheckCentered(row.First().Rect,row.Last().Rect);
+    CheckCentered(layout.Buttons.Single(b=>b.Button.Key=="previous").Rect,layout.Buttons.Single(b=>b.Button.Key=="next-page").Rect);
+    CheckCentered(layout.PageLabel,layout.PageLabel);
    }
    if(sample.Name=="Hunt-empty"&&layout.Buttons.Count(b=>b.Button.Action is {Kind:"page",Argument:"Boards"})!=1)
     throw new Exception("Empty hunt must have one entry to Boards");
