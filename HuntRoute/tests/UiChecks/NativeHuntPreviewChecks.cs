@@ -174,10 +174,20 @@ internal static class NativeHuntPreviewChecks {
      if(Math.Abs(left.Position.X-(layout.Size.X-right.Position.X-right.Size.X))>.01f)
       throw new Exception("Advanced settings rows must have equal side margins");
     }
+    void CheckEdges(NativeHuntRect left,NativeHuntRect right){
+     CheckCentered(left,right);
+     if(Math.Abs(left.Position.X-layout.Heading.Position.X)>.01f)
+      throw new Exception("Advanced settings rows must share the content edges");
+    }
+    var tabs=layout.Buttons.Where(b=>b.Row==0).OrderBy(b=>b.Column).ToArray();
+    CheckEdges(tabs[0].Rect,tabs[^1].Rect);
     foreach(var row in body.GroupBy(b=>b.Row))
-     CheckCentered(row.First().Rect,row.Last().Rect);
-    CheckCentered(layout.Buttons.Single(b=>b.Button.Key=="previous").Rect,layout.Buttons.Single(b=>b.Button.Key=="next-page").Rect);
+     CheckEdges(row.First().Rect,row.Last().Rect);
+    CheckEdges(layout.Buttons.Single(b=>b.Button.Key=="previous").Rect,layout.Buttons.Single(b=>b.Button.Key=="next-page").Rect);
     CheckCentered(layout.PageLabel,layout.PageLabel);
+    var close=layout.Buttons.Single(b=>b.Button.Key=="close").Rect;
+    if(Math.Abs(layout.PageLabel.Position.Y+layout.PageLabel.Size.Y/2-close.Position.Y-close.Size.Y/2)>.01f)
+     throw new Exception("Advanced page number must align with the footer");
    }
    if(sample.Name=="Hunt-empty"&&layout.Buttons.Count(b=>b.Button.Action is {Kind:"page",Argument:"Boards"})!=1)
     throw new Exception("Empty hunt must have one entry to Boards");

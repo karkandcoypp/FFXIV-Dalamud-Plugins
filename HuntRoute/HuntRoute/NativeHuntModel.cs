@@ -130,7 +130,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
    filterInHeader=targetFilter!=null&&fitsExtra;
    if(!fitsExtra)tabWidths=tabLabels.Select(Button).ToArray();
    float tabWidth=tabWidths.Max();
-   if(!fitsExtra||3*tabWidth+extraWidth+3*Gap<=inner)Array.Fill(tabWidths,tabWidth);
+   if(view==NativeHuntPage.Advanced)Array.Fill(tabWidths,(inner-2*Gap)/3);
+   else if(!fitsExtra||3*tabWidth+extraWidth+3*Gap<=inner)Array.Fill(tabWidths,tabWidth);
    float tabsSpan=tabWidths.Sum()+2*Gap;
    float headerSpan=tabsSpan+(fitsExtra?Gap+extraWidth:0);
    float tabX=(width-headerSpan)/2;
@@ -252,7 +253,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
    if(view==NativeHuntPage.Advanced){
     float cellWidth=Math.Max(144,visible.Max(item=>measureButton==null?Button(item.Label):MathF.Ceiling(measureButton(item.Label))+16));
     int count=2*cellWidth+Gap<=inner?Math.Min(2,visible.Length-i):1;
-    cellWidth=Math.Min(cellWidth,inner);
+    cellWidth=count==2?(inner-Gap)/2:inner;
     float rowX=(width-count*cellWidth-(count-1)*Gap)/2;
     rows++;
     for(int column=0;column<count;column++)
@@ -288,10 +289,11 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   bool pager=!mini&&pageCount>1;
   float pagerWidth=Math.Max(Button("Пред."),Button("Далее"));
   bool compactPager=pager&&view==NativeHuntPage.Targets;
-  float pagerX=view==NativeHuntPage.Advanced?(width-controlWidth)/2:controlX;
-  float pageLabelX=compactPager?Margin+pagerWidth+Gap:pagerX+(controlWidth-74)/2;
+  bool advancedPager=view==NativeHuntPage.Advanced;
+  float pagerSpan=advancedPager?inner:controlWidth;
+  float pageLabelX=compactPager?Margin+pagerWidth+Gap:controlX+(pagerSpan-74)/2;
   int pagerRow=compactPager?rows+1:7;
-  if(pager){Set(9,pagerRow,0,new("previous","Пред.",new("previous",Delta:-1),page>0),pagerX,bottom,pagerWidth,ActionHeight);Set(10,pagerRow,compactPager?2:1,new("next-page","Далее",new("next-page",Delta:1),page+1<pageCount),compactPager?pageLabelX+74+Gap:pagerX+controlWidth-pagerWidth,bottom,pagerWidth,ActionHeight);}
+  if(pager){Set(9,pagerRow,0,new("previous","Пред.",new("previous",Delta:-1),page>0),controlX,bottom,pagerWidth,ActionHeight);Set(10,pagerRow,compactPager?2:1,new("next-page","Далее",new("next-page",Delta:1),page+1<pageCount),compactPager?pageLabelX+74+Gap:controlX+pagerSpan-pagerWidth,bottom,pagerWidth,ActionHeight);}
   float footer=bottom+(pager&&!compactPager?ActionHeight+12:0);
   var back=view switch {NativeHuntPage.Number=>NativeHuntPage.Advanced,NativeHuntPage.Advanced=>NativeHuntPage.Settings,NativeHuntPage.Target or NativeHuntPage.Filters=>NativeHuntPage.Targets,NativeHuntPage.Expansions or NativeHuntPage.Zones=>NativeHuntPage.Filters,_=>NativeHuntPage.Hunt};
   if(settingsList)Set(11,8,0,Page("advanced","Параметры",NativeHuntPage.Advanced),controlX,footer,Button("Параметры"),FooterHeight);
@@ -303,7 +305,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
   return new(new(width,footer+(mini?4:huntActions?FooterBottomInset-Gap:(compactPager?ActionHeight:FooterHeight)+FooterBottomInset)),new(new(Margin,titleY),new(screen.Elite?titleEnd:headingWidth,titleHeight)),
    new(new(Margin,summaryY),new(textWidth,summaryHeight)),new(new(width-Margin-PortraitSize,titleY),new(PortraitSize,PortraitSize)),
    new(new(Margin,progressY),new(textWidth,18)),new(new(Margin,progressY+19),new(textWidth,mini?0:5)),
-   new(new(pageLabelX,bottom+6),new(74,22)),
+   new(new(pageLabelX,advancedPager?footer+(FooterHeight-22)/2:bottom+6),new(74,22)),
    pager?$"Стр. {page+1} / {pageCount}":"",buttons,tableText,eliteBadge);
  }
 }
