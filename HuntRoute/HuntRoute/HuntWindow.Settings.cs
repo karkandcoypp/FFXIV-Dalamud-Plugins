@@ -19,6 +19,8 @@ public sealed partial class HuntWindow {
   }
   if(ImGui.CollapsingHeader("Телепорты внутри зоны")){
    dirty|=ImGui.Checkbox("Предлагать сокращение пути",ref shortcuts);
+   bool navmesh=s.ShortcutNavmesh;
+   if(ImGui.Checkbox("Учитывать обходы через vnavmesh",ref navmesh)){s.ShortcutNavmesh=navmesh;dirty=true;}
    ImGui.BeginDisabled(!shortcuts);
    GilDisplay.Draw("Лимит стоимости","Лимит гил");
    HuntTheme.Hint("0 — только бесплатные телепорты.");

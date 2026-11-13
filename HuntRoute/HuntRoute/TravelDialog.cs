@@ -33,7 +33,8 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
     public static TravelDialogContent Shortcut(ShortcutOffer offer,string target,string? zone=null) => new(
         "","Сократить перелёт?","",string.IsNullOrWhiteSpace(zone)?$"{offer.Name} → {target}":$"{zone} · {offer.Name} → {target}",
         "","","","","",[],
-        CenterNoticeText:true,Summary:$"(на ~{offer.SavedSeconds:F0} с быстрее)",Fare:offer.GilCost);
+        CenterNoticeText:true,Summary:$"(на ~{offer.SavedSeconds:F0} с быстрее)",Fare:offer.GilCost)
+        {Footer=offer.UsesNavmesh?"Расчёт по vnavmesh":"Оценка по прямой"};
     public static TravelDialogContent Plain(string text) => Notice(string.IsNullOrWhiteSpace(text)?"Продолжить?":text,"Продолжить");
 }
 public sealed record DialogText(string Text,Vector2 Position,Vector2 Size,uint Font,Vector4 Color,bool Centered=false);
@@ -182,7 +183,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             }
             y+=rowHeight+4;
         }
-        if(!string.IsNullOrEmpty(content.Footer)) y+=Text(content.Footer,left,y,inner,NativeHuntLayout.SecondaryFont,Muted)+4;
+        if(!string.IsNullOrEmpty(content.Footer)) y+=Text(content.Footer,left,y,inner,NativeHuntLayout.SecondaryFont,Muted,centerNotice)+4;
         if(content.Fare.HasValue)y+=Text(content.FareLabel,left,y,inner,content.FareFont,Mint,centered:true);
         const float buttonHeight=NativeHuntLayout.ActionHeight;
         float confirmWidth=Math.Max(NativeHuntLayout.ButtonWidth(content.ConfirmLabel),measureButton==null?0:MathF.Ceiling(measureButton(content.ConfirmLabel))+16);

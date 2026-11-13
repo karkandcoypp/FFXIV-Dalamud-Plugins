@@ -175,9 +175,10 @@ internal static class NativeHuntPreviewChecks {
        !sample.Screen.Buttons.Single(b=>b.Key=="number:gil").Label.EndsWith(" гил",StringComparison.Ordinal)))
      throw new Exception("Hunt parameters must show the gil limit explicitly without a redundant summary");
     var body=layout.Buttons.Where(b=>b.Slot is >=3 and <=8).ToArray();
-    int expected=sample.Offset==0?6:4;
-    if(body.Length!=expected||body.GroupBy(b=>b.Row).Count()!=expected/2||
-       body.GroupBy(b=>b.Row).Any(row=>row.Count()!=2)||body.Select(b=>b.Rect.Size.X).Distinct().Count()!=1)
+    int expected=sample.Offset==0?6:5;
+    if(body.Length!=expected||body.GroupBy(b=>b.Row).Count()!=(expected+1)/2||
+       body.GroupBy(b=>b.Row).Take(2).Any(row=>row.Count()!=2)||
+       body.GroupBy(b=>b.Row).Any(row=>row.Select(b=>b.Rect.Size.X).Distinct().Count()!=1))
      throw new Exception("Advanced settings must use aligned pairs of equal-width buttons");
     void CheckCentered(NativeHuntRect left,NativeHuntRect right){
      if(Math.Abs(left.Position.X-(layout.Size.X-right.Position.X-right.Size.X))>.01f)

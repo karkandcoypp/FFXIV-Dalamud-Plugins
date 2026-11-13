@@ -8,28 +8,36 @@ public readonly record struct ShortcutCandidate(uint Id,string Name,Vector2 Posi
 public sealed record ShortcutOffer(uint RunId,byte Bill,byte Mob,uint TargetId,uint Territory,uint Aetheryte,string Name,uint GilCost,float DirectDistance,float FinalDistance,float DirectSeconds,float TeleportSeconds) {
     public byte OrderId {get;init;}
     public uint Generation {get;init;}
+    public bool UsesNavmesh {get;init;}
     public string ContractKey=>$"{Bill}:{OrderId}:{Generation}:{Mob}:{TargetId}";
     public float SavedSeconds => DirectSeconds-TeleportSeconds;
 }
 public static class ShortcutAdvisor {
-    // Estimates use horizontal flight distance; terrain and altitude are not available here.
     public const float FlightSpeed=20,MinimumFlightSeconds=30,MinimumSavedSeconds=10,MinimumSavedFraction=.20f;
     public const uint MaximumCost=200;
     public static bool MatchesQuote(ShortcutOffer offered,ShortcutOffer current) =>
         current.RunId==offered.RunId && current.ContractKey==offered.ContractKey && current.Territory==offered.Territory
         && current.Aetheryte==offered.Aetheryte && current.GilCost<=offered.GilCost;
-    public static ShortcutOffer? Evaluate(uint run,MobHuntEntry target,Vector2 player,Vector2 destination,IEnumerable<ShortcutCandidate> entries,float teleportOverheadSeconds=18,uint maximumCost=MaximumCost,float minimumSeconds=MinimumSavedSeconds,float minimumFraction=MinimumSavedFraction) {
-        float direct=Vector2.Distance(player,destination);
+    public static float? PathLength(Vector3 from,Vector3 to,IReadOnlyList<Vector3> path) {
+        if(path.Count==0||Vector3.Distance(path[^1],to)>5)return null;
+        float length=0;
+        foreach(var point in path){length+=Vector3.Distance(from,point);from=point;}
+        length+=Vector3.Distance(from,to);
+        return float.IsFinite(length)?length:null;
+    }
+    public static ShortcutOffer? Evaluate(uint run,MobHuntEntry target,Vector2 player,Vector2 destination,IEnumerable<ShortcutCandidate> entries,float teleportOverheadSeconds=18,uint maximumCost=MaximumCost,float minimumSeconds=MinimumSavedSeconds,float minimumFraction=MinimumSavedFraction,float? routeDistance=null,IReadOnlyDictionary<uint,float>? routeFromAetherytes=null) {
+        bool navmesh=routeDistance.HasValue&&routeFromAetherytes!=null;
+        float direct=navmesh?routeDistance!.Value:Vector2.Distance(player,destination);
         float directSeconds=direct/FlightSpeed;
         if(!float.IsFinite(directSeconds)||directSeconds<MinimumFlightSeconds || !float.IsFinite(teleportOverheadSeconds) || teleportOverheadSeconds<0) return null;
         var candidates=entries.Where(e=>e.GilCost<=maximumCost)
-            .Select(e=>(Entry:e,Last:Vector2.Distance(e.Position,destination)))
+            .Select(e=>(Entry:e,Last:navmesh?routeFromAetherytes!.GetValueOrDefault(e.Id,float.NaN):Vector2.Distance(e.Position,destination)))
             .Where(e=>float.IsFinite(e.Last) && directSeconds-(teleportOverheadSeconds+e.Last/FlightSpeed)>=Math.Max(minimumSeconds,directSeconds*minimumFraction))
             .OrderBy(e=>e.Last).ThenBy(e=>e.Entry.GilCost).ThenBy(e=>e.Entry.Id).ToArray();
         if(candidates.Length==0) return null;
         var chosen=candidates[0];
         return new(run,target.BillNumber,target.MobIndex,target.MobHuntId,target.TerritoryType,
-            chosen.Entry.Id,chosen.Entry.Name,chosen.Entry.GilCost,direct,chosen.Last,directSeconds,teleportOverheadSeconds+chosen.Last/FlightSpeed){OrderId=target.OrderId,Generation=target.Generation};
+            chosen.Entry.Id,chosen.Entry.Name,chosen.Entry.GilCost,direct,chosen.Last,directSeconds,teleportOverheadSeconds+chosen.Last/FlightSpeed){OrderId=target.OrderId,Generation=target.Generation,UsesNavmesh=navmesh};
     }
 }
 public sealed class ShortcutNotice {

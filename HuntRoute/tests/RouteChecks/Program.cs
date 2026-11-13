@@ -193,6 +193,13 @@ var shortcutNotice=new ShortcutNotice();var suggestedShortcut=Shortcut(Vector2.Z
 Check(shortcutNotice.ShouldOpen(suggestedShortcut)&&!shortcutNotice.ShouldOpen(suggestedShortcut),"Do not repeat shortcut offer after decline");
 Check(shortcutNotice.ShouldOpen(suggestedShortcut with {RunId=2}),"A new route can offer a shortcut anew");
 var gnome=ShortcutAdvisor.Evaluate(1,targetA,Vector2.Zero,new(1094,0),new[]{new ShortcutCandidate(1,"Mord Souq",new(654,0),100)});
+var wallGoal=new Vector3(400,0,0);
+var wallRoute=ShortcutAdvisor.PathLength(Vector3.Zero,wallGoal,[new(0,0,400),new(400,0,400),wallGoal]);
+ShortcutCandidate[] wallEntries=[new(1,"Near",new(390,0),100)];
+Check(wallRoute==1200&&ShortcutAdvisor.Evaluate(1,targetA,Vector2.Zero,new(400,0),wallEntries)==null&&
+      ShortcutAdvisor.Evaluate(1,targetA,Vector2.Zero,new(400,0),wallEntries,routeDistance:wallRoute,routeFromAetherytes:new Dictionary<uint,float>{{1,10}}) is {UsesNavmesh:true,Aetheryte:1},
+      "A wall detour makes a teleport worthwhile even when the straight-line estimate does not");
+Check(ShortcutAdvisor.PathLength(Vector3.Zero,wallGoal,[new(200,0,0)])==null,"Partial paths fall back to the straight-line estimate");
 Check(gnome is not null && Math.Abs(gnome.SavedSeconds-14.7f)<.01f,"Gnome regression: 1094m direct, 440m final saves 14.7s");
 Check(ShortcutAdvisor.Evaluate(1,targetA,Vector2.Zero,new(1094,0),new[]{new ShortcutCandidate(1,"Mord Souq",new(654,0),100)},30)==null,"Slow loading removes unprofitable suggestion");
 Check(ShortcutAdvisor.Evaluate(1,targetA,Vector2.Zero,new(2000,0),new[]{cheap},float.NaN)==null,"Invalid timing cannot produce an offer");

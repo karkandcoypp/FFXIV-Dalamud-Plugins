@@ -146,6 +146,7 @@ public sealed class NativeHuntController {
    buttons.Add(Button("number:"+key,$"{label} {value}","edit-number",key,!plugin.PersistenceBlocked));
   }
   buttons.Add(Button("refresh","Обновить данные","refresh"));buttons.Add(Button("retry-save","Сохранить снова","retry-save"));buttons.Add(Button("export","Диагностика","export"));buttons.Add(Button("classic","Окно для мыши","classic"));
+  buttons.Add(Button("shortcut-navmesh",$"vnavmesh: {(s.ShortcutNavmesh?"вкл":"выкл")}","toggle","shortcut-navmesh",!plugin.PersistenceBlocked));
   return new(Offset==0?"Параметры охоты":"Обслуживание",feedback??"",buttons);
  }
  private (string Label,string Value) NumberValue(string key){var s=plugin.Settings;return key switch{"elite-distance"=>("Дальность меток элиты",s.WorldDistance+" м"),"ordinary-distance"=>("Дальность меток обычных мобов",s.OrdinaryWorldDistance+" м"),"gil"=>("Лимит стоимости телепорта",s.MaxGil+" гил"),"seconds"=>("Минимальная экономия времени",$"{s.MinSeconds:0.#} с"),"percent"=>("Минимальная экономия времени, %",s.MinPercent+" %"),_=>("Параметр","")};}
@@ -201,6 +202,6 @@ public sealed class NativeHuntController {
    case "classic":plugin.OpenClassic();break;
   }
  }
- private void Toggle(string key){if(plugin.PersistenceBlocked)return;var s=plugin.Settings;switch(key){case "mini":plugin.SetMini(!s.Mini);return;case "reset":s.ResetNotifications=!s.ResetNotifications;break;case "elite":s.WorldMarkers=!s.WorldMarkers;break;case "ordinary":s.OrdinaryWorldMarkers=!s.OrdinaryWorldMarkers;break;case "elite-sound":s.EliteSound=!s.EliteSound;break;case "next-sound":s.NextZoneSound=!s.NextZoneSound;break;case "shortcuts":s.Shortcuts=!s.Shortcuts;break;default:return;}plugin.SaveJourney(true);}
+ private void Toggle(string key){if(plugin.PersistenceBlocked)return;var s=plugin.Settings;switch(key){case "mini":plugin.SetMini(!s.Mini);return;case "reset":s.ResetNotifications=!s.ResetNotifications;break;case "elite":s.WorldMarkers=!s.WorldMarkers;break;case "ordinary":s.OrdinaryWorldMarkers=!s.OrdinaryWorldMarkers;break;case "elite-sound":s.EliteSound=!s.EliteSound;break;case "next-sound":s.NextZoneSound=!s.NextZoneSound;break;case "shortcuts":s.Shortcuts=!s.Shortcuts;break;case "shortcut-navmesh":s.ShortcutNavmesh=!s.ShortcutNavmesh;break;default:return;}plugin.SaveJourney(true);}
  private void Step(string key,int delta){if(plugin.PersistenceBlocked)return;var s=plugin.Settings;switch(key){case "elite-distance":s.WorldDistance=Math.Clamp(s.WorldDistance+delta,50,500);break;case "ordinary-distance":s.OrdinaryWorldDistance=Math.Clamp(s.OrdinaryWorldDistance+delta,50,500);break;case "gil":s.MaxGil=(uint)Math.Clamp((long)s.MaxGil+delta,0,uint.MaxValue);break;case "seconds":s.MinSeconds=Math.Max(0,s.MinSeconds+delta/10f);break;case "percent":s.MinPercent=Math.Clamp(s.MinPercent+delta,0,100);break;default:return;}s.Validate();plugin.SaveJourney(true);}
 }

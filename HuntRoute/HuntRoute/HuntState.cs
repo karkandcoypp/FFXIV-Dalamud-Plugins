@@ -19,6 +19,7 @@ public sealed class HuntSettings {
  public bool? LegacySound {get=>null;set{if(value is {} enabled){EliteSound=enabled;NextZoneSound=enabled;}}}
  public bool ResetNotifications {get;set;}=true;
  public bool Shortcuts {get;set;}=true;
+ public bool ShortcutNavmesh {get;set;}
  public uint MaxGil {get;set;}=200;
  public float MinSeconds {get;set;}=10;
  public float MinPercent {get;set;}=20;

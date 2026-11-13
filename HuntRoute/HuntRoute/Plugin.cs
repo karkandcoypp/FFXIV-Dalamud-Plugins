@@ -405,7 +405,10 @@ public sealed partial class Plugin : IDalamudPlugin {
     }
 
     private unsafe bool FlightKnown()=>FlightCapability?.Invoke() ?? (Service.Condition[ConditionFlag.InFlight] || FFXIVClientStructs.FFXIV.Client.Game.Control.Control.CanFly);
-    internal ShortcutOffer? FindShortcut() {
+    private ShortcutNavigation? shortcutNavigation;
+    internal ShortcutOffer? FindShortcut()=>ReadShortcut(out _);
+    internal ShortcutOffer? ReadShortcut(out bool waiting) {
+        waiting=false;
         if(!Ready||Session.Phase!=RoutePhase.Following)return null;
         if(Flow.Active && !FlightKnown())return null;
         if(!Settings.Shortcuts || !NavigationAllowed || !Ready || Session.Phase!=RoutePhase.Following || Session.Target is not {} target
@@ -421,12 +424,16 @@ public sealed partial class Plugin : IDalamudPlugin {
         var here=new Vector2(player.Position.X,player.Position.Z);
 
         var prices=fareSnapshot??Service.Aetherytes.GroupBy(a=>a.AetheryteId).ToDictionary(g=>g.Key,g=>g.Min(a=>a.GilCost));
-        var candidates=Entries(target.MapId,target.TerritoryType).Where(e=>prices.ContainsKey(e.Id))
-            .Select(e=>new ShortcutCandidate(e.Id,e.Name,MapCoordinates.ToWorld(e.Position,map),prices[e.Id]));
-        return ShortcutAdvisor.Evaluate(Session.RunId,target,here,destination,candidates,Timing.OverheadSeconds,Settings.MaxGil,Settings.MinSeconds,Settings.MinPercent/100f);
+        var candidates=Entries(target.MapId,target.TerritoryType).Where(e=>prices.TryGetValue(e.Id,out uint fare)&&fare<=Settings.MaxGil)
+            .Select(e=>new ShortcutCandidate(e.Id,e.Name,MapCoordinates.ToWorld(e.Position,map),prices[e.Id])).ToArray();
+        if(candidates.Length==0)return null;
+        var distances=Settings.ShortcutNavmesh?(shortcutNavigation??=new()).Read(
+            $"{ContextKey()}:{Session.RunId}:{key}:{string.Join(",",candidates.Select(c=>c.Id))}",player.Position,destination,candidates,Now,out waiting):null;
+        if(waiting)return null;
+        return ShortcutAdvisor.Evaluate(Session.RunId,target,here,destination,candidates,Timing.OverheadSeconds,Settings.MaxGil,Settings.MinSeconds,Settings.MinPercent/100f,distances?.Direct,distances?.Entries);
     }
     internal bool ShortcutStillValid(ShortcutOffer offered) =>
-        FindShortcut() is {} current && ShortcutAdvisor.MatchesQuote(offered,current);
+        FindShortcut() is {} current && current.UsesNavmesh==offered.UsesNavmesh && ShortcutAdvisor.MatchesQuote(offered,current);
     internal bool AcceptShortcut(ShortcutOffer offered) {
         if(!ShortcutStillValid(offered) || TravelBusy) {
             Service.Chat.PrintError("Предложение изменилось или больше не сокращает путь. Проверьте обновлённые данные."); return false;

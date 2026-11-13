@@ -3,7 +3,8 @@ namespace HuntRoute;
 public sealed class ShortcutWindow(Plugin plugin) {
     private readonly ShortcutNotice notice=new();
     internal void Sync() {
-        var offer=plugin.FindShortcut();
+        var offer=plugin.ReadShortcut(out bool waiting);
+        if(waiting)return;
         if(offer==null) { plugin.NativeDialogs.Cancel("shortcut");return; }
         if(!notice.ShouldOpen(offer)) return;
         plugin.NativeDialogs.Offer(new("shortcut",$"shortcut:{offer.RunId}:{offer.ContractKey}",
