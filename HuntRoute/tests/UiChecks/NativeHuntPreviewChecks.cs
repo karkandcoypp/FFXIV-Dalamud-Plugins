@@ -375,10 +375,10 @@ internal static class NativeHuntPreviewChecks {
      float inset=Math.Max(0,(rect.Size.X-ImGui.CalcTextSize(label).X)/2);
      return new(rect.Position+new Vector2(inset,0),rect.Size-new Vector2(inset,0));
     }
-    bool centerNumber=NativeHuntLayout.CenterNumberText(sample.Page,sample.Mini);
+    bool centerText=NativeHuntLayout.CenterPageText(sample.Page,sample.Mini);
     float summaryFont=NativeHuntLayout.SummaryFont(sample.Page,sample.Mini);
-    Text(title,centerNumber?Center(title,layout.Heading,NativeHuntLayout.TitleFont):layout.Heading,NativeHuntLayout.TitleFont,sample.Screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One);
-    if(summary.Length>0)Text(summary,centerNumber?Center(summary,layout.Summary,summaryFont):layout.Summary,summaryFont,sample.Screen.SummaryColor??NativeHuntColors.Muted);
+    Text(title,centerText?Center(title,layout.Heading,NativeHuntLayout.TitleFont):layout.Heading,NativeHuntLayout.TitleFont,sample.Screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One);
+    if(summary.Length>0)Text(summary,centerText?Center(summary,layout.Summary,summaryFont):layout.Summary,summaryFont,sample.Screen.SummaryColor??NativeHuntColors.Muted);
     if(layout.EliteBadge is {} badgeRect){
      draw.AddRectFilled(badgeRect.Position,badgeRect.Position+badgeRect.Size,0xff30424d,4);
      draw.AddRect(badgeRect.Position,badgeRect.Position+badgeRect.Size,0xff427d9c,4);

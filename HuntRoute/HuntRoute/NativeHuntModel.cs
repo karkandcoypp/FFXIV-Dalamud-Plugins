@@ -77,6 +77,7 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  public static int PagedButtonCount(NativeHuntScreen screen)=>screen.Buttons.Count(b=>!IsTargetFilter(b));
  public static float TitleWidth(NativeHuntScreen screen,bool mini)=>SummaryWidth(screen,mini)-(screen.Elite?EliteBadgeWidth+EliteBadgeGap:0);
  public static bool CenterNumberText(NativeHuntPage view,bool mini)=>!mini&&view==NativeHuntPage.Number;
+ public static bool CenterPageText(NativeHuntPage view,bool mini)=>!mini&&view is NativeHuntPage.Number or NativeHuntPage.Actions;
  public static byte SummaryFont(NativeHuntPage view,bool mini)=>CenterNumberText(view,mini)?(byte)24:SecondaryFont;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Goal==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;

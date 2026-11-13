@@ -126,7 +126,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(titleText!=title){heading.String=title;titleText=title;}
   bool gilSummary=NativeHuntLayout.CenterNumberText(controller.Page,mini)&&description.EndsWith(" гил",StringComparison.Ordinal);
   summary.FontSize=NativeHuntLayout.SummaryFont(controller.Page,mini);
-  var textAlignment=NativeHuntLayout.CenterNumberText(controller.Page,mini)?AlignmentType.Top:AlignmentType.TopLeft;
+  var textAlignment=NativeHuntLayout.CenterPageText(controller.Page,mini)?AlignmentType.Top:AlignmentType.TopLeft;
   heading.AlignmentType=summary.AlignmentType=textAlignment;
   summary.LineSpacing=summary.FontSize+3;
   float textWidth=NativeHuntLayout.SummaryWidth(screen,mini);
