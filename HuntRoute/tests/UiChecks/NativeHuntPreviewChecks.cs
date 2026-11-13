@@ -221,11 +221,18 @@ internal static class NativeHuntPreviewChecks {
     var focus=layout.Buttons.Single(b=>b.Button.Key=="focus");
     var targets=layout.Buttons.Single(b=>b.Button.Key=="targets");
     var actionRows=layout.Buttons.Where(b=>b.Slot is >=3 and <=8).GroupBy(b=>b.Row).ToArray();
-    if(actionRows.Select(row=>row.Count()).ToArray() is not [3,2]||
+    var primary=layout.Buttons.Single(b=>b.Button.Key=="primary");
+    var close=layout.Buttons.Single(b=>b.Button.Key=="close");
+    if(primary.Row!=close.Row||primary.Rect.Position.Y!=close.Rect.Position.Y||
+       primary.Rect.Position.X!=layout.Heading.Position.X||
+       actionRows.Select(row=>row.Select(b=>b.Button.Key).ToArray()).ToArray() is not [["focus","targets"],["pause","stop"]]||
+       !actionRows[0].Select(b=>b.Rect.Position.X).SequenceEqual(actionRows[1].Select(b=>b.Rect.Position.X))||
        actionRows.Any(row=>row.Select(b=>b.Rect.Size.X).Distinct().Count()!=1||
         Math.Abs(row.First().Rect.Position.X+row.Last().Rect.Position.X+row.Last().Rect.Size.X-layout.Size.X)>.01f))
      throw new Exception("Route actions and target links must form separate centered rows");
     var nav=NativeHuntNavigation.Build(layout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+    if(nav.Single(n=>n.Key=="pause").Down!=primary.Slot+1||nav.Single(n=>n.Key=="primary").Right!=close.Slot+1)
+     throw new Exception("D-pad must reach the teleport from Pause and Close from teleport");
     if(focus.Row!=targets.Row||nav.Single(n=>n.Key=="focus").Right!=targets.Slot+1||nav.Single(n=>n.Key=="targets").Left!=focus.Slot+1)
      throw new Exception("Focus and All targets must share a row and be adjacent on the D-pad");
    }
