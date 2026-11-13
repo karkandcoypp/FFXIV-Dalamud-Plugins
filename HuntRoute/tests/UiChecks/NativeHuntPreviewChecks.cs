@@ -257,11 +257,27 @@ internal static class NativeHuntPreviewChecks {
     if(layout.Buttons.Count(b=>b.Row==0)!=3||sample.Screen.Buttons.Any(b=>b.Action.Kind=="refresh"))
      throw new Exception("Boards must rely on background updates and show only three tabs");
     controller.Boards(true);
-    if(controller.Build().Buttons.Count(b=>b.Action.Kind=="boards-all")!=1)
-     throw new Exception("Filtered board view must still allow showing all boards");
+    var filtered=controller.Build();
+    if(filtered.Buttons.Count(b=>b.Action.Kind=="boards-all")!=1||
+       filtered.Buttons.Single(b=>b.Key=="board:Heavensward").Enabled)
+     throw new Exception("Filtered board view must allow unlocking the completed board row");
     controller.Execute(new("boards-all"));
-    if(controller.Build().Buttons.Any(b=>b.Action.Kind=="boards-all"))
-     throw new Exception("Show all boards must disappear when already showing all boards");
+    var expanded=controller.Build();
+    if(expanded.Buttons.Any(b=>b.Action.Kind=="boards-all")||
+       !expanded.Buttons.Single(b=>b.Key=="board:Heavensward").Enabled)
+     throw new Exception("Show all boards must enable the previously filtered board row");
+    var expandedLayout=NativeHuntLayout.Build(expanded,NativeHuntPage.Boards,0,22,0);
+    var expandedLinks=NativeHuntNavigation.Build(expandedLayout.Buttons.Select(b=>new NativeNavItem(b.Slot+1,b.Row,b.Column,b.Button.Key,b.Button.Enabled)));
+    if(NativeHuntNavigation.RestoreFocus(expandedLinks,"boards-all")!=expandedLinks.Single(n=>n.Key=="board:Heavensward").Index)
+     throw new Exception("Expanding the boards must restore focus to the first selectable board");
+    var territory=typeof(Plugin).GetField("CurrentTerritory",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!;
+    var previousTerritory=territory.GetValue(plugin);
+    try{
+     territory.SetValue(plugin,628u);
+     controller.Boards(true);
+     if(controller.Build().Buttons.Any(b=>b.Action.Kind=="boards-all"))
+      throw new Exception("Show all boards must be hidden when the only reachable board already offers new bills");
+    }finally{territory.SetValue(plugin,previousTerritory);}
     controller.Navigate(NativeHuntPage.Advanced);
     var refresh=controller.Build().Buttons.Single(b=>b.Action.Kind=="refresh");
     const System.Reflection.BindingFlags fields=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;

@@ -107,15 +107,19 @@ public sealed class NativeHuntController {
   return new(goal.Name??"Цель",summary,buttons,goal.Icon,new(plugin.Kills(goal),goal.NeededKills),Elite:goal.IsEliteMark);
  }
  private NativeHuntScreen BoardScreen(){
+  bool canExpand=false;
   var buttons=Plugin.Boards.Select(b=>{
    var row=new NativeBoardRow(b.Name,Progress(b,false),Progress(b,true));
-   return Button("board:"+b.Name,row.Name,"board",b.Name,plugin.BoardReachable(b)&&(!OnlyNewBoards||plugin.CanPickup(b,false)||plugin.CanPickup(b,true))) with {Board=row};
+   bool reachable=plugin.BoardReachable(b);
+   bool selectable=!OnlyNewBoards||plugin.CanPickup(b,false)||plugin.CanPickup(b,true);
+   canExpand|=reachable&&!selectable;
+   return Button("board:"+b.Name,row.Name,"board",b.Name,reachable&&selectable) with {Board=row};
   }).ToList();
-  if(OnlyNewBoards)buttons.Add(Button("boards-all","Показать все доски","boards-all"));
+  if(canExpand)buttons.Add(Button("boards-all","Все доски","boards-all"));
   var now=DateTimeOffset.UtcNow;
   var day=ResetClock.Next(now,false)-now;
   var week=ResetClock.Next(now,true)-now;
-  return new("Доски охоты","",buttons,BoardTimers:NativeBoardTimers.FromRemaining(day,week));
+  return new(canExpand?"Доски с новыми контрактами":"Доски охоты","",buttons,BoardTimers:NativeBoardTimers.FromRemaining(day,week));
  }
  private NativeBoardStatus Progress(Board b,bool weekly){
   if(plugin.CompletionUncertain(b,weekly))return new("неизвестно");

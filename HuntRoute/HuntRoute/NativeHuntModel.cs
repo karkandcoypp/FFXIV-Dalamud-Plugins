@@ -41,7 +41,15 @@ public static class NativeHuntNavigation {
   int Horizontal(NativeNavItem item,bool right){var row=items.Where(n=>n.Row==item.Row).ToArray();int at=Array.FindIndex(row,n=>n.Index==item.Index);return row[(at+(right?1:row.Length-1))%row.Length].Index;}
   return items.Select(n=>new NativeNavLink(n.Index,Vertical(n,false),Vertical(n,true),Horizontal(n,false),Horizontal(n,true),n.Key)).ToArray();
  }
- public static int RestoreFocus(IReadOnlyList<NativeNavLink> links,string? key){int match=links.FirstOrDefault(n=>n.Key==key).Index;return match>0?match:links.Count==0?0:links[0].Index;}
+ public static int RestoreFocus(IReadOnlyList<NativeNavLink> links,string? key){
+  int match=links.FirstOrDefault(n=>n.Key==key).Index;
+  if(match>0)return match;
+  if(key=="boards-all"){
+   int board=links.FirstOrDefault(n=>n.Key.StartsWith("board:",StringComparison.Ordinal)).Index;
+   if(board>0)return board;
+  }
+  return links.Count==0?0:links[0].Index;
+ }
 }
 
 public readonly record struct NativeHuntRect(Vector2 Position,Vector2 Size){
