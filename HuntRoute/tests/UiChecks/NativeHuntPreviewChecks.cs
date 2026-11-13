@@ -256,6 +256,11 @@ internal static class NativeHuntPreviewChecks {
    if(sample.Page==NativeHuntPage.Boards){
     if(layout.Buttons.Count(b=>b.Row==0)!=3||sample.Screen.Buttons.Any(b=>b.Action.Kind=="refresh"))
      throw new Exception("Boards must rely on background updates and show only three tabs");
+    var tabs=layout.Buttons.Where(b=>b.Row==0).OrderBy(b=>b.Column).Select(b=>b.Rect).ToArray();
+    float right=tabs[2].Position.X+tabs[2].Size.X;
+    if(Math.Abs(tabs[0].Position.X-(layout.Size.X-right))>.01f||
+       Math.Abs((tabs[1].Position.X-tabs[0].Position.X-tabs[0].Size.X)-(tabs[2].Position.X-tabs[1].Position.X-tabs[1].Size.X))>.01f)
+     throw new Exception("Board tabs must be centered with equal gaps");
     controller.Boards(true);
     var filtered=controller.Build();
     if(filtered.Buttons.Count(b=>b.Action.Kind=="boards-all")!=1||

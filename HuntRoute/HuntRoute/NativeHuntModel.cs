@@ -131,9 +131,10 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
    if(!fitsExtra)tabWidths=tabLabels.Select(Button).ToArray();
    float tabWidth=tabWidths.Max();
    if(!fitsExtra||3*tabWidth+extraWidth+3*Gap<=inner)Array.Fill(tabWidths,tabWidth);
-   Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),Margin,37,tabWidths[0],ActionHeight);
-   Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),Margin+tabWidths[0]+Gap,37,tabWidths[1],ActionHeight);
-   Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),Margin+tabWidths[0]+tabWidths[1]+2*Gap,37,tabWidths[2],ActionHeight);
+   float tabX=view==NativeHuntPage.Boards?(width-tabWidths.Sum()-2*Gap)/2:Margin;
+   Set(0,0,0,Page("tab:hunt","Охота",NativeHuntPage.Hunt),tabX,37,tabWidths[0],ActionHeight);
+   Set(1,0,1,Page("tab:boards","Доски",NativeHuntPage.Boards),tabX+tabWidths[0]+Gap,37,tabWidths[1],ActionHeight);
+   Set(2,0,2,Page("tab:settings","Настройки",NativeHuntPage.Settings),tabX+tabWidths[0]+tabWidths[1]+2*Gap,37,tabWidths[2],ActionHeight);
    if(compactActive)Set(3,0,3,visible[0],width-Margin-extraWidth,37,extraWidth,ActionHeight);
    if(filterInHeader&&targetFilter!=null)Set(11,0,3,targetFilter,width-Margin-extraWidth,37,extraWidth,ActionHeight);
   }
