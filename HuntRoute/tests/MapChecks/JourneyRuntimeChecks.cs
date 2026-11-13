@@ -10,14 +10,18 @@ using HuntRoute;
 using Lumina;
 using Lumina.Excel.Sheets;
 static class JourneyRuntimeChecks {
+ static Plugin CreatePlugin(){
+  var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+  Set(plugin,"expansionCompletionNotice",Activator.CreateInstance(typeof(Plugin).Assembly.GetType("HuntRoute.ExpansionCompletionNotice")!));
+  Set(plugin,"observedFares",new Dictionary<uint,IReadOnlyDictionary<uint,uint>>());
+  return plugin;
+ }
  static object? Call(object target,string name,params object?[] args)=>target.GetType().GetMethod(name,BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)!.Invoke(target,args);
  static void Set(object target,string name,object? value){var type=target.GetType();var f=type.GetField(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);if(f!=null)f.SetValue(target,value);else type.GetProperty(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)!.SetValue(target,value);}
  static T Get<T>(object target,string name){var type=target.GetType();var f=type.GetField(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);return (T)(f!=null?f.GetValue(target):type.GetProperty(name,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)!.GetValue(target))!;}
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> call)where T:class{var proxy=DispatchProxy.Create<T,ServiceProxy>();((ServiceProxy)(object)proxy).Handler=call;return proxy;}
  static void CheckCompletionChat(bool manual=false,bool otherExpansion=false){
-  var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
-  var tracker=typeof(Plugin).Assembly.GetType("HuntRoute.ExpansionCompletionNotice")!;
-  Set(plugin,"expansionCompletionNotice",Activator.CreateInstance(tracker));
+  var plugin=CreatePlugin();
   Set(plugin,"Ready",true);
   Set(plugin,"character",123UL);
   var states=new Dictionary<byte,BillState>();
@@ -69,12 +73,12 @@ static class JourneyRuntimeChecks {
    Console.WriteLine("PASS one colored completion chat message with only available follow-up boards");
   }finally{Service.Chat=previous;}
  }
- public static void RunOffline(){
+ public static void RunOffline(GameData? game=null){
   CheckCompletionChat();
   CheckCompletionChat(manual:true);
   CheckCompletionChat(otherExpansion:true);
   static void Check(bool yes,string message){if(!yes)throw new Exception(message);}
-  var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+  var plugin=CreatePlugin();
   var priorList=Service.Aetherytes;
   try{
    Service.Aetherytes=Proxy<IAetheryteList>((_,_)=>throw new Exception("Snapshot lookup must not enumerate the native service"));
@@ -97,6 +101,30 @@ static class JourneyRuntimeChecks {
   Service.ObjectTable=Proxy<IObjectTable>((_,_)=>null);
   var flow=Get<JourneyFlow>(plugin,"Flow");
   var saved=Get<SavedJourney>(plugin,"CharacterSave");
+  if(game!=null){
+   var previousChat=Service.Chat;
+   var previousData=Service.DataManager;
+   var messages=new List<SeString>();
+   bool duty=true;
+   try{
+    Service.DataManager=new SheetServices(game);
+    Service.Chat=Proxy<IChatGui>((method,args)=>{if(method.Name=="Print"&&args?[0] is SeString message)messages.Add(message);return null;});
+    Service.Condition=Proxy<ICondition>((_,args)=>duty&&args?[0] is ConditionFlag[] flags&&flags.Contains(ConditionFlag.BoundByDuty));
+    Set(plugin,"CurrentTerritory",397u);
+    Call(plugin,"CheckResetChatNotice");
+    Check(messages.Count==0&&saved.DailyChatNotice==0&&saved.WeeklyChatNotice==0,"Duty defers the reset chat");
+    duty=false;
+    Call(plugin,"CheckResetChatNotice");Call(plugin,"CheckResetChatNotice");
+    Check(messages.Count==1&&messages[0].TextValue.Contains("Stormblood — ежедневные и недельный элитный"),"Reset chat lists both available contract types once");
+    saved.DailyChatNotice-=86400;
+    Call(plugin,"CheckResetChatNotice");Call(plugin,"CheckResetChatNotice");
+    Check(messages.Count==2&&messages[1].TextValue.Contains("Stormblood — ежедневные")&&!messages[1].TextValue.Contains("элитный"),"New daily period does not repeat weekly chat");
+    Console.WriteLine("PASS reset chat duty suppression, open-world delivery and daily/weekly deduplication");
+   }finally{
+    Set(plugin,"CurrentTerritory",0u);
+    Service.Chat=previousChat;Service.DataManager=previousData;Service.Condition=Proxy<ICondition>((_,_)=>false);
+   }
+  }
   Call(plugin,"CheckResetNotice");
   var login=queue.Activate(true)??throw new Exception("Login prompt missing");
   Check(login.Key.EndsWith(":taken"),"Unfinished contract must offer continuation");
@@ -142,7 +170,7 @@ static class JourneyRuntimeChecks {
  }
  public static int Run(GameData game){
   int checks=0;void Check(bool yes,string message){checks++;if(!yes)throw new Exception(message);}
-  var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+  var plugin=CreatePlugin();
   var session=new RouteSession();var search=new EliteSearch();Set(plugin,"Session",session);Set(plugin,"Search",search);Set(plugin,"Ready",true);Set(plugin,"character",123UL);Set(plugin,"loginNoticeShown",true);
   var flow=Get<JourneyFlow>(plugin,"Flow");var store=Get<HuntStore>(plugin,"Store");
   var bridgeType=typeof(Plugin).Assembly.GetType("HuntRoute.NativeDialogService")!;
@@ -249,12 +277,12 @@ static class JourneyRuntimeChecks {
   Call(plugin,"ReconcileTravel");Call(plugin,"AdvanceRoute");Check(writes==beforeCreditedArrival&&session.Phase==RoutePhase.NextZone,"Goal credited during cast is not flagged again after arrival");
   var board=Plugin.Boards[0];territory=board.Territory;mapId=board.Map;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);queue.Clear();flow.Pauses=PauseReason.None;
   Call(plugin,"OfferBoard",board);request=queue.Activate(true);int beforeBoard=ports;
-  Check(request?.Presentation?.Destination==game.Excel.GetSheet<TerritoryType>().GetRow(board.Territory).PlaceName.Value.Name.ToString() && (request.Presentation.Context.Contains(game.Excel.GetSheet<Aetheryte>().GetRow(board.Aetheryte).PlaceName.Value.Name.ToString())||request.Presentation.Destination==game.Excel.GetSheet<Aetheryte>().GetRow(board.Aetheryte).PlaceName.Value.Name.ToString()),"Board proposal explicitly identifies actual city and aetheryte");
+  Check(request?.Presentation?.Title==game.Excel.GetSheet<TerritoryType>().GetRow(board.Territory).PlaceName.Value.Name.ToString() && (request.Presentation.Destination==game.Excel.GetSheet<Aetheryte>().GetRow(board.Aetheryte).PlaceName.Value.Name.ToString()||request.Presentation.Title==game.Excel.GetSheet<Aetheryte>().GetRow(board.Aetheryte).PlaceName.Value.Name.ToString()),"Board proposal explicitly identifies actual city and aetheryte");
   Check(request!=null&&queue.Resolve(request.Key,true)!.Accept(),"Board proposal accepts already-in-city action");Check(ports==beforeBoard&&Get<PendingJourney?>(plugin,"pendingJourney")==null&&marker?.Map==board.Map,"Already-in-city board action only flags board and cannot create fake travel timeout");
   string folder=Path.Combine(Path.GetTempPath(),"HuntRoute-runtime-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(folder);string file=Path.Combine(folder,"state.json");
   try {
    Set(plugin,"stateFile",file);flow.Active=true;Call(plugin,"SaveJourney",true);
-   var copy=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));Set(copy,"store",HuntStore.Load(file));Set(copy,"character",123UL);Set(copy,"Session",new RouteSession());Set(copy,"Search",new EliteSearch());Call(copy,"LoadJourney");
+   var copy=CreatePlugin();Set(copy,"store",HuntStore.Load(file));Set(copy,"character",123UL);Set(copy,"Session",new RouteSession());Set(copy,"Search",new EliteSearch());Call(copy,"LoadJourney");
    var recovered=Get<JourneyFlow>(copy,"Flow");Check(recovered.Active&&recovered.Pauses==PauseReason.Restored&&!recovered.CanNavigate,"Real route save/load restores on pause with no transport or marker calls");
    var durable=HuntStore.Load(file);
    durable.Characters[123].Deferred.Add("saved-deferred");durable.Characters[123].DailyNotice=42;
@@ -266,7 +294,7 @@ static class JourneyRuntimeChecks {
    legacy["Settings"]=System.Text.Json.JsonSerializer.SerializeToNode(new HuntSettings{Mini=true,MaxGil=321});
    File.WriteAllText(legacyFile,legacy.ToJsonString());
    Service.PluginInterface=Proxy<Dalamud.Plugin.IDalamudPluginInterface>((method,_)=>method.Name=="GetPluginConfigDirectory"?folder:throw new Exception(method.Name));
-   var migrating=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+   var migrating=CreatePlugin();
    Set(migrating,"character",123UL);Set(migrating,"Session",new RouteSession());Set(migrating,"Search",new EliteSearch());
    using(var lockedLegacy=File.Open(legacyFile,FileMode.Open,FileAccess.Read,FileShare.None)){
     Call(migrating,"InitializeStore");Call(migrating,"SaveJourney",true);
@@ -281,7 +309,7 @@ static class JourneyRuntimeChecks {
    var retainedRoute=HuntStore.Load(legacyFile);
    Check(retainedRoute.Settings.Mini&&retainedRoute.Settings.MaxGil==321&&retainedRoute.Characters[123].DailyNotice==654,
     "Failed settings write preserves legacy settings while saving route changes");
-   var restarted=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
+   var restarted=CreatePlugin();
    Set(restarted,"character",123UL);Set(restarted,"Session",new RouteSession());Set(restarted,"Search",new EliteSearch());
    Call(restarted,"InitializeStore");
    Check(Get<HuntSettings>(restarted,"Settings").MaxGil==321,"Restart restores legacy settings after failed migration");
@@ -348,7 +376,7 @@ static class JourneyRuntimeChecks {
   Get<HashSet<byte>>(plugin,"unreadBills").Clear();counts.Clear();
   session.Retarget(elite);search.Start([new(0,0),new(200,0)]);Set(plugin,"searchKey",Call(plugin,"SearchIdentity",elite));objects=[Npc(91,elite.MobHuntId,new(4,0,0))];flow.Pauses=PauseReason.Marker|PauseReason.User;before=writes;
   Call(plugin,"AdvanceRoute");Check(search.ActorId==91&&writes==before&&flow.Pauses.HasFlag(PauseReason.User),"Paused controller detects elite without replacing user flag or clearing independent pause");
-  objects=[];flow.Pauses=PauseReason.None;flow.Active=false;territory=401;mapId=c.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,elite});Call(plugin,"BuildRoutes");
+  objects=[];flow.Pauses=PauseReason.None;flow.Active=false;territory=401;mapId=c.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,elite});Call(plugin,"BuildRoutes",entries.ToDictionary(e=>e.AetheryteId,e=>e.GilCost));
   var calculated=Get<List<ZoneRoute>>(plugin,"Routes").Single();var first=calculated.Mobs.First(m=>!Get<Dictionary<string,string>>(flow,"Unavailable").ContainsKey(JourneyFlow.Key(m)));
   Check(calculated.Start!=null&&(EntryPoint?)Call(plugin,"EntryFor",first)==calculated.Start,"Calculated entry is retained for first target");
   // Force a valid non-nearest entry: transport must consume the reviewed plan.
@@ -460,7 +488,12 @@ static class JourneyRuntimeChecks {
   savedNotice.DailyNotice=0;request!.OnShown!();queue.Resolve(request.Key,false);Call(plugin,"CheckResetNotice");request=queue.Activate(true);
   Check(request?.Key.StartsWith("pickup:")==true&&savedNotice.DailyNotice==0,"Continuation must not acknowledge available contracts");
   queue.Clear();Set(plugin,"loginNoticeShown",false);Set(plugin,"Mobs",new List<MobHuntEntry>());Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,1,1,true)}});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
-  Check(request?.Presentation?.ConfirmLabel=="Открыть"&&request.Presentation.Context=="Новых контрактов пока нет.","Completed day still gets login summary without claiming new contracts exist");
+  Check(request==null,"Completed contracts with no new bills suppress the login popup");
+  savedNotice.DailyNotice=0;
+  Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});
+  Call(plugin,"CheckResetNotice");request=queue.Activate(true);
+  Check(request?.Key.StartsWith("pickup:")==true,"New contracts can still trigger a reset notice after a quiet login");
+  queue.Clear();
   Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,1,1,true)},{5,new(true,false,0,1,false)}});
   var oldBoardHistory=Get<CompletionHistory>(plugin,"History");var boardHistory=new CompletionHistory();
   boardHistory.Observe(123,1,false,DateTimeOffset.UtcNow,new(true,true,1,1,false));
@@ -473,7 +506,7 @@ static class JourneyRuntimeChecks {
   Set(plugin,"completionHistory",oldBoardHistory);
   queue.Clear();Set(plugin,"loginNoticeShown",false);store.Settings.ResetNotifications=false;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Explicit notification opt-out remains respected");store.Settings.ResetNotifications=true;
   flow.Active=true;flow.Pauses=PauseReason.None;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"A started route defers the login popup until paused");flow.Pauses=PauseReason.User;Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request!=null,"Deferred login offer becomes available on manual pause");
-  queue.Clear();Set(plugin,"character",124UL);Call(plugin,"LoadJourney");Set(plugin,"contractRevision",2L);Set(plugin,"BillStates",new Dictionary<byte,BillState>());Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Key.StartsWith("login:124:")==true,"Another character has its own login offer");queue.Clear();
+  queue.Clear();Set(plugin,"character",124UL);Call(plugin,"LoadJourney");Set(plugin,"contractRevision",2L);Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Key.StartsWith("login:124:")==true,"Another character has its own login offer");queue.Clear();
   // Reproduce completed HW route -> new daily bills -> Start from Kugane.
   flow=Get<JourneyFlow>(plugin,"Flow");counts=new(){[(1,0)]=(int)a.NeededKills};Set(plugin,"KillCounts",counts);flow.Active=false;flow.Pauses=PauseReason.None;flow.Manual=null;
   session.Start(a,Plugin.Boards.SelectMany(board=>board.Daily.Append(board.Weekly)));session.Tick(new[]{a},_=>true,_=>true,397);
@@ -482,7 +515,7 @@ static class JourneyRuntimeChecks {
   foreach(var bill in new byte[]{6,7,8}){var type=game.Excel.GetSheet<MobHuntOrderType>().GetRow(bill);byte order=bill==6?(byte)2:bill==7?(byte)3:(byte)5;
    foreach(var row in game.Excel.GetSubrowSheet<MobHuntOrder>().GetRow(type.OrderStart.RowId+order-1u).Where(o=>o.Target.RowId!=0&&o.NeededKills>0)){var t=row.Target.Value;stormblood.Add(new(){BillNumber=bill,OrderId=order,Generation=1,MobIndex=(byte)row.SubrowId,MobHuntId=t.Name.RowId,Name=t.Name.Value.Singular.ToString(),MapId=t.Map.RowId,TerritoryType=t.Map.Value.TerritoryType.RowId,TerritoryName=t.Map.Value.PlaceName.Value.Name.ToString(),NeededKills=row.NeededKills});}
   }
-  Set(plugin,"Mobs",stormblood);territory=628;mapId=370;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"nextTeleportAllowed",0L);Set(plugin,"pendingJourney",null);objects=[];queue.Clear();Call(plugin,"BuildRoutes");
+  Set(plugin,"Mobs",stormblood);territory=628;mapId=370;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"nextTeleportAllowed",0L);Set(plugin,"pendingJourney",null);objects=[];queue.Clear();Call(plugin,"BuildRoutes",entries.ToDictionary(e=>e.AetheryteId,e=>e.GilCost));
   uint finishedRun=session.RunId;int beforeCityPorts=ports;Call(plugin,"ResumeJourney");Call(plugin,"AdvanceRoute");request=queue.Activate(true);
   Check(request?.Owner=="travel"&&flow.Active,"Starting newly obtained Stormblood bills from Kugane keeps teleport confirmation alive after controller update");
   Check(session.Phase==RoutePhase.AwaitingTravel&&session.Target is {} cityTarget&&cityTarget.BillNumber is 6 or 7 or 8&&session.RunId>finishedRun&&ports==beforeCityPorts,"City start establishes new target/run before confirmation but does not cast teleport");
@@ -493,7 +526,7 @@ static class JourneyRuntimeChecks {
   Set(plugin,"TeleportTransport",(Func<uint,bool>)(_=>{ports++;return true;}));Call(plugin,"OfferPlannedTravel");request=queue.Activate(true);Check(request!=null&&queue.Resolve(request.Key,true)!.Accept()&&ports==beforeCityPorts+1&&session.Phase==RoutePhase.WaitingForZone,"Accepted planned trip performs exactly one teleport and then waits for arrival");
   var arrivedGoal=session.Target!;clock+=10000;territory=arrivedGoal.TerritoryType;mapId=arrivedGoal.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"ownedMarker",null);Call(plugin,"ReconcileTravel");Call(plugin,"AdvanceRoute");
   Check(session.Phase==RoutePhase.Following&&session.RunId==plannedRun&&marker?.Map==mapId,"Arrival from Kugane flags first newly obtained goal and continues without another Start");queue.Clear();
-  territory=628;mapId=370;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"Mobs",new List<MobHuntEntry>{arrivedGoal});counts.Clear();session.PlanTravel(arrivedGoal,Plugin.Boards.SelectMany(board=>board.Daily.Append(board.Weekly)));Call(plugin,"BuildRoutes");Call(plugin,"OfferPlannedTravel");counts[(arrivedGoal.BillNumber,arrivedGoal.MobIndex)]=(int)arrivedGoal.NeededKills;int beforeLateCityCredit=ports;Call(plugin,"AdvanceRoute");
+  territory=628;mapId=370;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Set(plugin,"Mobs",new List<MobHuntEntry>{arrivedGoal});counts.Clear();session.PlanTravel(arrivedGoal,Plugin.Boards.SelectMany(board=>board.Daily.Append(board.Weekly)));Call(plugin,"BuildRoutes",entries.ToDictionary(e=>e.AetheryteId,e=>e.GilCost));Call(plugin,"OfferPlannedTravel");counts[(arrivedGoal.BillNumber,arrivedGoal.MobIndex)]=(int)arrivedGoal.NeededKills;int beforeLateCityCredit=ports;Call(plugin,"AdvanceRoute");
   Check(!flow.Active&&session.Phase==RoutePhase.Idle&&ports==beforeLateCityCredit&&queue.Activate(true)==null,"Credit before confirmation retires planned trip without stale popup or transport");
   // Read-only world overlay uses actual runtime bill, object and scene snapshots.
   flow=Get<JourneyFlow>(plugin,"Flow");flow.Active=true;flow.Pauses=PauseReason.Marker|PauseReason.User;counts=new();Set(plugin,"KillCounts",counts);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,elite});territory=397;mapId=a.MapId;position=Vector3.Zero;
@@ -542,7 +575,7 @@ static class JourneyRuntimeChecks {
   Set(plugin,"settingsLoadPending",true);nativeUi.Navigate(NativeHuntPage.Settings);Check(nativeUi.Build().Buttons.Where(bu=>bu.Action.Kind=="toggle").All(bu=>!bu.Enabled),"Native options show unavailable persistence as disabled controls");
   bool preference=store.Settings.OrdinaryWorldMarkers;nativeUi.Execute(new("toggle","ordinary"));Check(store.Settings.OrdinaryWorldMarkers==preference,"Stale native setting command cannot overwrite unread settings");Set(plugin,"settingsLoadPending",false);
   nativeUi.Boards(true);Set(plugin,"BillStates",new Dictionary<byte,BillState>());Check(nativeUi.Build().Buttons.Where(bu=>bu.Action.Kind=="board").All(bu=>!bu.Enabled),"Native new-board picker disables categories with no confirmed availability");
-  nativeUi.Boards(false);queue.Clear();nativePorts=ports;nativeUi.Execute(new("board","Stormblood"));request=queue.Activate(true);Check(request?.Owner=="travel"&&ports==nativePorts&&request.Presentation?.Destination==game.Excel.GetSheet<TerritoryType>().GetRow(628).PlaceName.Value.Name.ToString(),"Native board button opens correct confirmation and does not cast on selection");queue.Clear();
+  nativeUi.Boards(false);queue.Clear();nativePorts=ports;nativeUi.Execute(new("board","Stormblood"));request=queue.Activate(true);Check(request?.Owner=="travel"&&ports==nativePorts&&request.Presentation?.Title==game.Excel.GetSheet<TerritoryType>().GetRow(628).PlaceName.Value.Name.ToString(),"Native board button opens correct confirmation and does not cast on selection");queue.Clear();
   nativePorts=ports;nativeWrites=writes;Set(plugin,"Mobs",new List<MobHuntEntry>());nativeUi.Execute(goalButton.Action);nativeUi.Execute(new("track",goalButton.Action.Argument));Check(ports==nativePorts&&writes==nativeWrites,"Stale native goal selection/track command cannot act on a replacement bill");Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,elite});
   var nativeServiceType=typeof(Plugin).Assembly.GetType("HuntRoute.NativeHuntUi")!;var nativeService=Activator.CreateInstance(nativeServiceType,BindingFlags.Instance|BindingFlags.NonPublic,null,new object[]{plugin,bridge},null)!;
   Call(nativeService,"CloseAll");Check(flow.Active,"Closing native main/mini presentation never stops hunting");((IDisposable)nativeService).Dispose();

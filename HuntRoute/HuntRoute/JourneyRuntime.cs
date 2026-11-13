@@ -390,15 +390,15 @@ public sealed partial class Plugin {
   Service.Chat.Print(message.Build());
   playSound();
  }
- private string LoginMode()=>Mobs.Any(m=>AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m))?"taken":Boards.Any(b=>CanPickup(b,false)||CanPickup(b,true))?"pickup":"summary";
+ private string? LoginMode()=>Mobs.Any(m=>AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m))?"taken":Boards.Any(b=>CanPickup(b,false)||CanPickup(b,true))?"pickup":null;
  private void OfferLoginNotice(){
-  string mode=LoginMode();
+  if(LoginMode() is not {} mode){loginNoticeShown=true;return;}
   if(Flow.Active&&Flow.Pauses==PauseReason.None){NoticeText="Предложение охоты ожидает паузы маршрута. Действия доступны в сводке.";return;}
   NativeDialogs.Offer(new("pickup",$"login:{character}:{mode}","Начать охоту?",
    ()=>Ready&&Settings.ResetNotifications&&LoginMode()==mode,
    ()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),
    ()=>{if(mode=="taken")ResumeJourney();else PickupOpen=mode=="pickup";Open();return true;},
-   TravelDialogContent.Login(mode),
+   mode=="taken"?TravelDialogContent.ResumeHunt():TravelDialogContent.Pickup(),
    ()=>{
     loginNoticeShown=true;
     if(mode!="pickup")return;
@@ -410,6 +410,7 @@ public sealed partial class Plugin {
  }
  private void CheckResetNotice(){
   if(!Settings.ResetNotifications||!Ready||contractRevision<2)return;
+  CheckResetChatNotice();
   if(!loginNoticeShown){OfferLoginNotice();return;}
   var now=DateTimeOffset.UtcNow;long daily=ResetClock.Period(now,false).ToUnixTimeSeconds(),weekly=ResetClock.Period(now,true).ToUnixTimeSeconds();
   bool d=CharacterSave.DailyNotice!=daily&&Boards.Any(b=>CanPickup(b,false));bool w=CharacterSave.WeeklyNotice!=weekly&&Boards.Any(b=>CanPickup(b,true));
@@ -417,5 +418,31 @@ public sealed partial class Plugin {
   if(Flow.Active&&Flow.Pauses==PauseReason.None){NoticeText="Доступны новые контракты — выберите доску в сводке.";return;}
   if(TravelBusy || pendingJourney!=null || Flow.Pauses.HasFlag(PauseReason.Marker))return;
   NativeDialogs.Offer(new("pickup",$"pickup:{character}:{(d?daily:0)}:{(w?weekly:0)}","Доступны новые контракты",()=>Ready&&Settings.ResetNotifications&&(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false))||w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true))),()=>!TravelBusy&&pendingJourney==null&&(!Flow.Active||Flow.Pauses!=PauseReason.None)&&!Flow.Pauses.HasFlag(PauseReason.Marker),()=>{PickupOpen=true;Open();return true;},TravelDialogContent.Pickup(),()=>{if(d&&ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds()==daily&&Boards.Any(b=>CanPickup(b,false)))CharacterSave.DailyNotice=daily;if(w&&ResetClock.Period(DateTimeOffset.UtcNow,true).ToUnixTimeSeconds()==weekly&&Boards.Any(b=>CanPickup(b,true)))CharacterSave.WeeklyNotice=weekly;SaveJourney(true);}));
+ }
+ private void CheckResetChatNotice(){
+  if(completionLoadPending||character==0||CurrentTerritory==0||pendingJourney!=null||TravelBusy||
+     Service.Condition.Any(ConditionFlag.BoundByDuty,ConditionFlag.BoundByDuty56,ConditionFlag.BoundByDuty95,
+       ConditionFlag.InDeepDungeon,ConditionFlag.ChocoboRacing,ConditionFlag.DutyRecorderPlayback))return;
+  var now=DateTimeOffset.UtcNow;
+  long daily=ResetClock.Period(now,false).ToUnixTimeSeconds(),weekly=ResetClock.Period(now,true).ToUnixTimeSeconds();
+  var saved=CharacterSave;
+  bool checkDaily=saved.DailyChatNotice!=daily,checkWeekly=saved.WeeklyChatNotice!=weekly;
+  if(!checkDaily&&!checkWeekly)return;
+  if(!Service.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(CurrentTerritory,out var territory)||
+     territory.ContentFinderCondition.RowId!=0)return;
+  bool dailyAvailable=false,weeklyAvailable=false;
+  var message=new SeStringBuilder().AddText("[Hunt Route] Сброс охоты. Доступны контракты:");
+  foreach(var board in Boards){
+   bool d=checkDaily&&CanPickup(board,false),w=checkWeekly&&CanPickup(board,true);
+   if(!d&&!w)continue;
+   dailyAvailable|=d;weeklyAvailable|=w;
+   message.Add(Dalamud.Game.Text.SeStringHandling.Payloads.NewLinePayload.Payload);
+   message.AddText(board.Name+" — ").AddUiForeground(d?(w?"ежедневные и недельный элитный":"ежедневные"):"недельный элитный",31);
+  }
+  if(!dailyAvailable&&!weeklyAvailable)return;
+  Service.Chat.Print(message.Build());
+  if(dailyAvailable)saved.DailyChatNotice=daily;
+  if(weeklyAvailable)saved.WeeklyChatNotice=weekly;
+  SaveJourney(true);
  }
 }

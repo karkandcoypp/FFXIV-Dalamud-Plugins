@@ -403,8 +403,7 @@ foreach(var content in new[]{nextDialog,shortcutDialog,nextDialog with {Destinat
  Check(TravelDialogLayout.FitScale(dialogSize,new(1920,1080),1)==1,"Confirmation keeps normal UI scale when it fits");
  foreach(var text in layout.Texts)Check(text.Position.X>=16 && text.Position.Y>=32 && text.Position.X+text.Size.X<=layout.Width-16 && text.Position.Y+text.Size.Y<layout.Confirm.Position.Y,"Wrapped dialog text remains within content bounds");
 }
-foreach(string mode in new[]{"taken","pickup","summary"}) {
- var loginPresentation=TravelDialogContent.Login(mode);
+foreach(var loginPresentation in new[]{TravelDialogContent.ResumeHunt(),TravelDialogContent.Pickup()}) {
  var layout=TravelDialogLayout.Build(loginPresentation,MeasureDialog);
  Check(!loginPresentation.HasSubject&&loginPresentation.Footer.Length==0&&layout.Texts.Count<=3&&layout.Height<175,"Login dialog keeps only title, optional status and actions");
 }

@@ -25,6 +25,7 @@ class Program {
   if(args is ["--offline"]){RunOffline();return;}
   if(args is ["--scissorjaws",var sqpack]){CheckScissorjaws(sqpack);return;}
   if(args is ["--portraits",var portraitSqpack]){CheckPortraits(portraitSqpack);return;}
+  if(args is ["--reset-chat",var chatSqpack]){using var game=new GameData(chatSqpack);JourneyRuntimeChecks.RunOffline(game);return;}
   Run(args);
  }
  private delegate NativeHuntRect CropTexture(ReadOnlySpan<byte> pixels,int width,int height,Vector2 textureSize);
@@ -202,6 +203,8 @@ class Program {
   typeof(Plugin).GetField("KillCounts",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new Dictionary<(byte,byte),int>());
   Service.ObjectTable=Proxy<IObjectTable>((m,_)=>m.Name=="get_LocalPlayer"?null:throw new Exception(m.Name));
   var build=typeof(Plugin).GetMethod("BuildRoutes",BindingFlags.Instance|BindingFlags.NonPublic)!;
+  var fares=unlockedEntries.ToDictionary(e=>e.AetheryteId,_=>100u);
+  typeof(Plugin).GetField("observedFares",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new Dictionary<uint,IReadOnlyDictionary<uint,uint>>());
   foreach(var board in Plugin.Boards)foreach(int sample in new[]{0,1,2}) {
    var mobs=new List<MobHuntEntry>();
    foreach(byte tier in board.Daily) {
@@ -210,7 +213,7 @@ class Program {
      var t=o.Target.Value;mobs.Add(new(){BillNumber=tier,MobIndex=(byte)o.SubrowId,MobHuntId=t.Name.RowId,MapId=t.Map.RowId,TerritoryType=t.Map.Value.TerritoryType.RowId,NeededKills=o.NeededKills});
     }
    }
-   typeof(Plugin).GetField("Mobs",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,mobs);build.Invoke(plugin,null);
+   typeof(Plugin).GetField("Mobs",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,mobs);build.Invoke(plugin,[fares]);
    var routes=(List<ZoneRoute>)typeof(Plugin).GetField("Routes",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!;
    if(routes.Sum(r=>r.Mobs.Count)!=mobs.Count)throw new Exception("Production route lost targets");checks++;
    foreach(var route in routes) {
@@ -304,7 +307,7 @@ class Program {
   sync.Invoke(controller,null);shortcutBusy=false;sync.Invoke(controller,null);
   var queuedShortcut=confirmationQueue.Activate(true);
   if(queuedShortcut?.Owner!="shortcut")throw new Exception("Busy frame consumed useful shortcut forever");checks++;
-  if(queuedShortcut.Presentation is not {Subject:"gnome",Metrics.Length:3} || !queuedShortcut.Presentation.Context.Contains("100"))throw new Exception("Shortcut controller lost structured target/cost presentation");checks++;
+  if(queuedShortcut.Presentation is not {} shortcutPresentation || !shortcutPresentation.Destination.EndsWith(" → gnome") || !shortcutPresentation.Summary.Contains("100 гил"))throw new Exception("Shortcut controller lost structured target/cost presentation");checks++;
   if(confirmationQueue.Resolve(queuedShortcut.Key,false)!=null)throw new Exception("No approved a shortcut");checks++;
   sync.Invoke(controller,null);if(confirmationQueue.Activate(true)!=null)throw new Exception("Declined shortcut repeated");checks++;
   var nextSession=new RouteSession();var fromMob=new MobHuntEntry{Name="done elite",IsEliteMark=true,TerritoryName="Kozama'uka",BillNumber=18,MobIndex=0,MobHuntId=1,TerritoryType=1188,NeededKills=1};

@@ -8,11 +8,7 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
     public string FareLabel => Fare is {} gil?$"Цена · {gil} гил":"";
     public string ConfirmLabel => ActionLabel ?? "Телепорт";
     public string DeclineLabel => "Позже";
-    public static TravelDialogContent Login(string mode) => mode switch {
-        "taken"=>Notice("Продолжить охоту?","Продолжить"),
-        "pickup"=>Pickup(),
-        _=>Notice("Открыть сводку охоты?","Открыть","Новых контрактов пока нет.")
-    };
+    public static TravelDialogContent ResumeHunt() => Notice("Продолжить охоту?","Продолжить");
     public static TravelDialogContent Pickup() => Notice("Доступны новые контракты","К доскам");
     private static TravelDialogContent Notice(string title,string action,string context="") =>
         new("",title,"","",context,"","","","",[],action,CenterNoticeText:true);

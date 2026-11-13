@@ -35,6 +35,8 @@ public sealed class SavedJourney {
  public HashSet<string> LongNotified {get;set;}=[];
  public long DailyNotice {get;set;}
  public long WeeklyNotice {get;set;}
+ public long DailyChatNotice {get;set;}
+ public long WeeklyChatNotice {get;set;}
  public string? Context {get;set;}
  public string? SearchTarget {get;set;}
  public EliteProgress? Search {get;set;}
