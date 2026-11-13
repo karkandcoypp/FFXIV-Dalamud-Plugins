@@ -5,14 +5,15 @@ using HuntRoute;
 
 // Offline composition preview of the shared native layout; not a screenshot of FFXIV's Atk renderer.
 internal static class DialogPreviewChecks {
-    internal static unsafe void Run(string directory) {
+    internal static unsafe void Run(string directory,Lumina.GameData? game=null) {
         var fareLineCounts=new HashSet<int>();
         var offer=new ShortcutOffer(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40);
-        foreach(var sample in new[]{("login",TravelDialogContent.ResumeHunt()),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-long",TravelDialogContent.Board("The Crystarium — The Mean and the Dossal Gate of the Crystalline City of Norvrandt","The Dossal Gate and the Crystalline Mean of the Crystalline City of Norvrandt","Shadowbringers",1854,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("plain-long",TravelDialogContent.Plain(string.Concat(Enumerable.Repeat("Продолжить охоту по оставшимся контрактам? ",4)))),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("Elpis","The Ruby Sea","coralshell",1) with {Context="Onokoro",Fare=287}),("next-portrait-forelands",TravelDialogContent.Next("Elpis","The Dravanian Forelands","melia",1) with {Context="Tailfeather",Fare=203}),("next-portrait-hinterlands",TravelDialogContent.Next("Elpis","The Dravanian Hinterlands","poroggo",1) with {Context="Idyllshire",Fare=288,Detail="После телепорта перейдите в зону цели."}),("next-portrait-yanxia",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Inn at Journey's Head",Fare=210}),("next-portrait-fare-wrap",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=210}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands and the Coerthas Western Highlands",new string('Ж',100),1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=1854,Detail="Эфирит в соседней зоне. Дальше — своим ходом."}),("shortcut",TravelDialogContent.Shortcut(offer with {Name="Lydha Lran",DirectSeconds=59,TeleportSeconds=20},"rosebear","Il Mheg")),("shortcut-long",TravelDialogContent.Shortcut(offer with {Name="The Dossal Gate and the Crystalline Mean at the Crystarium"},"northern highland crystalback gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
+        foreach(var sample in new[]{("login",TravelDialogContent.ResumeHunt()),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-long",TravelDialogContent.Board("The Crystarium — The Mean and the Dossal Gate of the Crystalline City of Norvrandt","The Dossal Gate and the Crystalline Mean of the Crystalline City of Norvrandt","Shadowbringers",1854,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("plain-long",TravelDialogContent.Plain(string.Concat(Enumerable.Repeat("Продолжить охоту по оставшимся контрактам? ",4)))),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("Elpis","The Ruby Sea","coralshell",1) with {Context="Onokoro",Fare=287}),("next-portrait-forelands",TravelDialogContent.Next("Elpis","The Dravanian Forelands","melia",1) with {Context="Tailfeather",Fare=203}),("next-portrait-hinterlands",TravelDialogContent.Next("Elpis","The Dravanian Hinterlands","poroggo",1) with {Context="Idyllshire",Fare=288,Detail="После телепорта перейдите в зону цели."}),("next-portrait-yanxia",TravelDialogContent.Next("Elpis","Yanxia","ebisu catfish",1) with {Context="The House of the Fierce",Fare=325}),("next-portrait-fare-wrap",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Crystalline Mean and The Dossal Gate at the Crystarium in Norvrandt",Fare=210}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands and the Coerthas Western Highlands",new string('Ж',100),1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=1854,Detail="Эфирит в соседней зоне. Дальше — своим ходом."}),("shortcut",TravelDialogContent.Shortcut(offer with {Name="Lydha Lran",DirectSeconds=59,TeleportSeconds=20},"rosebear","Il Mheg")),("shortcut-long",TravelDialogContent.Shortcut(offer with {Name="The Dossal Gate and the Crystalline Mean at the Crystarium"},"northern highland crystalback gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
             ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(520,900);io.DeltaTime=1f/60;
             io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
             ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);ImGui.Begin("measure",ImGuiWindowFlags.NoDecoration);
+            if(game!=null&&sample.Item1=="next-portrait-yanxia")CheckGameNames(game);
             var layout=TravelDialogLayout.Build(sample.Item2,(text,width,font)=> { ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(text,false,width).Y+4; },label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return Math.Max(ImGui.CalcTextSize(label).X,label.EnumerateRunes().Count()*9.5f);},title=>{ImGui.SetWindowFontScale(NativeHuntLayout.TitleFont/17f);return ImGui.CalcTextSize(title).X;});
             if(sample.Item1=="board"&&!layout.Texts.Select(t=>t.Text).SequenceEqual(new[]{"Доска охоты · Endwalker","Old Sharlayan","Цена · 1235 гил"}))
                 throw new Exception("Board prompt must identify the expansion, city and price once");
@@ -140,5 +141,29 @@ internal static class DialogPreviewChecks {
         }
         if(!fareLineCounts.Contains(1)||!fareLineCounts.Contains(2))
             throw new Exception("Fare checks must exercise both one- and two-line aetheryte names");
+    }
+
+    private static void CheckGameNames(Lumina.GameData game) {
+        float Width(string value) {
+            ImGui.SetWindowFontScale(NativeHuntLayout.TitleFont/17f);
+            return ImGui.CalcTextSize(value).X;
+        }
+        float Height(string value,float width,uint font) {
+            ImGui.SetWindowFontScale(font/17f);
+            return ImGui.CalcTextSize(value,false,width).Y+4;
+        }
+        var zones=game.Excel.GetSheet<Lumina.Excel.Sheets.TerritoryType>()
+            .Select(t=>t.PlaceName.Value.Name.ToString()).Where(n=>!string.IsNullOrWhiteSpace(n)).Distinct().ToArray();
+        var aetherytes=game.Excel.GetSheet<Lumina.Excel.Sheets.Aetheryte>()
+            .Where(a=>a.IsAetheryte).Select(a=>a.PlaceName.Value.Name.ToString())
+            .Where(n=>!string.IsNullOrWhiteSpace(n)).Distinct().ToArray();
+        foreach(string zone in zones)foreach(string aetheryte in aetherytes) {
+            var content=TravelDialogContent.Next("",zone,"ebisu catfish",1) with {Context=aetheryte,Fare=325};
+            var layout=TravelDialogLayout.Build(content,Height,measureTitleWidth:Width);
+            var portrait=layout.Portrait!.Value;
+            NativeResizeChecks.Check(new(layout.Width,layout.Height),layout.Texts.Select(t=>new NativeHuntRect(t.Position,t.Size))
+                .Append(portrait).Append(new(layout.Confirm.Position,layout.Confirm.Size)).Append(new(layout.Decline.Position,layout.Decline.Size)));
+        }
+        Console.WriteLine($"PASS game location names: {zones.Length} zones × {aetherytes.Length} aetherytes");
     }
 }

@@ -157,7 +157,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
             catch(Exception e){Service.PluginLog.Debug(e,"Портрет следующей цели недоступен");presentation=content with {PortraitIcon=0};}
         }
         var layout=TravelDialogLayout.Build(presentation,(text,width,font)=> {
-            var node=new TextNode { Size=new Vector2(width,4096),FontSize=font,LineSpacing=font+3,
+            var node=new TextNode { Size=new Vector2(width,4096),FontSize=font,LineSpacing=3,
                 String=text };
             node.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);
             textNodes.Add(node);AddFixedNode(node);return node.GetTextDrawSize(considerScale:false).Y;

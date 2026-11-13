@@ -93,7 +93,8 @@ class Program {
    if(overflow>0)throw new Exception($"Horizontal overflow {overflow}px in {sample}");
    Console.WriteLine($"PASS production UI {sample}: exported vertices");
   }
-  DialogPreviewChecks.Run(directory);
+ using var game=args.Length>1?new Lumina.GameData(args[1]):null;
+ DialogPreviewChecks.Run(directory,game);
   WorldMarkerPreviewChecks.Run(directory);
   var nativeFlow=(JourneyFlow)typeof(Plugin).GetProperty("Flow",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!;
   nativeFlow.Stop();nativeFlow.Unavailable.Clear();nativeFlow.Active=true;nativeFlow.Status="Сопровождение активно";
@@ -112,6 +113,6 @@ class Program {
   }
   Set(plugin,"BillStates",boardStates);Set(plugin,"completionHistory",boardHistory);
   Set(plugin,"CurrentTerritory",418u); // An unlocked-by-location board can receive focus in the preview.
-  NativeHuntPreviewChecks.Run(directory,plugin,args.Length>1?new Lumina.GameData(args[1]):null);
+ NativeHuntPreviewChecks.Run(directory,plugin,game);
  }
 }

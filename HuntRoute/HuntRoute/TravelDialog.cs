@@ -109,7 +109,9 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         float y=top;
         if(content.NextZone) {
             float measuredTitle=measureTitleWidth?.Invoke(content.Title)??float.PositiveInfinity;
-            float titleColumnWidth=Math.Max(inner-160-portraitGap,MathF.Ceiling(measuredTitle)+4);
+            float measuredAetheryte=measureTitleWidth?.Invoke(content.Context)??160;
+            float preferredDetailsWidth=Math.Max(160,MathF.Ceiling(measuredAetheryte)+8);
+            float titleColumnWidth=Math.Max(inner-preferredDetailsWidth-portraitGap,Math.Max(112,MathF.Ceiling(measuredTitle)+8));
             float detailsWidth=inner-titleColumnWidth-portraitGap;
             bool sideDetails=portrait.HasValue&&content.Fare.HasValue&&detailsWidth>=116;
             float headingWidth=sideDetails?titleColumnWidth:inner;
