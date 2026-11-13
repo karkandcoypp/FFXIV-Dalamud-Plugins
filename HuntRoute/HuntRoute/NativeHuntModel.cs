@@ -76,7 +76,8 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
  private static bool IsTargetFilter(NativeHuntButton b)=>b.Key=="filters"&&b.Action is {Kind:"page",Argument:"Filters"};
  public static int PagedButtonCount(NativeHuntScreen screen)=>screen.Buttons.Count(b=>!IsTargetFilter(b));
  public static float TitleWidth(NativeHuntScreen screen,bool mini)=>SummaryWidth(screen,mini)-(screen.Elite?EliteBadgeWidth+EliteBadgeGap:0);
- public static byte SummaryFont(NativeHuntPage view,bool mini)=>SecondaryFont;
+ public static bool CenterNumberText(NativeHuntPage view,bool mini)=>!mini&&view==NativeHuntPage.Number;
+ public static byte SummaryFont(NativeHuntPage view,bool mini)=>CenterNumberText(view,mini)?(byte)24:SecondaryFont;
  public static float SummaryWidth(NativeHuntScreen screen,bool mini)=>ContentWidth(mini)-(!mini&&screen.Icon!=0?PortraitSize+Gap:0);
  private static bool IsCompact(NativeHuntButton button)=>button.Board==null&&button.Goal==null&&button.Checked==null&&!button.Label.Contains('\n')&&button.Label.Length<=24;
  public static NativeHuntRect ButtonCaption(Vector2 position,Vector2 size,Vector2 measured){

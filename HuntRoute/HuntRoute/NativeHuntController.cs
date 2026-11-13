@@ -149,7 +149,12 @@ public sealed class NativeHuntController {
   return new(Offset==0?"Параметры охоты":"Обслуживание",feedback??(Offset==0?"Телепорт в зоне и дальность меток.":""),buttons);
  }
  private (string Label,string Value) NumberValue(string key){var s=plugin.Settings;return key switch{"elite-distance"=>("Дальность меток элиты",s.WorldDistance+" м"),"ordinary-distance"=>("Дальность меток обычных мобов",s.OrdinaryWorldDistance+" м"),"gil"=>("Лимит стоимости телепорта",s.MaxGil+" гил"),"seconds"=>("Минимальная экономия времени",$"{s.MinSeconds:0.#} с"),"percent"=>("Минимальная экономия времени, %",s.MinPercent+" %"),_=>("Параметр","")};}
- private NativeHuntScreen Number(){var (label,value)=NumberValue(numberKey);return new(label,$"{value}",new[]{-1,-10,-50,1,10,50}.Select(d=>Button("step:"+d,(d<0?"-":"+")+(numberKey=="seconds"?$"{Math.Abs(d)/10f:F1} с":Math.Abs(d).ToString()),"step",numberKey,!plugin.PersistenceBlocked,d)).ToArray());}
+ private NativeHuntScreen Number(){
+  var (label,value)=NumberValue(numberKey);
+  return new(label,value,new[]{-1,-10,-50,1,10,50}.Select(d=>Button("step:"+d,
+   (d<0?"−":"+")+(numberKey=="seconds"?$"{Math.Abs(d)/10f:0.#} с":Math.Abs(d).ToString()),
+   "step",numberKey,!plugin.PersistenceBlocked,d)).ToArray(),SummaryColor:NativeHuntColors.Tracking);
+ }
  private NativeHuntScreen Actions(){
   var buttons=new List<NativeHuntButton>();
   if(plugin.Flow.Active){

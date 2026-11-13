@@ -17,6 +17,11 @@ internal static class NativeHuntPreviewChecks {
   samples.Add(("Boards-max-timers",boards.Page,boards.Screen with {BoardTimers=NativeBoardTimers.FromRemaining(longest,longest)},false,0));
   var number=samples.Single(s=>s.Page==NativeHuntPage.Number);
   samples.Add(("Number-lower",number.Page,number.Screen,false,0));
+  foreach(string key in new[]{"seconds","percent","gil","elite-distance"}){
+   controller.Execute(new("edit-number",key));
+   samples.Add(("Number-"+key,controller.Page,controller.Build(),false,0));
+  }
+  controller.Navigate(NativeHuntPage.Number);
   samples.Add(("mini",NativeHuntPage.Hunt,controller.Build(true),true,0));
   var flow=(JourneyFlow)typeof(Plugin).GetProperty("Flow",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.GetValue(plugin)!;
   var priorPauses=flow.Pauses;
@@ -352,7 +357,10 @@ internal static class NativeHuntPreviewChecks {
      float inset=Math.Max(0,(rect.Size.X-ImGui.CalcTextSize(label).X)/2);
      return new(rect.Position+new Vector2(inset,0),rect.Size-new Vector2(inset,0));
     }
-    Text(title,layout.Heading,NativeHuntLayout.TitleFont,sample.Screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One);if(summary.Length>0)Text(summary,layout.Summary,NativeHuntLayout.SummaryFont(sample.Page,sample.Mini),sample.Screen.SummaryColor??NativeHuntColors.Muted);
+    bool centerNumber=NativeHuntLayout.CenterNumberText(sample.Page,sample.Mini);
+    float summaryFont=NativeHuntLayout.SummaryFont(sample.Page,sample.Mini);
+    Text(title,centerNumber?Center(title,layout.Heading,NativeHuntLayout.TitleFont):layout.Heading,NativeHuntLayout.TitleFont,sample.Screen.Progress!=null?NativeHuntColors.Tracking:Vector4.One);
+    if(summary.Length>0)Text(summary,centerNumber?Center(summary,layout.Summary,summaryFont):layout.Summary,summaryFont,sample.Screen.SummaryColor??NativeHuntColors.Muted);
     if(layout.EliteBadge is {} badgeRect){
      draw.AddRectFilled(badgeRect.Position,badgeRect.Position+badgeRect.Size,0xff30424d,4);
      draw.AddRect(badgeRect.Position,badgeRect.Position+badgeRect.Size,0xff427d9c,4);
