@@ -19,12 +19,12 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
         "",[],PortraitIcon:portraitIcon,NextZone:true);
     public static TravelDialogContent Board(string city,string aetheryte,string expansion,uint gil,bool local) => new(
         $"Доска охоты · {expansion}",city,"Эфирит",local||aetheryte==city?"":aetheryte,
-        local?"Вы уже в городе · поставим метку":gil==0?"Телепорт бесплатный":$"Стоимость телепорта: {gil.ToString("N0",System.Globalization.CultureInfo.InvariantCulture).Replace(',', '\u00A0')} гил",
-        "","","","",[],local?"К доске":null,CenterNoticeText:local||aetheryte==city);
+        local?"Вы уже в городе · поставим метку":gil==0?"Телепорт бесплатный":"",
+        "","","","",[],local?"К доске":null,CenterNoticeText:local||aetheryte==city,Fare:!local&&gil>0?gil:null);
     public static TravelDialogContent Shortcut(ShortcutOffer offer,string target) => new(
         "","Сократить перелёт?","",$"{offer.Name} → {target}",
         "","","","","",[],
-        Summary:$"На ~{offer.SavedSeconds:F0} с быстрее · {offer.GilCost} гил");
+        Summary:$"На ~{offer.SavedSeconds:F0} с быстрее",Fare:offer.GilCost);
     public static TravelDialogContent Plain(string text) => Notice(string.IsNullOrWhiteSpace(text)?"Продолжить?":text,"Продолжить");
 }
 public sealed record DialogText(string Text,Vector2 Position,Vector2 Size,uint Font,Vector4 Color,bool Centered=false);

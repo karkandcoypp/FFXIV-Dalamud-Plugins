@@ -12,6 +12,7 @@ namespace HuntRoute;
 internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Action<NativeHuntAction> execute,Action closed,Func<bool> modal,bool mini=false):NativeAddon {
  private void AddFixedNode(NodeBase node)=>NativeFixedLayout.Attach(this,node);
  private TextNode? buttonMeasure;
+ private IconImageNode? gilIcon;
  private readonly TextNode?[] captions=new TextNode?[NativeHuntLayout.ButtonCapacity];
  private readonly TextButtonNode?[] buttons=new TextButtonNode?[NativeHuntLayout.ButtonCapacity];
  private readonly CheckboxNode?[] checks=new CheckboxNode?[NativeHuntLayout.ButtonCapacity];
@@ -45,6 +46,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   if(WindowNode is WindowNode window){window.ShowConfigButton=false;window.ShowHelpButton=false;}
   if(mini)native->DisableFocusOnShow=true;
   buttonMeasure=new TextNode{FontSize=NativeHuntLayout.ButtonFont,Size=new(4096,64),IsVisible=false};AddFixedNode(buttonMeasure);
+  gilIcon=GilDisplay.CreateIcon();AddFixedNode(gilIcon);
   heading=new TextNode{FontSize=NativeHuntLayout.TitleFont,String="Hunt Route"};heading.AddTextFlags(TextFlags.WordWrap|TextFlags.MultiLine);AddFixedNode(heading);
   eliteBorder=new ColorImageNode{Color=NativeHuntLayout.EliteBorder,IsVisible=false};AddFixedNode(eliteBorder);
   eliteBackground=new ColorImageNode{Color=NativeHuntLayout.EliteBackground,IsVisible=false};AddFixedNode(eliteBackground);
@@ -122,7 +124,9 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
   bool hasIcon=!mini&&screen.Icon!=0;
   string title=NativeHuntLayout.FitLabel(screen.Title,110),description=NativeHuntLayout.FitLabel(screen.Summary,420);
   if(titleText!=title){heading.String=title;titleText=title;}
-  if(summaryText!=description){summary.String=description;summaryText=description;}
+  bool gilSummary=NativeHuntLayout.CenterNumberText(controller.Page,mini)&&description.EndsWith(" гил",StringComparison.Ordinal);
+  if(summaryText!=description||gilSummary){summary.String=description;summaryText=description;}
+  if(gilIcon!=null)gilIcon.IsVisible=false;
   summary.FontSize=NativeHuntLayout.SummaryFont(controller.Page,mini);
   var textAlignment=NativeHuntLayout.CenterNumberText(controller.Page,mini)?AlignmentType.Top:AlignmentType.TopLeft;
   heading.AlignmentType=summary.AlignmentType=textAlignment;
@@ -142,6 +146,7 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
    eliteLabel.Position=badge.Position;eliteLabel.Size=badge.Size;
   }
   summary.Position=layout.Summary.Position;summary.Size=layout.Summary.Size;
+  if(gilSummary&&gilIcon!=null)GilDisplay.Place(gilIcon,summary,description[..^4],summary.Position,summary.Size);
   var progress=screen.Progress;
   progressLabel.IsVisible=progress!=null;
   progressTrack.IsVisible=!mini&&progress!=null;
@@ -189,6 +194,8 @@ internal sealed unsafe class NativeHuntAddon(NativeHuntController controller,Act
     NativeButtonText.SetCaption(caption,button,spec.Board!=null||spec.Goal!=null?"":spec.Label,
      !spec.Enabled?NativeHuntColors.Muted:ownsFocus&&focusedKey==spec.Key?NativeHuntColors.Attention:spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One));
     caption.IsVisible=spec.Board==null&&spec.Goal==null;
+    if(spec.Key=="number:gil"&&gilIcon!=null&&spec.Label.EndsWith(" гил",StringComparison.Ordinal))
+     GilDisplay.Place(gilIcon,caption,spec.Label[..^4],button.Position,button.Size);
     button.BackgroundNode.Color=spec.Key=="primary"&&spec.Emphasized?NativeHuntColors.PrimarySurface:Vector4.One;
     button.LabelNode.TextColor=spec.LabelColor??(spec.Emphasized?NativeHuntColors.Attention:Vector4.One);
     button.IsVisible=true;button.IsEnabled=spec.Enabled;

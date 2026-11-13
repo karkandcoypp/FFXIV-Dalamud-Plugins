@@ -307,7 +307,7 @@ class Program {
   sync.Invoke(controller,null);shortcutBusy=false;sync.Invoke(controller,null);
   var queuedShortcut=confirmationQueue.Activate(true);
   if(queuedShortcut?.Owner!="shortcut")throw new Exception("Busy frame consumed useful shortcut forever");checks++;
-  if(queuedShortcut.Presentation is not {} shortcutPresentation || !shortcutPresentation.Destination.EndsWith(" → gnome") || !shortcutPresentation.Summary.Contains("100 гил"))throw new Exception("Shortcut controller lost structured target/cost presentation");checks++;
+  if(queuedShortcut.Presentation is not {} shortcutPresentation || !shortcutPresentation.Destination.EndsWith(" → gnome") || shortcutPresentation.Fare!=100)throw new Exception("Shortcut controller lost structured target/cost presentation");checks++;
   if(confirmationQueue.Resolve(queuedShortcut.Key,false)!=null)throw new Exception("No approved a shortcut");checks++;
   sync.Invoke(controller,null);if(confirmationQueue.Activate(true)!=null)throw new Exception("Declined shortcut repeated");checks++;
   var nextSession=new RouteSession();var fromMob=new MobHuntEntry{Name="done elite",IsEliteMark=true,TerritoryName="Kozama'uka",BillNumber=18,MobIndex=0,MobHuntId=1,TerritoryType=1188,NeededKills=1};

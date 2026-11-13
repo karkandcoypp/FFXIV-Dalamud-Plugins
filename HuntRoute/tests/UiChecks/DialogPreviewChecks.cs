@@ -14,7 +14,7 @@ internal static class DialogPreviewChecks {
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
             ImGui.NewFrame();ImGui.SetNextWindowPos(Vector2.Zero);ImGui.SetNextWindowSize(io.DisplaySize);ImGui.Begin("measure",ImGuiWindowFlags.NoDecoration);
             var layout=TravelDialogLayout.Build(sample.Item2,(text,width,font)=> { ImGui.SetWindowFontScale(font/17f);return ImGui.CalcTextSize(text,false,width).Y+4; },label=>{ImGui.SetWindowFontScale(NativeHuntLayout.ButtonFont/17f);return Math.Max(ImGui.CalcTextSize(label).X,label.EnumerateRunes().Count()*9.5f);},title=>{ImGui.SetWindowFontScale(NativeHuntLayout.TitleFont/17f);return ImGui.CalcTextSize(title).X;});
-            if(sample.Item1=="board"&&!layout.Texts.Select(t=>t.Text).SequenceEqual(new[]{"Доска охоты · Endwalker","Old Sharlayan","Стоимость телепорта: 1\u00A0235 гил"}))
+            if(sample.Item1=="board"&&!layout.Texts.Select(t=>t.Text).SequenceEqual(new[]{"Доска охоты · Endwalker","Old Sharlayan","Цена · 1235 гил"}))
                 throw new Exception("Board prompt must identify the expansion, city and price once");
             if(sample.Item1=="board-local"&&(sample.Item2.ConfirmLabel!="К доске"||layout.Texts.Any(t=>t.Text.Contains("гил"))))
                 throw new Exception("Local board prompt must offer a marker without a fare");
@@ -27,13 +27,15 @@ internal static class DialogPreviewChecks {
                 throw new Exception("Dialog text must finish above the button row: "+sample.Item1);
             if(sample.Item2.Fare.HasValue) {
                 var fare=layout.Texts.Single(t=>t.Text==sample.Item2.FareLabel);
-                var aetheryte=layout.Texts.Single(t=>t.Text==sample.Item2.Context);
-                if(sample.Item1=="next-portrait-forelands"&&aetheryte.Position.X<=layout.Texts.Single(t=>t.Text==sample.Item2.Title).Position.X)
+                var aetheryte=layout.Texts.FirstOrDefault(t=>t.Text==sample.Item2.Context);
+                if(sample.Item1=="next-portrait-forelands"&&aetheryte!.Position.X<=layout.Texts.Single(t=>t.Text==sample.Item2.Title).Position.X)
                     throw new Exception("Forelands destination and fare details should share the dialog header");
+                if(sample.Item2.NextZone&&aetheryte!=null){
                 ImGui.SetWindowFontScale(aetheryte.Font/17f);
                 float lineHeight=ImGui.CalcTextSize("W").Y;
                 int lines=(int)MathF.Round(ImGui.CalcTextSize(aetheryte.Text,false,aetheryte.Size.X).Y/lineHeight);
                 fareLineCounts.Add(lines);
+                }
                 float gap=layout.Confirm.Position.Y-fare.Position.Y-fare.Size.Y;
                 if(!fare.Centered||Math.Abs(fare.Position.X+fare.Size.X/2-layout.Width/2)>.01f||
                    fare.Size.Y>NativeHuntLayout.BodyFont+8||Math.Abs(gap-6)>.01f||

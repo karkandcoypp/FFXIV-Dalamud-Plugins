@@ -20,7 +20,9 @@ public sealed partial class HuntWindow {
   if(ImGui.CollapsingHeader("Телепорты внутри зоны")){
    dirty|=ImGui.Checkbox("Предлагать сокращение пути",ref shortcuts);
    ImGui.BeginDisabled(!shortcuts);
-   ImGui.TextUnformatted("Лимит гил · 0 — бесплатно");ImGui.SetNextItemWidth(-1);dirty|=ImGui.InputInt("##gil",ref gil);
+   GilDisplay.Draw("Лимит стоимости","Лимит гил");
+   HuntTheme.Hint("0 — только бесплатные телепорты.");
+   ImGui.SetNextItemWidth(-1);dirty|=ImGui.InputInt("##gil",ref gil);
    ImGui.TextUnformatted("Минимум экономии, секунд");ImGui.SetNextItemWidth(-1);dirty|=ImGui.InputFloat("##seconds",ref seconds);
    ImGui.TextUnformatted("Минимум экономии, %");ImGui.SetNextItemWidth(-1);dirty|=ImGui.SliderFloat("##percent",ref percent,0,100);ImGui.EndDisabled();
   }

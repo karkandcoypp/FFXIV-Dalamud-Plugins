@@ -77,11 +77,11 @@ internal sealed class NativeDialogService : IDisposable {
                 if(content.Summary.Length>0)ImGui.TextWrapped(content.Summary);
                 if(content.Destination.Length>0&&content.Destination!=content.Title)ImGui.TextWrapped(content.Destination);
                 if(content.Context.Length>0)ImGui.TextWrapped(content.NextZone&&content.Fare.HasValue?$"Эфирит · {content.Context}":content.Context);
-                if(content.Fare.HasValue)ImGui.TextUnformatted(content.FareLabel);
                 if(content.Subject.Length>0)ImGui.TextWrapped(content.SubjectLabel.Length>0?$"{content.SubjectLabel} · {content.Subject}":content.Subject);
                 if(content.Detail.Length>0)ImGui.TextWrapped(content.Detail);
                 foreach(var metric in content.Metrics)ImGui.TextWrapped($"{metric.Label} · {metric.Value}");
                 if(content.Footer.Length>0)ImGui.TextWrapped(content.Footer);
+                if(content.Fare is {} amount)GilDisplay.Draw(amount.ToString(),content.FareLabel);
             }finally{ImGui.PopTextWrapPos();}
             ImGui.BeginDisabled(!request.Ready());
             bool accept=ImGui.Button(content.ConfirmLabel);
@@ -165,7 +165,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color;if(spec.Centered)node.AlignmentType=AlignmentType.Top; }
         fareText=presentation.Fare.HasValue?textNodes[^1]:null;
         if(fareText!=null) {
-            fareIcon=new IconImageNode{IconId=65002,Size=new(16,16),FitTexture=true,IsVisible=false};
+            fareIcon=GilDisplay.CreateIcon();
             AddFixedNode(fareIcon);
         }
         portraitRect=layout.Portrait;
@@ -217,15 +217,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     private void RefreshFare(){
         if(fareIcon is not {IsTextureReady:true,IsVisible:false} icon||fareText is not {} text||content.Fare is not {} amount)return;
         string number=amount.ToString();
-        float numberWidth=MathF.Ceiling(text.GetTextDrawSize(number,considerScale:false).X);
-        if(numberWidth<=0||numberWidth+22>text.Size.X)return;
-        float x=text.Position.X+(text.Size.X-numberWidth-22)/2;
-        icon.Position=new(x+numberWidth+6,text.Position.Y+(text.Size.Y-16)/2);
-        text.Position=new(x,text.Position.Y);
-        text.Size=new(numberWidth+2,text.Size.Y);
-        text.AlignmentType=AlignmentType.TopLeft;
-        text.String=number;
-        icon.IsVisible=true;
+        GilDisplay.Place(icon,text,number,text.Position,text.Size);
     }
     private void RefreshPortrait(){
         if(portrait is not {IsVisible:false,IsTextureReady:true} image||portraitRect is not {} bounds)return;

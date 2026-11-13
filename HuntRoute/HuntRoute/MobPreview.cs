@@ -8,7 +8,7 @@ namespace HuntRoute;
 
 internal static class MobPreview {
     private static readonly HashSet<uint> failures=[];
-    private static IDalamudTextureWrap? Image(uint icon){
+    internal static IDalamudTextureWrap? Image(uint icon){
         foreach(bool high in new[]{true,false})try{
             var wrap=Service.TextureProvider.GetFromGameIcon(new GameIconLookup(icon,itemHq:false,hiRes:high)).GetWrapOrDefault();
             if(wrap!=null&&wrap.Width>0&&wrap.Height>0)return wrap;
