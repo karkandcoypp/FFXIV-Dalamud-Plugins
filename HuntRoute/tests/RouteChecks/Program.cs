@@ -393,7 +393,7 @@ var nextDialog=TravelDialogContent.Next("Kozama'uka","Yak T'el","mourner");
 var shortcutDialog=TravelDialogContent.Shortcut(new(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40),"gnome");
 Check(nextDialog.Destination=="Yak T'el" && nextDialog.Subject=="mourner" && nextDialog.Metrics.Length==0,"Next-zone dialog names the correct zone and first mob");
 Check(shortcutDialog.Destination=="Mord Souq → gnome" && shortcutDialog.Fare==100,"Intra-zone dialog names the actual aetheryte, cost and target");
-Check(shortcutDialog.Summary=="На ~15 с быстрее" && shortcutDialog.Metrics.Length==0,"Savings are a separate rounded estimate");
+Check(shortcutDialog.Summary=="(на ~15 с быстрее)" && shortcutDialog.Metrics.Length==0,"Savings are a separate rounded estimate");
 foreach(var content in new[]{nextDialog,shortcutDialog,nextDialog with {Destination=new string('W',95),Subject=new string('Ж',120)},TravelDialogContent.Plain(new string('Я',180))}) {
  var layout=TravelDialogLayout.Build(content,MeasureDialog);
  Check(layout.Width==TravelDialogLayout.DialogWidth && layout.Height>100 && new[]{layout.Confirm,layout.Decline}.All(b=>b.Position.X>=16&&b.Position.X+b.Size.X<=layout.Width-16&&b.Position.Y+b.Size.Y<=layout.Height-12)&&layout.Confirm.Position.X+layout.Confirm.Size.X<layout.Decline.Position.X,"Native dialog reserves visible buttons and margins");

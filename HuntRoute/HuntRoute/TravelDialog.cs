@@ -6,6 +6,7 @@ namespace HuntRoute;
 public sealed record DialogMetric(string Label,string Value,bool Highlight=false);
 public sealed record TravelDialogContent(string Eyebrow,string Title,string DestinationLabel,string Destination,string Context,string SubjectLabel,string Subject,string Detail,string Footer,DialogMetric[] Metrics,string? ActionLabel=null,uint PortraitIcon=0,bool CenterNoticeText=false,bool NextZone=false,string Summary="",uint? Fare=null) {
     public string FareLabel => Fare is {} gil?$"Цена · {gil} гил":"";
+    public byte FareFont => Summary.Length>0?(byte)22:NativeHuntLayout.BodyFont;
     public string ConfirmLabel => ActionLabel ?? "Телепорт";
     public string DeclineLabel => "Позже";
     public static TravelDialogContent ResumeHunt() => Notice("Продолжить охоту?","Продолжить");
@@ -21,10 +22,10 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
         $"Доска охоты · {expansion}",city,"Эфирит",local||aetheryte==city?"":aetheryte,
         local?"Вы уже в городе · поставим метку":gil==0?"Телепорт бесплатный":"",
         "","","","",[],local?"К доске":null,CenterNoticeText:local||aetheryte==city,Fare:!local&&gil>0?gil:null);
-    public static TravelDialogContent Shortcut(ShortcutOffer offer,string target) => new(
-        "","Сократить перелёт?","",$"{offer.Name} → {target}",
+    public static TravelDialogContent Shortcut(ShortcutOffer offer,string target,string? zone=null) => new(
+        "","Сократить перелёт?","",string.IsNullOrWhiteSpace(zone)?$"{offer.Name} → {target}":$"{zone} · {offer.Name} → {target}",
         "","","","","",[],
-        Summary:$"На ~{offer.SavedSeconds:F0} с быстрее",Fare:offer.GilCost);
+        CenterNoticeText:true,Summary:$"(на ~{offer.SavedSeconds:F0} с быстрее)",Fare:offer.GilCost);
     public static TravelDialogContent Plain(string text) => Notice(string.IsNullOrWhiteSpace(text)?"Продолжить?":text,"Продолжить");
 }
 public sealed record DialogText(string Text,Vector2 Position,Vector2 Size,uint Font,Vector4 Color,bool Centered=false);
@@ -117,10 +118,10 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             y+=Text(content.Title,left,y,textWidth,NativeHuntLayout.TitleFont,White,centerNotice)+4;
         }
         bool hasSummary=content.Summary.Length>0;
-        if(hasSummary)y+=Text(content.Summary,left,y,textWidth,NativeHuntLayout.TitleFont,Mint)+8;
+        if(hasSummary)y+=Text(content.Summary,left,y,textWidth,NativeHuntLayout.BodyFont,Mint,centerNotice)+8;
         if(!string.IsNullOrEmpty(content.Destination)&&content.Destination!=content.Title) {
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";
-            y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White)+2;
+            y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White,centerNotice&&hasSummary)+2;
         }
         if(content.NextZone&&content.Fare.HasValue&&content.Context.Length>0)
             y+=Text("Эфирит",detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
@@ -158,7 +159,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             y+=rowHeight+4;
         }
         if(!string.IsNullOrEmpty(content.Footer)) y+=Text(content.Footer,left,y,inner,NativeHuntLayout.SecondaryFont,Muted)+4;
-        if(content.Fare.HasValue)y+=Text(content.FareLabel,left,y,inner,NativeHuntLayout.BodyFont,Mint,centered:true);
+        if(content.Fare.HasValue)y+=Text(content.FareLabel,left,y,inner,content.FareFont,Mint,centered:true);
         const float buttonHeight=NativeHuntLayout.ActionHeight;
         float confirmWidth=Math.Max(NativeHuntLayout.ButtonWidth(content.ConfirmLabel),measureButton==null?0:MathF.Ceiling(measureButton(content.ConfirmLabel))+16);
         float declineWidth=Math.Max(NativeHuntLayout.ActionWidth,measureButton==null?0:MathF.Ceiling(measureButton(content.DeclineLabel))+16);
