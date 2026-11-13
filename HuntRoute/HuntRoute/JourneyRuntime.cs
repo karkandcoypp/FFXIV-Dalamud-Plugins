@@ -232,7 +232,7 @@ public sealed partial class Plugin {
    TravelDialogContent.Next(CurrentTerritory.ToString(),target.TerritoryName??"Зона",target.Name??"Цель",target.Icon) with {Context=entry.Name,Fare=quote,Detail=TravelHint(target,entry)}),true);
  }
  internal string TravelHint(MobHuntEntry target,EntryPoint? entry){
-  if(entry!=null&&Service.DataManager.GetExcelSheet<Aetheryte>().GetRow(entry.Id).Territory.RowId!=target.TerritoryType)return "Эфирит в соседней зоне. Дальше — своим ходом.";
+  if(entry!=null&&Service.DataManager.GetExcelSheet<Aetheryte>().GetRow(entry.Id).Territory.RowId!=target.TerritoryType)return "Из соседней зоны — своим ходом.";
   return "";
  }
  internal void OfferNext(){if(Session.Phase==RoutePhase.AwaitingTravel)OfferPlannedTravel();else if(Session.Suggested is {} next)OfferTravel(next,false);}

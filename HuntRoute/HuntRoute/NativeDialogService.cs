@@ -132,6 +132,8 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     private TextNode? yesCaption,noCaption;
     private IconImageNode? portrait;
     private TextNode? portraitCaption;
+    private TextNode? fareText;
+    private IconImageNode? fareIcon;
     private NativeHuntRect? portraitRect;
 
     protected override void OnSetup(AtkUnitBase* native,Span<AtkValue> values) {
@@ -161,6 +163,11 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
             finally { measureButton.FontSize=NativeHuntLayout.ButtonFont; }
         });
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color;if(spec.Centered)node.AlignmentType=AlignmentType.Top; }
+        fareText=presentation.Fare.HasValue?textNodes[^1]:null;
+        if(fareText!=null) {
+            fareIcon=new IconImageNode{IconId=1,Size=new(16,16),FitTexture=true,IsVisible=false};
+            AddFixedNode(fareIcon);
+        }
         portraitRect=layout.Portrait;
         if(portraitRect is {} portraitBounds&&presentation.NextZone) {
             for(int i=0;i<layout.Texts.Count;i++) {
@@ -184,6 +191,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         measuredSize=new(layout.Width,layout.Height);
         SetWindowSize(measuredSize);
         RefreshPortrait();
+        RefreshFare();
         RefreshCaptions();
         native->FocusNode=no.FocusNode;
     }
@@ -203,7 +211,21 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         if(answered||yesButton==null||noButton==null)return;
         yesButton.IsEnabled=ready();
         RefreshPortrait();
+        RefreshFare();
         RefreshCaptions();
+    }
+    private void RefreshFare(){
+        if(fareIcon is not {IsTextureReady:true,IsVisible:false} icon||fareText is not {} text||content.Fare is not {} amount)return;
+        string number=amount.ToString();
+        float numberWidth=MathF.Ceiling(text.GetTextDrawSize(number,considerScale:false).X);
+        if(numberWidth<=0||numberWidth+22>text.Size.X)return;
+        float x=text.Position.X+(text.Size.X-numberWidth-22)/2;
+        icon.Position=new(x+numberWidth+6,text.Position.Y+(text.Size.Y-16)/2);
+        text.Position=new(x,text.Position.Y);
+        text.Size=new(numberWidth+2,text.Size.Y);
+        text.AlignmentType=AlignmentType.TopLeft;
+        text.String=number;
+        icon.IsVisible=true;
     }
     private void RefreshPortrait(){
         if(portrait is not {IsVisible:false,IsTextureReady:true} image||portraitRect is not {} bounds)return;
@@ -222,6 +244,8 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         float unusedHeight=TravelDialogLayout.UnusedPortraitHeight(bounds,fitted);
         if(unusedHeight>0&&yesButton is {} confirm&&noButton is {} decline) {
             var offset=new Vector2(0,unusedHeight);
+            if(fareText is {} fare)fare.Position-=offset;
+            if(fareIcon is {} coin)coin.Position-=offset;
             confirm.Position-=offset;
             decline.Position-=offset;
             measuredSize-=offset;

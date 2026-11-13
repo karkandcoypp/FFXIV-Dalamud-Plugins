@@ -99,12 +99,13 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         }
         float y=top;
         if(content.NextZone) {
-            const float detailsWidth=160;
-            float titleColumnWidth=inner-detailsWidth-portraitGap;
-            bool sideDetails=portrait.HasValue&&measureTitleWidth?.Invoke(content.Title)<=titleColumnWidth-8;
+            float measuredTitle=measureTitleWidth?.Invoke(content.Title)??float.PositiveInfinity;
+            float titleColumnWidth=Math.Max(inner-160-portraitGap,MathF.Ceiling(measuredTitle)+4);
+            float detailsWidth=inner-titleColumnWidth-portraitGap;
+            bool sideDetails=portrait.HasValue&&content.Fare.HasValue&&detailsWidth>=116;
             float headingWidth=sideDetails?titleColumnWidth:inner;
             y+=Text(content.Eyebrow,left,y,headingWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
-            y+=Text(content.Title,left,y,headingWidth,NativeHuntLayout.TitleFont,White)+8;
+            y+=Text(content.Title,left,y,headingWidth,NativeHuntLayout.TitleFont,White)+4;
             headingBottom=y;
             if(sideDetails) {
                 textWidth=detailsWidth;
@@ -124,13 +125,19 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         if(content.NextZone&&content.Fare.HasValue&&content.Context.Length>0)
             y+=Text("Эфирит",detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
         if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,hasSummary?Muted:Mint,centerNotice)+4;
-        if(content.Fare.HasValue)y+=Text(content.FareLabel,detailsX,y,textWidth,NativeHuntLayout.BodyFont,Mint)+4;
         bool captionUnderPortrait=content.NextZone&&portrait.HasValue&&content.Subject.Length>0;
         if(content.HasSubject) {
             y+=2;
             string subject=string.IsNullOrEmpty(content.SubjectLabel)?content.Subject:$"{content.SubjectLabel} · {content.Subject}";
             if(!captionUnderPortrait)y+=Text(subject,left,y,textWidth,NativeHuntLayout.BodyFont,Brand);
-            if(!string.IsNullOrEmpty(content.Detail)) y+=4+Text(content.Detail,detailsX,y+4,textWidth,NativeHuntLayout.SecondaryFont,Muted);
+            if(!string.IsNullOrEmpty(content.Detail)) {
+                if(content.NextZone) {
+                    y=Math.Max(y,headingBottom);
+                    y+=Text(content.Detail,left,y,inner,NativeHuntLayout.SecondaryFont,NativeHuntColors.Attention);
+                } else {
+                    y+=4+Text(content.Detail,detailsX,y+4,textWidth,NativeHuntLayout.SecondaryFont,Muted);
+                }
+            }
             y+=4;
         }
         if(portrait is {} image) {
@@ -151,6 +158,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             y+=rowHeight+4;
         }
         if(!string.IsNullOrEmpty(content.Footer)) y+=Text(content.Footer,left,y,inner,NativeHuntLayout.SecondaryFont,Muted)+4;
+        if(content.Fare.HasValue)y+=Text(content.FareLabel,left,y,inner,NativeHuntLayout.BodyFont,Mint,centered:true);
         const float buttonHeight=NativeHuntLayout.ActionHeight;
         float confirmWidth=Math.Max(NativeHuntLayout.ButtonWidth(content.ConfirmLabel),measureButton==null?0:MathF.Ceiling(measureButton(content.ConfirmLabel))+16);
         float declineWidth=Math.Max(NativeHuntLayout.ActionWidth,measureButton==null?0:MathF.Ceiling(measureButton(content.DeclineLabel))+16);

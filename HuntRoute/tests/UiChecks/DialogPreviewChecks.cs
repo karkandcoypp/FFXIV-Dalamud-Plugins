@@ -8,7 +8,7 @@ internal static class DialogPreviewChecks {
     internal static unsafe void Run(string directory) {
         var fareLineCounts=new HashSet<int>();
         var offer=new ShortcutOffer(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40);
-        foreach(var sample in new[]{("login",TravelDialogContent.ResumeHunt()),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-long",TravelDialogContent.Board("The Crystarium — The Mean and the Dossal Gate of the Crystalline City of Norvrandt","The Dossal Gate and the Crystalline Mean of the Crystalline City of Norvrandt","Shadowbringers",1854,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("plain-long",TravelDialogContent.Plain(string.Concat(Enumerable.Repeat("Продолжить охоту по оставшимся контрактам? ",4)))),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("Elpis","The Ruby Sea","coralshell",1) with {Context="Onokoro",Fare=287}),("next-portrait-yanxia",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Inn at Journey's Head",Fare=210}),("next-portrait-fare-wrap",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=210}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands and the Coerthas Western Highlands",new string('Ж',100),1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=1854,Detail="Эфирит в соседней зоне. Дальше — своим ходом."}),("shortcut",TravelDialogContent.Shortcut(offer with {Name="Lydha Lran",DirectSeconds=59,TeleportSeconds=20},"rosebear")),("shortcut-long",TravelDialogContent.Shortcut(offer with {Name="The Dossal Gate and the Crystalline Mean at the Crystarium"},"northern highland crystalback gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
+        foreach(var sample in new[]{("login",TravelDialogContent.ResumeHunt()),("pickup",TravelDialogContent.Pickup()),("board",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",1235,false)),("board-free",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,false)),("board-separate-aetheryte",TravelDialogContent.Board("The Crystarium","The Dossal Gate","Shadowbringers",1235,false)),("board-long",TravelDialogContent.Board("The Crystarium — The Mean and the Dossal Gate of the Crystalline City of Norvrandt","The Dossal Gate and the Crystalline Mean of the Crystalline City of Norvrandt","Shadowbringers",1854,false)),("board-local",TravelDialogContent.Board("Old Sharlayan","Old Sharlayan","Endwalker",0,true)),("plain",TravelDialogContent.Plain("Продолжить?")),("plain-long",TravelDialogContent.Plain(string.Concat(Enumerable.Repeat("Продолжить охоту по оставшимся контрактам? ",4)))),("next",TravelDialogContent.Next("The Ruby Sea","The Rak'tika Greatwood","gizamaluk") with {Context="Fanow · 354 гил"}),("next-portrait",TravelDialogContent.Next("Elpis","The Ruby Sea","coralshell",1) with {Context="Onokoro",Fare=287}),("next-portrait-forelands",TravelDialogContent.Next("Elpis","The Dravanian Forelands","melia",1) with {Context="Tailfeather",Fare=203}),("next-portrait-hinterlands",TravelDialogContent.Next("Elpis","The Dravanian Hinterlands","poroggo",1) with {Context="Idyllshire",Fare=288,Detail="Из соседней зоны — своим ходом."}),("next-portrait-yanxia",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Inn at Journey's Head",Fare=210}),("next-portrait-fare-wrap",TravelDialogContent.Next("Elpis","Yanxia","rhino beetle",1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=210}),("next-portrait-long",TravelDialogContent.Next("The Ruby Sea","The Dravanian Hinterlands and the Coerthas Western Highlands",new string('Ж',100),1) with {Context="The Crystalline Mean and The Dossal Gate",Fare=1854,Detail="Эфирит в соседней зоне. Дальше — своим ходом."}),("shortcut",TravelDialogContent.Shortcut(offer with {Name="Lydha Lran",DirectSeconds=59,TeleportSeconds=20},"rosebear")),("shortcut-long",TravelDialogContent.Shortcut(offer with {Name="The Dossal Gate and the Crystalline Mean at the Crystarium"},"northern highland crystalback gnome")),("long",TravelDialogContent.Next("Coerthas Western Highlands","The Dravanian Hinterlands",new string('Ж',100)))}) {
             ImGui.CreateContext();var io=ImGui.GetIO();io.IniFilename=null;io.DisplaySize=new(520,900);io.DeltaTime=1f/60;
             io.Fonts.AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf",17,(ImFontConfig*)null,io.Fonts.GetGlyphRangesCyrillic());
             byte* pixels;int tw,th;io.Fonts.GetTexDataAsRGBA32(0,&pixels,&tw,&th);io.Fonts.SetTexID(0,new ImTextureID(1));
@@ -19,7 +19,7 @@ internal static class DialogPreviewChecks {
             if(sample.Item1=="board-local"&&(sample.Item2.ConfirmLabel!="К доске"||layout.Texts.Any(t=>t.Text.Contains("гил"))))
                 throw new Exception("Local board prompt must offer a marker without a fare");
             bool compact=sample.Item1 is "login" or "pickup" or "plain" or "board" or "board-free" or "board-local";
-            if(layout.Texts.Where(t=>t.Text!=sample.Item2.Subject||!layout.Portrait.HasValue).Any(t=>t.Centered!=compact || (t.Centered&&Math.Abs(t.Position.X+t.Size.X/2-layout.Width/2)>0.5f)))
+            if(layout.Texts.Where(t=>(t.Text!=sample.Item2.Subject||!layout.Portrait.HasValue)&&t.Text!=sample.Item2.FareLabel).Any(t=>t.Centered!=compact || (t.Centered&&Math.Abs(t.Position.X+t.Size.X/2-layout.Width/2)>0.5f)))
                 throw new Exception("Unexpected dialog text alignment: "+sample.Item1);
             if(layout.Confirm.Position.Y!=layout.Decline.Position.Y||Math.Abs(layout.Confirm.Position.X+layout.Decline.Position.X+layout.Decline.Size.X-layout.Width)>0.5f)
                 throw new Exception("Dialog buttons must form a centered row: "+sample.Item1);
@@ -28,14 +28,17 @@ internal static class DialogPreviewChecks {
             if(sample.Item2.Fare.HasValue) {
                 var fare=layout.Texts.Single(t=>t.Text==sample.Item2.FareLabel);
                 var aetheryte=layout.Texts.Single(t=>t.Text==sample.Item2.Context);
+                if(sample.Item1=="next-portrait-forelands"&&aetheryte.Position.X<=layout.Texts.Single(t=>t.Text==sample.Item2.Title).Position.X)
+                    throw new Exception("Forelands destination and fare details should share the dialog header");
                 ImGui.SetWindowFontScale(aetheryte.Font/17f);
                 float lineHeight=ImGui.CalcTextSize("W").Y;
                 int lines=(int)MathF.Round(ImGui.CalcTextSize(aetheryte.Text,false,aetheryte.Size.X).Y/lineHeight);
                 fareLineCounts.Add(lines);
-                float gap=fare.Position.Y-aetheryte.Position.Y-aetheryte.Size.Y;
-                if(fare.Size.Y>NativeHuntLayout.BodyFont+8||Math.Abs(gap-4)>0.01f)
-                    throw new Exception("Fare must follow the measured aetheryte text with a four-unit gap");
-                Console.WriteLine($"PASS aetheryte fare spacing: {lines} lines, gap {gap:F0}");
+                float gap=layout.Confirm.Position.Y-fare.Position.Y-fare.Size.Y;
+                if(!fare.Centered||Math.Abs(fare.Position.X+fare.Size.X/2-layout.Width/2)>.01f||
+                   fare.Size.Y>NativeHuntLayout.BodyFont+8||Math.Abs(gap-6)>.01f||
+                   layout.Texts.Any(t=>t!=fare&&t.Position.Y+t.Size.Y>fare.Position.Y))
+                    throw new Exception("Fare must fit on one centered line above the confirmation buttons");
             }
             if(layout.Portrait.HasValue!=(sample.Item2.PortraitIcon!=0))throw new Exception("Dialog portrait visibility mismatch");
             if(sample.Item2.NextZone && layout.Texts.Count(t=>t.Text==sample.Item2.Title)!=1)
@@ -43,6 +46,13 @@ internal static class DialogPreviewChecks {
             if(sample.Item2.NextZone&&!layout.Portrait.HasValue&&!layout.Texts.Any(t=>t.Text==$"Первая цель · {sample.Item2.Subject}"))
                 throw new Exception("Next zone without a portrait must retain the first target");
             if(layout.Portrait is {} portrait){
+                if(sample.Item2.Detail.Length>0){
+                    var hint=layout.Texts.Single(t=>t.Text==sample.Item2.Detail);
+                    var headerBottom=layout.Texts.Where(t=>t.Text==sample.Item2.Title||t.Text==sample.Item2.Context).Max(t=>t.Position.Y+t.Size.Y);
+                    if(hint.Position.X!=18||hint.Size.X!=layout.Width-36||hint.Position.Y<headerBottom||
+                       hint.Position.Y+hint.Size.Y>portrait.Position.Y||hint.Color!=NativeHuntColors.Attention)
+                        throw new Exception("Adjacent-zone hint must span the header above the portrait");
+                }
                 if(Math.Abs(portrait.Position.X+portrait.Size.X/2-layout.Width/2)>0.5f)
                     throw new Exception("Portrait must be centered below the travel details");
                 var caption=layout.Texts.Single(t=>t.Text==sample.Item2.Subject);
@@ -70,7 +80,7 @@ internal static class DialogPreviewChecks {
                     if(ImGui.CalcTextSize(text.Text,false,text.Size.X).Y>lineHeight+1)wrapped++;
                 }
                 if(wrapped==0)throw new Exception("Stress fixture must actually wrap");
-                foreach(var column in layout.Texts.GroupBy(t=>t.Position.X)) {
+                foreach(var column in layout.Texts.Where(t=>!sample.Item2.Fare.HasValue||t.Text!=sample.Item2.FareLabel).GroupBy(t=>t.Position.X)) {
                     var ordered=column.OrderBy(t=>t.Position.Y).ToArray();
                     foreach(var pair in ordered.Zip(ordered.Skip(1))) {
                         float gap=pair.Second.Position.Y-pair.First.Position.Y-pair.First.Size.Y;
