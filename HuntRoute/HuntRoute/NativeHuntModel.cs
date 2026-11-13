@@ -237,6 +237,17 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     bottom+=ActionHeight+Gap;
     continue;
    }
+   if(view==NativeHuntPage.Advanced){
+    float cellWidth=Math.Max(144,visible.Max(item=>measureButton==null?Button(item.Label):MathF.Ceiling(measureButton(item.Label))+16));
+    int count=2*cellWidth+Gap<=inner?Math.Min(2,visible.Length-i):1;
+    cellWidth=Math.Min(cellWidth,inner);
+    rows++;
+    for(int column=0;column<count;column++)
+     Set(i+column+3,rows,column,visible[i+column],controlX+column*(cellWidth+Gap),bottom,cellWidth,ActionHeight);
+    i+=count-1;
+    bottom+=ActionHeight+Gap;
+    continue;
+   }
    float gridWidth=mini?3*ActionWidth+2*Gap:controlWidth;
    float gridX=controlX;
    if(!button.Label.Contains('\n')&&button.Label.Length<=25){

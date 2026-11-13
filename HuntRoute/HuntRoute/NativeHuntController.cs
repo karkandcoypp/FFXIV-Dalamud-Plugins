@@ -25,7 +25,7 @@ public sealed class NativeHuntController {
   if(!plugin.Ready)return new("Hunt Route",plugin.Error??"Данные персонажа загружаются.",[Button("refresh","Обновить данные","refresh")]);
   var errors=new[]{plugin.JourneySaveError,plugin.SettingsSaveError,plugin.HistorySaveError}.Where(s=>s!=null).ToArray();
   var screen=mini?Hunt(true):Page switch {NativeHuntPage.Targets=>Targets(),NativeHuntPage.Boards=>BoardScreen(),NativeHuntPage.Settings=>Settings(),NativeHuntPage.Advanced=>Advanced(),NativeHuntPage.Target=>Target(),NativeHuntPage.Actions=>Actions(),NativeHuntPage.Filters=>Filters(),NativeHuntPage.Expansions=>Expansions(),NativeHuntPage.Zones=>Zones(),NativeHuntPage.Number=>Number(),_=>Hunt(false)};
-  if(errors.Length>0)screen=screen with {Summary="Не удалось сохранить изменения.\n"+screen.Summary,Buttons=mini?screen.Buttons:new[]{Button("retry-save","Повторить сохранение","retry-save")}.Concat(screen.Buttons.Where(b=>b.Key!="retry-save")).ToArray()};
+  if(errors.Length>0)screen=screen with {Summary="Не удалось сохранить изменения.\n"+screen.Summary,Buttons=mini||Page==NativeHuntPage.Advanced?screen.Buttons:new[]{Button("retry-save","Повторить сохранение","retry-save")}.Concat(screen.Buttons.Where(b=>b.Key!="retry-save")).ToArray()};
   return screen;
  }
  private NativeHuntScreen Hunt(bool mini){
@@ -136,12 +136,15 @@ public sealed class NativeHuntController {
    ToggleRow("elite-sound","Звук обнаружения элиты",s.EliteSound),ToggleRow("next-sound","Звук перехода в зону",s.NextZoneSound)]);
  }
  private NativeHuntScreen Advanced(){
-  var s=plugin.Settings;var buttons=new List<NativeHuntButton>{Button("shortcuts",$"Телепорт в зоне: {(s.Shortcuts?"Вкл":"Выкл")}","toggle","shortcuts",!plugin.PersistenceBlocked)};
-  foreach(string key in new[]{"elite-distance","ordinary-distance","gil","seconds","percent"}){var (label,value)=NumberValue(key);buttons.Add(Button("number:"+key,$"{label}: {value}","edit-number",key,!plugin.PersistenceBlocked));}
-  buttons.Add(Button("refresh","Обновить данные","refresh"));buttons.Add(Button("retry-save","Повторить сохранение","retry-save"));buttons.Add(Button("export","Сохранить диагностику","export"));buttons.Add(Button("classic","Резервное окно мыши","classic"));
-  return new("Дополнительные параметры",feedback??"Лимит 0 гил разрешает только бесплатные телепорты.",buttons);
+  var s=plugin.Settings;var buttons=new List<NativeHuntButton>{Button("shortcuts",$"Телепорт: {(s.Shortcuts?"вкл":"выкл")}","toggle","shortcuts",!plugin.PersistenceBlocked)};
+  foreach(var (key,label) in new[]{("gil","До"),("seconds","Выигрыш от"),("percent","Выигрыш от"),("elite-distance","Элита"),("ordinary-distance","Метки мобов")}){
+   var (_,value)=NumberValue(key);
+   buttons.Add(Button("number:"+key,$"{label} {value}","edit-number",key,!plugin.PersistenceBlocked));
+  }
+  buttons.Add(Button("refresh","Обновить данные","refresh"));buttons.Add(Button("retry-save","Сохранить снова","retry-save"));buttons.Add(Button("export","Диагностика","export"));buttons.Add(Button("classic","Окно для мыши","classic"));
+  return new(Offset==0?"Параметры охоты":"Обслуживание",feedback??(Offset==0?"Телепорт в зоне и дальность меток.":""),buttons);
  }
- private (string Label,string Value) NumberValue(string key){var s=plugin.Settings;return key switch{"elite-distance"=>("Метки элиты",s.WorldDistance+" м"),"ordinary-distance"=>("Дальность меток",s.OrdinaryWorldDistance+" м"),"gil"=>("Лимит гил",s.MaxGil.ToString()),"seconds"=>("Экономия времени",$"{s.MinSeconds:F1} с"),"percent"=>("Экономия пути",s.MinPercent+" %"),_=>("Параметр","")};}
+ private (string Label,string Value) NumberValue(string key){var s=plugin.Settings;return key switch{"elite-distance"=>("Дальность меток элиты",s.WorldDistance+" м"),"ordinary-distance"=>("Дальность меток обычных мобов",s.OrdinaryWorldDistance+" м"),"gil"=>("Лимит стоимости телепорта",s.MaxGil+" гил"),"seconds"=>("Минимальная экономия времени",$"{s.MinSeconds:0.#} с"),"percent"=>("Минимальная экономия времени, %",s.MinPercent+" %"),_=>("Параметр","")};}
  private NativeHuntScreen Number(){var (label,value)=NumberValue(numberKey);return new(label,$"{value}",new[]{-1,-10,-50,1,10,50}.Select(d=>Button("step:"+d,(d<0?"-":"+")+(numberKey=="seconds"?$"{Math.Abs(d)/10f:F1} с":Math.Abs(d).ToString()),"step",numberKey,!plugin.PersistenceBlocked,d)).ToArray());}
  private NativeHuntScreen Actions(){
   var buttons=new List<NativeHuntButton>();

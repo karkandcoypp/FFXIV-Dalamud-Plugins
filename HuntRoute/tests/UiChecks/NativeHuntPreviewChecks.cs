@@ -10,6 +10,9 @@ internal static class NativeHuntPreviewChecks {
   var samples=new List<(string Name,NativeHuntPage Page,NativeHuntScreen Screen,bool Mini,int Offset)>();
   foreach(var page in Enum.GetValues<NativeHuntPage>()){if(page==NativeHuntPage.Target)controller.FocusGoal();else controller.Navigate(page);samples.Add((page.ToString(),page,controller.Build(),false,0));}
   var boards=samples.Single(s=>s.Page==NativeHuntPage.Boards);
+  controller.Navigate(NativeHuntPage.Advanced);
+  controller.Turn(1,NativeHuntLayout.PagedButtonCount(controller.Build()));
+  samples.Add(("Advanced-maintenance",controller.Page,controller.Build(),false,controller.Offset));
   var longest=TimeSpan.FromMinutes(23*60+59);
   samples.Add(("Boards-max-timers",boards.Page,boards.Screen with {BoardTimers=NativeBoardTimers.FromRemaining(longest,longest)},false,0));
   var number=samples.Single(s=>s.Page==NativeHuntPage.Number);
@@ -161,6 +164,13 @@ internal static class NativeHuntPreviewChecks {
     .Select(b=>b.Button.Action).Concat(sample.Screen.Buttons.Select(b=>b.Action));
    if(distinctDestinations.GroupBy(a=>a).Any(g=>g.Count()>1))
     throw new Exception("Duplicate control actions on "+sample.Name);
+   if(sample.Page==NativeHuntPage.Advanced){
+    var body=layout.Buttons.Where(b=>b.Slot is >=3 and <=8).ToArray();
+    int expected=sample.Offset==0?6:4;
+    if(body.Length!=expected||body.GroupBy(b=>b.Row).Count()!=expected/2||
+       body.GroupBy(b=>b.Row).Any(row=>row.Count()!=2)||body.Select(b=>b.Rect.Size.X).Distinct().Count()!=1)
+     throw new Exception("Advanced settings must use aligned pairs of equal-width buttons");
+   }
    if(sample.Name=="Hunt-empty"&&layout.Buttons.Count(b=>b.Button.Action is {Kind:"page",Argument:"Boards"})!=1)
     throw new Exception("Empty hunt must have one entry to Boards");
    if(sample.Page is NativeHuntPage.Target or NativeHuntPage.Filters && !layout.Buttons.Any(b=>b.Button.Key=="back"&&b.Button.Action.Argument=="Targets"))
