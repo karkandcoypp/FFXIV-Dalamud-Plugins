@@ -253,14 +253,20 @@ internal static class NativeHuntPreviewChecks {
     }
     if(visited.Count!=links.Length)throw new Exception("Unreachable control in "+sample.Name);
    }
+   if(!sample.Mini){
+    var closeRect=layout.Buttons.Single(b=>b.Button.Key=="close").Rect;
+    if(Math.Abs(layout.Size.X-closeRect.Position.X-closeRect.Size.X-layout.Heading.Position.X)>.01f)
+     throw new Exception("Close must align with the right content edge on "+sample.Name);
+    var header=layout.Buttons.Where(b=>b.Row==0).OrderBy(b=>b.Column).Select(b=>b.Rect).ToArray();
+    float right=header[^1].Position.X+header[^1].Size.X;
+    float gap=header[1].Position.X-header[0].Position.X-header[0].Size.X;
+    if(Math.Abs(header[0].Position.X-(layout.Size.X-right))>.01f||
+       header.Zip(header.Skip(1),(left,next)=>next.Position.X-left.Position.X-left.Size.X).Any(g=>Math.Abs(g-gap)>.01f))
+     throw new Exception("Header buttons must be centered with equal gaps on "+sample.Name);
+   }
    if(sample.Page==NativeHuntPage.Boards){
     if(layout.Buttons.Count(b=>b.Row==0)!=3||sample.Screen.Buttons.Any(b=>b.Action.Kind=="refresh"))
      throw new Exception("Boards must rely on background updates and show only three tabs");
-    var tabs=layout.Buttons.Where(b=>b.Row==0).OrderBy(b=>b.Column).Select(b=>b.Rect).ToArray();
-    float right=tabs[2].Position.X+tabs[2].Size.X;
-    if(Math.Abs(tabs[0].Position.X-(layout.Size.X-right))>.01f||
-       Math.Abs((tabs[1].Position.X-tabs[0].Position.X-tabs[0].Size.X)-(tabs[2].Position.X-tabs[1].Position.X-tabs[1].Size.X))>.01f)
-     throw new Exception("Board tabs must be centered with equal gaps");
     controller.Boards(true);
     var filtered=controller.Build();
     if(filtered.Buttons.Count(b=>b.Action.Kind=="boards-all")!=1||
