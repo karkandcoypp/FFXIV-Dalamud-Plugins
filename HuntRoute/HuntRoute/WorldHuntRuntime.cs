@@ -10,6 +10,7 @@ public sealed partial class Plugin {
   eliteMarkerSound.Observe(marker,Settings.EliteSound,Service.ClientState.TerritoryType,Service.ClientState.MapId);
 
  internal WorldHuntMarker[] ReadWorldHuntMarkers(){
+  if(Service.Condition[ConditionFlag.InCombat])return [];
   if(!Ready||!Settings.WorldMarkers&&!Settings.OrdinaryWorldMarkers||!Service.ClientState.IsLoggedIn||Service.ObjectTable.LocalPlayer is not {} player||Service.Condition.Any(ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent,ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51,ConditionFlag.Unconscious))return [];
   uint territory=Service.ClientState.TerritoryType,map=Service.ClientState.MapId;
   var goals=Mobs.Where(m=>AllTiers.Contains(m.BillNumber)&&m.TerritoryType==territory&&m.MapId==map)

@@ -536,6 +536,8 @@ static class JourneyRuntimeChecks {
   WorldHuntMarker[] Overlay()=>(WorldHuntMarker[])Call(plugin,"ReadWorldHuntMarkers")!;
   Check(Overlay().Length==3&&Overlay().Any(m=>m.ActorId==106)&&Overlay().All(m=>m.ActorId!=100&&!m.Current),"Runtime overlay marks the nearest required actors even if a farther ordinary actor is tracked");
   Check(Overlay().Single(m=>m.ActorId==106).Label.Contains("0/1"),"Runtime ordinary label uses authoritative counter");
+  combat=true;Check(Overlay().Length==0,"Combat hides ordinary and elite world markers");
+  combat=false;Check(Overlay().Length==3,"Leaving combat restores markers for remaining goals");
   counts[(1,0)]=1;Check(Overlay().All(m=>m.ActorId!=100&&m.ActorId!=106),"Actual kill-count completion removes all overlays of completed requirement");counts.Clear();
   store.Settings.WorldMarkers=false;Check(Overlay().Length==2&&Overlay().All(m=>!m.Elite),"Ordinary runtime overlay works when elite overlay disabled");store.Settings.WorldMarkers=true;
   store.Settings.OrdinaryWorldMarkers=false;Check(Overlay().Length==1&&Overlay()[0].Elite,"Ordinary runtime toggle does not hide required elite");store.Settings.OrdinaryWorldMarkers=true;
