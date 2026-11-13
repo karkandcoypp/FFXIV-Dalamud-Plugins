@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 namespace HuntRoute;
 
 public sealed record ConfirmationRequest(string Owner,string Key,string Text,Func<bool> Valid,Func<bool> Ready,Func<bool> Accept,TravelDialogContent? Presentation=null,Action? OnShown=null,string? DeclineKey=null);
@@ -17,7 +18,7 @@ public sealed class ConfirmationQueue {
     }
     public ConfirmationRequest? Activate(bool available,long now=0) {
         if(!available || Active!=null) return null;
-        foreach(string owner in new[]{"travel","next","shortcut","pickup"}) {
+        foreach(string owner in new[]{"travel","next","shortcut","pickup"}.Concat(pending.Keys.Where(k=>k.StartsWith("completion:",StringComparison.Ordinal)).ToArray())) {
             if(!pending.TryGetValue(owner,out var request)) continue;
             if(WasDeclined(request)||!request.Valid()) { pending.Remove(owner);continue; }
             if((retryAfter.TryGetValue(owner,out long until)&&now<until)||!request.Ready()) continue;

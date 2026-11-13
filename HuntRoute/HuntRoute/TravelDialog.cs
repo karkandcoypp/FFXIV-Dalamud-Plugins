@@ -8,7 +8,15 @@ public sealed record TravelDialogContent(string Eyebrow,string Title,string Dest
     public string FareLabel => Fare is {} gil?$"Цена · {gil} гил":"";
     public byte FareFont => Summary.Length>0?(byte)22:NativeHuntLayout.BodyFont;
     public string ConfirmLabel => ActionLabel ?? "Телепорт";
-    public string DeclineLabel => "Позже";
+    public string DeclineLabel => Results?"Закрыть":"Позже";
+    public bool Results {get;init;}
+    public bool SingleButton {get;init;}
+    public static TravelDialogContent Completion(string expansion,string currency,long? marks,long? gil,long? kills,string duration,bool next) {
+        static string Amount(long? value)=>value is {} n?n.ToString("N0",System.Globalization.CultureInfo.InvariantCulture).Replace(',', ' '):"Нет данных";
+        return new("","Контракты выполнены","",expansion,"","","","","",
+            [new(currency,Amount(marks),true),new("Заработано гил",Amount(gil),true),new("Убито мобов",Amount(kills)),new("Время охоты",duration)],
+            next?"Новая охота":"Закрыть",CenterNoticeText:true){Results=true,SingleButton=!next};
+    }
     public static TravelDialogContent ResumeHunt() => Notice("Продолжить охоту?","Продолжить");
     public static TravelDialogContent Pickup() => Notice("Доступны новые контракты","К доскам");
     private static TravelDialogContent Notice(string title,string action,string context="") =>
@@ -121,7 +129,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         if(hasSummary)y+=Text(content.Summary,left,y,textWidth,NativeHuntLayout.BodyFont,Mint,centerNotice)+8;
         if(!string.IsNullOrEmpty(content.Destination)&&content.Destination!=content.Title) {
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";
-            y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White,centerNotice&&hasSummary)+2;
+            y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White,centerNotice&&(hasSummary||content.Results))+2;
         }
         if(content.NextZone&&content.Fare.HasValue&&content.Context.Length>0)
             y+=Text("Эфирит",detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
@@ -148,7 +156,21 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             y=imageTop+image.Size.Y+4;
             if(captionUnderPortrait)y+=Text(content.Subject,image.Position.X,y,image.Size.X,NativeHuntLayout.BodyFont,Brand,centered:true)+4;
         }
-        if(content.Metrics.Length>0) {
+        if(content.Results) {
+            const float gap=8;
+            float cell=(inner-gap)/2;
+            for(int i=0;i<content.Metrics.Length;i+=2) {
+                float rowHeight=0;
+                for(int j=0;j<2;j++) {
+                    var metric=content.Metrics[i+j];
+                    float x=left+j*(cell+gap);
+                    float labelHeight=Text(metric.Label,x,y,cell,NativeHuntLayout.BodyFont,Muted,true);
+                    float valueHeight=Text(metric.Value,x,y+labelHeight+3,cell,22,metric.Highlight?Mint:White,true);
+                    rowHeight=Math.Max(rowHeight,labelHeight+3+valueHeight);
+                }
+                y+=rowHeight+10;
+            }
+        } else if(content.Metrics.Length>0) {
             float cardWidth=(inner-(content.Metrics.Length-1)*8)/content.Metrics.Length,rowHeight=0;
             for(int i=0;i<content.Metrics.Length;i++) {
                 var metric=content.Metrics[i];float x=left+i*(cardWidth+8),my=y+4;
@@ -164,7 +186,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         float confirmWidth=Math.Max(NativeHuntLayout.ButtonWidth(content.ConfirmLabel),measureButton==null?0:MathF.Ceiling(measureButton(content.ConfirmLabel))+16);
         float declineWidth=Math.Max(NativeHuntLayout.ActionWidth,measureButton==null?0:MathF.Ceiling(measureButton(content.DeclineLabel))+16);
         float buttonsY=y+6,heightTotal=buttonsY+buttonHeight+12;
-        float buttonsX=(width-confirmWidth-declineWidth-6)/2;
+        float buttonsX=content.SingleButton?(width-confirmWidth)/2:(width-confirmWidth-declineWidth-6)/2;
         var confirm=new DialogButton(new(buttonsX,buttonsY),new(confirmWidth,buttonHeight));
         var decline=new DialogButton(new(buttonsX+confirmWidth+6,buttonsY),new(declineWidth,buttonHeight));
         return new(width,heightTotal,confirm,decline,texts,portrait);

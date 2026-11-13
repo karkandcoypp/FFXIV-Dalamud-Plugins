@@ -37,6 +37,7 @@ public sealed class SavedJourney {
  public long WeeklyNotice {get;set;}
  public long DailyChatNotice {get;set;}
  public long WeeklyChatNotice {get;set;}
+ public Dictionary<string,long> HuntStartedAt {get;set;}=[];
  public string? Context {get;set;}
  public string? SearchTarget {get;set;}
  public EliteProgress? Search {get;set;}

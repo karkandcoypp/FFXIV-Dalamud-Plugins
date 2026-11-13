@@ -79,15 +79,19 @@ internal sealed class NativeDialogService : IDisposable {
                 if(content.Context.Length>0)ImGui.TextWrapped(content.NextZone&&content.Fare.HasValue?$"Эфирит · {content.Context}":content.Context);
                 if(content.Subject.Length>0)ImGui.TextWrapped(content.SubjectLabel.Length>0?$"{content.SubjectLabel} · {content.Subject}":content.Subject);
                 if(content.Detail.Length>0)ImGui.TextWrapped(content.Detail);
-                foreach(var metric in content.Metrics)ImGui.TextWrapped($"{metric.Label} · {metric.Value}");
+                foreach(var metric in content.Metrics){
+                    if(content.Results&&metric==content.Metrics[1]&&metric.Value!="Нет данных")
+                        GilDisplay.Draw($"{metric.Label} · {metric.Value}",$"{metric.Label} · {metric.Value} гил");
+                    else ImGui.TextWrapped($"{metric.Label} · {metric.Value}");
+                }
                 if(content.Footer.Length>0)ImGui.TextWrapped(content.Footer);
                 if(content.Fare is {} amount)GilDisplay.Draw(amount.ToString(),content.FareLabel);
             }finally{ImGui.PopTextWrapPos();}
             ImGui.BeginDisabled(!request.Ready());
             bool accept=ImGui.Button(content.ConfirmLabel);
             ImGui.EndDisabled();
-            ImGui.SameLine();
-            bool decline=ImGui.Button(content.DeclineLabel);
+            if(!content.SingleButton)ImGui.SameLine();
+            bool decline=!content.SingleButton&&ImGui.Button(content.DeclineLabel);
             if(accept||decline)AnswerFallback(active.Key,accept);
         }finally{ImGui.End();}
     }
@@ -164,8 +168,12 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         });
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color;if(spec.Centered)node.AlignmentType=AlignmentType.Top; }
         fareText=presentation.Fare.HasValue?textNodes[^1]:null;
+        if(presentation.Results&&presentation.Metrics[1].Value!="Нет данных"){
+            int valueIndex=layout.Texts.FindIndex(t=>t.Text==presentation.Metrics[1].Label)+1;
+            fareText=textNodes[valueIndex];
+        }
         if(fareText!=null) {
-            fareIcon=GilDisplay.CreateIcon(presentation.FareFont==NativeHuntLayout.BodyFont?16:presentation.FareFont);
+            fareIcon=GilDisplay.CreateIcon(presentation.Results?26:presentation.FareFont==NativeHuntLayout.BodyFont?16:presentation.FareFont);
             AddFixedNode(fareIcon);
         }
         portraitRect=layout.Portrait;
@@ -185,6 +193,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         var no=noButton=new TextButtonNode { Position=layout.Decline.Position,Size=layout.Decline.Size,String="",
             NavIndex=2,NavLeft=1,NavRight=1,OnClick=()=>Complete(false) };
         no.LabelNode.FontSize=NativeHuntLayout.ButtonFont;
+        if(content.SingleButton){no.IsVisible=false;no.IsEnabled=false;yesButton.NavLeft=1;yesButton.NavRight=1;}
         AddFixedNode(yesButton);AddFixedNode(no);
         yesCaption=NativeButtonText.CreateCaption();noCaption=NativeButtonText.CreateCaption();
         AddFixedNode(yesCaption);AddFixedNode(noCaption);
@@ -193,10 +202,10 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         RefreshPortrait();
         RefreshFare();
         RefreshCaptions();
-        native->FocusNode=no.FocusNode;
+        native->FocusNode=content.SingleButton?yesButton.FocusNode:no.FocusNode;
     }
     protected override void OnShow(AtkUnitBase* native) {
-        noButton?.SetFocus();
+        if(content.SingleButton)yesButton?.SetFocus();else noButton?.SetFocus();
         // Center the measured window after setup, accounting for the game's UI scale.
         var viewport=(Vector2)AtkStage.Instance()->ScreenSize;
         if(viewport.X<=16||viewport.Y<=16)return;
@@ -215,9 +224,9 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         RefreshCaptions();
     }
     private void RefreshFare(){
-        if(fareIcon is not {IsTextureReady:true,IsVisible:false} icon||fareText is not {} text||content.Fare is not {} amount)return;
-        string number=amount.ToString();
-        GilDisplay.Place(icon,text,number,text.Position,text.Size);
+        if(fareIcon is not {IsTextureReady:true,IsVisible:false} icon||fareText is not {} text)return;
+        string number=content.Results?content.Metrics[1].Value:content.Fare?.ToString()??"";
+        GilDisplay.Place(icon,text,number,text.Position,text.Size,content.Results?10:6);
     }
     private void RefreshPortrait(){
         if(portrait is not {IsVisible:false,IsTextureReady:true} image||portraitRect is not {} bounds)return;
@@ -265,7 +274,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     private void RefreshCaptions(){
         if(yesButton==null||noButton==null||yesCaption==null||noCaption==null)return;
         yesButton.String=noButton.String="";
-        yesCaption.IsVisible=noCaption.IsVisible=true;
+        yesCaption.IsVisible=true;noCaption.IsVisible=!content.SingleButton;
         NativeButtonText.SetCaption(yesCaption,yesButton,content.ConfirmLabel,yesButton.IsEnabled?NativeHuntColors.Attention:NativeHuntColors.Muted);
         NativeButtonText.SetCaption(noCaption,noButton,content.DeclineLabel,Vector4.One);
     }

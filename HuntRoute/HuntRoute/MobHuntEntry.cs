@@ -14,4 +14,6 @@ public sealed class MobHuntEntry {
     public byte MobIndex { get; init; }
     public uint NeededKills { get; init; }
     public uint Icon { get; init; }
+    public uint GilReward { get; init; }
+    public uint CurrencyReward { get; init; }
 }

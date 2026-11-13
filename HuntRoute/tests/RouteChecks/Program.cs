@@ -391,6 +391,15 @@ foreach(var silhouette in new[]{new Vector2(406,225),new Vector2(119,236)}) {
 }
 var nextDialog=TravelDialogContent.Next("Kozama'uka","Yak T'el","mourner");
 var shortcutDialog=TravelDialogContent.Shortcut(new(1,10,0,1,815,1,"Mord Souq",100,1094,440,54.7f,40),"gnome");
+foreach(bool nextHunt in new[]{false,true}){
+ var results=TravelDialogContent.Completion("Endwalker","Мешки орехов",210,22500,22,"24 мин 36 с",nextHunt);
+ var resultsLayout=TravelDialogLayout.Build(results,MeasureDialog);
+ Check(results.Metrics.Select(m=>m.Value).SequenceEqual(new[]{"210","22 500","22","24 мин 36 с"})&&
+       results.SingleButton!=nextHunt&&results.DeclineLabel=="Закрыть"&&
+       results.ConfirmLabel==(nextHunt?"Новая охота":"Закрыть")&&
+       resultsLayout.Texts.All(t=>t.Position.Y+t.Size.Y<resultsLayout.Confirm.Position.Y),
+       "Expansion results fit above the appropriate actions");
+}
 Check(nextDialog.Destination=="Yak T'el" && nextDialog.Subject=="mourner" && nextDialog.Metrics.Length==0,"Next-zone dialog names the correct zone and first mob");
 Check(shortcutDialog.Destination=="Mord Souq → gnome" && shortcutDialog.Fare==100,"Intra-zone dialog names the actual aetheryte, cost and target");
 Check(shortcutDialog.Summary=="(на ~15 с быстрее)" && shortcutDialog.Metrics.Length==0,"Savings are a separate rounded estimate");

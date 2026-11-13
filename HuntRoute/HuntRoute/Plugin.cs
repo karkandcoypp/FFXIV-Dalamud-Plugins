@@ -210,7 +210,8 @@ public sealed partial class Plugin : IDalamudPlugin {
         foreach(var order in rows) {
             if(order.Target.RowId==0||order.NeededKills==0||order.SubrowId>=5)continue;
             var target=order.Target.Value;var map=target.Map.Value;
-            batch.Add(new(){Generation=CharacterSave.Contracts.GetValueOrDefault(bill)?.Generation??0,OrderId=orderId,Name=target.Name.Value.Singular.ToString(),TerritoryName=map.PlaceName.Value.Name.ToString(),ExpansionName=map.TerritoryType.Value.ExVersion.Value.Name.ToString(),ExpansionId=map.TerritoryType.Value.ExVersion.RowId,TerritoryType=map.TerritoryType.RowId,MapId=map.RowId,MobHuntId=target.Name.RowId,IsEliteMark=type.Type==2,BillNumber=bill,MobIndex=(byte)order.SubrowId,NeededKills=order.NeededKills,Icon=target.Icon});
+            var reward=order.MobHuntReward.Value;
+            batch.Add(new(){Generation=CharacterSave.Contracts.GetValueOrDefault(bill)?.Generation??0,OrderId=orderId,Name=target.Name.Value.Singular.ToString(),TerritoryName=map.PlaceName.Value.Name.ToString(),ExpansionName=map.TerritoryType.Value.ExVersion.Value.Name.ToString(),ExpansionId=map.TerritoryType.Value.ExVersion.RowId,TerritoryType=map.TerritoryType.RowId,MapId=map.RowId,MobHuntId=target.Name.RowId,IsEliteMark=type.Type==2,BillNumber=bill,MobIndex=(byte)order.SubrowId,NeededKills=order.NeededKills,Icon=target.Icon,GilReward=reward.GilReward,CurrencyReward=reward.CurrencyReward});
         }
         if(batch.Count==0)throw new InvalidOperationException("Цели контракта ещё не загружены");
         return batch;

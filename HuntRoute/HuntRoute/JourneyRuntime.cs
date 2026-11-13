@@ -364,12 +364,23 @@ public sealed partial class Plugin {
   foreach(var board in Boards){
    bool reliable=board.Daily.Append(board.Weekly).All(i=>BillStates.ContainsKey(i)&&!unreadBills.Contains(i))
     &&!CompletionUncertain(board,false)&&!CompletionUncertain(board,true);
-   if(!reliable||!expansionCompletionNotice.Observe(board.Name,CollectionProgress(board,false),CollectionProgress(board,true),reliable))continue;
+   if(!reliable)continue;
+   var daily=CollectionProgress(board,false);
+   var weekly=CollectionProgress(board,true);
+   if(NativeDialogs!=null&&daily.Taken+weekly.Taken>0){
+    var at=DateTimeOffset.UtcNow;
+    var starts=CharacterSave.HuntStartedAt;
+    long dailyReset=ResetClock.Period(at,false).ToUnixTimeSeconds();
+    if(!starts.TryGetValue(board.Name,out long started)||started<dailyReset)
+     starts[board.Name]=at.ToUnixTimeSeconds();
+   }
+   if(!expansionCompletionNotice.Observe(board.Name,daily,weekly,reliable))continue;
    (completed??=[]).Add(board);
   }
   if(completed==null)return;
   if(ownedMarkerBill is {} bill&&completed.Any(board=>board.Weekly==bill||board.Daily.Contains(bill)))
    ClearCompletedMarker();
+  foreach(var board in completed)OfferHuntSummary(board);
   if(!Settings.ResetNotifications)return;
   const ushort completedGreen=45, availableYellow=31;
   var message=new SeStringBuilder().AddText("[Hunt Route] ");
@@ -389,6 +400,31 @@ public sealed partial class Plugin {
   }
   Service.Chat.Print(message.Build());
   playSound();
+ }
+ private void OfferHuntSummary(Board board){
+  if(NativeDialogs==null)return;
+  var now=DateTimeOffset.UtcNow;
+  long end=now.ToUnixTimeSeconds();
+  bool timed=CharacterSave.HuntStartedAt.Remove(board.Name,out long started);
+  var goals=CompletedGoals.Concat(Mobs.Where(Done))
+   .Where(m=>(m.BillNumber==board.Weekly||board.Daily.Contains(m.BillNumber))&&
+    History.IsComplete(character,m.BillNumber,m.BillNumber==board.Weekly,now,m.OrderId))
+   .DistinctBy(m=>(m.BillNumber,m.OrderId,m.MobIndex)).ToArray();
+  bool completeData=board.Daily.Append(board.Weekly).Where(b=>BillStates.GetValueOrDefault(b).Unlocked)
+   .All(b=>goals.Any(m=>m.BillNumber==b));
+  bool CanStart()=>Boards.Any(b=>b!=board&&BoardReachable(b)&&(CanPickup(b,false)||CanPickup(b,true)));
+  bool next=CanStart();
+  string currency=board.Name is "Heavensward" or "Stormblood"?"Печати Центурио":"Мешки орехов";
+  timed=timed&&started>=ResetClock.Period(now,false).ToUnixTimeSeconds()&&started<=end;
+  var elapsed=TimeSpan.FromSeconds(timed?end-started:0);
+  string duration=timed?$"{(long)elapsed.TotalMinutes} мин {elapsed.Seconds} с":"Нет данных";
+  var content=TravelDialogContent.Completion(board.Name,currency,
+   completeData?goals.Sum(m=>(long)m.CurrencyReward):null,completeData?goals.Sum(m=>(long)m.GilReward):null,
+   completeData?goals.Sum(m=>(long)m.NeededKills):null,duration,next);
+  ulong owner=character;
+  NativeDialogs.Offer(new("completion:"+board.Name,$"completion:{owner}:{board.Name}:{end}",content.Title,
+   ()=>Ready&&character==owner,()=>!TravelBusy,
+   ()=>{if(next&&CanStart()){PickupOpen=true;Open();}return true;},content));
  }
  private string? LoginMode()=>Mobs.Any(m=>AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m))?"taken":Boards.Any(b=>CanPickup(b,false)||CanPickup(b,true))?"pickup":null;
  private void OfferLoginNotice(){
