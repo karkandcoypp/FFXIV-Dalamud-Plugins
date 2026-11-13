@@ -141,12 +141,12 @@ public sealed class NativeHuntController {
  }
  private NativeHuntScreen Advanced(){
   var s=plugin.Settings;var buttons=new List<NativeHuntButton>{Button("shortcuts",$"Телепорт: {(s.Shortcuts?"вкл":"выкл")}","toggle","shortcuts",!plugin.PersistenceBlocked)};
-  foreach(var (key,label) in new[]{("gil","До"),("seconds","Выигрыш от"),("percent","Выигрыш от"),("elite-distance","Элита"),("ordinary-distance","Метки мобов")}){
+  foreach(var (key,label) in new[]{("gil","Лимит"),("seconds","Выигрыш от"),("percent","Выигрыш от"),("elite-distance","Элита"),("ordinary-distance","Метки мобов")}){
    var (_,value)=NumberValue(key);
    buttons.Add(Button("number:"+key,$"{label} {value}","edit-number",key,!plugin.PersistenceBlocked));
   }
   buttons.Add(Button("refresh","Обновить данные","refresh"));buttons.Add(Button("retry-save","Сохранить снова","retry-save"));buttons.Add(Button("export","Диагностика","export"));buttons.Add(Button("classic","Окно для мыши","classic"));
-  return new(Offset==0?"Параметры охоты":"Обслуживание",feedback??(Offset==0?"Телепорт в зоне и дальность меток.":""),buttons);
+  return new(Offset==0?"Параметры охоты":"Обслуживание",feedback??"",buttons);
  }
  private (string Label,string Value) NumberValue(string key){var s=plugin.Settings;return key switch{"elite-distance"=>("Дальность меток элиты",s.WorldDistance+" м"),"ordinary-distance"=>("Дальность меток обычных мобов",s.OrdinaryWorldDistance+" м"),"gil"=>("Лимит стоимости телепорта",s.MaxGil+" гил"),"seconds"=>("Минимальная экономия времени",$"{s.MinSeconds:0.#} с"),"percent"=>("Минимальная экономия времени, %",s.MinPercent+" %"),_=>("Параметр","")};}
  private NativeHuntScreen Number(){

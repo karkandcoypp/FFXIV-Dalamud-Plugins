@@ -22,12 +22,14 @@ internal static class GilDisplay {
 
     internal static bool Place(IconImageNode icon,TextNode text,string label,Vector2 position,Vector2 size){
         if(!icon.IsTextureReady)return false;
-        float labelWidth=MathF.Ceiling(text.GetTextDrawSize(label,considerScale:false).X);
+        var measured=text.GetTextDrawSize(label,considerScale:false);
+        float labelWidth=MathF.Ceiling(measured.X);
         if(labelWidth<=0||labelWidth+IconSize+Gap+2>size.X)return false;
         float x=position.X+(size.X-labelWidth-IconSize-Gap)/2;
-        icon.Position=new(x+labelWidth+Gap,position.Y+(size.Y-IconSize)/2);
+        icon.Position=new(x+labelWidth+Gap,text.Position.Y+(measured.Y-IconSize)/2);
         text.Position=new(x,text.Position.Y);
-        text.Size=new(labelWidth+2,text.Size.Y);
+        // Keep the full measurement width available; a narrow node can wrap the next page's text.
+        text.Size=new(position.X+size.X-x,text.Size.Y);
         text.AlignmentType=AlignmentType.TopLeft;
         text.String=label;
         icon.IsVisible=true;

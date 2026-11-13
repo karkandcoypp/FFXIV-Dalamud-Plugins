@@ -170,6 +170,10 @@ internal static class NativeHuntPreviewChecks {
    if(distinctDestinations.GroupBy(a=>a).Any(g=>g.Count()>1))
     throw new Exception("Duplicate control actions on "+sample.Name);
    if(sample.Page==NativeHuntPage.Advanced){
+    if(sample.Offset==0&&(sample.Screen.Summary.Length!=0||
+       !sample.Screen.Buttons.Single(b=>b.Key=="number:gil").Label.StartsWith("Лимит ",StringComparison.Ordinal)||
+       !sample.Screen.Buttons.Single(b=>b.Key=="number:gil").Label.EndsWith(" гил",StringComparison.Ordinal)))
+     throw new Exception("Hunt parameters must show the gil limit explicitly without a redundant summary");
     var body=layout.Buttons.Where(b=>b.Slot is >=3 and <=8).ToArray();
     int expected=sample.Offset==0?6:4;
     if(body.Length!=expected||body.GroupBy(b=>b.Row).Count()!=expected/2||
