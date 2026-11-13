@@ -164,11 +164,11 @@ public sealed class NativeHuntController {
    if(travel.Length>0)buttons.Add(Button("primary","Телепорт",travel));
    else if(plugin.Flow.Pauses!=PauseReason.None)buttons.Add(Button("resume",plugin.Flow.Pauses==PauseReason.Marker?"Вернуть метку":"Продолжить маршрут","resume"));
    else if(plugin.Session.Phase!=RoutePhase.WaitingForZone)buttons.Add(Button("resume","Вернуть метку","resume"));
-   if(!plugin.Flow.Pauses.HasFlag(PauseReason.User))buttons.Add(Button("pause","Пауза маршрута","pause"));
+   if(!plugin.Flow.Pauses.HasFlag(PauseReason.User))buttons.Add(Button("pause","Пауза","pause"));
    buttons.Add(Button("stop","Остановить","stop"));
   }
-  if(plugin.Flow.Manual!=null)buttons.Add(Button("auto","Вернуться в авторежим","auto"));
-  if(plugin.Search.Lost&&!plugin.Search.AwaitingCredit)buttons.Add(Button("release","Снять закрепление элиты","release"));
+  if(plugin.Flow.Manual!=null)buttons.Add(Button("auto","Авторежим","auto"));
+  if(plugin.Search.Lost&&!plugin.Search.AwaitingCredit)buttons.Add(Button("release","Открепить элиту","release"));
   if(plugin.Session.Target!=null)buttons.Add(Button("focus","К цели","focus"));
   buttons.Add(Button("targets","Все цели","page",NativeHuntPage.Targets.ToString()));string status=plugin.Flow.Active&&plugin.Flow.Pauses==PauseReason.None
    ?plugin.Session.Phase switch {RoutePhase.AwaitingTravel or RoutePhase.NextZone=>"Ожидается подтверждение перехода",RoutePhase.WaitingForZone=>"Ожидается прибытие",_=>"Сопровождение активно"}

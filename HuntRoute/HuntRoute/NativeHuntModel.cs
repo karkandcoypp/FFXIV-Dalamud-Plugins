@@ -263,6 +263,26 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     bottom+=ActionHeight+Gap;
     continue;
    }
+   if(view==NativeHuntPage.Actions){
+    bool navigation=button.Key is "focus" or "targets";
+    int count=0;
+    float cellWidth=0;
+    while(count<3&&i+count<visible.Length){
+     var item=visible[i+count];
+     if((item.Key is "focus" or "targets")!=navigation)break;
+     float w=Math.Max(cellWidth,Compact(item));
+     if(count>0&&(count+1)*w+count*Gap>inner)break;
+     cellWidth=Math.Min(w,inner);
+     count++;
+    }
+    float x=(width-count*cellWidth-(count-1)*Gap)/2;
+    rows++;
+    for(int column=0;column<count;column++)
+     Set(i+column+3,rows,column,visible[i+column],x+column*(cellWidth+Gap),bottom,cellWidth,ActionHeight);
+    i+=count-1;
+    bottom+=ActionHeight+Gap;
+    continue;
+   }
    float gridWidth=mini?3*ActionWidth+2*Gap:controlWidth;
    float gridX=controlX;
    if(!button.Label.Contains('\n')&&button.Label.Length<=25){
@@ -271,8 +291,6 @@ public sealed record NativeHuntLayout(Vector2 Size,NativeHuntRect Heading,Native
     rows++;
     while(i+count<visible.Length){
      var item=visible[i+count];
-     if(view==NativeHuntPage.Actions&&count>0&&item.Key=="focus"&&visible.Skip(i+count+1).FirstOrDefault()?.Key=="targets"
-        &&used+Compact(item)+Gap+Compact(visible[i+count+1])>gridWidth)break;
      if(item.Board!=null||item.Goal!=null||item.Checked.HasValue||item.Label.Contains('\n')||item.Label.Length>25)break;
      float w=Math.Max(view==NativeHuntPage.Target?LongActionWidth:0,Compact(item));
      if(used+w>gridWidth)break;
