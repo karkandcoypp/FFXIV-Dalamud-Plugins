@@ -44,6 +44,8 @@ public sealed partial class Plugin {
  internal System.Action? MarkerClearer {get;set;}
  private ulong? ordinaryActor;
  private Vector2? ordinaryPosition;
+ private float ordinaryHeight;
+ private readonly Dictionary<string,float> shortcutHeights=[];
  private EliteProgress? restoreSearch;
  private Dictionary<string,Vector2>? live;
  private Dictionary<string,Vector2> livePositions=>live??=new();
@@ -252,7 +254,7 @@ public sealed partial class Plugin {
  private unsafe string ContextKey()=> ContextProvider?.Invoke() ?? $"{Service.ObjectTable.LocalPlayer?.CurrentWorld.RowId ?? 0}:{UIState.Instance()->PublicInstance.InstanceId}:{CurrentTerritory}:{CurrentMap}";
  private void ReconcileContext(){
   string current=ContextKey();if(context==null){if(Flow.Restored&&CharacterSave.Context!=null&&CharacterSave.Context!=current){CharacterSave.Search=null;CharacterSave.SearchTarget=null;}context=current;return;}if(current==context&&!externalTransition)return;
-  bool expected=pendingJourney!=null;bool different=current!=context;context=current;externalTransition=false;ownedMarker=null;ordinaryActor=null;livePositions.Clear();if(different){Search.Start([]);searchKey="";}else Search.Suspend();
+  bool expected=pendingJourney!=null;bool different=current!=context;context=current;externalTransition=false;ownedMarker=null;ordinaryActor=null;livePositions.Clear();shortcutHeights.Clear();if(different){Search.Start([]);searchKey="";}else Search.Suspend();
   if(!Flow.Active || expected || Flow.Pauses.HasFlag(PauseReason.Restored))return;
   searchKey="";
   if(Flow.Manual!=null&&Session.Target is {} manual&&manual.TerritoryType!=CurrentTerritory){Flow.Pauses|=PauseReason.NoZone;Flow.Status="Ручная цель в другой зоне. Вернитесь или отмените ручной приоритет.";return;}
@@ -309,15 +311,15 @@ public sealed partial class Plugin {
   }catch(Exception e){NoticeText="Карту этой цели открыть не удалось: "+e.Message;}
  }
  private void RefreshLive(){
-  livePositions.Clear();if(Service.ObjectTable.LocalPlayer is not {} player)return;
+  livePositions.Clear();shortcutHeights.Clear();if(Service.ObjectTable.LocalPlayer is not {} player)return;
   var actors=Service.ObjectTable.OfType<IBattleNpc>().Where(n=>!n.IsDead&&n.GameObjectId!=0&&float.IsFinite(n.Position.X)&&float.IsFinite(n.Position.Y)&&float.IsFinite(n.Position.Z)).ToArray();
-  foreach(var m in Mobs.Where(m=>!unreadBills.Contains(m.BillNumber)&&m.TerritoryType==CurrentTerritory&&m.MapId==CurrentMap&&!Done(m)&&!Flow.Excluded(m))){var npc=actors.Where(n=>n.NameId==m.MobHuntId).OrderBy(n=>Vector3.DistanceSquared(player.Position,n.Position)).FirstOrDefault();if(npc!=null)livePositions[JourneyFlow.Key(m)]=new(npc.Position.X,npc.Position.Z);}
+  foreach(var m in Mobs.Where(m=>!unreadBills.Contains(m.BillNumber)&&m.TerritoryType==CurrentTerritory&&m.MapId==CurrentMap&&!Done(m)&&!Flow.Excluded(m))){var npc=actors.Where(n=>n.NameId==m.MobHuntId).OrderBy(n=>Vector3.DistanceSquared(player.Position,n.Position)).FirstOrDefault();if(npc!=null){livePositions[JourneyFlow.Key(m)]=new(npc.Position.X,npc.Position.Z);shortcutHeights[JourneyFlow.Key(m)]=npc.Position.Y;}}
  }
  private bool DetectorNavigation(){
   if(!Flow.Active || !Flow.CanNavigate || !NavigationAllowed || pendingJourney!=null || Service.ObjectTable.LocalPlayer is not {} player || Service.Condition.Any(ConditionFlag.Unconscious,ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent))return false;
   var candidates=Mobs.Where(m=>!unreadBills.Contains(m.BillNumber)&&AllTiers.Contains(m.BillNumber)&&!Done(m)&&!Flow.Excluded(m)&&m.TerritoryType==CurrentTerritory&&m.MapId==CurrentMap).ToArray();
   var actors=Service.ObjectTable.OfType<IBattleNpc>().Where(n=>!n.IsDead&&n.GameObjectId!=0&&float.IsFinite(n.Position.X)&&float.IsFinite(n.Position.Y)&&float.IsFinite(n.Position.Z) && candidates.Any(m=>m.MobHuntId==n.NameId)).ToArray();
-  livePositions.Clear();foreach(var m in candidates){var near=actors.Where(n=>n.NameId==m.MobHuntId).OrderBy(n=>Vector3.DistanceSquared(player.Position,n.Position)).FirstOrDefault();if(near!=null)livePositions[JourneyFlow.Key(m)]=new(near.Position.X,near.Position.Z);}
+  livePositions.Clear();shortcutHeights.Clear();foreach(var m in candidates){var near=actors.Where(n=>n.NameId==m.MobHuntId).OrderBy(n=>Vector3.DistanceSquared(player.Position,n.Position)).FirstOrDefault();if(near!=null){livePositions[JourneyFlow.Key(m)]=new(near.Position.X,near.Position.Z);shortcutHeights[JourneyFlow.Key(m)]=near.Position.Y;}}
   var elite=candidates.Where(m=>m.IsEliteMark&&(Flow.Manual==null||JourneyFlow.Key(m)==Flow.Manual)).SelectMany(m=>actors.Where(n=>n.NameId==m.MobHuntId).Select(n=>(Mob:m,Npc:n))).OrderBy(p=>Vector3.DistanceSquared(player.Position,p.Npc.Position)).FirstOrDefault();
   if(elite.Mob!=null && (Session.Target==null||JourneyFlow.Key(Session.Target)!=JourneyFlow.Key(elite.Mob))){Session.Retarget(elite.Mob);ordinaryActor=null;}
   if(Session.Target is {IsEliteMark:true})return false;
@@ -328,7 +330,7 @@ public sealed partial class Plugin {
   var position=new Vector2(ordinary.Position.X,ordinary.Position.Z);
   bool changed=ordinaryActor!=ordinary.GameObjectId||ordinaryKind!=JourneyFlow.Key(target)
    ||ownedMarker is not {} flag||flag.Territory!=target.TerritoryType||flag.Map!=target.MapId||Vector2.Distance(new(flag.X,flag.Y),position)>=2;
-  ordinaryActor=ordinary.GameObjectId;ordinaryKind=JourneyFlow.Key(target);ordinaryPosition=position;
+  ordinaryActor=ordinary.GameObjectId;ordinaryKind=JourneyFlow.Key(target);ordinaryPosition=position;ordinaryHeight=ordinary.Position.Y;
   if(changed)PlaceFlag(target.TerritoryType,target.MapId,position,target.BillNumber);
   return true;
  }

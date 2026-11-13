@@ -113,6 +113,7 @@ public sealed partial class Plugin : IDalamudPlugin {
     internal void HideClassic(){if(window!=null)window.IsOpen=false;}
     internal void Refresh() { nextScan = 0; signature = ""; }
     private void OnLogout(int type,int code) {
+        shortcutNavigation?.Reset(Now);
         eliteMarkerSound.Reset();
         NativeMain?.CloseAll();
         SaveJourney(true);
@@ -122,12 +123,13 @@ public sealed partial class Plugin : IDalamudPlugin {
         Elite.Selected=null; Session.Stop(); NativeDialogs.CancelAll(); NextZone.Sync(); Shortcut.Sync();
     }
     private void OnTerritoryChanged(uint territory) {
+        shortcutNavigation?.Reset(Now);
         nextScan=0; routeSignature=""; Session.ZoneTransition(); Search.Suspend();externalTransition=true;
     }
     private unsafe void Update(IFramework _) {
         // Loading can temporarily clear LocalPlayer/ContentId. Only the logout event clears the route.
         bool loading=Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51);
-        if(loading) { if(pendingJourney!=null)pendingJourney.Loaded=true; Timing.Loading(Now);if(!wasLoading) { Session.ZoneTransition();Search.Suspend(); } wasLoading=true; return; }
+        if(loading) { if(pendingJourney!=null)pendingJourney.Loaded=true; Timing.Loading(Now);if(!wasLoading) { shortcutNavigation?.Reset(Now); Session.ZoneTransition();Search.Suspend(); } wasLoading=true; return; }
         if(wasLoading) { wasLoading=false;nextScan=0;routeSignature="";Session.ZoneTransition(); }
         if(!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId==0) {
             Ready=false; Search.Suspend();return;
@@ -406,6 +408,7 @@ public sealed partial class Plugin : IDalamudPlugin {
 
     private unsafe bool FlightKnown()=>FlightCapability?.Invoke() ?? (Service.Condition[ConditionFlag.InFlight] || FFXIVClientStructs.FFXIV.Client.Game.Control.Control.CanFly);
     private ShortcutNavigation? shortcutNavigation;
+    private (uint Map,uint Territory,IReadOnlyDictionary<uint,uint> Prices,uint MaxGil,ShortcutCandidate[] Entries)? shortcutCandidates;
     internal ShortcutOffer? FindShortcut()=>ReadShortcut(out _);
     internal ShortcutOffer? ReadShortcut(out bool waiting) {
         waiting=false;
@@ -417,21 +420,30 @@ public sealed partial class Plugin : IDalamudPlugin {
         var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(target.MapId);
         string key=JourneyFlow.Key(target);
         Vector2 destination;
-        if(!target.IsEliteMark&&ordinaryActor!=null&&ordinaryKind==key&&ordinaryPosition is {} tracked)destination=tracked;
-        else if(livePositions.TryGetValue(key,out var live))destination=live;
+        float? height=null;
+        if(!target.IsEliteMark&&ordinaryActor!=null&&ordinaryKind==key&&ordinaryPosition is {} tracked){destination=tracked;height=ordinaryHeight;}
+        else if(livePositions.TryGetValue(key,out var live)){destination=live;if(shortcutHeights.TryGetValue(key,out float y))height=y;}
         else if(Location.Database.TryGetValue(target.MobHuntId,out var position))destination=MapCoordinates.ToWorld(position.Coordinate,map);
         else return null;
         var here=new Vector2(player.Position.X,player.Position.Z);
 
         var prices=fareSnapshot??Service.Aetherytes.GroupBy(a=>a.AetheryteId).ToDictionary(g=>g.Key,g=>g.Min(a=>a.GilCost));
-        var candidates=Entries(target.MapId,target.TerritoryType).Where(e=>prices.TryGetValue(e.Id,out uint fare)&&fare<=Settings.MaxGil)
-            .Select(e=>new ShortcutCandidate(e.Id,e.Name,MapCoordinates.ToWorld(e.Position,map),prices[e.Id])).ToArray();
+        if(shortcutCandidates is not {} cache||cache.Map!=target.MapId||cache.Territory!=target.TerritoryType
+            ||!ReferenceEquals(cache.Prices,prices)||cache.MaxGil!=Settings.MaxGil) {
+            var entries=Entries(target.MapId,target.TerritoryType).Where(e=>prices.TryGetValue(e.Id,out uint fare)&&fare<=Settings.MaxGil)
+                .Select(e=>new ShortcutCandidate(e.Id,e.Name,MapCoordinates.ToWorld(e.Position,map),prices[e.Id])).ToArray();
+            shortcutCandidates=cache=(target.MapId,target.TerritoryType,prices,Settings.MaxGil,entries);
+        }
+        var candidates=cache.Entries;
         if(candidates.Length==0)return null;
         var distances=Settings.ShortcutNavmesh?(shortcutNavigation??=new()).Read(
-            $"{ContextKey()}:{Session.RunId}:{key}:{string.Join(",",candidates.Select(c=>c.Id))}",player.Position,destination,candidates,Now,out waiting):null;
+            $"{ContextKey()}:{Session.RunId}:{key}:{cache.Entries.GetHashCode()}",player.Position,new(destination.X,height??player.Position.Y,destination.Y),height.HasValue,candidates,Now,out waiting):null;
         if(waiting)return null;
         return ShortcutAdvisor.Evaluate(Session.RunId,target,here,destination,candidates,Timing.OverheadSeconds,Settings.MaxGil,Settings.MinSeconds,Settings.MinPercent/100f,distances?.Direct,distances?.Entries);
     }
+    internal bool ShortcutContextMatches(ShortcutOffer offer)=>Ready&&Settings.Shortcuts&&Session.Phase==RoutePhase.Following
+        && Session.RunId==offer.RunId&&Session.Target is {} target&&JourneyFlow.Key(target)==offer.ContractKey
+        && CurrentTerritory==target.TerritoryType&&CurrentMap==target.MapId;
     internal bool ShortcutStillValid(ShortcutOffer offered) =>
         FindShortcut() is {} current && current.UsesNavmesh==offered.UsesNavmesh && ShortcutAdvisor.MatchesQuote(offered,current);
     internal bool AcceptShortcut(ShortcutOffer offered) {
@@ -486,6 +498,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         catch(Exception e) { nextHistorySave=Now+10000;HistorySaveError="Не удалось сохранить отметки выполнения. В игре зачёт сохранён, но отметки могут пропасть после перезапуска.";Service.PluginLog.Error(e,"Не удалось сохранить историю выполнения охоты"); }
     }
     public void Dispose() {
+        shortcutNavigation?.Reset(Now);
         SaveJourney(true);
         SaveHistory(true);
         Service.ClientState.Logout -= OnLogout;

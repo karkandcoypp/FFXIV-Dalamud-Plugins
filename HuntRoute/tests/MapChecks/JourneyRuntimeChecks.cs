@@ -73,7 +73,62 @@ static class JourneyRuntimeChecks {
    Console.WriteLine("PASS one colored completion chat message with only available follow-up boards");
   }finally{Service.Chat=previous;}
  }
+ private static void CheckShortcutNavigation(){
+  var navigation=typeof(Plugin).Assembly.GetType("HuntRoute.ShortcutNavigation")!;
+  int probes=0,projects=0,requests=0;
+  bool ready=true;
+  var oldPath=new TaskCompletionSource<List<Vector3>>();
+  CancellationToken oldToken=default;
+  var ground=new Vector3(400,-20,0);
+  Func<Vector3,bool,Vector3?> project=(point,known)=>{
+   projects++;
+   if(known&&point.Y!=-20)throw new Exception("Known position must preserve the lower floor");
+   return point.X==390?null:point;
+  };
+  Func<Vector3,Vector3,CancellationToken,Task<List<Vector3>>> path=(from,to,token)=>{
+   if(++requests==1){oldToken=token;return oldPath.Task;}
+   return Task.FromResult(new List<Vector3>{new(from.X,-20,400),new(to.X,-20,400),to});
+  };
+  var instance=Activator.CreateInstance(navigation,BindingFlags.Instance|BindingFlags.NonPublic,null,
+   [new Func<bool>(()=>{probes++;return ready;}),project,path,null],null)!;
+  ShortcutCandidate[] entries=[new(1,"Bad",new(390,0),100),new(2,"Good",new(380,0),100){Height=-20}];
+  object? Read(string zone,long now,out bool waiting){
+   object?[] args=[zone,new Vector3(0,-20,0),ground,true,entries,now,false];
+   var result=Call(instance,"Read",args);
+   waiting=(bool)args[6]!;
+   return result;
+  }
+  Read("old",100,out _);
+  for(int i=0;i<100;i++)Read("old",101,out _);
+  if(probes!=1||projects!=1||requests!=1)throw new Exception("Repeated reads must reuse the job and step budget");
+  if(Read("new",102,out bool waiting)!=null||waiting||!oldToken.IsCancellationRequested)
+   throw new Exception("Changing zones must cancel the old path and permit immediate fallback");
+  object? fresh=null;
+  for(int i=103;i<=112;i++)fresh=Read("new",i,out _);
+  if(fresh==null||requests!=3||projects!=4)throw new Exception("A hung job or invalid entry must not block a valid mesh path");
+  oldPath.SetResult([ground]);
+  if(!ReferenceEquals(fresh,Read("new",120,out _)))throw new Exception("Late path must not replace the current result");
+  ready=false;
+  if(Read("new",800,out waiting)!=null||waiting)throw new Exception("Unavailable mesh must allow fallback immediately");
+  Call(instance,"Reset",new object?[]{1000L});
+  ready=true;
+  if(Read("newer",1100,out waiting)!=null||waiting||requests!=3)throw new Exception("Zone transition must allow fallback during provider stabilization");
+
+  var queue=new ConfirmationQueue();
+  bool measuring=false;
+  var dialog=new ConfirmationRequest("shortcut","quote","quote",()=>true,()=>true,()=>true,DeclineKey:"contract",ConfirmReady:()=>!measuring);
+  queue.Offer(dialog);
+  if(queue.Activate(true)!=dialog)throw new Exception("Shortcut must open when ready");
+  measuring=true;
+  if(!dialog.Valid()||dialog.CanConfirm()||queue.Active!=dialog)throw new Exception("Refreshing a quote must preserve the window and disable confirmation");
+  queue.Resolve(dialog.Key,false);
+  measuring=false;
+  queue.Offer(dialog with {Key="updated"});
+  if(queue.Activate(true)!=null)throw new Exception("Later must suppress refreshed offers");
+  Console.WriteLine("PASS vnavmesh elevation, partial candidate failure, request budget, ignored cancellation, zone transitions and dialog refresh");
+ }
  public static void RunOffline(GameData? game=null){
+  CheckShortcutNavigation();
   CheckCompletionChat();
   CheckCompletionChat(manual:true);
   CheckCompletionChat(otherExpansion:true);

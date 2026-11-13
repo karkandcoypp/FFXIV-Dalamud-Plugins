@@ -23,7 +23,7 @@ internal sealed class NativeDialogService : IDisposable {
     internal bool InitializationFailed=>initialization.IsFaulted||initialization.IsCanceled;
     internal bool WasDeclined(string key)=>queue.IsDeclined(key);
     internal bool HasDialog=>queue.Active!=null||addon!=null;
-    internal void Offer(ConfirmationRequest request,bool repeat=false) { if(disposed||queue.Active?.Key==request.Key)return;if(repeat)queue.Retry(request);else queue.Offer(request); }
+    internal void Offer(ConfirmationRequest request,bool repeat=false) { if(disposed)return;if(queue.Active is {} current&&current.Key==request.Key){if(current.Valid())return;Cancel(current.Owner);}if(repeat)queue.Retry(request);else queue.Offer(request); }
     internal void CancelAll(){queueGeneration++;shownFallback=null;queue.Clear();addon?.CloseQuietly();addon=null;}
     internal void Cancel(string owner) {
         if(queue.Cancel(owner)) { addon?.CloseQuietly();addon=null; }
@@ -45,7 +45,7 @@ internal sealed class NativeDialogService : IDisposable {
         var request=queue.Activate(available,Environment.TickCount64);
         if(request==null||useFallback) return;
         try {
-            addon=new NativeConfirmationAddon(request.Presentation ?? TravelDialogContent.Plain(request.Text),request.Ready,yes=>Answered(request.Key,yes)) {
+            addon=new NativeConfirmationAddon(request.Presentation ?? TravelDialogContent.Plain(request.Text),request.CanConfirm,request.Ready,yes=>Answered(request.Key,yes)) {
                 InternalName="HuntRouteConfirm",Title="Hunt Route",Size=new Vector2(TravelDialogLayout.DialogWidth,180),
                 RememberClosePosition=false,EnableContextMenu=false,DisableClamping=false
             };
@@ -87,7 +87,7 @@ internal sealed class NativeDialogService : IDisposable {
                 if(content.Footer.Length>0)ImGui.TextWrapped(content.Footer);
                 if(content.Fare is {} amount)GilDisplay.Draw(amount.ToString(),content.FareLabel);
             }finally{ImGui.PopTextWrapPos();}
-            ImGui.BeginDisabled(!request.Ready());
+            ImGui.BeginDisabled(!request.CanConfirm());
             bool accept=ImGui.Button(content.ConfirmLabel);
             ImGui.EndDisabled();
             if(!content.SingleButton)ImGui.SameLine();
@@ -100,7 +100,7 @@ internal sealed class NativeDialogService : IDisposable {
     }
     private void Answered(string key,bool? yes) {
         try {
-            if(queue.Active?.Key!=key) return;
+            if(queue.Active is not {} active||active.Key!=key||yes==true&&!active.CanConfirm()) return;
             ConfirmationRequest? request=null;
             if(yes is {} response) request=queue.Resolve(key,response);
             else queue.Interrupt(key);
@@ -114,7 +114,7 @@ internal sealed class NativeDialogService : IDisposable {
                     retired.Dispose();
                 }
                 if(disposed || generation!=queueGeneration || request==null || !request.Valid()) return;
-                if(!request.Ready() || !request.Accept()) queue.Retry(request);
+                if(!request.CanConfirm() || !request.Accept()) queue.Retry(request);
             },delayTicks:1);
         } catch(Exception e) { Service.PluginLog.Error(e,"Ошибка ответа на игровой диалог Hunt Route"); }
     }
@@ -128,7 +128,7 @@ internal sealed class NativeDialogService : IDisposable {
         catch(Exception e) { Service.PluginLog.Error(e,"Очистка native UI Hunt Route"); }
     }
 }
-internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content,Func<bool> ready,Action<bool?> answer) : NativeAddon {
+internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content,Func<bool> ready,Func<bool> interactionReady,Action<bool?> answer) : NativeAddon {
     private void AddFixedNode(NodeBase node)=>NativeFixedLayout.Attach(this,node);
     private bool answered;
     private Vector2 measuredSize;
@@ -281,7 +281,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
     protected override void OnHide(AtkUnitBase* native)=>Dismiss();
     protected override void OnFinalize(AtkUnitBase* native)=>Dismiss();
     private void Dismiss() {
-        if(!answered) Complete(ready()?false:null);
+        if(!answered) Complete(interactionReady()?false:null);
     }
     private void Complete(bool? yes) {
         if(answered || (yes==true&&!ready())) return;

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 namespace HuntRoute;
 
-public sealed record ConfirmationRequest(string Owner,string Key,string Text,Func<bool> Valid,Func<bool> Ready,Func<bool> Accept,TravelDialogContent? Presentation=null,Action? OnShown=null,string? DeclineKey=null);
+public sealed record ConfirmationRequest(string Owner,string Key,string Text,Func<bool> Valid,Func<bool> Ready,Func<bool> Accept,TravelDialogContent? Presentation=null,Action? OnShown=null,string? DeclineKey=null,Func<bool>? ConfirmReady=null) {
+    public bool CanConfirm()=>Ready()&&(ConfirmReady?.Invoke()??true);
+}
 public sealed class ConfirmationQueue {
     private readonly Dictionary<string,ConfirmationRequest> pending=[];
     private readonly HashSet<string> shown=[];
@@ -39,6 +41,7 @@ public sealed class ConfirmationQueue {
     public bool Cancel(string owner) {
         pending.Remove(owner);retryAfter.Remove(owner);
         if(Active?.Owner!=owner) return false;
+        if(Active.DeclineKey!=null)shown.Remove(Active.Key);
         Active=null;return true;
     }
     public void Interrupt(string key) {

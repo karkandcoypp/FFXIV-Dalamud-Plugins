@@ -4,7 +4,7 @@ using System.Linq;
 using System.Numerics;
 namespace HuntRoute;
 
-public readonly record struct ShortcutCandidate(uint Id,string Name,Vector2 Position,uint GilCost);
+public readonly record struct ShortcutCandidate(uint Id,string Name,Vector2 Position,uint GilCost) { public float? Height {get;init;} }
 public sealed record ShortcutOffer(uint RunId,byte Bill,byte Mob,uint TargetId,uint Territory,uint Aetheryte,string Name,uint GilCost,float DirectDistance,float FinalDistance,float DirectSeconds,float TeleportSeconds) {
     public byte OrderId {get;init;}
     public uint Generation {get;init;}

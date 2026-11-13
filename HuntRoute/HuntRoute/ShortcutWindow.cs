@@ -1,17 +1,25 @@
 namespace HuntRoute;
 
 public sealed class ShortcutWindow(Plugin plugin) {
-    private readonly ShortcutNotice notice=new();
+    private ShortcutOffer? latest;
+    private ConfirmationRequest? request;
+    private bool recalculating;
+    private bool Current(ShortcutOffer offer)=>plugin.ShortcutContextMatches(offer)
+        &&(recalculating||latest is {} current&&current.UsesNavmesh==offer.UsesNavmesh&&ShortcutAdvisor.MatchesQuote(offer,current));
     internal void Sync() {
         var offer=plugin.ReadShortcut(out bool waiting);
+        latest=offer;
+        recalculating=waiting;
         if(waiting)return;
-        if(offer==null) { plugin.NativeDialogs.Cancel("shortcut");return; }
-        if(!notice.ShouldOpen(offer)) return;
-        plugin.NativeDialogs.Offer(new("shortcut",$"shortcut:{offer.RunId}:{offer.ContractKey}",
-            $"До цели {plugin.Session.Target?.Name}: {offer.DirectDistance:F0} м.\n\nЭфирит: {offer.Name}\nПосле телепорта до цели: {offer.FinalDistance:F0} м\nСтоимость: {offer.GilCost} гил\n\nОценка времени: перелёт ~{offer.DirectSeconds:F0} с\nС телепортом ~{offer.TeleportSeconds:F0} с\nЭкономия ~{offer.SavedSeconds:F0} с\n\nСократить перелёт телепортом?",
-            ()=>plugin.ShortcutStillValid(offer),
+        if(offer==null) { request=null;plugin.NativeDialogs.Cancel("shortcut");return; }
+        string key=$"shortcut:{offer.RunId}:{offer.ContractKey}";
+        if(plugin.NativeDialogs.WasDeclined(key))return;
+        if(request==null||request.Key!=key||!request.Valid())request=new("shortcut",key,
+            $"Р”Рѕ С†РµР»Рё {plugin.Session.Target?.Name}: {offer.DirectDistance:F0} Рј.\n\nР­С„РёСЂРёС‚: {offer.Name}\nРџРѕСЃР»Рµ С‚РµР»РµРїРѕСЂС‚Р° РґРѕ С†РµР»Рё: {offer.FinalDistance:F0} Рј\nРЎС‚РѕРёРјРѕСЃС‚СЊ: {offer.GilCost} РіРёР»\n\nРћС†РµРЅРєР° РІСЂРµРјРµРЅРё: РїРµСЂРµР»С‘С‚ ~{offer.DirectSeconds:F0} СЃ\nРЎ С‚РµР»РµРїРѕСЂС‚РѕРј ~{offer.TeleportSeconds:F0} СЃ\nР­РєРѕРЅРѕРјРёСЏ ~{offer.SavedSeconds:F0} СЃ\n\nРЎРѕРєСЂР°С‚РёС‚СЊ РїРµСЂРµР»С‘С‚ С‚РµР»РµРїРѕСЂС‚РѕРј?",
+            ()=>Current(offer),
             ()=>!plugin.TravelBusy && plugin.NavigationAllowed,
             ()=>plugin.AcceptShortcut(offer),
-            TravelDialogContent.Shortcut(offer,plugin.Session.Target?.Name ?? "Цель контракта",plugin.Session.Target?.TerritoryName)));
+            TravelDialogContent.Shortcut(offer,plugin.Session.Target?.Name ?? "Р¦РµР»СЊ РєРѕРЅС‚СЂР°РєС‚Р°",plugin.Session.Target?.TerritoryName), DeclineKey:key, ConfirmReady:()=>!recalculating);
+        plugin.NativeDialogs.Offer(request);
     }
 }
