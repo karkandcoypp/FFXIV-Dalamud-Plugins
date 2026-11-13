@@ -165,7 +165,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
         for(int i=0;i<layout.Texts.Count;i++) { var spec=layout.Texts[i];var node=textNodes[i];node.Position=spec.Position;node.Size=spec.Size;node.TextColor=spec.Color;if(spec.Centered)node.AlignmentType=AlignmentType.Top; }
         fareText=presentation.Fare.HasValue?textNodes[^1]:null;
         if(fareText!=null) {
-            fareIcon=new IconImageNode{IconId=1,Size=new(16,16),FitTexture=true,IsVisible=false};
+            fareIcon=new IconImageNode{IconId=65002,Size=new(16,16),FitTexture=true,IsVisible=false};
             AddFixedNode(fareIcon);
         }
         portraitRect=layout.Portrait;

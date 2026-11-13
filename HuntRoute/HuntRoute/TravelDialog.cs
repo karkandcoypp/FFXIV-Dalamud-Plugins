@@ -124,7 +124,7 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
         }
         if(content.NextZone&&content.Fare.HasValue&&content.Context.Length>0)
             y+=Text("Эфирит",detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
-        if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,hasSummary?Muted:Mint,centerNotice)+4;
+        if(!string.IsNullOrEmpty(content.Context)) y+=Text(content.Context,detailsX,y,textWidth,content.NextZone&&content.Fare.HasValue?NativeHuntLayout.TitleFont:NativeHuntLayout.SecondaryFont,hasSummary?Muted:Mint,centerNotice)+4;
         bool captionUnderPortrait=content.NextZone&&portrait.HasValue&&content.Subject.Length>0;
         if(content.HasSubject) {
             y+=2;
