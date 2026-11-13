@@ -332,6 +332,8 @@ internal static class NativeHuntPreviewChecks {
    }
    if(sample.Page==NativeHuntPage.Number){
     var steps=layout.Buttons.Where(b=>b.Button.Action.Kind=="step").ToArray();
+    if(steps.Any(b=>!b.Button.Label.StartsWith(b.Button.Action.Delta<0?'-':'+')))
+     throw new Exception("Numeric steps must use game-font-compatible signs");
     if(steps.Length!=6||steps.GroupBy(b=>b.Row).Select(g=>g.Count()).ToArray() is not [3,3]||steps.Any(b=>b.Rect.Size.X!=NativeHuntLayout.ActionWidth))
      throw new Exception("Numeric controls must fit two compact rows");
     for(int column=0;column<3;column++){

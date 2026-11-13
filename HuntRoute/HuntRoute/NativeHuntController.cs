@@ -152,7 +152,7 @@ public sealed class NativeHuntController {
  private NativeHuntScreen Number(){
   var (label,value)=NumberValue(numberKey);
   return new(label,value,new[]{-1,-10,-50,1,10,50}.Select(d=>Button("step:"+d,
-   (d<0?"−":"+")+(numberKey=="seconds"?$"{Math.Abs(d)/10f:0.#} с":Math.Abs(d).ToString()),
+   (d<0?"-":"+")+(numberKey=="seconds"?$"{Math.Abs(d)/10f:0.#} с":Math.Abs(d).ToString()),
    "step",numberKey,!plugin.PersistenceBlocked,d)).ToArray(),SummaryColor:NativeHuntColors.Tracking);
  }
  private NativeHuntScreen Actions(){
