@@ -125,13 +125,13 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
             }
         } else {
             if(content.Eyebrow.Length>0)y+=Text(content.Eyebrow,left,y,textWidth,NativeHuntLayout.SecondaryFont,Brand,centerNotice)+2;
-            y+=Text(content.Title,left,y,textWidth,NativeHuntLayout.TitleFont,White,centerNotice)+4;
+            y+=Text(content.Title,left,y,textWidth,content.Results?16u:NativeHuntLayout.TitleFont,White,centerNotice)+4;
         }
         bool hasSummary=content.Summary.Length>0;
         if(hasSummary)y+=Text(content.Summary,left,y,textWidth,NativeHuntLayout.BodyFont,Mint,centerNotice)+8;
         if(!string.IsNullOrEmpty(content.Destination)&&content.Destination!=content.Title) {
             string destination=string.IsNullOrEmpty(content.DestinationLabel)?content.Destination:$"{content.DestinationLabel} · {content.Destination}";
-            y+=Text(destination,left,y,textWidth,NativeHuntLayout.BodyFont,White,centerNotice&&(hasSummary||content.Results))+2;
+            y+=Text(destination,left,y,textWidth,content.Results?NativeHuntLayout.SecondaryFont:NativeHuntLayout.BodyFont,White,centerNotice&&(hasSummary||content.Results))+(content.Results?6:2);
         }
         if(content.NextZone&&content.Fare.HasValue&&content.Context.Length>0)
             y+=Text("Эфирит",detailsX,y,textWidth,NativeHuntLayout.SecondaryFont,Brand)+2;
@@ -166,8 +166,8 @@ public sealed record TravelDialogLayout(float Width,float Height,DialogButton Co
                 for(int j=0;j<2;j++) {
                     var metric=content.Metrics[i+j];
                     float x=left+j*(cell+gap);
-                    float labelHeight=Text(metric.Label,x,y,cell,NativeHuntLayout.BodyFont,Muted,true);
-                    float valueHeight=Text(metric.Value,x,y+labelHeight+3,cell,22,metric.Highlight?Mint:White,true);
+                    float labelHeight=Text(metric.Label,x,y,cell,NativeHuntLayout.SecondaryFont,Muted,true);
+                    float valueHeight=Text(metric.Value,x,y+labelHeight+3,cell,18,metric.Highlight?Mint:White,true);
                     rowHeight=Math.Max(rowHeight,labelHeight+3+valueHeight);
                 }
                 y+=rowHeight+10;

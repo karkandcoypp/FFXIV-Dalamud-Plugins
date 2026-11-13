@@ -173,7 +173,7 @@ internal sealed unsafe class NativeConfirmationAddon(TravelDialogContent content
             fareText=textNodes[valueIndex];
         }
         if(fareText!=null) {
-            fareIcon=GilDisplay.CreateIcon(presentation.Results?26:presentation.FareFont==NativeHuntLayout.BodyFont?16:presentation.FareFont);
+            fareIcon=GilDisplay.CreateIcon(presentation.Results?20:presentation.FareFont==NativeHuntLayout.BodyFont?16:presentation.FareFont);
             AddFixedNode(fareIcon);
         }
         portraitRect=layout.Portrait;
