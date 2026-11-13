@@ -16,7 +16,7 @@ internal sealed class ShortcutNavigation {
     private readonly Func<Vector3,bool,Vector3?> project;
     private readonly Func<Vector3,Vector3,CancellationToken,Task<List<Vector3>>> path;
     private readonly Action<double>? slowStep;
-    private readonly List<(Task<List<Vector3>> Task,CancellationTokenSource Token)> retired=[];
+    private readonly List<(Task Task,CancellationTokenSource Token)> retired=[];
     private Task<List<Vector3>>? pending;
     private CancellationTokenSource? cancellation;
     private (uint Id,Vector3 Point,bool Known)[] candidates=[];
@@ -27,7 +27,7 @@ internal sealed class ShortcutNavigation {
     private int step;
     private float direct;
     private Distances? result;
-    private long started,retryAfter,readyUntil,stepAfter,transitionUntil;
+    private long started,retryAfter,readyUntil,stepAfter,transitionProbeAfter;
 
     internal ShortcutNavigation():this(
         ()=>Service.PluginInterface.GetIpcSubscriber<bool>("vnavmesh.Nav.IsReady").InvokeFunc(),
@@ -40,17 +40,27 @@ internal sealed class ShortcutNavigation {
         this.isReady=isReady;this.project=project;this.path=path;this.slowStep=slowStep;
     }
 
+    private bool requireMeshReload;
+
     internal void Reset(long now=0) {
         Retire();
         context=null;retryAfter=0;readyUntil=0;
-        transitionUntil=now==0?0:now+750;
+        if(now!=0&&!requireMeshReload){transitionProbeAfter=now;requireMeshReload=true;}
+    }
+
+    internal void ObserveTransition(long now) {
+        if(!requireMeshReload||now<transitionProbeAfter)return;
+        transitionProbeAfter=now+100;
+        try { if(!isReady())requireMeshReload=false; }
+        catch(Exception){requireMeshReload=false;}
     }
 
     private void Retire() {
         if(cancellation!=null) {
-            cancellation.Cancel();
-            if(pending is {IsCompleted:false}) retired.Add((pending,cancellation));
-            else { if(pending?.IsFaulted==true)_=pending.Exception;cancellation.Dispose(); }
+            var cancelled=cancellation.CancelAsync();
+            var retirement=pending==null?cancelled:Task.WhenAll(cancelled,pending);
+            if(!retirement.IsCompleted)retired.Add((retirement,cancellation));
+            else { if(retirement.IsFaulted)_=retirement.Exception;cancellation.Dispose(); }
         }
         cancellation=null;pending=null;result=null;
     }
@@ -69,7 +79,8 @@ internal sealed class ShortcutNavigation {
             Retire();context=null;
             if(changed){readyUntil=0;retryAfter=0;}
         }
-        if(now<transitionUntil||now<retryAfter||retired.Count>=2)return null;
+        if(requireMeshReload){ObserveTransition(now);return null;}
+        if(now<retryAfter||retired.Count>=2)return null;
         long timer=Stopwatch.GetTimestamp();
         try {
             if(now>=readyUntil) {
@@ -91,7 +102,7 @@ internal sealed class ShortcutNavigation {
                     .ThenBy(e=>e.Id).Take(MaxCandidates)
                     .Select(e=>(e.Id,new Vector3(e.Position.X,e.Height??to.Y,e.Position.Y),e.Height.HasValue)).ToArray();
             }
-            if(now<stepAfter){waiting=retired.Count==0;return null;}
+            if(now<stepAfter){waiting=true;return null;}
             stepAfter=now+1;
             if(step==0) {
                 if(project(to,known) is not {} endpoint){finished=true;return null;}
@@ -117,7 +128,7 @@ internal sealed class ShortcutNavigation {
                 } else if(distance is {} meters) lengths[candidates[step-2].Id]=meters;
                 return NextCandidate(out waiting);
             }
-            waiting=retired.Count==0;
+            waiting=true;
             return null;
         } catch(Exception) {
             Retire();finished=true;return null;
@@ -130,7 +141,7 @@ internal sealed class ShortcutNavigation {
     private Distances? NextCandidate(out bool waiting) {
         step++;
         finished=step>candidates.Length+1;
-        waiting=!finished&&retired.Count==0;
+        waiting=!finished;
         if(finished&&lengths.Count>0)result=new(direct,new Dictionary<uint,float>(lengths));
         return result;
     }

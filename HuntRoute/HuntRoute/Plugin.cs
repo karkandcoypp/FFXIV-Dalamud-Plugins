@@ -12,7 +12,7 @@ using Lumina.Excel.Sheets;
 namespace HuntRoute;
 
 public record Board(string Name, byte[] Daily, byte Weekly, uint Aetheryte, uint Territory, uint Map, Vector2 Position);
-public record EntryPoint(uint Id, string Name, Vector2 Position);
+public record EntryPoint(uint Id, string Name, Vector2 Position) { public Vector3? WorldPosition {get;init;} }
 public record ZoneRoute(string Name, List<MobHuntEntry> Mobs, EntryPoint? Start, bool StartsHere=false,float EstimatedCost=0,uint GilCost=uint.MaxValue,uint Region=0);
 
 public sealed partial class Plugin : IDalamudPlugin {
@@ -73,8 +73,10 @@ public sealed partial class Plugin : IDalamudPlugin {
                 prices[id]=Math.Min(prices.GetValueOrDefault(id,uint.MaxValue),entry.GilCost);
             }
         }
-        return fareSnapshot=prices;
+        return fareSnapshot=StableFares(fareSnapshot,prices);
     }
+    internal static IReadOnlyDictionary<uint,uint> StableFares(IReadOnlyDictionary<uint,uint>? previous,IReadOnlyDictionary<uint,uint> prices)=>
+        previous!=null&&previous.Count==prices.Count&&prices.All(p=>previous.TryGetValue(p.Key,out uint fare)&&fare==p.Value)?previous:prices;
     // Uninitialized offline integration fixtures supply a managed list instead.
     private IEnumerable<uint> UnlockedAetherytes()=>fareSnapshot?.Keys??Service.Aetherytes?.Select(a=>a.AetheryteId)??[];
     private bool IsAetheryteUnlocked(uint id)=>fareSnapshot?.ContainsKey(id)??Service.Aetherytes?.Any(a=>a.AetheryteId==id)??false;
@@ -123,13 +125,13 @@ public sealed partial class Plugin : IDalamudPlugin {
         Elite.Selected=null; Session.Stop(); NativeDialogs.CancelAll(); NextZone.Sync(); Shortcut.Sync();
     }
     private void OnTerritoryChanged(uint territory) {
-        shortcutNavigation?.Reset(Now);
+        if(CurrentTerritory!=territory)shortcutNavigation?.Reset(Now);
         nextScan=0; routeSignature=""; Session.ZoneTransition(); Search.Suspend();externalTransition=true;
     }
     private unsafe void Update(IFramework _) {
         // Loading can temporarily clear LocalPlayer/ContentId. Only the logout event clears the route.
         bool loading=Service.Condition.Any(ConditionFlag.BetweenAreas,ConditionFlag.BetweenAreas51);
-        if(loading) { if(pendingJourney!=null)pendingJourney.Loaded=true; Timing.Loading(Now);if(!wasLoading) { shortcutNavigation?.Reset(Now); Session.ZoneTransition();Search.Suspend(); } wasLoading=true; return; }
+        if(loading) { if(pendingJourney!=null)pendingJourney.Loaded=true; Timing.Loading(Now);if(!wasLoading) { shortcutNavigation?.Reset(); Session.ZoneTransition();Search.Suspend(); } shortcutNavigation?.ObserveTransition(Now); wasLoading=true; return; }
         if(wasLoading) { wasLoading=false;nextScan=0;routeSignature="";Session.ZoneTransition(); }
         if(!Service.ClientState.IsLoggedIn || !Service.Player.IsLoaded || Service.Player.ContentId==0) {
             Ready=false; Search.Suspend();return;
@@ -137,11 +139,13 @@ public sealed partial class Plugin : IDalamudPlugin {
         try {
             NativeMain?.Pump();
             long now=Now;
+            shortcutNavigation?.ObserveTransition(now);
             if(now<nextScan) {
                 // Contract snapshots stay on the 1-second cadence; fly-by detection runs at 10 Hz.
                 if(Ready && character==Service.Player.ContentId && now>=nextEliteScan && Session.Phase==RoutePhase.Following
                     && !Service.Condition.Any(ConditionFlag.WatchingCutscene,ConditionFlag.OccupiedInCutSceneEvent) && now>=nextTeleportAllowed) {
                     nextEliteScan=now+100;CheckMarker();DetectorNavigation();UpdateEliteSearch();
+                    if(Settings.ShortcutNavmesh){Shortcut?.Sync();NativeDialogs?.Pump();}
                 }
                 return;
             }
@@ -244,7 +248,14 @@ public sealed partial class Plugin : IDalamudPlugin {
         foreach (var marker in markers) {
             if (marker.DataType != 3 || !unlocked.Contains(marker.DataKey.RowId)) continue;
             if(!Service.DataManager.GetExcelSheet<Aetheryte>().TryGetRow(marker.DataKey.RowId,out var a)) continue;
-            if (a.IsAetheryte && a.Territory.RowId == territory) result.Add(new(a.RowId, a.PlaceName.Value.Name.ToString(), MapCoordinates.FromTexturePixel(new Vector2(marker.X,marker.Y),map)));
+            if (!a.IsAetheryte || a.Territory.RowId != territory) continue;
+            var point=MapCoordinates.FromTexturePixel(new Vector2(marker.X,marker.Y),map);
+            var world=MapCoordinates.ToWorld(point,map);
+            var position=a.Level.Where(l=>l.RowId!=0).Select(l=>l.Value)
+                .Where(l=>l.Territory.RowId==territory&&(l.Map.RowId==0||l.Map.RowId==mapId))
+                .OrderBy(l=>Vector2.DistanceSquared(world,new(l.X,l.Z)))
+                .Select(l=>(Vector3?)new Vector3(l.X,l.Y,l.Z)).FirstOrDefault();
+            result.Add(new(a.RowId,a.PlaceName.Value.Name.ToString(),point){WorldPosition=position});
         }
         // Hinterlands can only be entered via Idyllshire; do not fabricate an in-zone distance.
         return result;
@@ -408,6 +419,7 @@ public sealed partial class Plugin : IDalamudPlugin {
 
     private unsafe bool FlightKnown()=>FlightCapability?.Invoke() ?? (Service.Condition[ConditionFlag.InFlight] || FFXIVClientStructs.FFXIV.Client.Game.Control.Control.CanFly);
     private ShortcutNavigation? shortcutNavigation;
+    private long shortcutCandidateRevision;
     private (uint Map,uint Territory,IReadOnlyDictionary<uint,uint> Prices,uint MaxGil,ShortcutCandidate[] Entries)? shortcutCandidates;
     internal ShortcutOffer? FindShortcut()=>ReadShortcut(out _);
     internal ShortcutOffer? ReadShortcut(out bool waiting) {
@@ -416,7 +428,7 @@ public sealed partial class Plugin : IDalamudPlugin {
         if(Flow.Active && !FlightKnown())return null;
         if(!Settings.Shortcuts || !NavigationAllowed || !Ready || Session.Phase!=RoutePhase.Following || Session.Target is not {} target
             || Service.ClientState.TerritoryType!=target.TerritoryType || Service.ClientState.MapId!=target.MapId
-            || Service.ObjectTable.LocalPlayer is not {} player || Done(target)) return null;
+            || Service.ObjectTable.LocalPlayer is not {} player || unreadBills.Contains(target.BillNumber) || Done(target)) return null;
         var map=Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Map>().GetRow(target.MapId);
         string key=JourneyFlow.Key(target);
         Vector2 destination;
@@ -431,13 +443,14 @@ public sealed partial class Plugin : IDalamudPlugin {
         if(shortcutCandidates is not {} cache||cache.Map!=target.MapId||cache.Territory!=target.TerritoryType
             ||!ReferenceEquals(cache.Prices,prices)||cache.MaxGil!=Settings.MaxGil) {
             var entries=Entries(target.MapId,target.TerritoryType).Where(e=>prices.TryGetValue(e.Id,out uint fare)&&fare<=Settings.MaxGil)
-                .Select(e=>new ShortcutCandidate(e.Id,e.Name,MapCoordinates.ToWorld(e.Position,map),prices[e.Id])).ToArray();
+                .Select(e=>new ShortcutCandidate(e.Id,e.Name,e.WorldPosition is {} p?new(p.X,p.Z):MapCoordinates.ToWorld(e.Position,map),prices[e.Id]){Height=e.WorldPosition?.Y}).ToArray();
+            shortcutCandidateRevision++;
             shortcutCandidates=cache=(target.MapId,target.TerritoryType,prices,Settings.MaxGil,entries);
         }
         var candidates=cache.Entries;
         if(candidates.Length==0)return null;
         var distances=Settings.ShortcutNavmesh?(shortcutNavigation??=new()).Read(
-            $"{ContextKey()}:{Session.RunId}:{key}:{cache.Entries.GetHashCode()}",player.Position,new(destination.X,height??player.Position.Y,destination.Y),height.HasValue,candidates,Now,out waiting):null;
+            $"{ContextKey()}:{Session.RunId}:{key}:{shortcutCandidateRevision}",player.Position,new(destination.X,height??player.Position.Y,destination.Y),height.HasValue,candidates,Now,out waiting):null;
         if(waiting)return null;
         return ShortcutAdvisor.Evaluate(Session.RunId,target,here,destination,candidates,Timing.OverheadSeconds,Settings.MaxGil,Settings.MinSeconds,Settings.MinPercent/100f,distances?.Direct,distances?.Entries);
     }

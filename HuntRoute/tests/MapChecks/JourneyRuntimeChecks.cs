@@ -101,7 +101,7 @@ static class JourneyRuntimeChecks {
   Read("old",100,out _);
   for(int i=0;i<100;i++)Read("old",101,out _);
   if(probes!=1||projects!=1||requests!=1)throw new Exception("Repeated reads must reuse the job and step budget");
-  if(Read("new",102,out bool waiting)!=null||waiting||!oldToken.IsCancellationRequested)
+  if(Read("new",102,out bool waiting)!=null||!waiting||!oldToken.IsCancellationRequested)
    throw new Exception("Changing zones must cancel the old path and permit immediate fallback");
   object? fresh=null;
   for(int i=103;i<=112;i++)fresh=Read("new",i,out _);
@@ -112,7 +112,29 @@ static class JourneyRuntimeChecks {
   if(Read("new",800,out waiting)!=null||waiting)throw new Exception("Unavailable mesh must allow fallback immediately");
   Call(instance,"Reset",new object?[]{1000L});
   ready=true;
-  if(Read("newer",1100,out waiting)!=null||waiting||requests!=3)throw new Exception("Zone transition must allow fallback during provider stabilization");
+  if(Read("newer",2100,out waiting)!=null||waiting||requests!=3)throw new Exception("A provider still reporting the old mesh must allow only fallback");
+  ready=false;
+  Read("newer",2200,out _);
+  ready=true;
+  Read("newer",2300,out waiting);
+  if(!waiting)throw new Exception("The next mesh must be queried after an observed reload");
+
+  var stableFares=typeof(Plugin).GetMethod("StableFares",BindingFlags.Static|BindingFlags.NonPublic)!;
+  var pluginFares=(IReadOnlyDictionary<uint,uint>)new Dictionary<uint,uint>{{1,100},{2,100}};
+  object? result=null;
+  var normal=Activator.CreateInstance(navigation,BindingFlags.Instance|BindingFlags.NonPublic,null,
+   [new Func<bool>(()=>true),project,path,null],null)!;
+  for(int tick=0;tick<=3000;tick+=100){
+   if(tick%1000==0) {
+    var next=(IReadOnlyDictionary<uint,uint>)stableFares.Invoke(null,[pluginFares,new Dictionary<uint,uint>{{2,100},{1,100}}])!;
+    if(!ReferenceEquals(next,pluginFares))throw new Exception("Refreshing unchanged fares restarted the calculation");
+    pluginFares=next;
+   }
+   result=Call(normal,"Read",["stable",new Vector3(0,-20,0),ground,true,entries,1000L+tick,false]);
+  }
+  if(result==null)throw new Exception("A shortcut must complete at the framework cadence across fare refreshes");
+  if(ReferenceEquals(pluginFares,stableFares.Invoke(null,[pluginFares,new Dictionary<uint,uint>{{1,110},{2,100}}])))
+   throw new Exception("A real fare change must invalidate the old quote");
 
   var queue=new ConfirmationQueue();
   bool measuring=false;
@@ -121,6 +143,10 @@ static class JourneyRuntimeChecks {
   if(queue.Activate(true)!=dialog)throw new Exception("Shortcut must open when ready");
   measuring=true;
   if(!dialog.Valid()||dialog.CanConfirm()||queue.Active!=dialog)throw new Exception("Refreshing a quote must preserve the window and disable confirmation");
+  var quote=new ShortcutOffer(1,1,1,1,1,2,"Entry",100,1000,200,50,30);
+  if(ShortcutAdvisor.SamePresentation(quote,quote with {GilCost=90})||
+     ShortcutAdvisor.SamePresentation(quote,quote with {TeleportSeconds=25}))
+   throw new Exception("A refreshed fare or saving must replace the displayed quote");
   queue.Resolve(dialog.Key,false);
   measuring=false;
   queue.Offer(dialog with {Key="updated"});
@@ -170,10 +196,10 @@ static class JourneyRuntimeChecks {
     Check(messages.Count==0&&saved.DailyChatNotice==0&&saved.WeeklyChatNotice==0,"Duty defers the reset chat");
     duty=false;
     Call(plugin,"CheckResetChatNotice");Call(plugin,"CheckResetChatNotice");
-    Check(messages.Count==1&&messages[0].TextValue.Contains("Stormblood — ежедневные и недельный элитный"),"Reset chat lists both available contract types once");
+    Check(messages.Count==1&&messages[0].TextValue.Contains("Stormblood вЂ” РµР¶РµРґРЅРµРІРЅС‹Рµ Рё РЅРµРґРµР»СЊРЅС‹Р№ СЌР»РёС‚РЅС‹Р№"),"Reset chat lists both available contract types once");
     saved.DailyChatNotice-=86400;
     Call(plugin,"CheckResetChatNotice");Call(plugin,"CheckResetChatNotice");
-    Check(messages.Count==2&&messages[1].TextValue.Contains("Stormblood — ежедневные")&&!messages[1].TextValue.Contains("элитный"),"New daily period does not repeat weekly chat");
+    Check(messages.Count==2&&messages[1].TextValue.Contains("Stormblood вЂ” РµР¶РµРґРЅРµРІРЅС‹Рµ")&&!messages[1].TextValue.Contains("СЌР»РёС‚РЅС‹Р№"),"New daily period does not repeat weekly chat");
     Console.WriteLine("PASS reset chat duty suppression, open-world delivery and daily/weekly deduplication");
    }finally{
     Set(plugin,"CurrentTerritory",0u);
@@ -207,7 +233,7 @@ static class JourneyRuntimeChecks {
    if(method.Name!="RunOnTick")throw new Exception(method.Name);
    deferred=(System.Action)args![0]!;return Task.CompletedTask;
   });
-  ConfirmationRequest Request(string key)=>new("travel",key,"Телепорт?",()=>true,()=>ready,()=>{accepts++;return true;},OnShown:()=>shown++,DeclineKey:key);
+  ConfirmationRequest Request(string key)=>new("travel",key,"РўРµР»РµРїРѕСЂС‚?",()=>true,()=>ready,()=>{accepts++;return true;},OnShown:()=>shown++,DeclineKey:key);
   var later=Request("later");Call(fallback,"Offer",later,false);Call(fallback,"Pump");
   Check(ReferenceEquals(Call(fallback,"PresentFallback"),later)&&shown==1,"Initialization fault exposes the same request via classic confirmation");
   Call(fallback,"PresentFallback");Check(shown==1,"Fallback does not acknowledge every draw");
@@ -310,7 +336,7 @@ static class JourneyRuntimeChecks {
   flow.Pauses|=PauseReason.User;flow.Pauses&=~PauseReason.Marker;Call(plugin,"AdvanceRoute");Check(writes==before&&!flow.CanNavigate,"Independent user pause survives clearing marker pause");
   flow.Manual=JourneyFlow.Key(c);flow.Pauses=PauseReason.None;Set(plugin,"context","previous");territory=397;mapId=a.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Call(plugin,"ReconcileContext");Check(flow.Pauses.HasFlag(PauseReason.NoZone)&&flow.Manual==JourneyFlow.Key(c),"Manual target survives external zone change");
   flow.Manual=null;Set(plugin,"context","another");Call(plugin,"ReconcileContext");Check(session.Target==elite||session.Target==a||session.Target==b||flow.Pauses.HasFlag(PauseReason.NoZone),"Automatic context adaptation respects completed local goals");
-  store.Settings.ResetNotifications=true;counts.Clear();Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});Set(plugin,"contractRevision",10L);flow.Active=true;flow.Pauses=PauseReason.None;Call(plugin,"CheckResetNotice");Check(Get<string?>(plugin,"NoticeText")?.Contains("новые контракты")==true,"Reset during active route produces only a passive indicator");
+  store.Settings.ResetNotifications=true;counts.Clear();Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});Set(plugin,"contractRevision",10L);flow.Active=true;flow.Pauses=PauseReason.None;Call(plugin,"CheckResetNotice");Check(Get<string?>(plugin,"NoticeText")?.Contains("РЅРѕРІС‹Рµ РєРѕРЅС‚СЂР°РєС‚С‹")==true,"Reset during active route produces only a passive indicator");
   flow.Pauses=PauseReason.User;queue.Clear();Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Owner=="pickup","Paused route may show new-contract choice");request!.OnShown!();queue.Resolve(request.Key,false);queue.Clear();Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Shown reset offer does not repeat within period after Later");
   // Deferrals and explicit dialog reopening must not strand or silently restart the route.
   queue.Clear();flow.Pauses=PauseReason.None;flow.Manual=null;flow.Active=true;objects=[];session.Retarget(a);Set(plugin,"ownedMarker",null);
@@ -533,12 +559,12 @@ static class JourneyRuntimeChecks {
   queue.Clear();Set(plugin,"loginNoticeShown",false);Set(plugin,"Mobs",new List<MobHuntEntry>());Set(plugin,"completionHistory",new CompletionHistory());Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});flow.Active=false;flow.Pauses=PauseReason.None;
   savedNotice.DailyNotice=ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds();combat=true;Call(plugin,"CheckResetNotice");
   Check(queue.Activate(true)==null,"Login offer waits until combat ends");combat=false;request=queue.Activate(true);
-  Check(request?.Key.StartsWith("login:")==true&&request.Presentation?.ConfirmLabel=="К доскам","Login offers board choice even if current reset was acknowledged earlier");
+  Check(request?.Key.StartsWith("login:")==true&&request.Presentation?.ConfirmLabel=="Рљ РґРѕСЃРєР°Рј","Login offers board choice even if current reset was acknowledged earlier");
   request!.OnShown!();queue.Resolve(request.Key,false);Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Later does not repeat login offer during the same session");
   queue.Clear();Call(plugin,"LoadJourney");flow=Get<JourneyFlow>(plugin,"Flow");Set(plugin,"contractRevision",2L);Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
   Check(request?.Key.StartsWith("login:")==true,"New login resets session suppression despite same character and daily period");
   queue.Clear();Set(plugin,"Mobs",new List<MobHuntEntry>{a});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
-  Check(request?.Presentation?.ConfirmLabel=="Продолжить","Obtained incomplete bills offer continuation instead of another board trip");
+  Check(request?.Presentation?.ConfirmLabel=="РџСЂРѕРґРѕР»Р¶РёС‚СЊ","Obtained incomplete bills offer continuation instead of another board trip");
   savedNotice=Get<SavedJourney>(plugin,"CharacterSave");
   savedNotice.DailyNotice=0;request!.OnShown!();queue.Resolve(request.Key,false);Call(plugin,"CheckResetNotice");request=queue.Activate(true);
   Check(request?.Key.StartsWith("pickup:")==true&&savedNotice.DailyNotice==0,"Continuation must not acknowledge available contracts");
@@ -556,7 +582,7 @@ static class JourneyRuntimeChecks {
   Set(plugin,"completionHistory",boardHistory);
   var boardUi=new NativeHuntController(plugin);boardUi.Navigate(NativeHuntPage.Boards);
   var coloredBoard=boardUi.Build().Buttons.Single(b=>b.Key=="board:Heavensward").Board!;
-  Check(coloredBoard.Daily is {Label:"выполнено",Color:{}}&&coloredBoard.Weekly is {Label:"можно взять",Color:{}}&&
+  Check(coloredBoard.Daily is {Label:"РІС‹РїРѕР»РЅРµРЅРѕ",Color:{}}&&coloredBoard.Weekly is {Label:"РјРѕР¶РЅРѕ РІР·СЏС‚СЊ",Color:{}}&&
    coloredBoard.Daily.Color!=coloredBoard.Weekly.Color,"Board presents completed daily and available weekly status in separate colors");
   Set(plugin,"completionHistory",oldBoardHistory);
   queue.Clear();Set(plugin,"loginNoticeShown",false);store.Settings.ResetNotifications=false;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Explicit notification opt-out remains respected");store.Settings.ResetNotifications=true;

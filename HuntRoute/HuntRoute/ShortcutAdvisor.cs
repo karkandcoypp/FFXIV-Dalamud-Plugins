@@ -18,6 +18,9 @@ public static class ShortcutAdvisor {
     public static bool MatchesQuote(ShortcutOffer offered,ShortcutOffer current) =>
         current.RunId==offered.RunId && current.ContractKey==offered.ContractKey && current.Territory==offered.Territory
         && current.Aetheryte==offered.Aetheryte && current.GilCost<=offered.GilCost;
+    public static bool SamePresentation(ShortcutOffer shown,ShortcutOffer current)=>
+        MatchesQuote(shown,current)&&shown.GilCost==current.GilCost&&shown.UsesNavmesh==current.UsesNavmesh
+        && MathF.Round(shown.SavedSeconds)==MathF.Round(current.SavedSeconds);
     public static float? PathLength(Vector3 from,Vector3 to,IReadOnlyList<Vector3> path) {
         if(path.Count==0||Vector3.Distance(path[^1],to)>5)return null;
         float length=0;
