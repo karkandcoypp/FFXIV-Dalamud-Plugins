@@ -252,16 +252,23 @@ public sealed partial class Plugin : IDalamudPlugin {
             var point=MapCoordinates.FromTexturePixel(new Vector2(marker.X,marker.Y),map);
             var world=MapCoordinates.ToWorld(point,map);
             var levels=Service.DataManager.GetExcelSheet<Level>();
-            var position=a.Level.Select(l=>l.RowId).Where(id=>id!=0)
-                .Select(id=>levels.TryGetRow(id,out var row)?(Level?)row:null)
-                .OfType<Level>()
-                .Where(l=>l.Territory.RowId==territory&&(l.Map.RowId==0||l.Map.RowId==mapId))
-                .OrderBy(l=>Vector2.DistanceSquared(world,new(l.X,l.Z)))
-                .Select(l=>(Vector3?)new Vector3(l.X,l.Y,l.Z)).FirstOrDefault();
-            result.Add(new(a.RowId,a.PlaceName.Value.Name.ToString(),point){WorldPosition=position});
+            result.Add(ResolveEntry(a.RowId,a.PlaceName.Value.Name.ToString(),point,world,mapId,territory,
+                a.Level.Select(l=>l.RowId),id=>levels.TryGetRow(id,out var row)?(row.Territory.RowId,row.Map.RowId,new Vector3(row.X,row.Y,row.Z)):null));
         }
         // Hinterlands can only be entered via Idyllshire; do not fabricate an in-zone distance.
         return result;
+    }
+    internal static EntryPoint ResolveEntry(uint id,string name,Vector2 point,Vector2 world,uint map,uint territory,
+        IEnumerable<uint> levelIds,Func<uint,(uint Territory,uint Map,Vector3 Position)?> lookup) {
+        Vector3? best=null;
+        float closest=float.PositiveInfinity;
+        foreach(uint levelId in levelIds) {
+            if(levelId==0||lookup(levelId) is not {} level||level.Territory!=territory||level.Map!=0&&level.Map!=map)continue;
+            float distance=Vector2.DistanceSquared(world,new(level.Position.X,level.Position.Z));
+            if(distance>=closest)continue;
+            closest=distance;best=level.Position;
+        }
+        return new(id,name,point){WorldPosition=best};
     }
     private void BuildRoutes(IReadOnlyDictionary<uint,uint> fares) {
         var result=new List<ZoneRoute>();

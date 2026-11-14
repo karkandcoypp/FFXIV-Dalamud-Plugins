@@ -22,6 +22,7 @@ class Program {
  static void Main(string[] args) {
   string home=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"XIVLauncher/addon/Hooks/dev");
   AssemblyLoadContext.Default.Resolving+=(_,n)=>File.Exists(Path.Combine(home,n.Name+".dll"))?AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(home,n.Name+".dll")):null;
+  CheckMissingAetheryteLevelOffline();
   if(args is ["--offline"]){RunOffline();return;}
   if(args is ["--scissorjaws",var sqpack]){CheckScissorjaws(sqpack);return;}
   if(args is ["--portraits",var portraitSqpack]){CheckPortraits(portraitSqpack);return;}
@@ -440,6 +441,17 @@ class Program {
   confirmationQueue.Clear();
   checks+=JourneyRuntimeChecks.Run(game);
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
+ }
+ static void CheckMissingAetheryteLevelOffline(){
+  var method=typeof(Plugin).GetMethod("ResolveEntry",BindingFlags.Static|BindingFlags.NonPublic)!;
+  var marker=new Vector2(25,30);
+  var known=new Vector3(100,-20,120);
+  Func<uint,(uint Territory,uint Map,Vector3 Position)?> lookup=id=>id==2?(397u,220u,known):null;
+  EntryPoint Resolve(uint[] rows)=>(EntryPoint)method.Invoke(null,[71u,"Falcon's Nest",marker,new Vector2(100,120),220u,397u,rows,lookup])!;
+  if(Resolve([0,1]) is not {Id:71,WorldPosition:null} fallback||fallback.Position!=marker
+     ||Resolve([1,2]).WorldPosition!=known)
+   throw new Exception("Missing Level row must retain the map marker or allow a later valid height");
+  Console.WriteLine("PASS missing aetheryte Level row fallback and valid height lookup");
  }
  static void CheckMissingAetheryteLevel(GameData game,Plugin plugin,MethodInfo entries,MethodInfo build,IReadOnlyDictionary<uint,uint> fares){
   var aetherytes=game.Excel.GetSheet<Aetheryte>();
