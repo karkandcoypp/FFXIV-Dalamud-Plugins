@@ -13,6 +13,7 @@ static class JourneyRuntimeChecks {
  static Plugin CreatePlugin(){
   var plugin=(Plugin)RuntimeHelpers.GetUninitializedObject(typeof(Plugin));
   Set(plugin,"expansionCompletionNotice",Activator.CreateInstance(typeof(Plugin).Assembly.GetType("HuntRoute.ExpansionCompletionNotice")!));
+  Set(plugin,"shortcutHeights",new Dictionary<string,float>());
   Set(plugin,"observedFares",new Dictionary<uint,IReadOnlyDictionary<uint,uint>>());
   return plugin;
  }
@@ -196,10 +197,10 @@ static class JourneyRuntimeChecks {
     Check(messages.Count==0&&saved.DailyChatNotice==0&&saved.WeeklyChatNotice==0,"Duty defers the reset chat");
     duty=false;
     Call(plugin,"CheckResetChatNotice");Call(plugin,"CheckResetChatNotice");
-    Check(messages.Count==1&&messages[0].TextValue.Contains("Stormblood вЂ” РµР¶РµРґРЅРµРІРЅС‹Рµ Рё РЅРµРґРµР»СЊРЅС‹Р№ СЌР»РёС‚РЅС‹Р№"),"Reset chat lists both available contract types once");
+    Check(messages.Count==1&&messages[0].TextValue.Contains("Stormblood — ежедневные и недельный элитный"),"Reset chat lists both available contract types once");
     saved.DailyChatNotice-=86400;
     Call(plugin,"CheckResetChatNotice");Call(plugin,"CheckResetChatNotice");
-    Check(messages.Count==2&&messages[1].TextValue.Contains("Stormblood вЂ” РµР¶РµРґРЅРµРІРЅС‹Рµ")&&!messages[1].TextValue.Contains("СЌР»РёС‚РЅС‹Р№"),"New daily period does not repeat weekly chat");
+    Check(messages.Count==2&&messages[1].TextValue.Contains("Stormblood — ежедневные")&&!messages[1].TextValue.Contains("элитный"),"New daily period does not repeat weekly chat");
     Console.WriteLine("PASS reset chat duty suppression, open-world delivery and daily/weekly deduplication");
    }finally{
     Set(plugin,"CurrentTerritory",0u);
@@ -336,7 +337,7 @@ static class JourneyRuntimeChecks {
   flow.Pauses|=PauseReason.User;flow.Pauses&=~PauseReason.Marker;Call(plugin,"AdvanceRoute");Check(writes==before&&!flow.CanNavigate,"Independent user pause survives clearing marker pause");
   flow.Manual=JourneyFlow.Key(c);flow.Pauses=PauseReason.None;Set(plugin,"context","previous");territory=397;mapId=a.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);Call(plugin,"ReconcileContext");Check(flow.Pauses.HasFlag(PauseReason.NoZone)&&flow.Manual==JourneyFlow.Key(c),"Manual target survives external zone change");
   flow.Manual=null;Set(plugin,"context","another");Call(plugin,"ReconcileContext");Check(session.Target==elite||session.Target==a||session.Target==b||flow.Pauses.HasFlag(PauseReason.NoZone),"Automatic context adaptation respects completed local goals");
-  store.Settings.ResetNotifications=true;counts.Clear();Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});Set(plugin,"contractRevision",10L);flow.Active=true;flow.Pauses=PauseReason.None;Call(plugin,"CheckResetNotice");Check(Get<string?>(plugin,"NoticeText")?.Contains("РЅРѕРІС‹Рµ РєРѕРЅС‚СЂР°РєС‚С‹")==true,"Reset during active route produces only a passive indicator");
+  store.Settings.ResetNotifications=true;counts.Clear();Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});Set(plugin,"contractRevision",10L);flow.Active=true;flow.Pauses=PauseReason.None;Call(plugin,"CheckResetNotice");Check(Get<string?>(plugin,"NoticeText")?.Contains("новые контракты")==true,"Reset during active route produces only a passive indicator");
   flow.Pauses=PauseReason.User;queue.Clear();Call(plugin,"CheckResetNotice");request=queue.Activate(true);Check(request?.Owner=="pickup","Paused route may show new-contract choice");request!.OnShown!();queue.Resolve(request.Key,false);queue.Clear();Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Shown reset offer does not repeat within period after Later");
   // Deferrals and explicit dialog reopening must not strand or silently restart the route.
   queue.Clear();flow.Pauses=PauseReason.None;flow.Manual=null;flow.Active=true;objects=[];session.Retarget(a);Set(plugin,"ownedMarker",null);
@@ -467,8 +468,8 @@ static class JourneyRuntimeChecks {
   Set(plugin,"pendingJourney",null);Set(plugin,"nextTeleportAllowed",0L);flow.Pauses=PauseReason.None;territory=397;mapId=a.MapId;Set(plugin,"CurrentTerritory",territory);Set(plugin,"CurrentMap",mapId);session.Retarget(a);Set(plugin,"Mobs",new List<MobHuntEntry>{a,b,c,elite});counts.Clear();
   var anchor=MapCoordinates.ToWorld(Location.Database[a.MobHuntId].Coordinate,game.Excel.GetSheet<Map>().GetRow(a.MapId));position=new(anchor.X+5000,0,anchor.Y);
   var shortcut=(ShortcutOffer?)Call(plugin,"FindShortcut");Check(shortcut!=null,$"Long-flight regression fixture has a valid shortcut: phase={session.Phase}, pause={flow.Pauses}, ready={Get<bool>(plugin,"Ready")}, settings={store.Settings.Shortcuts}, overhead={Get<ShortcutTiming>(plugin,"Timing").OverheadSeconds}, point={position}, anchor={anchor}, entries={alternatives.Count}");queue.Clear();Call(Get<ShortcutWindow>(plugin,"Shortcut"),"Sync");request=queue.Activate(true);Check(request?.Owner=="shortcut","Shortcut controller queues reviewed proposal");
-  shortcutPrice=150;Check(!request!.Valid()&&queue.Resolve(request.Key,true)==null,"Price increase invalidates the active shortcut before acceptance");
-  queue.Retry(request);Check(queue.Activate(true)==null,"Stale shortcut cannot be requeued");shortcutPrice=100;
+  shortcutPrice=150;Call(Get<ShortcutWindow>(plugin,"Shortcut"),"Sync");Check(!request!.Valid()&&queue.Resolve(request.Key,true)==null,"Price increase invalidates the active shortcut before acceptance");
+  queue.Retry(request);Check(queue.Activate(true)?.Presentation?.Fare==150,"Only the refreshed shortcut can be shown");queue.Clear();shortcutPrice=100;
   var quoted=shortcut??throw new Exception("Missing quote");
   Check(!ShortcutAdvisor.MatchesQuote(quoted,quoted with {Aetheryte=quoted.Aetheryte+1}),"Switching optimal aetheryte invalidates old quote");
   string contextAtDeparture=territory+":"+mapId;
@@ -559,12 +560,12 @@ static class JourneyRuntimeChecks {
   queue.Clear();Set(plugin,"loginNoticeShown",false);Set(plugin,"Mobs",new List<MobHuntEntry>());Set(plugin,"completionHistory",new CompletionHistory());Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});flow.Active=false;flow.Pauses=PauseReason.None;
   savedNotice.DailyNotice=ResetClock.Period(DateTimeOffset.UtcNow,false).ToUnixTimeSeconds();combat=true;Call(plugin,"CheckResetNotice");
   Check(queue.Activate(true)==null,"Login offer waits until combat ends");combat=false;request=queue.Activate(true);
-  Check(request?.Key.StartsWith("login:")==true&&request.Presentation?.ConfirmLabel=="Рљ РґРѕСЃРєР°Рј","Login offers board choice even if current reset was acknowledged earlier");
+  Check(request?.Key.StartsWith("login:")==true&&request.Presentation?.ConfirmLabel=="К доскам","Login offers board choice even if current reset was acknowledged earlier");
   request!.OnShown!();queue.Resolve(request.Key,false);Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Later does not repeat login offer during the same session");
   queue.Clear();Call(plugin,"LoadJourney");flow=Get<JourneyFlow>(plugin,"Flow");Set(plugin,"contractRevision",2L);Set(plugin,"BillStates",new Dictionary<byte,BillState>{{1,new(true,false,0,1,false)}});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
   Check(request?.Key.StartsWith("login:")==true,"New login resets session suppression despite same character and daily period");
   queue.Clear();Set(plugin,"Mobs",new List<MobHuntEntry>{a});Call(plugin,"CheckResetNotice");request=queue.Activate(true);
-  Check(request?.Presentation?.ConfirmLabel=="РџСЂРѕРґРѕР»Р¶РёС‚СЊ","Obtained incomplete bills offer continuation instead of another board trip");
+  Check(request?.Presentation?.ConfirmLabel=="Продолжить","Obtained incomplete bills offer continuation instead of another board trip");
   savedNotice=Get<SavedJourney>(plugin,"CharacterSave");
   savedNotice.DailyNotice=0;request!.OnShown!();queue.Resolve(request.Key,false);Call(plugin,"CheckResetNotice");request=queue.Activate(true);
   Check(request?.Key.StartsWith("pickup:")==true&&savedNotice.DailyNotice==0,"Continuation must not acknowledge available contracts");
@@ -582,7 +583,7 @@ static class JourneyRuntimeChecks {
   Set(plugin,"completionHistory",boardHistory);
   var boardUi=new NativeHuntController(plugin);boardUi.Navigate(NativeHuntPage.Boards);
   var coloredBoard=boardUi.Build().Buttons.Single(b=>b.Key=="board:Heavensward").Board!;
-  Check(coloredBoard.Daily is {Label:"РІС‹РїРѕР»РЅРµРЅРѕ",Color:{}}&&coloredBoard.Weekly is {Label:"РјРѕР¶РЅРѕ РІР·СЏС‚СЊ",Color:{}}&&
+  Check(coloredBoard.Daily is {Label:"выполнено",Color:{}}&&coloredBoard.Weekly is {Label:"можно взять",Color:{}}&&
    coloredBoard.Daily.Color!=coloredBoard.Weekly.Color,"Board presents completed daily and available weekly status in separate colors");
   Set(plugin,"completionHistory",oldBoardHistory);
   queue.Clear();Set(plugin,"loginNoticeShown",false);store.Settings.ResetNotifications=false;Call(plugin,"CheckResetNotice");Check(queue.Activate(true)==null,"Explicit notification opt-out remains respected");store.Settings.ResetNotifications=true;

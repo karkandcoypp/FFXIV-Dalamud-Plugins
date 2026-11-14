@@ -205,6 +205,8 @@ class Program {
   var build=typeof(Plugin).GetMethod("BuildRoutes",BindingFlags.Instance|BindingFlags.NonPublic)!;
   var fares=unlockedEntries.ToDictionary(e=>e.AetheryteId,_=>100u);
   typeof(Plugin).GetField("observedFares",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new Dictionary<uint,IReadOnlyDictionary<uint,uint>>());
+  CheckMissingAetheryteLevel(game,plugin,entryMethod,build,fares);
+  if(args.Length==3&&args[2]=="--missing-aetheryte-level")return;
   foreach(var board in Plugin.Boards)foreach(int sample in new[]{0,1,2}) {
    var mobs=new List<MobHuntEntry>();
    foreach(byte tier in board.Daily) {
@@ -295,6 +297,8 @@ class Program {
   var priced=allAetherytes.Select(id=>Proxy<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>((m,_)=>m.Name switch {"get_AetheryteId"=>id,"get_GilCost"=>100u,_=>throw new Exception(m.Name)})).ToArray();
   Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?priced.AsEnumerable().GetEnumerator():throw new Exception(m.Name));
   var gnome=new MobHuntEntry{Name="gnome",TerritoryName="Amh Araeng",BillNumber=10,MobIndex=0,MobHuntId=gnomeTarget.Name.RowId,MapId=gm.RowId,TerritoryType=gm.TerritoryType.RowId,NeededKills=2};
+  typeof(Plugin).GetField("CurrentTerritory",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,gm.TerritoryType.RowId);
+  typeof(Plugin).GetField("CurrentMap",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,gm.RowId);
   var shortcutSession=new RouteSession();shortcutSession.Start(gnome,new byte[]{10});shortcutSession.Tick(new[]{gnome},_=>false,_=>true,gm.TerritoryType.RowId);
   typeof(Plugin).GetField("Session",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,shortcutSession);
   typeof(Plugin).GetField("Ready",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,true);
@@ -436,6 +440,50 @@ class Program {
   confirmationQueue.Clear();
   checks+=JourneyRuntimeChecks.Run(game);
   Console.WriteLine($"PASS: {checks} map/data/portrait checks including {links} raw map-link round trips; actual teleport and map-marker wrapper regressions passed.");
+ }
+ static void CheckMissingAetheryteLevel(GameData game,Plugin plugin,MethodInfo entries,MethodInfo build,IReadOnlyDictionary<uint,uint> fares){
+  var aetherytes=game.Excel.GetSheet<Aetheryte>();
+  var maps=game.Excel.GetSheet<Map>();
+  var levels=game.Excel.GetSheet<Level>();
+  var markers=game.Excel.GetSubrowSheet<MapMarker>();
+  var seen=new HashSet<uint>();
+  foreach(var group in game.Excel.GetSubrowSheet<MobHuntOrder>()){
+   foreach(var order in group){
+    if(order.Target.RowId==0||order.NeededKills==0)continue;
+    var target=order.Target.Value;
+    if(!Location.Database.ContainsKey(target.Name.RowId)||!maps.TryGetRow(target.Map.RowId,out var map)||
+       !seen.Add(map.RowId)||!markers.TryGetRow(map.MapMarkerRange,out var mapMarkers))continue;
+    uint territory=map.TerritoryType.RowId;
+    foreach(var marker in mapMarkers){
+     if(marker.DataType!=3||!aetherytes.TryGetRow(marker.DataKey.RowId,out var aetheryte)||
+        !aetheryte.IsAetheryte||aetheryte.Territory.RowId!=territory||
+        !aetheryte.Level.Any(l=>l.RowId!=0&&!levels.HasRow(l.RowId))||
+        aetheryte.Level.Any(l=>l.RowId!=0&&levels.TryGetRow(l.RowId,out var row)&&
+          row.Territory.RowId==territory&&(row.Map.RowId==0||row.Map.RowId==map.RowId)))continue;
+     var entry=((List<EntryPoint>)entries.Invoke(plugin,[map.RowId,territory])!).Single(e=>e.Id==aetheryte.RowId);
+     var expected=MapCoordinates.FromTexturePixel(new(marker.X,marker.Y),map);
+     if(entry.WorldPosition!=null||entry.Position!=expected)
+      throw new Exception($"Missing aetheryte level did not preserve map marker for {entry.Name}");
+
+     // Make the missing-level aetheryte the only unlocked entry, so the planner must use its map marker.
+     var previous=Service.Aetherytes;
+     var unlocked=Proxy<Dalamud.Game.ClientState.Aetherytes.IAetheryteEntry>((m,_)=>m.Name=="get_AetheryteId"?entry.Id:throw new Exception(m.Name));
+     Service.Aetherytes=Proxy<IAetheryteList>((m,_)=>m.Name=="GetEnumerator"?new[]{unlocked}.AsEnumerable().GetEnumerator():throw new Exception(m.Name));
+     try{
+      var mob=new MobHuntEntry{MobHuntId=target.Name.RowId,MapId=map.RowId,TerritoryType=territory,NeededKills=order.NeededKills};
+      typeof(Plugin).GetField("Mobs",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(plugin,new List<MobHuntEntry>{mob});
+      build.Invoke(plugin,[fares]);
+      var route=((List<ZoneRoute>)typeof(Plugin).GetField("Routes",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(plugin)!).Single();
+      if(route.Start?.Id!=entry.Id||route.GilCost!=fares[entry.Id]||route.Mobs.Single()!=mob)
+       throw new Exception("Route lost its target or usable entry without a height row");
+      Console.WriteLine($"PASS missing Level row for {entry.Name} (aetheryte {entry.Id}): map marker and route retained");
+      checks+=2;
+      return;
+     }finally{Service.Aetherytes=previous;}
+    }
+   }
+  }
+  throw new Exception("No hunt aetheryte with an unresolved Level row and no known height was found");
  }
  static T Proxy<T>(Func<MethodInfo,object?[]?,object?> handler) where T:class {
   var proxy=DispatchProxy.Create<T,ServiceProxy>();((ServiceProxy)(object)proxy).Handler=handler;return proxy;
