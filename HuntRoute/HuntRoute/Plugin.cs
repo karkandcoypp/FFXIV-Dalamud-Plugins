@@ -251,7 +251,10 @@ public sealed partial class Plugin : IDalamudPlugin {
             if (!a.IsAetheryte || a.Territory.RowId != territory) continue;
             var point=MapCoordinates.FromTexturePixel(new Vector2(marker.X,marker.Y),map);
             var world=MapCoordinates.ToWorld(point,map);
-            var position=a.Level.Where(l=>l.RowId!=0).Select(l=>l.Value)
+            var levels=Service.DataManager.GetExcelSheet<Level>();
+            var position=a.Level.Select(l=>l.RowId).Where(id=>id!=0)
+                .Select(id=>levels.TryGetRow(id,out var row)?(Level?)row:null)
+                .OfType<Level>()
                 .Where(l=>l.Territory.RowId==territory&&(l.Map.RowId==0||l.Map.RowId==mapId))
                 .OrderBy(l=>Vector2.DistanceSquared(world,new(l.X,l.Z)))
                 .Select(l=>(Vector3?)new Vector3(l.X,l.Y,l.Z)).FirstOrDefault();
